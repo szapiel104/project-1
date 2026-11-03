@@ -84,7 +84,7 @@ vWN = normalize(mat3(modelMatrix) * objectNormal);
 
 const FRAG_HEAD = /* glsl */ `
 uniform sampler2D tGrass1, tGrass2, tMeadow, tForest, tPebble, tDirt, tRock, tCliff, tSand, tNoise;
-uniform sampler2D nGF, nPR; // pary normalnych: RG = trawa/żwir, BA = las/skała (normalpack.ts)
+uniform sampler2D nGF, nPR; // pary normalnych: RG = trawa/żwir, BA = las/skała (normalpack.ts; skała = cliff_n)
 uniform float uDark;
 varying vec4 vSplat;
 varying float vSand;
@@ -121,23 +121,22 @@ const FRAG_ALBEDO = /* glsl */ `
   dirt = mix(dirt, grit, smoothstep(0.3, 0.62, nD.a * 0.55 + nS.b * 0.55) * 0.75);
   dirt = mix(dirt, forest * vec3(0.92, 0.86, 0.8), smoothstep(0.5, 0.78, nS.g * 0.7 + nD.r * 0.4) * 0.45);
   dirt *= 0.86 + smoothstep(0.3, 0.7, nD.g) * 0.22;
-  // skała: rzut z boku na stromych ścianach, z góry na płaskim
+  // skała (Michał 3.11.2026: „tekstury skał jak z taniej gry”): rzut z trzech stron z ostrym przejściem (bez
+  // rozmytych duchów dwóch rzutów naraz). Główna jest poszarpana skała (cliff) — wygląda jak prawdziwa ściana;
+  // warstwowa (rock) tylko w płatach i tylko na ścianach (z góry jej słoje wyglądały jak kora). Pod spodem ta sama
+  // skała w skali ok. 25 m, więc wielkie zbocza nie mają powtórek, i ciepły, szarobrązowy odcień zamiast białego.
   vec3 an = abs(vWN);
-  vec3 rTop = texture2D(tRock, w / 6.0).rgb;
-  vec3 rX = texture2D(tRock, vWP.zy / 6.0).rgb;
-  vec3 rZ = texture2D(tRock, vWP.xy / 6.0).rgb;
-  vec3 bw = pow(an, vec3(4.0)); bw /= (bw.x + bw.y + bw.z);
-  vec3 rock = rX * bw.x + rTop * bw.y + rZ * bw.z;
-  // druga skała (poszarpane turnie) w wielkich płatach i warstwy jaśniejsze/ciemniejsze wzdłuż wysokości
-  vec3 cX = texture2D(tCliff, vWP.zy / 7.5).rgb, cZ = texture2D(tCliff, vWP.xy / 7.5).rgb, cT = texture2D(tCliff, w / 7.5).rgb;
-  vec3 cliff = (cX * bw.x + cT * bw.y + cZ * bw.z) * vec3(0.78, 0.76, 0.72);
-  // druga skała tylko w płatach i do połowy: sama wyglądała jak kora (podłużne smugi), Michał 3.11.2026
-  rock = mix(rock, cliff, smoothstep(0.45, 0.75, nM.a) * 0.45);
-  // ta sama skała w dużej skali pod spodem: na wielkich ścianach gór nie widać powtórek wzoru
-  vec3 rBig = texture2D(tRock, vWP.zy / 19.0).rgb * bw.x + texture2D(tRock, w / 19.0 + 0.3).rgb * bw.y + texture2D(tRock, vWP.xy / 19.0).rgb * bw.z;
-  rock = mix(rock, rBig, 0.35);
-  float strata = texture2D(tNoise, vec2(vWP.y / 3.2, w.x / 140.0 + w.y / 170.0)).g;
-  rock *= 0.9 + strata * 0.18;
+  vec3 bw = pow(an, vec3(8.0)); bw /= (bw.x + bw.y + bw.z);
+  vec2 uX = vWP.zy, uZ = vWP.xy, uT = rot(w, 0.6);
+  vec3 cliff = texture2D(tCliff, uX / 8.5).rgb * bw.x + texture2D(tCliff, uT / 8.5).rgb * bw.y + texture2D(tCliff, uZ / 8.5).rgb * bw.z;
+  vec3 cBig = texture2D(tCliff, uX / 26.0 + 0.4).rgb * bw.x + texture2D(tCliff, uT / 26.0 + 0.4).rgb * bw.y + texture2D(tCliff, uZ / 26.0 + 0.4).rgb * bw.z;
+  vec3 layered = texture2D(tRock, uX / 7.0).rgb * bw.x + texture2D(tRock, uZ / 7.0).rgb * bw.z + cliff * bw.y;
+  vec3 rock = mix(cliff, cBig, 0.4);
+  rock = mix(rock, layered * 1.15, smoothstep(0.5, 0.8, nM.a) * 0.5 * (1.0 - bw.y));
+  // barwa: szarobrązowa skała, w zagłębieniach ciemniejsza (jasność samej tekstury jako cień), tu i ówdzie rdzawy nalot
+  float rl = lum(rock);
+  rock = rock * vec3(0.84, 0.8, 0.74) * (0.72 + rl * 0.42);
+  rock = mix(rock, rock * vec3(1.12, 0.96, 0.8), smoothstep(0.55, 0.85, nS.r) * 0.35);
 
   // udziały: łąka w plamach, drobne kamienie i prześwity ziemi rozsiane po trawie
   float wMeadow = smoothstep(0.86, 1.02, nS.g * 0.75 + nD.b * 0.3) * 0.5;
@@ -178,7 +177,8 @@ const FRAG_ALBEDO = /* glsl */ `
   vec3 tnG = unN(texture2D(nGF, w / 3.1).xy);
   vec3 tnF = unN(texture2D(nGF, rot(w, 1.3) / 4.2).zw);
   vec3 tnP = unN(texture2D(nPR, rot(w, 2.6) / 2.9).xy);
-  vec3 tnR = unN(texture2D(nPR, w / 6.0).zw);
+  // normalna skały z tych samych trzech rzutów co kolor (płaski rzut z góry na pionowej ścianie dawał smugi światła)
+  vec3 tnR = normalize(unN(texture2D(nPR, uX / 8.5).zw) * bw.x + unN(texture2D(nPR, uT / 8.5).zw) * bw.y + unN(texture2D(nPR, uZ / 8.5).zw) * bw.z);
   gNormal = normalize((tnG * (bG + bM * 0.6) + tnF * (bF + bD * 0.4 + bM * 0.4) + tnP * (bP * 1.4 + bD * 0.9 + bS * 0.5) + tnR * bR * 1.3 + vec3(0.0, 0.0, 1.0) * bS * 0.6) / sum);
   vec3 tnDet = unN(texture2D(nGF, rot(w, 1.7) / 0.85).xy);
   gNormal = normalize(gNormal + vec3(tnDet.xy * near * 0.8 * dg, 0.0));
@@ -211,7 +211,7 @@ const FRAG_ALBEDO = /* glsl */ `
   float macro = 0.74 + nM.b * 0.42 + (nS.r - 0.5) * 0.16;
   // wnęki między źdźbłami i kamieniami ciemnieją (fałszywe AO z jasności)
   float cav = mix(0.82, 1.08, smoothstep(0.08, 0.45, lum(alb)));
-  alb *= mix(macro * cav, 0.95 + (macro - 0.95) * 0.35, bS / sum) * uDark; // piasek jasny i równy, bez ciemnych plam łąki
+  alb *= mix(mix(macro * cav, 0.95 + (macro - 0.95) * 0.35, bS / sum), 1.0, bR / sum * 0.8) * uDark; // piasek jasny i równy, skała bez plam łąki
   // suchsze, żółtawe łaty na trawie
   alb = mix(alb, alb * vec3(1.12, 1.04, 0.78), smoothstep(0.62, 0.85, nM.g) * 0.5 * bG / sum);
   diffuseColor.rgb *= alb;
@@ -309,7 +309,7 @@ export function groundMaterial(): THREE.MeshStandardMaterial {
   const mat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.97, metalness: 0 });
   if (TEST || !loader) { shared = mat; return mat; }
   // pary normalnych w jednej teksturze (o 2 próbniki mniej: limit 16 na wielu kartach, opis w normalpack.ts)
-  const packGF = packNormals(tex('grass_n', false), tex('forest_n', false), 2048), packPR = packNormals(tex('pebble_n', false), tex('rock_n', false), 2048);
+  const packGF = packNormals(tex('grass_n', false), tex('forest_n', false), 2048), packPR = packNormals(tex('pebble_n', false), tex('cliff_n', false), 2048); // skała: normalne z poszarpanej skały (cliff_n), pasują do jej koloru
   mat.onBeforeRender = (renderer) => { packGF.update(renderer); packPR.update(renderer); };
   const uniforms = {
     tGrass1: { value: tex('grass1', true) }, tGrass2: { value: tex('grass2', true) }, tMeadow: { value: tex('meadow', true) },

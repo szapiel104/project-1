@@ -40,7 +40,7 @@ Pierwsze trzy pobrane przez repozytorium [null3d-engine/sample-assets](https://g
 - Ground 044 → `dirt.jpg` (wydeptana ziemia)
 - Rock 022 → `rock.jpg` (skała na zboczach)
 - Mapy normalnych `*_n.jpg` policzone z jasności zdjęć.
-- Rock 026 → `cliff.jpg` (poszarpane turnie w górach)
+- Rock 026 → `cliff.jpg` (poszarpane turnie w górach); `cliff_n.jpg` — mapa normalnych policzona z jasności `cliff.jpg` (3.11.2026, `Sobel` na rozmytej wysokości)
 - Ground 079 S → `sand.jpg` (plaże nad jeziorami i morzem)
 - W 2K (od 16.10.2026): Grass 001, Grass 004, Ground 015, Ground 044, Rock 022, Rock 026 wraz z mapami normalnych — z paczki cc0-texture-pack (te same tekstury ambientCG przekonwertowane do s&box) dostarczonej przez Michała, zdekodowane z powrotem do JPG; łąka, żwir i piasek dalej w 1K
 

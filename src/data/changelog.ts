@@ -10,6 +10,17 @@ export type { ChangeEntry } from './changelogTypes';
  */
 const NEW: ChangeEntry[] = [
   {
+    v: '0.86.0', date: '2026-11-03',
+    pl: [
+      'Nowy wygląd skał w górach i na urwiskach: poszarpana, szarobrązowa skała zamiast białych i „słoistych” płatów, z prawdziwą rzeźbą światła (nowa mapa nierówności) i bez rozmytych podwójnych wzorów na zboczach.',
+      'Na wielkich ścianach skalnych nie widać powtórek wzoru, a na skale nie ma już ciemnych plam przeniesionych z łąki.',
+    ],
+    en: [
+      'New look for mountain and cliff rock: jagged grey-brown stone instead of white, wood-grained patches, with real relief in the lighting (a new bump map) and no blurry double patterns on the slopes.',
+      'Large rock faces no longer show repeating patterns, and the rock is free of the dark blotches carried over from the meadows.',
+    ],
+  },
+  {
     v: '0.85.3', date: '2026-11-03',
     pl: [
       'Okno budynku na pergaminie: ciemny atrament, czerwone nagłówki sekcji, jasny tytuł na belce; braki na ciemnoczerwono, „Budynek działa” na zielono — wszystko czytelne.',

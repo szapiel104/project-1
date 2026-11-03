@@ -458,28 +458,17 @@ for oz in (-1, 1):
     b.box('interior', 'flag', 0.2, 0.62, 0.014, LB1 - 0.12, QF + 0.26, LM + oz * (LZ1 - LZ0 + 0.06) / 2)
 b.box('interior', 'flag', 0.012, 0.66, LZ1 - LZ0 + 0.08, LB1 - 0.06, QF + 0.22, LM)
 block(LB0, LB1, LZ0, LZ1 + 0.02, WALK - 0.1, WALK + 0.9)
-# kominek pod tylną ścianą (w lewej części) — prawdziwe palenisko z głębią (Michał 3.11.2026: „kominek nie jest
-# kominkiem, tylko jakąś płachtą”): dwa kamienne węgary, nadproże, gzyms, okopcona tylna ściana wnęki,
-# kamienny przypiecek, polana na krzyż, żar i języki ognia; nad gzymsem występ komina aż do stropu
+# kominek pod tylną ścianą (w lewej części): obudowa, gzyms, palenisko z żarem, komin w murze
 FX = -0.95
-FD = 0.2                                                                         # głębokość wnęki
-b.box('interior', 'castleDark', 0.42, 0.4, 0.04, FX, QF, QZ0 + 0.02)              # tylna ściana wnęki
-b.box('interior', 'dark', 0.32, 0.3, 0.006, FX, QF + 0.02, QZ0 + 0.043)            # sadza na tylnej ścianie
-for sx in (-1, 1):
-    b.box('interior', 'castle', 0.09, 0.4, FD, FX + sx * 0.205, QF, QZ0 + FD / 2)   # węgary po bokach
-b.box('interior', 'castle', 0.5, 0.08, FD, FX, QF + 0.32, QZ0 + FD / 2)           # nadproże
-b.box('interior', 'woodDark', 0.6, 0.04, FD + 0.05, FX, QF + 0.4, QZ0 + (FD + 0.05) / 2)   # gzyms
-b.box('interior', 'stoneDark', 0.56, 0.025, FD + 0.1, FX, QF, QZ0 + (FD + 0.1) / 2)   # przypiecek
-b.box('interior', 'castle', 0.36, QY2 - QF - 0.44, 0.12, FX, QF + 0.44, QZ0 + 0.06)   # występ komina
-for rot in (0.45, -0.45):                                                          # polana na krzyż
-    b.box('interior', 'woodDark', 0.2, 0.032, 0.032, FX, QF + 0.03, QZ0 + 0.11, rot)
-b.box('interior', 'ember', 0.2, 0.012, 0.1, FX, QF + 0.026, QZ0 + 0.11)            # żar
-for ox, oz, hh in ((0.0, 0.0, 0.15), (-0.06, 0.02, 0.1), (0.055, -0.015, 0.11)):  # płomienie
-    b.prism('interior', 'ember', 0.03, 0.0, hh, FX + ox, QF + 0.05, QZ0 + 0.11 + oz, seg=6)
-for k, ox in enumerate((-0.22, 0.2)):                                              # świece na gzymsie
-    b.prism('interior', 'white', 0.012, 0.012, 0.05, FX + ox, QF + 0.44, QZ0 + 0.12, seg=6)
-    b.prism('interior', 'ember', 0.008, 0.0, 0.025, FX + ox, QF + 0.49, QZ0 + 0.12, seg=5)
-block(FX - 0.3, FX + 0.3, QZ0, QZ0 + 0.3, WALK - 0.1, 9)
+b.box('interior', 'castleDark', 0.5, 0.42, 0.16, FX, QF, QZ0 + 0.08)
+b.box('interior', 'dark', 0.3, 0.26, 0.01, FX, QF, QZ0 + 0.162)
+b.box('interior', 'ember', 0.22, 0.04, 0.08, FX, QF + 0.01, QZ0 + 0.11)
+b.box('interior', 'woodDark', 0.58, 0.04, 0.2, FX, QF + 0.42, QZ0 + 0.1)
+b.box('interior', 'castle', 0.36, QY2 - QF - 0.46, 0.12, FX, QF + 0.46, QZ0 + 0.06)
+for k, ox in enumerate((-0.2, 0.18)):
+    b.prism('interior', 'white', 0.012, 0.012, 0.05, FX + ox, QF + 0.46, QZ0 + 0.1, seg=6)
+    b.prism('interior', 'ember', 0.008, 0.0, 0.025, FX + ox, QF + 0.51, QZ0 + 0.1, seg=5)
+block(FX - 0.27, FX + 0.27, QZ0, QZ0 + 0.2, WALK - 0.1, 9)
 # toaletka z lustrem i stołkiem między kominkiem a łożem
 TX = -0.25
 b.box('interior', 'wood', 0.42, 0.03, 0.2, TX, QF + 0.26, QZ0 + 0.11)
@@ -825,26 +814,12 @@ for s in (-1, 1):
 
 # ---------------- kuchnia ----------------
 kx0, kx1, kz0, kz1 = bbox('K')
-# palenisko kuchenne z prawdziwą wnęką (było pełnym blokiem z czarną płachtą z przodu): tylna ściana z sadzą,
-# dwa węgary, kamień nad otworem, w środku polana, żar, języki ognia i kocioł na trójnogu
-HX = (kx0 + kx1) / 2
-b.box('interior', 'stone', 1.1, 0.75, 0.06, HX, G, kz0 + 0.03)                    # tylna ściana
-b.box('interior', 'dark', 0.78, 0.4, 0.006, HX, G + 0.02, kz0 + 0.063)             # sadza
-for sx in (-1, 1):
-    b.box('interior', 'stone', 0.15, 0.75, 0.42, HX + sx * 0.475, G, kz0 + 0.21)   # węgary
-b.box('interior', 'stone', 0.8, 0.33, 0.42, HX, G + 0.42, kz0 + 0.21)             # kamień nad otworem
-b.box('interior', 'stoneDark', 0.8, 0.02, 0.36, HX, G, kz0 + 0.24)                # dno paleniska
-for rot in (0.4, -0.4, 0.05):                                                      # polana
-    b.box('interior', 'woodDark', 0.34, 0.04, 0.04, HX, G + 0.025, kz0 + 0.26, rot)
-b.box('interior', 'ember', 0.5, 0.014, 0.2, HX, G + 0.022, kz0 + 0.26)            # żar
-for ox, oz, hh in ((-0.2, 0.0, 0.16), (-0.12, 0.05, 0.11), (0.14, 0.02, 0.15), (0.22, -0.04, 0.1)):
-    b.prism('interior', 'ember', 0.04, 0.0, hh, HX + ox, G + 0.05, kz0 + 0.26 + oz, seg=6)
-b.prism('interior', 'iron', 0.13, 0.15, 0.16, HX, G + 0.1, kz0 + 0.26, seg=10)     # kocioł
-for k in range(3):                                                                 # trójnóg pod kotłem
-    a = k * 2.094
-    b.box('interior', 'iron', 0.014, 0.1, 0.014, HX + math.sin(a) * 0.12, G + 0.02, kz0 + 0.26 + math.cos(a) * 0.1)
-block(HX - 0.55, HX + 0.55, kz0, kz0 + 0.42, G - 0.05, G + 0.75)
+boxs('interior', 'stone', 1.1, 0.75, 0.42, (kx0 + kx1) / 2, G, kz0 + 0.21)
+b.box('interior', 'dark', 0.6, 0.38, 0.02, (kx0 + kx1) / 2, G + 0.05, kz0 + 0.425)
+b.box('interior', 'ember', 0.5, 0.06, 0.2, (kx0 + kx1) / 2, G + 0.05, kz0 + 0.3)
+b.prism('interior', 'iron', 0.13, 0.15, 0.16, (kx0 + kx1) / 2, G + 0.1, kz0 + 0.3, seg=10)
 # palenisko: belka nad otworem, półka z garnkami, okap zwężający się ku kominowi, kamienny przypiecek
+HX = (kx0 + kx1) / 2
 b.box('interior', 'woodDark', 1.16, 0.07, 0.08, HX, G + 0.44, kz0 + 0.44)
 b.box('interior', 'wood', 1.2, 0.03, 0.16, HX, G + 0.75, kz0 + 0.4)
 for k, ox in enumerate((-0.4, -0.22, 0.3)):

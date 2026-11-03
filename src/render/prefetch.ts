@@ -11,10 +11,10 @@
  */
 
 /** Numer wersji tekstur terenu w adresie (`?v=`): po podmianie tekstury terenu podbij go tutaj (używa go ground.ts) */
-export const TERRAIN_V = 5;
+export const TERRAIN_V = 6;
 
 /** Wszystkie tekstury terenu, których używa ground.ts (sprawdza test tests/prefetch.test.ts) */
-export const TERRAIN_FILES = ['grass1', 'grass2', 'meadow', 'forest', 'pebble', 'dirt', 'rock', 'cliff', 'sand', 'grass_n', 'forest_n', 'pebble_n', 'rock_n'];
+export const TERRAIN_FILES = ['grass1', 'grass2', 'meadow', 'forest', 'pebble', 'dirt', 'rock', 'cliff', 'sand', 'grass_n', 'forest_n', 'pebble_n', 'cliff_n'];
 
 const base = (): string => ((import.meta as unknown as { env?: { BASE_URL?: string } }).env?.BASE_URL ?? './');
 

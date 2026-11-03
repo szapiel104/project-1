@@ -1,5 +1,9 @@
 # Dziennik zmian
 
+## 0.86.0 — 3.11.2026
+- `ground.ts`: skała od nowa — triplanar z ostrym przejściem (`pow 8`), główna `cliff` + duża skala 26 m, `rock` (warstwy) tylko w płatach na ścianach, odcień i AO z jasności, normalna skały z trzech rzutów; plamy `macro` nie na skale.
+- Nowa tekstura `public/textures/terrain/cliff_n.jpg/.ktx2` (normalne liczone z `cliff.jpg`, `CREDITS.md`) zamiast `rock_n` w parze `nPR`; `TERRAIN_V` 6. Boty: bez zmian.
+
 ## 0.85.3 — 3.11.2026
 - Okno budynku na pergaminie (`tiles.css`), kronika obok okna (`fitInfo` w hud.ts), jaśniejsze miniatury na kartach budowy, `keep.py`: kominek i palenisko kuchenne jako wnęki. Boty: bez zmian.
 

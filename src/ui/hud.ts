@@ -673,14 +673,7 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
     // dół: nad dolną belką i nad przyciskiem kroniki w lewym dolnym rogu (gdy okno stoi po lewej, nie wchodzi na kronikę)
     let bottom = (dockEl ? dockEl.getBoundingClientRect().top : window.innerHeight) - 10 * k;
     const sb = document.querySelector<HTMLElement>('.scribe');
-    // kronika liczy się tylko, gdy stoi pod oknem (od 3.11.2026 jest w lewym górnym rogu — wtedy okno ścinało się do paska)
-    if (sb && sb.offsetParent !== null) { const r = sb.getBoundingClientRect(), ir = info.getBoundingClientRect(); if (r.height && r.top > top + 40 * k && r.left < ir.right && r.right > ir.left) bottom = Math.min(bottom, r.top - 8 * k); }
-    // kronika (lewy górny róg) staje tuż obok otwartego okna, gdy okno stoi po lewej — nie pod nim i nie daleko
-    if (sb) {
-      const ir = info.getBoundingClientRect();
-      const x = ir.left < 240 * k ? `${Math.round(ir.right / k + 12)}px` : '';
-      for (const el2 of [sb, document.querySelector<HTMLElement>('.scribe-log')]) if (el2 && el2.style.left !== x) el2.style.left = x;
-    }
+    if (sb && sb.offsetParent !== null) { const r = sb.getBoundingClientRect(), ir = info.getBoundingClientRect(); if (r.height && r.left < ir.right && r.right > ir.left) bottom = Math.min(bottom, r.top - 8 * k); }
     const want = `${Math.max(140, Math.floor((bottom - top) / k))}px`;
     if (info.style.maxHeight !== want) info.style.maxHeight = want;
     if (info.style.marginBottom) info.style.marginBottom = '';
@@ -721,7 +714,7 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
   void document.fonts?.ready.then(() => { resW = 0; refit(); });
   info.hidden = true;
   // okno po prawej zasłaniało minimapę — gdy jest otwarte, minimapa się chowa (CSS: body.info-open)
-  new MutationObserver(() => { document.body.classList.toggle('info-open', !info.hidden); if (!info.hidden) requestAnimationFrame(fitInfo); else for (const e2 of document.querySelectorAll<HTMLElement>('.scribe, .scribe-log')) e2.style.left = ''; }).observe(info, { attributes: true, attributeFilter: ['hidden'] });
+  new MutationObserver(() => { document.body.classList.toggle('info-open', !info.hidden); if (!info.hidden) requestAnimationFrame(fitInfo); }).observe(info, { attributes: true, attributeFilter: ['hidden'] });
   const infoName = el('p', 'info-name');
   // kto jest właścicielem klikniętego budynku (zwłaszcza cudzej twierdzy): imię w kolorze drużyny i wróg / sojusznik
   const ownerLine = el('p', 'info-owner');
