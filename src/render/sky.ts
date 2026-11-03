@@ -3,6 +3,8 @@
  * i zmierzchu, gwiazdy mrugające nocą, księżyc z kraterami i poświatą, tarcza słońca. W deszczu i mgle niebo szarzeje.
  */
 import * as THREE from 'three';
+import { gpuMods } from './gpu/webgpu';
+import { skyDomeNode, starsNode } from './gpu/skyNode';
 
 /** Stan pogody i pory potrzebny do narysowania nieba w tej klatce */
 export interface SkyFrame {
@@ -120,6 +122,8 @@ export class SkyDome {
       const stex = new THREE.CanvasTexture(sc); stex.colorSpace = THREE.SRGBColorSpace;
       const sunDisc = new THREE.Sprite(new THREE.SpriteMaterial({ map: stex, transparent: true, fog: false, depthWrite: false, blending: THREE.AdditiveBlending }));
       sunDisc.scale.setScalar(160);
+      // WebGPU: kopuła i gwiazdy jako materiały węzłowe (gpu/skyNode.ts), te same pokrętła `uniforms`
+      if (gpuMods) { dome.material = skyDomeNode() as unknown as THREE.ShaderMaterial; stars.material = starsNode() as unknown as THREE.ShaderMaterial; }
       group.add(dome, stars, moon, sunDisc);
       for (const o of [stars, moon, sunDisc]) o.renderOrder = -10;
       this.scene.add(group);

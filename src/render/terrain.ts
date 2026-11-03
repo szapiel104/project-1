@@ -25,7 +25,9 @@ import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js
 import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
 import type { ModelFactory } from './models';
 import { bump, normal, pattern } from './textures';
-import { cloudShade, groundGrassTexture, groundMaterial, waterMaterial, WATER_Y } from './ground';
+import { cloudShade, groundGrassTexture, groundMaterial, waterMaterial, waveNormals, WATER_Y } from './ground';
+import { gpuMods } from './gpu/webgpu';
+import { waterNodeMaterial } from './gpu/waterNode';
 import { WaterReflection } from './waterReflect';
 import { SHADOW_LAYER, shadowProxyMaterial } from './shadowlayer';
 import { createGrassField, type GrassField } from './grass';
@@ -788,7 +790,9 @@ function* terrainSteps(map: GameMap, models: ModelFactory, waterLevel: number): 
       const x0 = cx * WC - D - w / 2 - 2, z0 = cy * WC - D - h / 2 - 2;
       wetBoxes.push(new THREE.Box3(new THREE.Vector3(x0, WATER_Y - 0.2, z0), new THREE.Vector3(x0 + WC + 4, WATER_Y + 0.2, z0 + WC + 4)));
     }
-    wm = waterMaterial(depthTex, EW, EH, reflection.uniforms);
+    // WebGPU: nowa woda (gpu/waterNode.ts) — grubość z bufora głębokości, załamanie, lustro liczone przez kartę
+    const gw = !TEST && gpuMods ? waterNodeMaterial(waveNormals(), WATER_Y) : null;
+    wm = gw ?? waterMaterial(depthTex, EW, EH, reflection.uniforms);
     const waterMat = wm.mat;
     if (TEST) { waterMat.bumpMap = ripples; waterMat.bumpScale = 0.7; }
     // tafla sięga daleko za obszar (morze aż po horyzont); poza nim tekstura głębokości powtarza wartości z krawędzi
@@ -796,6 +800,7 @@ function* terrainSteps(map: GameMap, models: ModelFactory, waterLevel: number): 
     water.rotation.x = -Math.PI / 2;
     water.position.y = WATER_Y;
     water.receiveShadow = true;
+    if (gw) water.add(gw.target); // lustro idzie za taflą (jej płaszczyzna XY)
     group.add(cat(water, 'woda'));
     const shallow = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshStandardMaterial({ color: 0x2b281a, roughness: 1 }) /* muł pod mętną wodą */);
     shallow.rotation.x = -Math.PI / 2;

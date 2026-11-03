@@ -366,7 +366,7 @@ export function groundMaterial(): THREE.MeshStandardMaterial {
 }
 
 /** Zawijająca się mapa normalnych drobnych fal: suma sinusoid o całkowitych częstotliwościach (bez szwów) */
-function waveNormals(): THREE.DataTexture {
+export function waveNormals(): THREE.DataTexture {
   // drobna, nieregularna tafla: szum wartości (kilka oktaw, zawija się), bez kratki od sinusoid
   const N = 256;
   const hgt = new Float32Array(N * N);

@@ -1,5 +1,8 @@
 # Dziennik zmian
 
+## 0.92.0 — 2026-11-03
+- WebGPU partia 4/5: nowa woda `src/render/gpu/waterNode.ts` (viewportDepthTexture → grubość i droga promienia, viewportSharedTexture → załamanie, `reflector` 0.5 → odbicie, Fresnel, odblask; bez tekstury głębokości z siatki) i niebo `src/render/gpu/skyNode.ts` (kopuła + gwiazdy jako PointsNodeMaterial). Bot: bez zmian (tylko grafika).
+
 ## 0.91.3 — 2026-11-03
 - WebGPU: bez `compileAsync` przy wczytywaniu i bez rozgrzewki budynków po starcie (w r186 ok. 13 ms na obiekt, 23 s na scenę nawet z gotowymi potokami); pierwsza klatka buduje potoki sama.
 

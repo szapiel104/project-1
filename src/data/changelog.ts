@@ -10,6 +10,11 @@ export type { ChangeEntry } from './changelogTypes';
  */
 const NEW: ChangeEntry[] = [
   {
+    v: '0.92.0', date: '2026-11-03',
+    pl: ['Nowa woda: widać prawdziwą głębokość (płycizna zielonkawa, głębia ciemna), dno i brodzących ludzi przez falującą taflę, w wodzie odbija się cały świat, a słońce błyska na zmarszczkach.', 'Wraca niebo z gwiazdami, księżycem i łuną o świcie i zmierzchu.'],
+    en: ['New water: real depth (greenish shallows, dark deeps), the riverbed and wading people seen through the rippling surface, the whole world reflected in it and the sun glinting on the ripples.', 'The sky is back, with stars, the moon and the glow at dawn and dusk.'],
+  },
+  {
     v: '0.91.3', date: '2026-11-03',
     pl: ['Szybsze wczytywanie na nowym silniku grafiki: „Przygotowanie grafiki” trwa sekundę zamiast kilku.'],
     en: ['Faster loading on the new graphics engine: "Preparing the graphics" takes a second instead of several.'],

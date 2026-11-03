@@ -14,6 +14,11 @@ Nad grą pracuje kilka czatów naraz, więc długa gałąź rozjechałaby się z
 - **Zasada dla wszystkich czatów na czas przejścia:** zmiana w shaderze GLSL = ta sama zmiana w jego bliźniaku TSL
   (albo wpis w „Rozjazdy” niżej, żeby czat od WebGPU go dociągnął).
 
+## Zasada (Michał 3.11.2026): wszystko nowe, pełna moc WebGPU
+Nie przepisujemy starego GLSL 1:1. Każdą rzecz robimy od nowa tak, jak robi się ją dziś na WebGPU: bufor głębokości
+i obraz sceny w materiałach (woda, mgła, miękkie cząstki), cząstki i trawa liczone na karcie (compute), jedno wywołanie
+rysowania na cały efekt, bez czekania na kompilację przy wczytywaniu.
+
 ## Inwentarz (3.11.2026): 46 shaderów i wstawek w 22 plikach
 | Obszar | Pliki | Co jest | Bliźniak TSL |
 |---|---|---|---|
@@ -33,8 +38,8 @@ Nad grą pracuje kilka czatów naraz, więc długa gałąź rozjechałaby się z
 1. [~] Efekty obrazu w TSL (AO, grading jak w `scene.ts`, wyostrzenie, wygładzanie) — `src/render/gpu/postNode.ts` (0.91.1). Brakuje: mapa otoczenia (PMREM), odbicia wody.
 2. [~] Ziemia w TSL (najważniejsza dla wyglądu) — `src/render/gpu/groundNode.ts` (0.90.1: warstwy, skała z trzech rzutów, normalne, półki, śnieg w górach, mokry brzeg, dno, plamy). Brakuje: cienie chmur, łatka pór roku; tablica tekstur zamiast osobnych — później.
 3. [ ] Pory roku, wiatr, cienie chmur (wspólne funkcje węzłów).
-4. [ ] Woda, strumienie, kałuże.
-5. [ ] Cząstki, niebo, mgła (od razu jako instancje/compute).
+4. [~] Woda, strumienie, kałuże — 0.92.0: nowa woda `gpu/waterNode.ts` (grubość z bufora głębokości, załamanie dna, lustro `reflector`, Beer–Lambert, fale, odblask). Strumienie i kałuże — dalej.
+5. [~] Cząstki, niebo, mgła (od razu jako instancje/compute) — 0.92.0: niebo i gwiazdy `gpu/skyNode.ts`. Mgła, cząstki — dalej.
 6. [ ] Postacie, flagi, obrazki drzew, ślady, trawa.
 7. [ ] Narzędzia (kompilacja z góry, dziennik błędów, autojakość, sprawdzanie wywołań rysowania).
 8. [ ] Przełączenie domyślne na WebGPU (WebGL2 jako zapas), usunięcie GLSL.
