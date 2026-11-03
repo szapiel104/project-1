@@ -108,6 +108,7 @@ function bake(gltf: { scene: THREE.Group; animations: THREE.AnimationClip[] }, s
   tex.needsUpdate = true;
   // siatka bez skóry three.js (ruch liczy nasz shader); maska drużyny z koloru wierzchołków pod własną nazwą
   const geo = mesh.geometry.clone();
+  geo.morphAttributes = {}; // kształty z pliku nieużywane (WebGPU bez wag wywracał przejście obrazu)
   const mask = geo.getAttribute('color');
   if (mask) { geo.setAttribute('teamMask', mask); geo.deleteAttribute('color'); }
   const src = mesh.material as THREE.MeshStandardMaterial;
@@ -117,6 +118,7 @@ function bake(gltf: { scene: THREE.Group; animations: THREE.AnimationClip[] }, s
   let torch: THREE.BufferGeometry | null = null;
   if (torchM) {
     torch = torchM.geometry.clone();
+    torch.morphAttributes = {};
     if (torch.getAttribute('color')) torch.deleteAttribute('color');
     // bez maski drużyny: zero w każdym wierzchołku
     torch.setAttribute('teamMask', new THREE.BufferAttribute(new Float32Array(torch.getAttribute('position').count * 3), 3));

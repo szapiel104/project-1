@@ -9,7 +9,7 @@ import * as THREE from 'three';
  * Rysowane raz na klatkę, przed właściwym obrazem, bez przeliczania mapy cieni. Pomijane są rzeczy drobne albo
  * przezroczyste, których w falującym odbiciu i tak nie widać (gęsta trawa, opary, dym, siatki budowy).
  */
-const SKIP = new Set(['woda', 'trawa (dywan)', 'mgła w dolinach', 'dym, mgła, iskry', 'siatka budowy', 'chmury', ' (cień)', 'ryby']);
+export const SKIP = new Set(['woda', 'trawa (dywan)', 'mgła w dolinach', 'dym, mgła, iskry', 'siatka budowy', 'chmury', ' (cień)', 'ryby']);
 
 export class WaterReflection {
   readonly uniforms = {

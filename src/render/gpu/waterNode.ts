@@ -13,6 +13,19 @@ import { gpuMods } from './webgpu';
  * Jedno wywołanie rysowania na całą wodę (plus odbicie sceny w małej rozdzielczości).
  */
 /* eslint-disable @typescript-eslint/no-explicit-any */
+/** Warstwa obiektów widocznych w odbiciu wody (markReflect) */
+export const REFLECT_LAYER = 3;
+/**
+ * Co jakiś czas (nowe obiekty w scenie): wszystko na warstwę odbicia poza tym, czego w tafli i tak nie widać
+ * albo co kosztuje bez efektu (lista jak w WebGL-owym waterReflect.ts, plus ślady i kałuże).
+ */
+export function markReflect(scene: THREE.Object3D, skip: Set<string>): void {
+  scene.traverse((o) => {
+    const c = o.userData.cat as string | undefined;
+    if ((c && (skip.has(c) || c.startsWith('ślady') || c.startsWith('kałuże') || c.endsWith(' (cień)'))) || o.userData.noReflect) o.layers.disable(REFLECT_LAYER);
+    else o.layers.enable(REFLECT_LAYER);
+  });
+}
 export interface GpuWater {
   mat: THREE.MeshStandardMaterial;
   time: { value: number }; sky: { value: THREE.Color }; sunDir: { value: THREE.Vector3 }; sunCol: { value: THREE.Color };
@@ -65,6 +78,16 @@ export function waterNodeMaterial(waves: THREE.Texture, waterY: number): GpuWate
   const body = mix(output.rgb, bottom, tr);
   // odbicie sceny z lustra, zniekształcone falą
   const refl = reflector({ resolutionScale: 0.5 });
+  // lustro rysuje tylko warstwę REFLECT_LAYER (markReflect zdejmuje z niej trawę, mgłę, dym, chmury…) i co drugą
+  // klatkę (w poprzedniej zostaje gotowy obraz) — wcześniej cała scena rysowała się w każdej klatce drugi raz
+  const base = refl._reflectorBaseNode;
+  if (base) {
+    const getCam = base.getVirtualCamera.bind(base);
+    base.getVirtualCamera = (cam: THREE.Camera): THREE.Camera => { const v = getCam(cam); v.layers.set(REFLECT_LAYER); return v; };
+    const upd = base.updateBefore.bind(base);
+    let n = 0;
+    base.updateBefore = (frame: unknown): unknown => (base.hasOutput && (n++ & 1) ? undefined : upd(frame));
+  }
   refl.uvNode = refl.uvNode.add(slope.mul(0.25));
   const F = float(0.035).add(float(0.965).mul(pow(float(1).sub(clamp(dot(nW, V), 0, 1)), 5)));
   const rDir = reflect(V.negate(), nW);

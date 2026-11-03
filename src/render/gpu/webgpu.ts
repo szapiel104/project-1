@@ -18,6 +18,16 @@ let ready: THREE.WebGLRenderer | null = null;
 /** Moduły three/webgpu i three/tsl (tylko z flagą) — bliźniaki materiałów biorą je stąd, bez statycznego importu */
 export let gpuMods: { W: typeof import('three/webgpu'); TSL: typeof import('three/tsl'); FX: Record<string, unknown> } | null = null;
 let buildBudget = Infinity, buildSpent = 0;
+const builds: { t: number; ms: number; what: string }[] = [];
+/** Składania materiałów w ostatnich 10 s: liczba, czas i najczęstsze obiekty (do dziennika błędów) */
+export function gpuBuildSummary(): string {
+  const now = performance.now(), last = builds.filter((b) => now - b.t < 10000);
+  if (!last.length) return 'brak';
+  const by = new Map<string, number>();
+  for (const b of last) by.set(b.what, (by.get(b.what) ?? 0) + 1);
+  const top = [...by.entries()].sort((a, b) => b[1] - a[1]).slice(0, 5).map(([k, n]) => `${k} ×${n}`).join(', ');
+  return `${last.length} w 10 s, ${Math.round(last.reduce((a, b) => a + b.ms, 0))} ms (${top})`;
+}
 /** Obiekty pominięte w ostatniej klatce, bo ich materiał czeka na złożenie */
 export let gpuDeferredCount = 0;
 /** Początek klatki: budżet składania materiałów w ms (w grze mały, przy wczytywaniu większy) */
@@ -120,7 +130,19 @@ export async function prepareGpu(canvas: HTMLCanvasElement): Promise<void> {
   nodes._createNodeBuilder = (ro: unknown, m: unknown) => {
     const b = create(ro, m);
     const build = b.build.bind(b);
-    b.build = () => { const t = performance.now(); try { return build(); } finally { buildSpent += performance.now() - t; } };
+    b.build = () => {
+      const t = performance.now();
+      try { return build(); } finally {
+        const dt = performance.now() - t;
+        buildSpent += dt;
+        // do dziennika: co i jak często się składa (składanie w kółko = spadek FPS)
+        const r = ro as { object: THREE.Object3D; material: THREE.Material & { isShadowPassMaterial?: boolean } };
+        let o: THREE.Object3D | null = r.object, cat = '';
+        while (o && !cat) { cat = (o.userData?.cat as string | undefined) ?? ''; o = o.parent; }
+        builds.push({ t, ms: dt, what: `${cat || r.object.name || r.object.type}${r.material.isShadowPassMaterial ? ' (cień)' : ''}` });
+        if (builds.length > 400) builds.splice(0, builds.length - 400);
+      }
+    };
     return b;
   };
   (window as unknown as { __gpuStat: () => unknown }).__gpuStat = () => ({ deferred: gpuDeferredCount, pending: gpuPendingCount, spent: buildSpent });
@@ -142,6 +164,10 @@ export let gpuHiddenCount = 0;
  */
 export function hideGlslMaterials(scene: THREE.Object3D): void {
   scene.traverse((o) => {
+    // kształty (morph) z plików modeli bez wag na obiekcie: WebGPU składa wtedy shader z pustą tablicą wag i wywraca
+    // całe przejście obrazu (Michał 3.11.2026, gra deweloperska); gra kształtów nie używa — zdejmujemy je
+    const g = (o as THREE.Mesh).geometry as THREE.BufferGeometry | undefined;
+    if (g && Object.keys(g.morphAttributes).length && !(o as THREE.Mesh).morphTargetInfluences) g.morphAttributes = {};
     const mat = (o as THREE.Mesh).material as THREE.Material | THREE.Material[] | undefined;
     if (!mat) return;
     for (const m of Array.isArray(mat) ? mat : [mat]) {

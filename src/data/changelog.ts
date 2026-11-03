@@ -10,6 +10,11 @@ export type { ChangeEntry } from './changelogTypes';
  */
 const NEW: ChangeEntry[] = [
   {
+    v: '0.93.7', date: '2026-11-03',
+    pl: ['Naprawiony pusty, beżowy ekran po wczytaniu (niektóre postacie wywracały efekty obrazu, a niebo — całą klatkę).', 'Szybszy start gry: grafika, której nie zdążono przygotować przy wczytywaniu, dochodzi płynnie w pierwszych sekundach gry.', 'Odbicie w wodzie jest tańsze: rysuje tylko to, co widać w tafli, i odświeża się co drugą klatkę.'],
+    en: ['Fixed the blank beige screen after loading (some characters broke the image effects, and the sky broke the whole frame).', 'Faster game start: any graphics not ready during loading are added smoothly in the first seconds of play.', 'Water reflections are cheaper: they draw only what shows in the water and refresh every other frame.'],
+  },
+  {
     v: '0.93.6', date: '2026-11-03',
     pl: ['Wraca dym i para z czarów magów (kłęby z samocieniem, młody dym żarzy się od spodu).'],
     en: ['Smoke and steam from mages’ spells are back (self-shadowed puffs, young smoke glowing from below).'],

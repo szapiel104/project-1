@@ -1,5 +1,8 @@
 # Dziennik zmian
 
+## 0.93.7 — 2026-11-03
+- WebGPU: zdjęte morphAttributes bez wag (postacie z glb — przejście obrazu padało na `influences.element`), niebo bez `copy(null)` gdy tło puste, efekty obrazu ponawiane po błędzie (3×); rozgrzewka najwyżej 2,5 s (potem 14 ms/klatkę przez 20 s), lustro wody na REFLECT_LAYER i co drugą klatkę; dziennik: „składanie materiałów” (ile i czego w 10 s).
+
 ## 0.93.6 — 2026-11-03
 - WebGPU: dym czarów `spellSmokeNode` w `gpu/fireNode.ts` (marsz promienia, szum 3D z tekstury, odwrotność macierzy instancji z kąta ziarna).
 

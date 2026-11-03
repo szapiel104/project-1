@@ -156,7 +156,7 @@ export class SkyDome {
     (u.sun!.value as THREE.Vector3).copy(realSun);
     (u.moon!.value as THREE.Vector3).copy(p.sunDir).normalize();
     u.night!.value = p.night; u.dusk!.value = duskK; u.haze!.value = grey;
-    (u.fogCol!.value as THREE.Color).copy(bg);
+    if (bg?.isColor) (u.fogCol!.value as THREE.Color).copy(bg); // tło bywa puste (np. inne tło na chwilę) — wtedy zostaje poprzednie
     // zenit: dzień błękit (szary w niepogodę), o zmierzchu głębszy fiolet, nocą granat
     const zen = new THREE.Color(0x2f62ad).lerp(new THREE.Color(0x737a84), grey).lerp(new THREE.Color(0x3b3f73), duskK * 0.5).lerp(new THREE.Color(0x050914), p.night);
     (u.zenith!.value as THREE.Color).copy(zen);

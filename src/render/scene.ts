@@ -83,6 +83,8 @@ import { applySeason, SEASON_U, SnowTrails } from './season';
 import { Snowfall } from './snowfall';
 import { gpuBackend, gpuDeferredCount, gpuFrameBudget, gpuPending, hideGlslMaterials, takeGpuRenderer } from './gpu/webgpu';
 import { GpuPost } from './gpu/postNode';
+import { markReflect } from './gpu/waterNode';
+import { SKIP as REFLECT_SKIP } from './waterReflect';
 import { Footprints } from './footprints';
 import { maxHp } from '../sim/systems/placement';
 import { StrategyCamera } from './camera';
@@ -201,13 +203,23 @@ export class GameRenderer {
   /** Efekty obrazu na WebGPU (bliźniak composera, gpu/postNode.ts) */
   private gpuPost?: GpuPost;
   private gpuPostFailed = new URLSearchParams(location.search).has('bezefektow');
+  private gpuPostFailedAt = 0;
+  private gpuPostRetries = new URLSearchParams(location.search).has('bezefektow') ? 3 : 0;
   private aaMode: string = 'off';
+  private gpuStart = 0;
   /** Obraz klatki: efekty obrazu (WebGL) albo — na WebGPU, zanim efekty dostaną bliźniaki w TSL — prosto scena */
   private present(): void {
     if (!this.gpu_) { this.composer.render(); return; }
-    if (this.gpuScan++ % 60 === 0) hideGlslMaterials(this.scene);
-    gpuFrameBudget(this.warming ? 45 : 6); // ms składania materiałów na klatkę (reszta w kolejnych klatkach)
-    if (this.gpuPostFailed) { this.renderer.render(this.scene, this.cam.camera); return; }
+    if (this.gpuScan++ % 60 === 0) { hideGlslMaterials(this.scene); markReflect(this.scene, REFLECT_SKIP); }
+    // ms składania materiałów na klatkę (reszta w kolejnych klatkach): przy wczytywaniu dużo, przez pierwsze 20 s gry
+    // średnio (dokładanie tego, czego rozgrzewka nie zdążyła), potem mało
+    if (!this.warming && !this.gpuStart) this.gpuStart = performance.now();
+    gpuFrameBudget(this.warming ? 45 : performance.now() - this.gpuStart < 20000 ? 14 : 6);
+    // po błędzie efektów obrazu: sama scena, a po 3 s (najwyżej trzy razy) nowa próba — przyczyna bywa chwilowa
+    if (this.gpuPostFailed) {
+      if (this.gpuPostRetries < 3 && performance.now() - this.gpuPostFailedAt > 3000) { this.gpuPostRetries++; this.gpuPostFailed = false; this.gpuPost = undefined; }
+      else { this.renderer.render(this.scene, this.cam.camera); return; }
+    }
     try {
       if (!this.gpuPost) this.gpuPost = new GpuPost(this.renderer, this.scene, this.cam.camera);
       const r = this.renderer.getPixelRatio();
@@ -219,6 +231,7 @@ export class GameRenderer {
       // efekty obrazu się wysypały: dalej sama scena (gra ma działać), błąd w dzienniku
       console.error('[webgpu] efekty obrazu wyłączone:', e);
       this.gpuPostFailed = true;
+      this.gpuPostFailedAt = performance.now();
     }
   }
   private scene = new THREE.Scene();
@@ -1789,7 +1802,8 @@ export class GameRenderer {
       const left = gpuDeferredCount + gpuPending();
       if (first < 0) first = Math.max(1, left);
       onProgress?.(Math.max(0, first - left), first);
-      if (left === 0 || performance.now() - t0 > 12000) break;
+      // najwyżej 2,5 s czekania: resztę gra dokłada już w trakcie (Michał 3.11.2026: „wolno się wszystko wczytuje”)
+      if (left === 0 || performance.now() - t0 > 2500) break;
       await new Promise<void>((ok) => requestAnimationFrame(() => ok()));
     }
   }

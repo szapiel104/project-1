@@ -147,6 +147,7 @@ async function load(): Promise<void> {
   await step(tx('Gotowe', 'Ready'));
   (window as unknown as { __loadTimes: unknown }).__loadTimes = times;
   // czasy wczytywania w nagłówku dziennika błędów (F3 → kopiuj): prawdziwe liczby z karty gracza
+  void Promise.all([import('./debug/errlog'), import('./render/gpu/webgpu')]).then(([m, g]) => { if (g.GPU_MODE) m.setContext('składanie materiałów', () => g.gpuBuildSummary()); });
   void import('./debug/errlog').then((m) => m.setContext('wczytywanie', () => `${(times.reduce((a, [, ms]) => a + ms, 0) / 1000).toFixed(1)} s (${times.map(([t, ms]) => `${t.replace(/…$/, '')} ${(ms / 1000).toFixed(1)}`).join(', ')})${document.hidden ? ' [karta w tle]' : ''}`));
   console.info('[wczytywanie]', times.map(([t, ms]) => `${t} ${ms} ms`).join(' | '));
   // ?wczytywanie=1: ekran zostaje na wierzchu (do oglądania i poprawiania jego wyglądu)
