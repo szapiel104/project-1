@@ -1,5 +1,8 @@
 # Dziennik zmian
 
+## 0.92.9 — 2026-11-03
+- WebGPU: stały rozmiar mapy cieni (bez przełączania 4096/2048 przy oddalaniu) i bez `shadow.map.dispose()` — „Destroyed texture ShadowDepthTexture used in a submit”.
+
 ## 0.92.8 — 2026-11-03
 - WebGPU: macierz instancji przez `instanceMatrixNode()` (4× vec4 z InstancedInterleavedBuffer, synchronizacja wersji co klatkę) zamiast atrybutu mat4, którego WebGPU nie ma — ogień, chmury, postacie, drzewa z daleka.
 

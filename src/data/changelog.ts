@@ -10,6 +10,11 @@ export type { ChangeEntry } from './changelogTypes';
  */
 const NEW: ChangeEntry[] = [
   {
+    v: '0.92.9', date: '2026-11-03',
+    pl: ['Naprawione błędy cieni na nowym silniku przy oddalaniu i przybliżaniu kamery.'],
+    en: ['Fixed shadow errors on the new engine when zooming the camera in and out.'],
+  },
+  {
     v: '0.92.8', date: '2026-11-03',
     pl: ['Naprawiony płomień ogniska i pochodni rozciągnięty w długi, ciemny pas (to samo poprawione w chmurach, postaciach i dalekich drzewach).'],
     en: ['Fixed campfire and torch flames stretching into a long dark streak (the same fix applies to clouds, characters and distant trees).'],

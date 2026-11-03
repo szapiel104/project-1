@@ -3346,6 +3346,9 @@ export class GameRenderer {
   private shadowSize(n: number): void {
     if (n <= 0 || this.sun.shadow.mapSize.x === n) return;
     this.sun.shadow.mapSize.setScalar(n);
+    // WebGPU sam zmienia rozmiar swojej mapy cieni; zniszczenie jej tutaj zostawiało w potokach martwą teksturę
+    // („Destroyed texture ShadowDepthTexture used in a submit”, Michał 3.11.2026)
+    if (this.gpu_) return;
     this.sun.shadow.map?.dispose();
     (this.sun.shadow as { map: unknown }).map = null;
   }
@@ -3356,7 +3359,8 @@ export class GameRenderer {
    */
   private aimSun(): void {
     // z daleka mapa cieni 2048 zamiast 4096 (z histerezą, żeby przy progu nie przełączała się w kółko)
-    if (this.shadowMax > 0 && !this.calm) {
+    // (na WebGPU stały rozmiar — karta ma zapas, a przełączanie wymieniało teksturę pod działającymi potokami)
+    if (this.shadowMax > 0 && !this.calm && !this.gpu_) {
       const d = this.cam.distance, cur = this.sun.shadow.mapSize.x;
       this.shadowSize(d > 34 ? Math.min(this.shadowMax, 2048) : d < 30 ? this.shadowMax : cur);
     }
