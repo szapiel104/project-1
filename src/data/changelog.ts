@@ -10,6 +10,17 @@ export type { ChangeEntry } from './changelogTypes';
  */
 const NEW: ChangeEntry[] = [
   {
+    v: '0.84.2', date: '2026-11-03',
+    pl: [
+      'Iskry nad ogniskami i pożarami to teraz małe, ostre, rozżarzone punkty — z bliska nie rosną już w wielkie rozmyte pomarańczowe kule.',
+      'Blask okien i pochodni nocą delikatniejszy i z bliska ograniczony, bez plam na pół ekranu.',
+    ],
+    en: [
+      'Sparks above campfires and blazes are now small, sharp glowing points — up close they no longer swell into big blurry orange balls.',
+      'Window and torch glow at night is softer and capped up close, with no blotches across half the screen.',
+    ],
+  },
+  {
     v: '0.84.1', date: '2026-11-03',
     pl: [
       'Zamiast kopii jednego kamienia leżą trzy różne odmiany głazów, wrośnięte w zbocze; skała przy urwiskach jest ciemniejsza.',

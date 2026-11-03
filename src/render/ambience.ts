@@ -23,6 +23,27 @@ function softTexture(): THREE.Texture {
 }
 
 /**
+ * Iskra: mały, ostry, rozżarzony punkt z wąską poświatą (Michał 3.11.2026: „particle system tragiczny” — iskry z miękkiej
+ * plamy wyglądały z bliska jak wielkie rozmyte pomarańczowe kule). Środek pełny do 18 % promienia, potem szybko gaśnie.
+ */
+function sparkTexture(): THREE.Texture {
+  const c = document.createElement('canvas');
+  c.width = c.height = 32;
+  const x = c.getContext('2d')!;
+  const g = x.createRadialGradient(16, 16, 0, 16, 16, 16);
+  g.addColorStop(0, 'rgba(255,255,255,1)');
+  g.addColorStop(0.18, 'rgba(255,255,255,1)');
+  g.addColorStop(0.32, 'rgba(255,255,255,0.35)');
+  g.addColorStop(0.6, 'rgba(255,255,255,0.06)');
+  g.addColorStop(1, 'rgba(255,255,255,0)');
+  x.fillStyle = g;
+  x.fillRect(0, 0, 32, 32);
+  const t = new THREE.CanvasTexture(c);
+  t.colorSpace = THREE.SRGBColorSpace;
+  return t;
+}
+
+/**
  * Kłęby dymu: atlas 2×2 czterech różnych obłoczków (kilkanaście miękkich kul zlanych w jeden kłąb, przetkanych
  * drobnym szumem — brzegi strzępią się jak prawdziwy dym, a nie jak gładkie koło). Każda cząstka bierze jeden z nich
  * i obraca się powoli, więc słup dymu nie powtarza wzoru (Michał 3.11.2026: „u nas dym jest brzydki”).
@@ -109,13 +130,15 @@ attribute float alpha;
 attribute vec3 tint;
 attribute float spin;
 uniform float scale;
+uniform float maxPx;
 varying float vA;
 varying vec3 vT;
 varying float vS;
 #include <fog_pars_vertex>
 void main() {
   vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
-  gl_PointSize = size * scale / max(0.1, -mvPosition.z);
+  // z bliska punkt nie rośnie bez końca (iskra zostaje iskrą, a nie kulą na pół ekranu)
+  gl_PointSize = min(size * scale / max(0.1, -mvPosition.z), maxPx);
   gl_Position = projectionMatrix * mvPosition;
   vA = alpha; vT = tint; vS = spin;
   #include <fog_vertex>
@@ -163,7 +186,7 @@ class Pool {
   readonly turn: Float32Array;
   private next = 0;
   readonly mat: THREE.ShaderMaterial;
-  constructor(readonly n: number, map: THREE.Texture, additive: boolean, atlas = false) {
+  constructor(readonly n: number, map: THREE.Texture, additive: boolean, atlas = false, maxPx = 4096) {
     this.pos = new Float32Array(n * 3); this.size = new Float32Array(n); this.alpha = new Float32Array(n);
     this.tint = new Float32Array(n * 3); this.vel = new Float32Array(n * 3); this.age = new Float32Array(n).fill(1);
     this.life = new Float32Array(n).fill(1); this.base = new Float32Array(n);
@@ -176,7 +199,7 @@ class Pool {
     geo.setAttribute('spin', new THREE.BufferAttribute(this.spin, 1).setUsage(atlas ? THREE.DynamicDrawUsage : THREE.StaticDrawUsage));
     this.atlas = atlas;
     this.mat = new THREE.ShaderMaterial({
-      uniforms: THREE.UniformsUtils.merge([THREE.UniformsLib.fog, { map: { value: null }, scale: { value: 600 }, uAtlas: { value: atlas ? 1 : 0 } }]),
+      uniforms: THREE.UniformsUtils.merge([THREE.UniformsLib.fog, { map: { value: null }, scale: { value: 600 }, uAtlas: { value: atlas ? 1 : 0 }, maxPx: { value: maxPx } }]),
       vertexShader: VERT, fragmentShader: FRAG, transparent: true, depthWrite: false, fog: !additive,
       blending: additive ? THREE.AdditiveBlending : THREE.NormalBlending,
     });
@@ -244,7 +267,8 @@ export class Ambience {
   readonly group = new THREE.Group();
   private soft = softTexture();
   private smoke = new Pool(1800, puffTexture(), false, true);
-  private sparks = new Pool(700, this.soft, true);
+  /** Iskry: ostre punkty, najwyżej 9 pikseli (na ekranach z gęstymi pikselami skalowane w update) */
+  private sparks = new Pool(700, sparkTexture(), true, false, 9);
   private glow: Pool;
   private mist: THREE.InstancedMesh;
   private mistMat: THREE.MeshBasicMaterial;
@@ -259,7 +283,8 @@ export class Ambience {
   enabled = true;
 
   constructor() {
-    this.glow = new Pool(1600, this.soft, true);
+    // blask okien: miękka poświata, ale z bliska nie większa niż ok. 70 pikseli
+    this.glow = new Pool(1600, this.soft, true, false, 70);
     this.mistMat = new THREE.MeshBasicMaterial({ map: mistTexture(), transparent: true, depthWrite: false, opacity: 0, color: 0xffffff, fog: true });
     this.mist = new THREE.InstancedMesh(new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2), this.mistMat, Ambience.MIST);
     this.mist.frustumCulled = false;
@@ -307,6 +332,9 @@ export class Ambience {
   update(dt: number, o: { night: number; mist: number; rain: number; fog: THREE.Color; focus: THREE.Vector3; ground: (x: number, z: number) => number; scale: number; calm: boolean }): void {
     this.time += dt;
     for (const p of [this.smoke, this.sparks, this.glow]) p.mat.uniforms.scale!.value = o.scale;
+    const dpr = typeof devicePixelRatio === 'number' ? Math.min(2, devicePixelRatio) : 1;
+    this.sparks.mat.uniforms.maxPx!.value = 9 * dpr;
+    this.glow.mat.uniforms.maxPx!.value = 70 * dpr;
     this.group.visible = this.enabled;
     if (!this.enabled) return;
     const night = o.night;
@@ -370,8 +398,8 @@ export class Ambience {
       const wob = Math.sin(this.time * 7 + K.base[i]! * 40) * 0.3;
       K.pos[i * 3] = K.pos[i * 3]! + (K.vel[i * 3]! + wob) * dt; K.pos[i * 3 + 1] = K.pos[i * 3 + 1]! + K.vel[i * 3 + 1]! * dt * (1 - a * 0.6); K.pos[i * 3 + 2] = K.pos[i * 3 + 2]! + K.vel[i * 3 + 2]! * dt;
       const tw = 0.6 + 0.4 * Math.sin(this.time * 30 + K.base[i]! * 90);
-      K.size[i] = 0.09 * (1 - a * 0.5);
-      K.alpha[i] = (1 - a) * tw * (0.45 + night * 0.55);
+      K.size[i] = 0.055 * (1 - a * 0.45);
+      K.alpha[i] = Math.min(1, (1 - a) * 1.3) * tw * (0.6 + night * 0.4);
       K.tint[i * 3] = 1; K.tint[i * 3 + 1] = 0.75 - a * 0.5; K.tint[i * 3 + 2] = 0.3 - a * 0.28;
     }
     K.flush();
@@ -380,8 +408,8 @@ export class Ambience {
     const lit = Math.max(0, (night - 0.1) / 0.9);
     for (let i = 0; i < nWin; i++) {
       const fl = 0.82 + 0.1 * Math.sin(this.time * 6 + G.base[i]! * 50) + 0.08 * Math.sin(this.time * 13.7 + G.base[i]! * 31);
-      G.size[i] = lit > 0 ? 0.32 : 0;
-      G.alpha[i] = lit * fl * 0.45;
+      G.size[i] = lit > 0 ? 0.24 : 0;
+      G.alpha[i] = lit * fl * 0.32;
     }
     G.points.geometry.attributes.size!.needsUpdate = true;
     G.points.geometry.attributes.alpha!.needsUpdate = true;

@@ -1,5 +1,8 @@
 # Dziennik zmian
 
+## 0.84.2 — 3.11.2026
+- `ambience.ts`: osobna ostra tekstura iskier, `maxPx` w shaderze cząstek (iskry 9 px, blask 70 px × DPR), mniejsze iskry i blask okien.
+
 ## 0.84.1 — 3.11.2026
 - `terrain.ts`: lista `rocks` (jeden model) → `pebbles` (trzy odmiany `models.boulders()`), głazy wrastają w zbocze, ciemniejsza skała wewnątrz mapy, step: mniej i miękciej piachu.
 - Generator 9 (`MAP_GEN`): bez skałek (`relief.ts`, gen ≥ 9); mapy z generatora 8 bez zmian. Uwagi Michała do dalszej pracy w `docs/teren.md`. Boty: bez zmian.
