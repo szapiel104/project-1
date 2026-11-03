@@ -10,6 +10,19 @@ export type { ChangeEntry } from './changelogTypes';
  */
 const NEW: ChangeEntry[] = [
   {
+    v: '0.83.0', date: '2026-11-03',
+    pl: [
+      'Koszary jak w grach o zamkach: rząd wysokich kafelków z całą postacią żołnierza i liczbą, ilu możesz wyszkolić. Koszt, zapasy i siła — w karcie po najechaniu.',
+      'W koszarach: klik szkoli jednego, Shift+klik pięciu, Ctrl+klik wszystkich; prawy klik stawia flagę zbiórki tego rodzaju (Shift+prawy zdejmuje).',
+      'Karty budowy: duży obrazek budynku i nazwa; opis, koszt i warunek odblokowania pokazują się po najechaniu.',
+    ],
+    en: [
+      'Barracks as in castle games: a row of tall tiles with the whole soldier and how many you can train. Cost, stock and strength show on a card when you hover.',
+      'In the barracks: click trains one, Shift+click five, Ctrl+click all; right-click sets a rally flag for that kind (Shift+right-click removes it).',
+      'Build cards: a large picture of the building and its name; description, cost and unlock condition appear on hover.',
+    ],
+  },
+  {
     v: '0.82.0', date: '2026-11-03',
     pl: [
       '„Jak grać” jak prawdziwa księga: pergaminowe strony, czerwone nagłówki, inicjał na początku rozdziału, rady z pieczęcią i przejście do poprzedniego i następnego rozdziału.',

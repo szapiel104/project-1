@@ -94,7 +94,7 @@ function* thumbSteps(models: ModelFactory, teamColor: number, size: number, out:
  * w trzech czwartych od przodu, od pasa w górę z bronią, na ciemnym tle z ciepłym światłem od pochodni.
  * Klucz: `u:<id jednostki>`.
  */
-export function renderUnitPortraits(teamColor: number, size = 192): Map<string, string> {
+export function renderUnitPortraits(teamColor: number, size = 240): Map<string, string> {
   const out = new Map<string, string>();
   let renderer: THREE.WebGLRenderer;
   try {
@@ -111,7 +111,9 @@ export function renderUnitPortraits(teamColor: number, size = 192): Map<string, 
   const rim = new THREE.DirectionalLight(0xffa860, 1.6); rim.position.set(2, 1.5, -2); scene.add(rim);
   const cam = new THREE.PerspectiveCamera(26, 1, 0.05, 20);
   const m = new THREE.Matrix4();
-  for (const kind of ['spearman', 'archer', 'mageFire', 'mageWater'] as const) {
+  // pełna postać do kafelków koszar (Michał 3.11.2026: jednostki widoczne w pełnej okazałości, szczegóły po najechaniu)
+  const FW = Math.round(size * 0.66), FH = size;
+  for (const kind of ['spearman', 'archer', 'manatarms', 'sapper', 'mageFire', 'mageWater'] as const) {
     const root = new THREE.Group();
     scene.add(root);
     const f = new Figures(1, root as unknown as THREE.Scene, kind);
@@ -127,8 +129,23 @@ export function renderUnitPortraits(teamColor: number, size = 192): Map<string, 
     const lookY = box.min.y + h * 0.66;
     cam.position.set(0.25 * h, lookY + 0.05 * h, 1.55 * h);
     cam.lookAt(0, lookY, 0);
+    renderer.setSize(size, size, false);
+    cam.aspect = 1; cam.updateProjectionMatrix();
     renderer.render(scene, cam);
     out.set(`u:${kind}`, renderer.domElement.toDataURL('image/png'));
+    // cała postać od stóp po czubek broni, lekko z dołu — jak na kafelku w koszarach
+    const fullH = box.max.y - box.min.y;
+    const midY = box.min.y + fullH * 0.5;
+    cam.aspect = FW / FH; cam.updateProjectionMatrix();
+    const dist = (fullH * 0.56) / Math.tan(THREE.MathUtils.degToRad(cam.fov / 2));
+    cam.position.set(0.3 * dist, midY - 0.04 * fullH, dist);
+    cam.lookAt(0, midY, 0);
+    renderer.setSize(FW, FH, false);
+    renderer.render(scene, cam);
+    const full = renderer.domElement.toDataURL('image/png');
+    out.set(`uf:${kind}`, full);
+    // saper, drabiniarz i chłop z kilofem to ta sama postać na mapie
+    if (kind === 'sapper') { out.set('uf:ladderman', full); out.set('uf:levy', full); }
     scene.remove(root);
     root.traverse((o) => { const mm = o as THREE.Mesh; if (mm.isMesh) { mm.geometry.dispose(); (mm.material as THREE.Material).dispose(); } });
   }

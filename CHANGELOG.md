@@ -1,5 +1,9 @@
 # Dziennik zmian
 
+## 0.83.0 — 3.11.2026
+- `src/ui/hoverCard.ts` (wspólna karta po najechaniu), `src/ui/recruitTiles.ts` (kafelki koszar wydzielone z hud.ts), `src/ui/tiles.css`; pełne postacie `uf:<id>` w `renderUnitPortraits` (także w trybie testowym).
+- Boty: bez zmian (tylko interfejs).
+
 ## 0.82.0 — 3.11.2026
 - Księgi menu na pergaminie (`src/ui/book.css`), nagłówki rozdziałów (`bookHead`), ikony spisu, pager rozdziałów, karty poziomów grafiki z `aria-pressed`.
 - Migracje f, g i note_delete wykonane w Supabase.

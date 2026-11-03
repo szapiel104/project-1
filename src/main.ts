@@ -246,8 +246,8 @@ const savedThumbs = TEST ? null : cachedThumbs();
 // bez miniatur w pamięci (pierwsze wejście po nowej wersji) gra startuje bez nich, a rysują się w tle po starcie
 // (thumbsLater) — wcześniej rysowanie wszystkich naraz stało ok. 2,5 s w środku wczytywania, a potem drugi raz w grze
 const thumbs: Map<string, string> = TEST ? new Map() : savedThumbs ? new Map(savedThumbs) : new Map();
-// portrety żołnierzy do koszar (rysowane zawsze: dwa szybkie ujęcia, niezależne od zapisanych miniatur budynków)
-if (!TEST) for (const [k, v] of renderUnitPortraits(TEAM_COLORS[0]!)) thumbs.set(k, v);
+// portrety żołnierzy do koszar (rysowane zawsze, także w trybie testowym: dwa szybkie ujęcia, niezależne od zapisanych miniatur budynków)
+for (const [k, v] of renderUnitPortraits(TEAM_COLORS[0]!)) thumbs.set(k, v);
 const hud = createHud(document.getElementById('ui')!, {
   onArmyKind: (kind, shift) => {
     const ids = game.soldiers.filter((x) => chosen.has(x.id) && (UNITS[x.kind]!.id === kind) !== shift).map((x) => x.id);

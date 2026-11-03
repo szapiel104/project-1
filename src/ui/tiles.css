@@ -1,0 +1,59 @@
+/*
+ * Kafelki jednostek w koszarach i karta szczegółów po najechaniu (Michał 3.11.2026): widać samą postać w pełnej
+ * okazałości, a koszt, zapasy i siłę dopiero na karcie po najechaniu.
+ */
+.info:has(.recruit:not([hidden])) { width: min(600px, calc(100vw / var(--ui, 1) - 24px)); }
+.info .recruit { display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; padding: 10px 0; }
+.rt-row { display: flex; flex-wrap: wrap; gap: 8px; }
+.rt-tile { position: relative; flex: 0 0 auto; width: 104px; height: 158px; padding: 0; overflow: hidden; cursor: pointer;
+  background: radial-gradient(ellipse at 50% 30%, #3a2a1a, #120b06 75%); border: 1px solid #0b0704; border-radius: 2px;
+  box-shadow: 0 0 0 2px #6e5420, 0 0 0 3px #0b0704, inset 0 0 18px rgba(0, 0, 0, .7); transition: box-shadow .12s, transform .12s; }
+.rt-tile:hover, .rt-tile:focus-visible { box-shadow: 0 0 0 2px #f0cf72, 0 0 0 3px #0b0704, 0 0 16px rgba(255, 190, 80, .45), inset 0 0 18px rgba(0, 0, 0, .5); transform: translateY(-2px); }
+.rt-tile:focus-visible { outline: 2px solid #fff3c4; outline-offset: 3px; }
+.rt-tile:active { transform: translateY(0); }
+.rt-pic { position: absolute; inset: 0 0 26px; display: grid; place-items: center; }
+.rt-pic.full img { width: 100%; height: 100%; object-fit: contain; object-position: center bottom; display: block; filter: drop-shadow(0 4px 6px rgba(0, 0, 0, .6)); }
+.rt-pic svg { width: 80px; height: 80px; }
+.rt-name { position: absolute; left: 0; right: 0; bottom: 0; min-height: 26px; display: grid; place-items: center; padding: 3px 4px; font: 700 13px/1.1 var(--text, sans-serif); color: #f6e8c8; text-align: center; text-shadow: 0 1px 2px #000;
+  background: linear-gradient(rgba(10, 6, 3, .55), rgba(10, 6, 3, .95)); border-top: 1px solid rgba(154, 122, 42, .6); }
+.rt-max { position: absolute; top: 5px; right: 5px; min-width: 24px; height: 24px; padding: 0 5px; box-sizing: border-box; font: 800 13px/22px var(--text, sans-serif); text-align: center; color: #1c2a14; background: #9fd889; border: 1px solid #e3ffd6; border-radius: 12px; box-shadow: 0 1px 3px #000; }
+.rt-tile.cant .rt-max { color: #fff; background: #7a2a1f; border-color: #e9a598; }
+.rt-tile.cant .rt-pic { filter: grayscale(.85) brightness(.6); }
+.rt-tile.cant .rt-name { color: #c9b68f; }
+.rt-flag { position: absolute; top: 5px; left: 6px; font-size: 16px; line-height: 1; color: #ffd76a; text-shadow: 0 1px 2px #000; }
+.rt-flag[hidden] { display: none; }
+.info .rally-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.info .rally-row .hint { flex-basis: 100%; margin: 0; font-size: 13px; }
+
+/* karta po najechaniu */
+.hover-card { position: fixed; z-index: 9000; width: 300px; max-width: calc(100vw - 16px); padding: 12px 14px; display: grid; gap: 8px; pointer-events: none;
+  font: 500 14.5px/1.4 var(--text, sans-serif); color: #efe2c4; background: linear-gradient(#2a1e14, #160f09); border: 1px solid #0b0704; border-radius: 3px;
+  box-shadow: 0 0 0 2px #8a6a3a, 0 0 0 3px #0b0704, 0 12px 26px rgba(0, 0, 0, .6); zoom: var(--ui, 1); }
+.hover-card[hidden] { display: none; }
+.hover-card .hc-head { display: flex; align-items: center; gap: 10px; }
+.hover-card .hc-pic { width: 40px; height: 40px; flex: none; overflow: hidden; border: 1px solid #9a7a2a; background: #120b06; }
+.hover-card .hc-pic img, .hover-card .hc-pic svg { width: 100%; height: 100%; object-fit: cover; display: block; }
+.hover-card .hc-name { font: 800 18px/1.15 var(--text, sans-serif); color: #ffd76a; }
+.hover-card p { margin: 0; }
+.hover-card .hc-desc { color: #e6d6b4; }
+.hover-card .hc-cost { display: flex; flex-wrap: wrap; gap: 4px 14px; padding: 6px 0; border-top: 1px solid rgba(154, 122, 42, .35); border-bottom: 1px solid rgba(154, 122, 42, .35); }
+.hover-card .rt-need { display: inline-flex; align-items: center; gap: 4px; font-size: 15px; }
+.hover-card .rt-need strong { color: #fff4dc; }
+.hover-card .rt-need em { font-style: normal; font-size: 13px; color: #c9b68f; }
+.hover-card .rt-need.short strong, .hover-card .rt-need.short em, .hover-card span.rt-need.short { color: #ff8a78; }
+.hover-card .hc-stats { font-size: 13.5px; color: #d8c6a0; }
+.hover-card .hc-can { font-weight: 700; color: #b8f0a6; }
+.hover-card .hc-can.no { color: #ff9c8a; }
+.hover-card .hc-flag { color: #ffd76a; font-size: 13.5px; }
+.hover-card .hc-keys { font-size: 12.5px; color: #b9a682; }
+@media (prefers-reduced-motion: reduce) { .rt-tile { transition: none; } .rt-tile:hover, .rt-tile:focus-visible { transform: none; } }
+
+/* karty budowy: sam budynek w pełnej okazałości i nazwa; koszt i opis w karcie po najechaniu */
+#ui .card { width: 156px; padding: 4px 4px 8px; }
+#ui .card img { width: 146px; height: 146px; margin: -4px auto -6px; }
+#ui .card .build-cost { display: none; }
+#ui .card .build-name { font-size: 15.5px; line-height: 1.15; }
+#ui .card.locked .build-need { font-size: 0; gap: 0; padding: 5px 7px; }
+.hover-card .build-cost { display: flex; flex-wrap: wrap; gap: 6px; justify-content: flex-start; margin: 0; font-size: 15px; font-weight: 700; color: #fff4dc; }
+.hover-card .build-cost .cost-chip { display: inline-flex; align-items: center; gap: 5px; padding: 2px 8px 2px 2px; background: #0d0a07; border: 1px solid #5a4630; text-shadow: 1px 1px 0 #000; }
+.hover-card .build-cost .cost-chip .ico svg { width: 22px; height: 22px; display: block; }

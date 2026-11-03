@@ -1,3 +1,5 @@
+import { createRecruitTiles } from './recruitTiles';
+import { hoverCard, refreshHoverCard } from './hoverCard';
 import { me, onAccount } from '../net/supa';
 import { avatarSvg } from './avatars';
 import { BUILD_GROUPS } from './buildGroups';
@@ -731,11 +733,10 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
   trainBtn.hidden = true;
   trainBtn.addEventListener('click', () => events.onTrain(infoId, 1));
   const trainNote = el('p', 'hint');
-  // koszary: obok siebie karty jednostek z dużym portretem; na każdej przyciski +1, +5 i „+ wszystkie”
+  // koszary: rząd wysokich kafelków z całą postacią; koszt i siła na karcie po najechaniu (recruitTiles.ts)
   const recruit = el('div', 'recruit');
   recruit.hidden = true;
   let lastRecruit: RecruitUnit[] = [];
-  const unitCards = new Map<string, { card: HTMLElement; stats: HTMLElement; needs: HTMLElement; b1: HTMLButtonElement; b5: HTMLButtonElement; bAll: HTMLButtonElement; flag: HTMLButtonElement }>();
   // wspólny punkt zbiórki dla wszystkich nowych żołnierzy (pod kartami)
   const rallyRow = el('div', 'rally-row');
   const rallyAll = el('button', 'btn-main', tx('⚑ Punkt zbiórki dla wszystkich', '⚑ Rally point for all'));
@@ -748,48 +749,16 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
   // taran: wóz z daszkiem i belką z kutą głowicą
   const RAM_PORTRAIT = '<svg viewBox="0 0 32 32" width="34" height="34" aria-hidden="true"><path d="M5 15l11-7 11 7z" fill="#8a6a44" stroke="#2a1c10"/><rect x="6" y="15" width="20" height="2" fill="#5e4329"/><path d="M8 17v7M24 17v7" stroke="#5e4329" stroke-width="2"/><rect x="3" y="18" width="24" height="3" rx="1.5" fill="#8a5a2b" stroke="#2a1c10"/><path d="M27 17.5l3 1.5v1.5l-3 1.5z" fill="#6a6e76" stroke="#2a1c10"/><circle cx="10" cy="26" r="3" fill="#6e4a2c" stroke="#2a1c10"/><circle cx="22" cy="26" r="3" fill="#6e4a2c" stroke="#2a1c10"/></svg>';
   const PORTRAITS: Record<string, string> = { spearman: PORTRAIT, archer: ARCHER_PORTRAIT, ram: RAM_PORTRAIT, manatarms: MANATARMS_PORTRAIT, sapper: SAPPER_PORTRAIT, ladderman: SAPPER_PORTRAIT, mageFire: ARCHER_PORTRAIT, mageWater: ARCHER_PORTRAIT };
-  const drawRecruit = (): void => {
-    // koszary i siedziby magów mają różne karty: widać tylko te, które szkoli otwarty budynek
-    for (const [id, c] of unitCards) c.card.hidden = !lastRecruit.some((r) => r.id === id);
-    for (const r of lastRecruit) {
-      let c = unitCards.get(r.id);
-      if (!c) {
-        const card = el('div', 'unit-card');
-        const pic = el('span', 'unit-pic');
-        // portret z modelu 3D (ten sam żołnierz co na mapie); bez niego rysunek
-        const shot = thumbs.get(`u:${r.id}`);
-        if (shot) { const img = el('img'); img.src = shot; img.alt = ''; pic.append(img); pic.classList.add('shot'); }
-        else pic.innerHTML = PORTRAITS[r.id] ?? PORTRAIT;
-        const name = el('strong', 'unit-name', r.name);
-        const stats = el('span', 'unit-stats');
-        const needs = el('div', 'unit-needs');
-        const btns = el('div', 'unit-btns');
-        const mk = (n: number, label: string): HTMLButtonElement => { const b = el('button', 'btn-main btn-ok', label); b.type = 'button'; b.addEventListener('click', () => events.onTrain(infoId, n, r.id)); btns.append(b); return b; };
-        const b1 = mk(1, '+1'), b5 = mk(5, '+5'), bAll = mk(999, tx('+ wszyscy', '+ all'));
-        // flaga zbiórki tylko dla tego rodzaju: klik i wskazanie miejsca na mapie
-        const flag = el('button', 'unit-flag', tx('⚑ Flaga zbiórki', '⚑ Rally flag'));
-        flag.type = 'button';
-        flag.title = tx(`Gdzie mają iść nowi (${r.name.toLowerCase()}): kliknij, potem wskaż miejsce na mapie. Prawy klik na przycisku zdejmuje flagę.`, `Where new recruits (${r.name.toLowerCase()}) should go: click, then pick a spot on the map. Right-click the button to remove the flag.`);
-        flag.addEventListener('click', () => events.onRally(infoId, r.id, false));
-        flag.addEventListener('contextmenu', (e) => { e.preventDefault(); events.onRally(infoId, r.id, true); });
-        card.append(pic, name, stats, needs, btns, flag);
-        if (!rallyRow.isConnected) recruit.append(rallyRow);
-        recruit.insertBefore(card, rallyRow);
-        c = { card, stats, needs, b1, b5, bAll, flag };
-        unitCards.set(r.id, c);
-      }
-      setText(c.stats, `${t('hud.hp')} ${r.hp} · ${r.attack ? `${t('hud.attack')} ${r.attack}` : tx('nie walczy, rozbiera wrogie ruiny', 'does not fight, strips enemy ruins')}${r.range ? ` · ${tx('zasięg', 'range')} ${r.range}` : ''}${r.armor ? ` · ${tx('zbroja', 'armour')} ${r.armor}%` : ''}`);
-      const row = (icon: string, have: number, need: number): string => `<span class="need${have < need ? ' short' : ''}"><svg viewBox="0 0 20 20" width="22" height="22">${ICONS[icon] ?? ''}</svg><strong>${need}</strong><em>(${have})</em></span>`;
-      c.needs.innerHTML = r.magic
-        ? row('gold', r.gold, r.cost) + (r.gear ? row(r.gear.res, r.gear.have, 1) : '') + row('idle', r.idle, 1) + `<span class="need${r.magic.have >= r.magic.cap ? ' short' : ''}">${tx(`magów ${r.magic.have} / ${r.magic.cap}`, `mages ${r.magic.have} / ${r.magic.cap}`)}</span>`
-        : row(r.weapon, r.have, r.need ?? 1) + (r.gear ? row(r.gear.res, r.gear.have, 1) : '') + row('gold', r.gold, r.cost) + row('idle', r.idle, 1);
-      c.b1.disabled = r.max < 1; c.b5.disabled = r.max < 5; c.bAll.disabled = r.max < 1;
-      setText(c.bAll, tx(`+ wszyscy (${r.max})`, `+ all (${r.max})`));
-      c.card.classList.toggle('cant', r.max < 1);
-      c.flag.setAttribute('aria-pressed', String(!!r.rally));
-      setText(c.flag, r.rally ? tx('⚑ Flaga ustawiona — zmień', '⚑ Flag set — change') : tx('⚑ Flaga zbiórki', '⚑ Rally flag'));
-    }
-  };
+  const tilesBox = createRecruitTiles({
+    train: (n, unit) => events.onTrain(infoId, n, unit),
+    rally: (unit, clear) => events.onRally(infoId, unit, clear),
+    full: (id) => thumbs.get(`uf:${id}`),
+    bust: (id) => thumbs.get(`u:${id}`),
+    svg: (id) => PORTRAITS[id] ?? PORTRAIT,
+    icons: ICONS,
+  });
+  recruit.append(tilesBox.node, rallyRow);
+  const drawRecruit = (): void => tilesBox.draw(lastRecruit);
 
   const hpLine = el('div', 'hp-line');
   const hpBar = el('span', 'hp-bar');
@@ -1005,11 +974,23 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
     catButtons.set(id, b);
     cats.append(b);
   }
+  /** Karta po najechaniu na budynek: nazwa, opis, koszt (czerwony, gdy brakuje) i warunek odblokowania */
+  const buildTip = (def: BuildingDef, b: HTMLElement): Node[] => {
+    const head = el('div', 'hc-head');
+    head.append(el('strong', 'hc-name', t(def.name)));
+    const out: Node[] = [head, el('p', 'hc-desc', t(`d.${def.id}`))];
+    const cost = b.querySelector('.build-cost');
+    if (cost) { const c = el('div', 'hc-cost build-cost'); c.append(...[...cost.childNodes].map((n) => n.cloneNode(true))); out.push(c); }
+    const need = b.querySelector<HTMLElement>('.build-need');
+    if (b.classList.contains('locked') && need?.textContent) out.push(el('p', 'hc-can no', `🔒 ${need.textContent}`));
+    else if (b.classList.contains('poor')) out.push(el('p', 'hc-can no', tx('Brakuje surowców na budowę.', 'Not enough resources to build.')));
+    else out.push(el('p', 'hc-can', tx('Kliknij i wskaż miejsce na mapie.', 'Click, then pick a spot on the map.')));
+    return out;
+  };
   for (const def of BUILDINGS) {
     if (!def.buildable || def.legacy) continue; // kamieniołom i kopalnia żelaza zastąpione kopalnią pod górami
     const b = el('button', 'card');
     b.type = 'button';
-    b.title = t(`d.${def.id}`);
     b.dataset.build = def.id;
     b.setAttribute('aria-pressed', 'false');
     const src = thumbs.get(def.id);
@@ -1028,6 +1009,8 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
     text.append(el('span', 'build-name', t(def.name)), costBox, need);
     b.append(text);
     b.addEventListener('click', () => events.onPickBuilding(picked === def.id ? null : def.id));
+    // na karcie sam budynek i nazwa; koszt, opis i warunek odblokowania — w karcie po najechaniu (Michał 3.11.2026)
+    hoverCard(b, () => buildTip(def, b));
     buildButtons.set(def.id, b);
   }
   // karty ułożone w grupy po funkcji (buildGroups.ts), z podpisem nad każdą grupą; budynek bez grupy trafia do „Inne”
@@ -1332,8 +1315,9 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
         const msg = lock ? needText(lock) : '';
         setText(need, msg);
         need.hidden = !lock;
-        const title = lock ? `${msg}. ${t(`d.${id}`)}` : t(`d.${id}`);
-        if (b.title !== title) b.title = title;
+        const label = `${t(def?.name ?? id)}. ${lock ? `${msg}. ` : ''}${costEl?.getAttribute('aria-label') ?? ''}`;
+        if (b.getAttribute('aria-label') !== label) b.setAttribute('aria-label', label);
+        if (def) refreshHoverCard(b, () => buildTip(def, b));
       }
       if (wreck.getAttribute('aria-pressed') !== 'true') buildFoot.hidden = picked === null;
       syncPicker();
