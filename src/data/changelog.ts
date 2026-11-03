@@ -10,6 +10,11 @@ export type { ChangeEntry } from './changelogTypes';
  */
 const NEW: ChangeEntry[] = [
   {
+    v: '0.88.2', date: '2026-11-03',
+    pl: ['„Nowa gra” jako pergaminowy pasek na dole ekranu: tryb i poziom, kraina i nazwa mapy, opcje i przyciski w trzech kolumnach — nad nim widać całą mapę z lotu ptaka.'],
+    en: ['“New game” as a parchment bar along the bottom of the screen: mode and difficulty, land and map name, options and buttons in three columns — the whole map is visible from above.'],
+  },
+  {
     v: '0.88.1', date: '2026-11-03',
     pl: ['Mur i zamek: kamienie z jednej partii — tylko lekkie różnice jasności zamiast szachownicy jasnych i ciemnych bloków, jaśniejsza zaprawa, spokojniejsza faktura.'],
     en: ['Walls and castle: stones from one quarry — only slight differences in shade instead of a chequerboard of light and dark blocks, lighter mortar, calmer texture.'],

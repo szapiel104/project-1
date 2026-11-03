@@ -1,5 +1,8 @@
 # Dziennik zmian
 
+## 0.88.2 — 3.11.2026
+- „Nowa gra”: kolumny `.ng-col` w menu.ts, klasa `ng-dock` i pasek na dole w `newgame.css`. Boty: bez zmian.
+
 ## 0.88.1 — 3.11.2026
 - `gen_stone.py` ashlar: ton kamieni 0,88–1 (było 0,55–1), słabsze plamy i bryła, jaśniejsza fuga; KTX2. Boty: bez zmian.
 

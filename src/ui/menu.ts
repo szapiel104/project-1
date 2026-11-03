@@ -236,7 +236,7 @@ export function createMenu(root: HTMLElement, events: MenuEvents): Menu {
   /** Ekran z nagłówkiem; szeroki = dwie kolumny (zakładki po lewej, treść po prawej) */
   const screen = (heading: string, wide: boolean, ...nodes: Node[]): void => {
     panel.classList.toggle('wide', wide);
-    panel.classList.remove('book', 'parch'); wrap.classList.remove('book-open');
+    panel.classList.remove('book', 'parch', 'ng-dock'); wrap.classList.remove('book-open');
     panel.hidden = false;
     wrap.classList.add('sub-open');
     markBar(heading);
@@ -579,10 +579,17 @@ export function createMenu(root: HTMLElement, events: MenuEvents): Menu {
     start.type = 'submit';
     const foot = el('div', 'newgame-foot');
     foot.append(back(), start);
-    form.append(section(t('hud.mode'), modeRow), section(t('menu.level'), levelRow), section(tx('Kraina', 'Land'), biomeRow), seedWrap, status, devLab, instLab, wallLab, warn, foot);
+    // pasek na dole ekranu (Michał 3.11.2026: „zrób to na dole, wtedy więcej mapy”): trzy kolumny — tryb i poziom,
+    // kraina i nazwa mapy, opcje dewelopera i przyciski; nad paskiem cała mapa z lotu ptaka
+    const col = (cls: string, ...kids: Node[]): HTMLElement => { const c = el('div', `ng-col ${cls}`); c.append(...kids); return c; };
+    form.append(
+      col('ng-a', section(t('hud.mode'), modeRow), section(t('menu.level'), levelRow)),
+      col('ng-b', section(tx('Kraina', 'Land'), biomeRow), seedWrap, status),
+      col('ng-c', devLab, instLab, wallLab, warn, foot),
+    );
     form.addEventListener('submit', (e) => { e.preventDefault(); clearTimeout(timer); wrap.classList.remove('previewing'); events.onNewGame(seed.value.trim() || 'project-1', preset, level, dev, instant, walls, biome); });
     screen(t('menu.newGame'), true, form);
-    panel.classList.add('parch'); // pergamin jak w księgach (Michał 3.11.2026)
+    panel.classList.add('parch', 'ng-dock'); // pergamin jak w księgach, pasek na dole ekranu (Michał 3.11.2026)
     wrap.classList.add('previewing');
     preview();
   }

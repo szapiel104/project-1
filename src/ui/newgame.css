@@ -53,3 +53,33 @@ body .menu .menu-panel.parch .dev-knob { background: #8b7a5c; }
 body .menu .menu-panel.parch .newgame-foot { background: linear-gradient(rgba(237, 220, 181, 0), var(--parch) 32%); }
 
 @media (prefers-reduced-motion: reduce) { body .menu .menu-panel.parch .pick { transition: none; } body .menu .menu-panel.parch .pick:hover { transform: none; } }
+
+/* ===== „Nowa gra” jako pasek na dole ekranu (Michał 3.11.2026: „na dole, wtedy więcej mapy, ładniejszy”) =====
+   Nad paskiem cała mapa z lotu ptaka; w pasku trzy kolumny: tryb i poziom | kraina i nazwa mapy | opcje i przyciski. */
+body .menu.previewing .menu-panel.wide.ng-dock {
+  position: fixed; left: 0; right: 0; bottom: 0; top: auto; width: auto; min-width: 0; height: auto; max-height: min(46vh, calc(100vh / var(--ui, 1) - 160px));
+  margin: 0; padding: 14px clamp(16px, 2.4vw, 40px) 16px; align-content: start; overflow-y: auto; border: 0; border-top: 1px solid #120c08;
+  box-shadow: 0 -2px 0 #6e5226, 0 -3px 0 #0e0906, inset 0 18px 30px -18px rgba(120, 78, 28, .5), 0 -18px 40px rgba(0, 0, 0, .55); }
+body .menu.previewing .menu-panel.ng-dock::before, body .menu.previewing .menu-panel.ng-dock::after { display: none; }
+body .menu.previewing .menu-panel.ng-dock .menu-body { display: grid; gap: 8px; }
+body .menu.previewing .menu-panel.ng-dock .menu-heading { margin: 0; padding: 0; font-size: clamp(20px, 2.4vh, 26px); background: none; text-align: left; }
+body .menu .ng-dock .newgame { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1.15fr) minmax(260px, .8fr); gap: 10px clamp(16px, 2vw, 32px); align-items: start; }
+body .menu .ng-dock .ng-col { display: grid; gap: 8px; align-content: start; min-width: 0; }
+body .menu .ng-dock .ng-c { align-self: stretch; grid-template-rows: auto auto auto 1fr auto; padding-left: clamp(16px, 2vw, 32px); border-left: 1px solid rgba(138, 100, 50, .45); }
+body .menu .ng-dock .pick-group { margin: 0; }
+body .menu .ng-dock .pick-group legend { font-size: 13px; margin-bottom: 4px; }
+body .menu .ng-dock .pick-row { gap: 6px; grid-template-columns: repeat(auto-fit, minmax(90px, 1fr)); }
+body .menu .ng-dock .pick { min-height: 0; padding: 7px 10px; }
+body .menu .ng-dock .pick-big { font-size: 15.5px; }
+body .menu .ng-dock .pick-small { font-size: 12.5px; line-height: 1.3; }
+body .menu .ng-dock .pick:has(input:checked)::after { width: 12px; height: 12px; top: 7px; right: 7px; }
+body .menu .ng-dock .pick-row.lands .pick { min-height: 0; padding: 7px 10px; }
+body .menu .ng-dock .pick-row.lands .pick-big { font-size: 15px; }
+body .menu .ng-dock .field { margin: 0; }
+body .menu .ng-dock .preview-status { margin: 0; font-size: 13.5px; }
+body .menu .ng-dock .dev-switch { padding: 6px 10px; }
+body .menu .ng-dock .hint { margin: 0; font-size: 13.5px; }
+body .menu .ng-dock .newgame-foot { position: static; display: grid; grid-template-columns: auto 1fr; gap: 10px; margin: 0; padding: 0; background: none; align-self: end; }
+body .menu .ng-dock .newgame-foot .menu-btn { min-height: 52px; }
+@media (max-width: 1100px) { body .menu .ng-dock .newgame { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); } body .menu .ng-dock .ng-c { grid-column: 1 / -1; padding-left: 0; border-left: 0; } }
+body .menu.previewing:has(.ng-dock) { background: linear-gradient(0deg, rgba(8, 4, 2, .35), rgba(8, 4, 2, 0) 55%); }
