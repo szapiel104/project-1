@@ -16,9 +16,32 @@ import { pattern } from './textures';
 import { touch } from './touch';
 import { fallHeight, rubbleFalls } from './rubblefall';
 import { PLANK } from './plank';
+import { gpuMods } from './gpu/webgpu';
 
 /** Przycięty materiał placu budowy → materiał, z którego powstał (do puli kopii) */
 const siteSrc = new WeakMap<THREE.Material, THREE.Material>();
+/**
+ * WebGPU: jedna przycinana kopia na materiał (wspólna dla wszystkich placów budowy), wysokość cięcia z `userData.siteCut`
+ * siatki. Płaszczyzny przycinania three.js na WebGPU dają każdej kopii osobny kontekst (osobny numer w kluczu), więc
+ * każda budowa składała od nowa shadery wszystkich części budynku, i to dwa razy (obraz i cień) — dziennik Michała
+ * 3.11.2026: ok. 400 składań na 10 s w trakcie gry (budynki i ich cienie), spadek do 28 FPS.
+ */
+const gpuSite = new WeakMap<THREE.Material, THREE.Material>();
+function gpuSiteMaterial(m: THREE.Material): THREE.Material {
+  let c = gpuSite.get(m);
+  if (c) return c;
+  /* eslint-disable @typescript-eslint/no-explicit-any */
+  const T = gpuMods!.TSL as any;
+  c = cloneMaterial(m);
+  c.side = THREE.DoubleSide;
+  const keep = T.positionWorld.y.lessThanEqual(T.userData('siteCut', 'float'));
+  (c as any).maskNode = keep;
+  (c as any).maskShadowNode = keep;
+  c.userData = { ...m.userData, gpuKey: `${(m.userData.gpuKey as string | undefined) ?? ''}|site` };
+  /* eslint-enable @typescript-eslint/no-explicit-any */
+  gpuSite.set(m, c);
+  return c;
+}
 
 const tmpColor = new THREE.Color();
 
@@ -76,6 +99,7 @@ export class SiteLayer {
     const swapped: [THREE.Mesh, THREE.Material | THREE.Material[]][] = [];
     const clones = new Map<THREE.Material, THREE.Material>();
     const clip = (m: THREE.Material): THREE.Material => {
+      if (gpuMods) return gpuSiteMaterial(m);
       let c = clones.get(m);
       if (!c) {
         const pool = SiteLayer.clipPool.get(m);
@@ -112,11 +136,12 @@ export class SiteLayer {
     this.warm(mesh);
   }
   /** Przycina części modelu, które jeszcze nie są przycięte (np. zapasy dodane później) */
-  private clipNew(mesh: THREE.Object3D, site: { swapped: [THREE.Mesh, THREE.Material | THREE.Material[]][]; clip: (m: THREE.Material) => THREE.Material }): void {
+  private clipNew(mesh: THREE.Object3D, site: { plane: THREE.Plane; swapped: [THREE.Mesh, THREE.Material | THREE.Material[]][]; clip: (m: THREE.Material) => THREE.Material }): void {
     mesh.traverse((o) => {
       const me = o as THREE.Mesh;
       if (!me.isMesh || !me.material || me.userData.siteClip) return;
       me.userData.siteClip = true;
+      me.userData.siteCut = site.plane.constant;
       site.swapped.push([me, me.material]);
       me.material = Array.isArray(me.material) ? me.material.map(site.clip) : site.clip(me.material);
     });
@@ -128,6 +153,7 @@ export class SiteLayer {
     for (const [me, orig] of s.swapped) {
       for (const m of Array.isArray(me.material) ? me.material : [me.material]) if (!done.has(m)) {
         done.add(m);
+        if (gpuMods) continue; // kopie WebGPU są wspólne i zostają na następne budowy
         const src = siteSrc.get(m);
         if (!src) { m.dispose(); continue; }
         let pool = SiteLayer.clipPool.get(src);
@@ -209,6 +235,7 @@ export class SiteLayer {
       // najpierw wykop (pierwsze 12% pracy: sama dziura w ziemi), potem fundament, mury i na końcu dach
       const cut = site.base + 0.03 + Math.max(0, (k - 0.12) / 0.88) * (site.top - site.base) * 1.01;
       site.plane.constant = cut;
+      if (gpuMods) for (const [me] of site.swapped) me.userData.siteCut = cut;
       mesh.visible = k >= 0.12;
       // wykop: teren działki opada w miarę kopania, fundament go potem zasypuje
       // ruina: bez wykopu (teren pod gruzem zostaje na miejscu, inaczej gruz wisiał nad dołem)

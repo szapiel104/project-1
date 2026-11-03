@@ -58,7 +58,9 @@ export function pomGpu(m: THREE.MeshStandardMaterial, height: THREE.Texture, sca
     built = { color, normal };
     return built;
   };
-  m.userData.gpuKey = `pom${steps}`;
+  // klucz z numerem materiału: węzły niosą tę konkretną teksturę i barwę (uniform/texture), a three.js dzieli złożony
+  // shader między materiałami o tym samym kluczu — ze wspólnym kluczem wszystkie mury dostałyby teksturę pierwszego
+  m.userData.gpuKey = `pom${steps}-${m.uuid}`;
   Object.defineProperty(m, 'colorNode', { configurable: true, enumerable: true, get: () => build()?.color ?? null, set: () => undefined });
   if (m.normalMap) Object.defineProperty(m, 'normalNode', { configurable: true, enumerable: true, get: () => build()?.normal ?? null, set: () => undefined });
 }

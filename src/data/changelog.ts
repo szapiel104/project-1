@@ -10,6 +10,11 @@ export type { ChangeEntry } from './changelogTypes';
  */
 const NEW: ChangeEntry[] = [
   {
+    v: '0.94.11', date: '2026-11-03',
+    pl: ['Na nowym silniku place budowy nie przycinają już gry: rosnący budynek nie składa za każdym razem od nowa wszystkich swoich shaderów (wcześniej kilkaset składań na 10 sekund i spadek do ok. 28 FPS, gdy w osadzie trwały budowy).'],
+    en: ['On the new engine, construction sites no longer stutter the game: a rising building does not rebuild all its shaders every time (previously several hundred rebuilds per 10 seconds and a drop to about 28 FPS while building was going on).'],
+  },
+  {
     v: '0.94.10', date: '2026-11-03',
     pl: ['Naprawiony błąd z 0.94.9, przez który gra się nie wczytywała.', 'Na nowym silniku obraz jest jaśniejszy: cień w zagłębieniach (AO) przyciemniał całą scenę — mury, trawę i dachy — a teraz zostaje tylko w kątach i szczelinach.'],
     en: ['Fixed the 0.94.9 bug that stopped the game from loading.', 'The picture is brighter on the new engine: ambient occlusion used to darken the whole scene — walls, grass and roofs — and now stays in corners and crevices only.'],
