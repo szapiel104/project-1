@@ -1,5 +1,8 @@
 # Dziennik zmian
 
+## 0.92.8 — 2026-11-03
+- WebGPU: macierz instancji przez `instanceMatrixNode()` (4× vec4 z InstancedInterleavedBuffer, synchronizacja wersji co klatkę) zamiast atrybutu mat4, którego WebGPU nie ma — ogień, chmury, postacie, drzewa z daleka.
+
 ## 0.92.7 — 2026-11-03
 - WebGPU: budżet składania materiałów na klatkę (`gpuFrameBudget`, opakowanie `_renderObjectDirect`: obiekt z niezłożonym wariantem czeka do następnej klatki; 45 ms przy wczytywaniu, 6 ms w grze), `warmGpu` kończy, gdy nic nie czeka (do 12 s). Chmury `gpu/cloudNode.ts` (miękkie przy scenie), śnieg `snowSprite` w `gpu/pointsNode.ts`.
 

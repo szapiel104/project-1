@@ -10,6 +10,11 @@ export type { ChangeEntry } from './changelogTypes';
  */
 const NEW: ChangeEntry[] = [
   {
+    v: '0.92.8', date: '2026-11-03',
+    pl: ['Naprawiony płomień ogniska i pochodni rozciągnięty w długi, ciemny pas (to samo poprawione w chmurach, postaciach i dalekich drzewach).'],
+    en: ['Fixed campfire and torch flames stretching into a long dark streak (the same fix applies to clouds, characters and distant trees).'],
+  },
+  {
     v: '0.92.7', date: '2026-11-03',
     pl: ['Szybsze wczytywanie: gra startuje, gdy najważniejsza grafika jest gotowa, a resztę dokłada w kolejnych klatkach, po kawałku, bez przycięć.', 'Wracają chmury na niebie (miękko gasną przy górach) i padający śnieg.'],
     en: ['Faster loading: the game starts once the essential graphics are ready and adds the rest bit by bit over the next frames, without stutter.', 'Clouds are back in the sky (fading softly against the mountains), and so is falling snow.'],

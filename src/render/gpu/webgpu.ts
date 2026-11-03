@@ -111,3 +111,27 @@ export function hideGlslMaterials(scene: THREE.Object3D): void {
     }
   });
 }
+
+/* eslint-disable @typescript-eslint/no-explicit-any */
+const ibCache = new WeakMap<object, any>();
+/**
+ * Macierz instancji jako węzeł (dla własnych shaderów z obrotem do kamery, ognia, kości): cztery kolumny z bufora
+ * przeplatanego nad tą samą tablicą co `instanceMatrix`, zsynchronizowanego co klatkę (jak w three.js Instance.js).
+ * Atrybut wierzchołka typu mat4 nie istnieje w WebGPU — 0.92.2–0.92.7 czytały tak macierz i ognisko rozciągało się
+ * w długi pas (Michał 3.11.2026).
+ */
+export function instanceMatrixNode(im: THREE.InstancedBufferAttribute): any {
+  const { W, TSL } = gpuMods!;
+  const T = TSL as any, Wm = W as any;
+  let ib = ibCache.get(im);
+  if (!ib) { ib = new Wm.InstancedInterleavedBuffer(im.array, 16, 1); ib.setUsage(Wm.DynamicDrawUsage); ibCache.set(im, ib); }
+  const imA = im as any;
+  const sync = T.uniform(0).onFrameUpdate(() => {
+    if (ib.version !== imA.version) {
+      ib.clearUpdateRanges(); ib.updateRanges.push(...imA.updateRanges); imA.clearUpdateRanges(); ib.version = imA.version;
+    }
+    return 0;
+  });
+  const c = [0, 4, 8, 12].map((o) => T.instancedDynamicBufferAttribute(ib, 'vec4', 16, o));
+  return T.mat4(c[0], c[1], c[2], c[3].add(T.vec4(sync, sync, sync, 0)));
+}

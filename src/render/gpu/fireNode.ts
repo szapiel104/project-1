@@ -1,5 +1,5 @@
 import type * as THREE from 'three';
-import { gpuMods } from './webgpu';
+import { gpuMods, instanceMatrixNode } from './webgpu';
 
 /**
  * Ogień na WebGPU (docs/webgpu.md, partia 5): płomienie pochodni i ognisk (flames.ts) i pożary budynków (blaze.ts)
@@ -88,7 +88,7 @@ export function flameNode(time: { value: number }, mesh?: THREE.InstancedMesh): 
   const tU = uniform(0).onFrameUpdate(() => time.value);
   let M: any = modelWorldMatrix, seed: any = float(0.37), inten: any = float(1);
   if (mesh) {
-    M = modelWorldMatrix.mul(instancedBufferAttribute(mesh.instanceMatrix, 'mat4'));
+    M = modelWorldMatrix.mul(instanceMatrixNode(mesh.instanceMatrix));
     const ic = instancedBufferAttribute(mesh.instanceColor!, 'vec3');
     seed = ic.x; inten = ic.y;
   }
@@ -146,7 +146,7 @@ export function flameGlowNode(time: { value: number }, mesh: THREE.InstancedMesh
   const { uniform, instancedBufferAttribute, vec3, vec4, length, pow, max, sin, uv, positionGeometry, cameraWorldMatrix,
     cameraProjectionMatrix, cameraViewMatrix, modelWorldMatrix, varying } = T;
   const tU = uniform(0).onFrameUpdate(() => time.value);
-  const IM = modelWorldMatrix.mul(instancedBufferAttribute(mesh.instanceMatrix, 'mat4'));
+  const IM = modelWorldMatrix.mul(instanceMatrixNode(mesh.instanceMatrix));
   const ic = instancedBufferAttribute(mesh.instanceColor!, 'vec3');
   const center = IM.element(3).xyz, sx = length(IM.element(0).xyz);
   const right = cameraWorldMatrix.element(0).xyz, up = cameraWorldMatrix.element(1).xyz;

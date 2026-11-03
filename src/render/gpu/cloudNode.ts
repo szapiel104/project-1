@@ -1,5 +1,5 @@
 import type * as THREE from 'three';
-import { gpuMods } from './webgpu';
+import { gpuMods, instanceMatrixNode } from './webgpu';
 
 /**
  * Chmury na niebie (clouds.ts) na WebGPU: kłęby z jednej puli instancji, zwrócone do kamery w przestrzeni świata,
@@ -12,7 +12,7 @@ export function cloudNode(map: THREE.Texture, mesh: THREE.InstancedMesh): THREE.
     positionGeometry, cameraPosition, cameraViewMatrix, cameraProjectionMatrix, modelWorldMatrix, varying,
     viewportDepthTexture, screenUV, getViewPosition, cameraProjectionMatrixInverse, positionView } = T;
   const u = { lit: uniform(new Wm.Color(1, 1, 1)), shade: uniform(new Wm.Color(0.6, 0.64, 0.72)), haze: uniform(new Wm.Color(0.7, 0.72, 0.75)), far: uniform(300) };
-  const IM = modelWorldMatrix.mul(instancedBufferAttribute(mesh.instanceMatrix, 'mat4'));
+  const IM = modelWorldMatrix.mul(instanceMatrixNode(mesh.instanceMatrix));
   const ic = instancedBufferAttribute(mesh.instanceColor!, 'vec3');
   const center = IM.element(3).xyz, s = length(IM.element(0).xyz);
   const toCam = normalize(cameraPosition.sub(center));

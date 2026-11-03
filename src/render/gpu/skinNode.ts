@@ -1,5 +1,5 @@
 import type * as THREE from 'three';
-import { gpuMods } from './webgpu';
+import { gpuMods, instanceMatrixNode } from './webgpu';
 
 /**
  * Postacie ze szkieletem na WebGPU (skinned.ts): ruch z zapieczonych klatek animacji w teksturze kości, mieszanie dwóch
@@ -10,7 +10,7 @@ import { gpuMods } from './webgpu';
 export function skinnedNode(src: THREE.MeshStandardMaterial, bones: THREE.DataTexture, mesh: THREE.InstancedMesh): THREE.MeshStandardMaterial {
   const T = gpuMods!.TSL as any, Wm = gpuMods!.W as any;
   const { Fn, attribute, textureLoad, ivec2, int, mat4, vec4, vec3, float, mix, clamp, dot, normalize, positionGeometry,
-    normalGeometry, normalLocal, instancedBufferAttribute, varying, materialColor, texture } = T;
+    normalGeometry, normalLocal, varying, materialColor, texture } = T;
   const bt = texture(bones);
   const boneAt = (row: any, i: any): any => {
     const x = int(i).mul(4), y = int(row);
@@ -19,7 +19,7 @@ export function skinnedNode(src: THREE.MeshStandardMaterial, bones: THREE.DataTe
   const si = attribute('skinIndex', 'vec4'), sw = attribute('skinWeight', 'vec4');
   const skinAt = (row: any): any => boneAt(row, si.x).mul(sw.x).add(boneAt(row, si.y).mul(sw.y)).add(boneAt(row, si.z).mul(sw.z)).add(boneAt(row, si.w).mul(sw.w));
   const anim = attribute('aAnim', 'vec4');
-  const IM = instancedBufferAttribute(mesh.instanceMatrix, 'mat4');
+  const IM = instanceMatrixNode(mesh.instanceMatrix);
   const pos = Fn(() => {
     const skm = skinAt(anim.x).mul(float(1).sub(anim.z)).add(skinAt(anim.y).mul(anim.z));
     const M = IM.mul(skm);

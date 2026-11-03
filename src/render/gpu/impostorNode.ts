@@ -1,5 +1,5 @@
 import type * as THREE from 'three';
-import { gpuMods } from './webgpu';
+import { gpuMods, instanceMatrixNode } from './webgpu';
 
 /**
  * Drzewa z daleka na WebGPU (impostors.ts): czworokąt zwrócony do kamery (obrót tylko wokół pionu), z paska 8 klatek
@@ -10,10 +10,10 @@ import { gpuMods } from './webgpu';
 /* eslint-disable @typescript-eslint/no-explicit-any */
 export function impostorNode(o: { map: THREE.Texture; bare?: THREE.Texture | null; frames: number; color: THREE.Color; bareU: { value: number } }): THREE.MeshStandardMaterial {
   const T = gpuMods!.TSL as any, Wm = gpuMods!.W as any;
-  const { Fn, instancedBufferAttribute, vec2, vec3, vec4, float, atan, floor, mod, normalize, length, positionGeometry, normalLocal,
+  const { Fn, vec2, vec3, vec4, float, atan, floor, mod, normalize, length, positionGeometry, normalLocal,
     cameraPosition, modelWorldMatrix, uv, varying, texture, uniform, select } = T;
   const F = o.frames;
-  const IM = Fn((_: unknown, b: any) => b.object?.instanceMatrix ? instancedBufferAttribute(b.object.instanceMatrix, 'mat4') : T.mat4(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1))();
+  const IM = Fn((_: unknown, b: any) => b.object?.instanceMatrix ? instanceMatrixNode(b.object.instanceMatrix) : T.mat4(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1))();
   const ipos = IM.element(3).xyz;
   const wpos = modelWorldMatrix.mul(vec4(ipos, 1)).xyz;
   const tc0 = cameraPosition.sub(wpos);
