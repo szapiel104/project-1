@@ -59,6 +59,23 @@ nowy wygląd mapy = nowy numer generatora (`MAP_GEN`), stare zapisy dostają daw
 - [ ] (stare) **Modele skał i głazów** z prawdziwych skanów (paczki CC0/CC-BY z GitHuba, np. 0 A.D. jak trzciny) — kilka
   kształtów: głaz, płyta, ściana skalna, rumosz; dopiero z nimi wracają skałki i ładne urwiska.
 
+## Zaległe — robimy po WebGPU (Michał 3.11.2026, 12:56: „najpierw WebGPU, potem to, co da efekty”)
+- [ ] **Pustynia: palmy, suche krzewy, przesuszone trawy** z 0 A.D. (repozytorium github.com/0ad/0ad, CC BY-SA 3.0):
+  palmy `meshes/gaia/palm_date_new_{1..6}.dae` (tekstury `palm_date_new_1/2.png` + `_norm`), uschnięte `palm_dead_{1..5}`
+  (`palm_dead.png`), krzewy `bush_dese_a_{1,2}` (`bush_dese_a.dds`, suche `bush_dese_dry_{a,b,c}.dds`),
+  `wrld_plant_bush_dry{1..3}` (`wrld_plant_bush_dry_a.dds`), `plant_desert_0{1,2}` (`bush_desert_{a..d}.dds`), trawy
+  `grass_large_2_tall` (`grass_steppe.png`), `grass_la_tall_{a,b}` (`grass_field_dry_a.dds`), `cross_large_{short,tall}`
+  (`grass_field_dry_b.dds`). Palmy jako `TreeKind` (pień = trójkąty o pełnej masce tekstury, korona = reszta; z daleka
+  cały model), na pustyni zamiast drzew lasu (oazy, gaje przy zamkach, drzewka leśniczego). Kaktusów w 0 A.D. nie ma
+  (rośliny z Ameryk) — jeśli Michał dalej chce, szukać paczki CC0 w tym samym, nie bajkowym stylu.
+- [ ] **Krawędź mapy bez kwadratu** (Michał 12:48): góry, las, piach i trawa mają płynąć dalej za granicę gry — generator
+  nie może patrzeć, gdzie kończy się plansza. Pomysł (generator 11): masywy gór z szumu w całym świecie (nie pas przy
+  krawędzi), przy każdym zamku gwarantowany masyw na kopalnię w zasięgu; teren za mapą liczony tymi samymi szumami co
+  plansza (las w plamach, góry, piach), a nie ściana puszczy i osobne pasma.
+- [ ] **Większa mapa 1 na 1** (np. 240 pól zamiast 192) — tylko od nowego generatora (stare zapisy na starym rozmiarze).
+- [ ] Trawa i krzewy z powrotem (gęste, z paczek), gęstsza siatka całego terenu przy kamerze, więcej warstw ziemi
+  (po WebGPU — tablica tekstur).
+
 ## Uwagi do sprawdzenia
 - Wydajność: płaskowyże nie dokładają trójkątów (ta sama siatka planszy), skałki to pola gór; śnieg to jedna pula punktów.
 - Boty: krainy nie zmieniają zasad, ale skałki i urwiska zabierają miejsce — bot szuka miejsc jak dotąd (placement).
