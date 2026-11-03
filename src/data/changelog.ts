@@ -10,6 +10,11 @@ export type { ChangeEntry } from './changelogTypes';
  */
 const NEW: ChangeEntry[] = [
   {
+    v: '0.92.4', date: '2026-11-03',
+    pl: ['Szybsze „Przygotowanie grafiki” na nowym silniku.', 'Wraca trawa: kępy kołyszą się na wietrze, gęstnieją przy wodzie, rzedną na zboczach i żółkną jesienią.'],
+    en: ['Faster "Preparing the graphics" on the new engine.', 'Grass is back: tufts sway in the wind, grow thicker by the water, thinner on slopes and turn yellow in autumn.'],
+  },
+  {
     v: '0.92.3', date: '2026-11-03',
     pl: ['Wczytywanie nie zamraża już przeglądarki: grafika przygotowuje się porcjami, pasek się rusza, a inne karty działają normalnie. Mniej wariantów do przygotowania, więc trwa to krócej.', 'Ludzie i żołnierze znowu się ruszają (chodzą, walczą, padają) i noszą barwy swojego pana.'],
     en: ['Loading no longer freezes the browser: graphics are prepared in small portions, the bar keeps moving and other tabs keep working. Fewer variants to prepare, so it is quicker too.', 'People and soldiers move again (walk, fight, fall) and wear their lord’s colours.'],

@@ -1,5 +1,8 @@
 # Dziennik zmian
 
+## 0.92.4 — 2026-11-03
+- WebGPU: `warmGpu()` dobiera porcję do kosztu nowych wariantów (bez stałego kosztu klatki), przerwy przez MessageChannel zamiast rAF; trawa `gpu/grassNode.ts` (ten sam rozkład kęp, wiatr, barwa podłoża, suche źdźbła, ostra alfa).
+
 ## 0.92.3 — 2026-11-03
 - WebGPU: zwykłe materiały mają wspólny `customProgramCacheKey` i pusty `onBeforeCompile` (różne klucze starych łatek mnożyły drogie składanie node materiałów ~12 ms/wariant); rozgrzewka `warmGpu()` odsłania scenę porcjami (budżet klatki ok. 60–90 ms, przerwy na rAF) — koniec zamrażania przeglądarki. Postacie: `gpu/skinNode.ts` (kości z tekstury, mieszanie klatek, barwy drużyny, cień z positionNode).
 

@@ -3,6 +3,8 @@ import { cloudShade } from './ground';
 import { groundGrassTexture2, sharedNoise } from './ground';
 import { maskedTex } from './forest';
 import { SEASON_U } from './season';
+import { gpuMods } from './gpu/webgpu';
+import { grassNode } from './gpu/grassNode';
 
 /**
  * Trawa jak w nowych grach: gęsty dywan kęp wokół miejsca, na które patrzymy, zamiast pojedynczych kępek na płaskiej ziemi.
@@ -204,7 +206,8 @@ export function createGrassField(w: number, h: number, corners: Float32Array, de
   mat.customProgramCacheKey = () => 'grass-field-v8';
   mat.userData.season = 'grass';
   cloudShade(mat); // cienie chmur suną też po trawie
-  const mesh = new THREE.Mesh(geo, mat);
+  // WebGPU: ten sam dywan w węzłach (gpu/grassNode.ts), te same pokrętła `uni`
+  const mesh = new THREE.Mesh(geo, gpuMods ? grassNode(uni as unknown as Parameters<typeof grassNode>[0], { STEP, BASE, WEIGHTS: TILE_WEIGHTS }) : mat);
   mesh.frustumCulled = false;
   mesh.renderOrder = 1;
 

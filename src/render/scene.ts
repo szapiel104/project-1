@@ -1785,8 +1785,12 @@ export class GameRenderer {
       if ((m.isMesh || (o as THREE.Points).isPoints || (o as THREE.Sprite).isSprite || (o as THREE.Line).isLine) && o !== this.scene) items.push(o);
     });
     for (const o of items) o.visible = false;
-    const frameNext = (): Promise<void> => new Promise((ok) => { requestAnimationFrame(() => setTimeout(ok, 0)); });
-    let i = 0, chunk = 4;
+    // przerwa dla przeglądarki bez czekania na klatkę ekranu (inne karty i pasek dostają czas od razu)
+    const yieldNow = (): Promise<void> => new Promise((ok) => { const ch = new MessageChannel(); ch.port1.onmessage = () => ok(); ch.port2.postMessage(0); });
+    // koszt pustej klatki (efekty obrazu, cienie) mierzymy osobno: porcję dobieramy tylko do kosztu NOWYCH wariantów
+    let base = Infinity;
+    for (let k = 0; k < 2; k++) { const t = performance.now(); this.present(); base = Math.min(base, performance.now() - t); }
+    let i = 0, chunk = 16, shown = 0;
     try {
       while (i < items.length) {
         const end = Math.min(items.length, i + chunk);
@@ -1794,11 +1798,10 @@ export class GameRenderer {
         i = end;
         const t0 = performance.now();
         this.present();
-        const dt = performance.now() - t0;
-        // porcja dopasowuje się do kosztu: tanie (już złożone warianty) idą szybko, drogie po kilka
-        chunk = dt < 25 ? Math.min(400, chunk * 2) : dt > 90 ? Math.max(1, chunk >> 1) : chunk;
-        onProgress?.(i, items.length);
-        await frameNext();
+        const work = performance.now() - t0 - base;
+        chunk = work < 20 ? Math.min(2000, chunk * 4) : work > 120 ? Math.max(2, chunk >> 1) : chunk;
+        if (i - shown > items.length / 40 || i === items.length) { shown = i; onProgress?.(i, items.length); await new Promise<void>((ok) => requestAnimationFrame(() => ok())); }
+        else await yieldNow();
       }
     } finally { for (const o of items) o.visible = true; }
     this.present();
