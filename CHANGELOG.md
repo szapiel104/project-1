@@ -1,5 +1,8 @@
 # Dziennik zmian
 
+## 0.89.4 — 3.11.2026
+- `testmode.ts`: `?kraina=pustynia|desert`. Boty: bez zmian.
+
 ## 0.89.3 — 3.11.2026
 - `buildings.ts`: `castle` 0xe4dac4, `castleDark` 0xc2b59c, `slate` 0xa4a7ae (było prawie czarno przy teksturze ciosów). `rockmesh.ts`: bez wymuszonej warstwy skały (schodki na krawędziach pól). `ground.ts`: skała i półki w barwie krainy (`uDry`). Boty: bez zmian.
 

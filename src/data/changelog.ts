@@ -10,6 +10,11 @@ export type { ChangeEntry } from './changelogTypes';
  */
 const NEW: ChangeEntry[] = [
   {
+    v: '0.89.4', date: '2026-11-03',
+    pl: ['Tryb testowy: pustynię można wymusić dopiskiem „kraina=pustynia” w adresie (dla testerów).'],
+    en: ['Test mode: the desert can be forced with “kraina=pustynia” in the address (for testers).'],
+  },
+  {
     v: '0.89.3', date: '2026-11-03',
     pl: [
       'Zamek i mury z jasnego, ciosanego kamienia zamiast prawie czarnego; łupek na dachach jaśniejszy.',
