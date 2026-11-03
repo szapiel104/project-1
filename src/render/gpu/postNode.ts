@@ -122,8 +122,12 @@ export class GpuPost {
     c = renderOutput(vec4(c, 1), this.renderer.toneMapping, this.renderer.outputColorSpace).rgb;
     c = this.grade(T, c);
     let img: any = vec4(clamp(c, 0, 1), 1);
-    if (o.aa === 'fxaa') img = fx.fxaa(img);
-    else if (o.aa === 'smaa') img = fx.smaa(img);
+    // MSAA działa tu tylko bez AO (przejście z normalnymi do AO jest bez próbek): przy AO zamiast MSAA wygładza SMAA —
+    // inaczej Ultra (AO + MSAA 8×) wychodziło bez żadnego wygładzania, z poszarpanymi krawędziami
+    // (Michał 3.11.2026: „jakby w najgorszej grafice, a jest na ultra”)
+    const aa = o.aa.startsWith('msaa') && !msaa ? 'smaa' : o.aa;
+    if (aa === 'fxaa') img = fx.fxaa(img);
+    else if (aa === 'smaa') img = fx.smaa(img);
     if (o.sharpen > 0) {
       const tex = convertToTexture(img);
       const tx = this.u.texel, amount = this.u.sharpen;

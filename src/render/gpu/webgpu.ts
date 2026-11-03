@@ -128,6 +128,97 @@ export async function prepareGpu(canvas: HTMLCanvasElement): Promise<void> {
     _renderObjectDirect: (...a: unknown[]) => void; _objects: { get(...a: unknown[]): unknown }; _currentRenderContext: unknown;
     _nodes: { get(ro: unknown): { nodeBuilderState?: unknown }; nodeBuilderCache: Map<unknown, unknown>; getForRenderCacheKey(ro: unknown): unknown };
   };
+  // --- Wspólne shadery pul instancji ---
+  // three.js dokłada do klucza materiału numer każdej InstancedMesh (bo bufory instancji siedzą w złożonym shaderze),
+  // więc każda pula — każdy kawałek lasu, każda grupa kamieni, każda pula budynków — składała się osobno, i to dla
+  // obrazu, cienia i odbicia w wodzie. Kamera wjeżdżająca w nowy kawałek mapy = kilkadziesiąt składań i cienie
+  // „doładowujące się” (Michał 3.11.2026). Tu: pule ze zwykłymi materiałami (bez własnych węzłów) dzielą jeden złożony
+  // shader, a bufory instancji podstawiamy każdej puli jej własne przy wiązaniu atrybutów.
+  const srcMat = new WeakMap<object, any>();
+  const imArrays = new WeakSet<object>(), icArrays = new WeakSet<object>();
+  // na próbę pod ?pule=1 (zanim wejdzie dla wszystkich)
+  const POOLS = !!q?.has('pule');
+  const sharedPool = (o: any, m: any): boolean => POOLS && !!o?.isInstancedMesh && !o.morphTexture && !!m && !m.isNodeMaterial && !m.userData?.gpuKey;
+  type Sub = { ib: any; at: Map<number, any>; col?: any };
+  const subs = new WeakMap<object, Sub>();
+  const subOf = (o: any): Sub => {
+    let sb = subs.get(o.instanceMatrix);
+    if (!sb) {
+      const ib = new (THREE as any).InstancedInterleavedBuffer(o.instanceMatrix.array, 16, 1);
+      ib.setUsage(THREE.DynamicDrawUsage);
+      sb = { ib, at: new Map() };
+      subs.set(o.instanceMatrix, sb);
+    }
+    return sb;
+  };
+  const anyR = r as any;
+  const renderObj = anyR.renderObject.bind(anyR);
+  anyR.renderObject = (object: any, scene: unknown, camera: unknown, geometry: unknown, material: any, ...rest: unknown[]): unknown => {
+    if (object?.isInstancedMesh) {
+      srcMat.set(object, material);
+      imArrays.add(object.instanceMatrix.array);
+      if (object.instanceColor) icArrays.add(object.instanceColor.array);
+      // nasze bufory tej puli: ta sama wersja co jej instanceMatrix / instanceColor (jak w three.js Instance.js)
+      const sb = subs.get(object.instanceMatrix);
+      if (sb && sb.ib.version !== object.instanceMatrix.version) {
+        sb.ib.clearUpdateRanges(); for (const u of object.instanceMatrix.updateRanges) sb.ib.addUpdateRange(u.start, u.count);
+        sb.ib.version = object.instanceMatrix.version;
+      }
+      if (sb?.col && object.instanceColor && sb.col.version !== object.instanceColor.version) {
+        sb.col.clearUpdateRanges(); for (const u of object.instanceColor.updateRanges) sb.col.addUpdateRange(u.start, u.count);
+        sb.col.version = object.instanceColor.version;
+      }
+    }
+    return renderObj(object, scene, camera, geometry, material, ...rest);
+  };
+  let roPatched = false;
+  const objs = anyR._objects;
+  const createRO = objs.createRenderObject.bind(objs);
+  objs.createRenderObject = (...a: unknown[]): unknown => {
+    if (!roPatched) {
+      roPatched = true;
+      const proto = Object.getPrototypeOf(createRO(...a));
+      const gmk = proto.getMaterialCacheKey;
+      proto.getMaterialCacheKey = function (this: any): unknown {
+        const o = this.object;
+        if (!sharedPool(o, srcMat.get(o) ?? this.material)) return gmk.call(this);
+        const n = o.count;
+        o.isInstancedMesh = false; o.count = 1;
+        try { return `${gmk.call(this)}:pula${o.instanceColor ? 'c' : ''}`; } finally { o.isInstancedMesh = true; o.count = n; }
+      };
+      const gat = proto.getAttributes;
+      proto.getAttributes = function (this: any): unknown {
+        const list = gat.call(this) as any[];
+        const o = this.object;
+        if (!sharedPool(o, srcMat.get(o) ?? this.material)) return list;
+        let changed = false;
+        const out = list.map((a: any) => {
+          const d = a.isInterleavedBufferAttribute ? a.data : null;
+          if (d && d.stride === 16 && imArrays.has(d.array) && d.array !== o.instanceMatrix.array) {
+            const sb = subOf(o);
+            let na = sb.at.get(a.offset);
+            if (!na) { na = new (THREE as any).InterleavedBufferAttribute(sb.ib, a.itemSize, a.offset); sb.at.set(a.offset, na); }
+            changed = true;
+            return na;
+          }
+          if (!d && a.isInstancedBufferAttribute && a.itemSize === 3 && o.instanceColor && icArrays.has(a.array) && a.array !== o.instanceColor.array) {
+            const sb = subOf(o);
+            if (!sb.col) { sb.col = new THREE.InstancedBufferAttribute(o.instanceColor.array, 3); sb.col.setUsage(THREE.DynamicDrawUsage); }
+            changed = true;
+            return sb.col;
+          }
+          return a;
+        });
+        if (changed) {
+          this.attributes = out;
+          this.vertexBuffers = [...new Set(out.map((a: any) => (a.isInterleavedBufferAttribute ? a.data : a)))];
+        }
+        return this.attributes;
+      };
+      // pierwszy obiekt powstał jeszcze bez łatki — tworzymy go jeszcze raz już z nią
+    }
+    return createRO(...a);
+  };
   const direct = R._renderObjectDirect;
   R._renderObjectDirect = function (this: typeof R, object: unknown, material: unknown, scene: unknown, camera: unknown, lightsNode: unknown, group: unknown, clipping: unknown, passId: unknown): void {
     if (buildSpent >= buildBudget) {

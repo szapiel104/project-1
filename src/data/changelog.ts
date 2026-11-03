@@ -10,6 +10,11 @@ export type { ChangeEntry } from './changelogTypes';
  */
 const NEW: ChangeEntry[] = [
   {
+    v: '0.94.18', date: '2026-11-03',
+    pl: ['Na najwyższej jakości (z cieniowaniem zagłębień) krawędzie znów są wygładzone — wcześniej na nowym silniku nie było wtedy żadnego wygładzania.'],
+    en: ['At the highest quality (with ambient occlusion) edges are smooth again — previously the new engine applied no anti-aliasing at all in that case.'],
+  },
+  {
     v: '0.94.17', date: '2026-11-03',
     pl: [
       'Ogniska i pochodnie znów mają pomarańczowy płomień (był zielony).',

@@ -1,5 +1,9 @@
 # Dziennik zmian
 
+## 0.94.18 — 2026-11-03
+- WebGPU post: przy AO i wybranym MSAA wygładza SMAA (przejście z normalnymi do AO jest bez próbek, więc Ultra było bez wygładzania).
+- WebGPU: wspólne złożone shadery pul instancji (bez `object.uuid` w kluczu, bufory instancji podstawiane w `getAttributes`) — na próbę pod `?pule=1`.
+
 ## 0.94.17 — 2026-11-03
 - WebGPU post: normalne do AO (MRT) piszą tylko materiały nieprzezroczyste (`Fn` z `builder.material.transparent` → `vec4(0)`); prostokąty wokół ognia i dymu brały się z płaskich normalnych przezroczystych brył.
 - Płomień i poświata: `outputNode` zamiast `colorNode` (three.js mnożył kolor przez kolor instancji = ziarno i jasność → zielony ogień).
