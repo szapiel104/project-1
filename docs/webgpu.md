@@ -27,7 +27,7 @@ Nad grą pracuje kilka czatów naraz, więc długa gałąź rozjechałaby się z
 | Tekstury | `ktx.ts` (KTX2Loader) | KTX2/Basis | [ ] `detectSupport` z WebGPURenderer |
 
 ## Kolejność partii
-0. [ ] **Szkielet:** `?webgpu=1` → `WebGPURenderer` (await `init()`), mapa materiałów: każdy materiał bez bliźniaka →
+0. [~] **Szkielet** (0.90.0: flaga `?webgpu=1`/`?webgpu=gl`, `src/render/gpu/webgpu.ts`, renderer przed sceną w boot.ts, GLSL chowany, bez efektów obrazu, bez odbić wody i mapy otoczenia; do sprawdzenia w Chrome): `?webgpu=1` → `WebGPURenderer` (await `init()`), mapa materiałów: każdy materiał bez bliźniaka →
    `MeshStandardNodeMaterial` z tą samą teksturą i kolorem. Gra ma się uruchomić i dać grać (brzydziej). Pomiar FPS
    (`__perf`) WebGL vs WebGPU na tej samej scenie. Lista tego, co się sypie.
 1. [ ] Efekty obrazu w TSL (AO, grading jak w `scene.ts`, wyostrzenie, wygładzanie).

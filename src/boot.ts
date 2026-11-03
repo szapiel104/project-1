@@ -126,6 +126,9 @@ async function load(): Promise<void> {
   await import('./render/thumbcache').then((m) => m.loadThumbs()).catch(() => undefined);
   info.step(tx('Świat i osada', 'World and settlement'), tx('teren, rzeki, lasy, budynki i mieszkańcy z zapisu — teren buduje się etapami', 'terrain, rivers, forests, buildings and villagers from the save — the terrain is built in stages'));
   await step(tx('Budowanie świata i osady…', 'Building the world and the settlement…'));
+  // WebGPU (?webgpu=1, docs/webgpu.md): renderer musi wstać (asynchronicznie) przed sceną z main.ts
+  try { const g = await import('./render/gpu/webgpu'); if (g.GPU_MODE) await g.prepareGpu(document.getElementById('game') as HTMLCanvasElement); }
+  catch (e) { console.error('[webgpu] nie wstał, zostaje WebGL', e); }
   const game = await import('./main');
   // teren pierwszego świata buduje się etapami (ok. 20 kroków z przerwą na klatkę) — pasek i licznik idą, strona nie staje
   await game.worldReady((n) => {

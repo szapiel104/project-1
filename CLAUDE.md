@@ -115,6 +115,10 @@ Nad grą pracuje kilka czatów naraz, więc:
 - Kopie tekstury (`.clone()` dla innej skali) działają, bo `ktx.ts` dopisuje im dane po wczytaniu; nie rysować tekstur z `pattern()` na płótnie (KTX2 nie ma obrazka) — szare wersje robi `grayPattern()` z `.jpg`.
 - Źródła: paczki od Michała w Pobranych (`ambientcg_1024.sh3t` — 1K, sam kolor; `cc0-texture-pack-main.zip` — 2K kolor + normalne w formacie `.vtex_c`, dekoder: DXT1/BC7 + LZ4). Strony z teksturami (ambientCG, Poly Haven) są z czatu zablokowane. Każdą nową teksturę wpisz do `CREDITS.md`.
 
+## Przejście na WebGPU (Michał 3.11.2026, dla wszystkich czatów)
+- Plan i postęp: `docs/webgpu.md`. Gra przechodzi z WebGL na `WebGPURenderer` + TSL partiami, za flagą `?webgpu=1` (`src/render/gpu/`); bez flagi wszystko działa jak dotąd.
+- **Na czas przejścia:** zmieniasz shader GLSL (`ShaderMaterial`, `onBeforeCompile`, przejście obrazu) — zrób tę samą zmianę w jego bliźniaku TSL, a jeśli go jeszcze nie ma albo nie umiesz — dopisz linijkę w „Rozjazdy” w `docs/webgpu.md`. Nowe efekty pisz od razu w TSL, jeśli się da.
+
 ## Pomysły
 - **Progresja gracza (poziomy, doświadczenie, rozwój postaci, ranking — kierunek RPG/MMO):** plan i kolejność partii w `docs/progresja.md`. Gdy Michał prosi o coś z tego obszaru, bierz następną nieoznaczoną partię i oznacz ją datą po wdrożeniu.
 - Lista kolejnych partii jest w `docs/pomysly.md`. Gdy Michał pyta „co dalej”, podpowiadaj z niej (i dopisuj tam nowe pomysły, zdejmuj zrobione).

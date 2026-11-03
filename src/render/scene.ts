@@ -81,6 +81,7 @@ import { clockAt, rainAt } from '../sim/clock';
 import { COLD, seasonAt, weatherOf, yearPos } from '../sim/weather';
 import { applySeason, SEASON_U, SnowTrails } from './season';
 import { Snowfall } from './snowfall';
+import { gpuBackend, hideGlslMaterials, takeGpuRenderer } from './gpu/webgpu';
 import { Footprints } from './footprints';
 import { maxHp } from '../sim/systems/placement';
 import { StrategyCamera } from './camera';
@@ -193,6 +194,15 @@ const SMOKY = new Set(['armory', 'house', 'tent', 'bakery', 'brewery', 'tavern',
  */
 export class GameRenderer {
   private renderer: THREE.WebGLRenderer;
+  /** Rysuje WebGPURenderer (flaga ?webgpu=1, docs/webgpu.md) */
+  private gpu_ = false;
+  private gpuScan = 0;
+  /** Obraz klatki: efekty obrazu (WebGL) albo — na WebGPU, zanim efekty dostaną bliźniaki w TSL — prosto scena */
+  private present(): void {
+    if (!this.gpu_) { this.composer.render(); return; }
+    if (this.gpuScan++ % 60 === 0) hideGlslMaterials(this.scene);
+    this.renderer.render(this.scene, this.cam.camera);
+  }
   private scene = new THREE.Scene();
   private cam: StrategyCamera;
   /** Obraz przechodzi przez cieniowanie zagłębień (AO): ciemniejsze kąty, styki ścian z ziemią, szczeliny */
@@ -804,13 +814,15 @@ export class GameRenderer {
   private pyreAt = new THREE.Vector3();
 
   constructor(private canvas: HTMLCanvasElement, private models: ModelFactory = proceduralModels) {
-    this.renderer = createRenderer({canvas, antialias: true }, 'gra');
-    this.pre = new Precompiler(this.renderer, this.scene);
+    // WebGPU (docs/webgpu.md): z flagą ?webgpu=1 renderer przygotowany w boot.ts; bez niej zwykły WebGL
+    this.renderer = takeGpuRenderer() ?? createRenderer({canvas, antialias: true }, 'gra');
+    this.gpu_ = !!takeGpuRenderer();
+    this.pre = new Precompiler(this.renderer, this.scene, this.gpu_);
     this.scene.add(this.healOrbs);
     Figures.charred = (id) => this.burntBodies.has(id);
     Figures.frozen = (id) => this.frozenBodies.has(id);
     initKtx(this.renderer);
-    watchRenderer(this.renderer, 'gra');
+    if (!this.gpu_) watchRenderer(this.renderer, 'gra'); // dziennik błędów WebGL (gl.getError, utrata kontekstu)
     watchLoading(THREE.DefaultLoadingManager);
     this.renderer.localClippingEnabled = true; // budynki w budowie: model przycięty na wysokości postępu
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
@@ -823,7 +835,7 @@ export class GameRenderer {
     this.renderer.info.autoReset = false;
     this.renderer.shadowMap.enabled = true;
     this.renderer.shadowMap.type = THREE.PCFShadowMap;
-    enableShadowLayer(this.renderer); // zastępcze bryły cienia roślinności (terrain.ts)
+    if (!this.gpu_) enableShadowLayer(this.renderer); // zastępcze bryły cienia roślinności (terrain.ts); WebGPU: później
     this.hemi = new THREE.HemisphereLight(0xdfeaff, 0x6a5a3c, 1.5);
     this.scene.add(this.hemi);
     const sun = new THREE.DirectionalLight(0xffe2ad, 3.6);
@@ -1116,7 +1128,8 @@ export class GameRenderer {
     this.sharpen.enabled = false;
     this.composer.addPass(this.sharpen);
     this.matQ = new MaterialQuality(this.renderer.capabilities.getMaxAnisotropy());
-    this.envTex = makeEnvironment(this.renderer);
+    // mapa otoczenia przez PMREM z WebGL — na WebGPU dojdzie bliźniak (docs/webgpu.md, partia 1)
+    if (!this.gpu_) this.envTex = makeEnvironment(this.renderer);
     canvas.addEventListener('pointermove', (e) => {
       // kursor nad budynkiem (wieża, mur, dach chaty) wskazuje ten budynek, a nie ziemię za nim — łatwiej kliknąć
       // wieżę albo mur, żeby wysłać na nie wojsko (Michał 28.10.2026); promień po budynkach najwyżej co 40 ms
@@ -1719,12 +1732,12 @@ export class GameRenderer {
     // nie z przerwami na klatkę (pasek wczytywania się rusza) — dopiero wtedy prawdziwa pierwsza klatka.
     const hide = this.scene.children.filter((o) => o.visible && !(o as THREE.Light).isLight);
     for (const o of hide) o.visible = false;
-    try { this.composer.render(); } finally { for (const o of hide) o.visible = true; }
+    try { this.present(); } finally { for (const o of hide) o.visible = true; }
     lap('efekty obrazu');
     const shadowMats = this.pre.warm(this.scene, this.cam.camera);
     for (let k = 0; k < 120 && shadowMats.length && !this.pre.isReady(shadowMats); k++) await pause();
     lap('shadery cieni');
-    this.composer.render();
+    this.present();
     lap('pierwsza klatka');
   }
   private prewarmed = false;
@@ -2491,7 +2504,7 @@ export class GameRenderer {
     // three.js wysyła dla nich polecenie rysowania z zerem sztuk — ok. 1/5 wszystkich wywołań klatki
     const empties = this.hideEmptyPools();
     try {
-    if (this.gpuProfile && this.profN++ % 15 === 0) { this.profiledRender(); return; }
+    if (!this.gpu_ && this.gpuProfile && this.profN++ % 15 === 0) { this.profiledRender(); return; }
     const tg = performance.now();
     // odbicie w wodzie (od średniej grafiki w górę, jak poświata)
     // nowe obiekty z shaderami w trakcie kompilacji nie są rysowane w tej klatce (bez blokowania strony)
@@ -2500,8 +2513,8 @@ export class GameRenderer {
     if (this.pre.hasFresh() && tg - this.seasonPatchAt > 150) { this.seasonPatchAt = tg; for (const m of applySeason(this.scene)) this.pre.watch(m); }
     const restore = this.pre.beforeRender(this.cam.camera);
     try {
-      this.view?.reflectWater(this.renderer, this.scene, this.cam.camera, this.bloom.enabled);
-      this.composer.render();
+      if (!this.gpu_) this.view?.reflectWater(this.renderer, this.scene, this.cam.camera, this.bloom.enabled);
+      this.present();
     } finally { restore(); }
     const gpu = performance.now() - tg;
     this.timing['karta graficzna'] = (this.timing['karta graficzna'] ?? 0) + gpu;
@@ -3239,6 +3252,7 @@ export class GameRenderer {
   private gpuName?: string;
   /** Nazwa karty graficznej, na której rysuje przeglądarka (F3) — po niej widać, czy to osobna karta, czy wbudowana */
   get gpu(): string {
+    if (this.gpuName === undefined && this.gpu_) this.gpuName = gpuBackend;
     if (this.gpuName === undefined) {
       const gl = this.renderer.getContext();
       const ext = gl.getExtension('WEBGL_debug_renderer_info');
@@ -6007,7 +6021,7 @@ export class GameRenderer {
     this.sharpen.uniforms.amount!.value = sharpen;
     this.sharpenTexel();
     this.envOn = reflections;
-    this.scene.environment = reflections ? this.envTex : null;
+    this.scene.environment = reflections && !this.gpu_ ? this.envTex : null;
     this.matQ.set(aniso, samples > 0);
     this.matQ.sweep(this.scene);
   }

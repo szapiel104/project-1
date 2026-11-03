@@ -41,8 +41,9 @@ export class Precompiler {
   /** Obiekty już sprawdzone (przeniesione do innej grupy nie wracają na listę) */
   private done = new WeakSet<THREE.Object3D>();
 
-  constructor(private renderer: THREE.WebGLRenderer, private scene: THREE.Scene) {
-    patchAdd();
+  /** `off` — WebGPURenderer (docs/webgpu.md): sam kompiluje potoki w tle (`compileAsync`), ta warstwa nic nie robi */
+  constructor(private renderer: THREE.WebGLRenderer, private scene: THREE.Scene, private off = false) {
+    if (!off) patchAdd();
   }
 
   /**
@@ -86,15 +87,17 @@ export class Precompiler {
    * w tle po starcie gry (scene.ts, prewarmLater). Zwraca materiały, na które można potem czekać (`isReady`).
    */
   warm(o: THREE.Object3D, camera: THREE.Camera): THREE.Material[] {
+    if (this.off) return [];
     try { return [...(this.renderer.compile(o, camera, this.scene) as Set<THREE.Material>), ...this.compileShadow(o)]; }
     catch { return []; }
   }
 
   /** Czy shadery tych materiałów są już gotowe (bez blokowania: przy równoległej kompilacji pyta kartę, nie czeka) */
-  isReady(mats: THREE.Material[]): boolean { return this.ready(mats, false); }
+  isReady(mats: THREE.Material[]): boolean { return this.off || this.ready(mats, false); }
 
   /** Po pełnej rozgrzewce: wszystko w scenie skompilowane, lista od zera; od teraz pilnujemy nowych obiektów */
   start(): void {
+    if (this.off) return;
     this.pending.clear();
     this.on = true;
     sink = (o) => { if (this.on && !this.done.has(o) && !this.pending.has(o)) this.pending.set(o, { since: performance.now(), mats: null, compiled: false }); };
@@ -138,7 +141,7 @@ export class Precompiler {
    * Zwraca funkcję przywracającą widoczność (po narysowaniu klatki).
    */
   beforeRender(camera: THREE.Camera): () => void {
-    if (!this.pending.size) return noop;
+    if (this.off || !this.pending.size) return noop;
     const hidden: THREE.Object3D[] = [];
     const now = performance.now();
     let compiles = 0;

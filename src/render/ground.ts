@@ -314,7 +314,7 @@ export function groundMaterial(): THREE.MeshStandardMaterial {
   if (TEST || !loader) { shared = mat; return mat; }
   // pary normalnych w jednej teksturze (o 2 próbniki mniej: limit 16 na wielu kartach, opis w normalpack.ts)
   const packGF = packNormals(tex('grass_n', false), tex('forest_n', false), 2048), packPR = packNormals(tex('pebble_n', false), tex('cliff_n', false), 2048); // skała: normalne z poszarpanej skały (cliff_n), pasują do jej koloru
-  mat.onBeforeRender = (renderer) => { packGF.update(renderer); packPR.update(renderer); };
+  mat.onBeforeRender = (renderer) => { if (!(renderer as { isWebGLRenderer?: boolean }).isWebGLRenderer) return; packGF.update(renderer); packPR.update(renderer); }; // WebGPU: bliźniak ziemi w TSL (docs/webgpu.md)
   const uniforms = {
     tGrass1: { value: tex('grass1', true) }, tGrass2: { value: tex('grass2', true) }, tMeadow: { value: tex('meadow', true) },
     tForest: { value: tex('forest', true) }, tPebble: { value: tex('pebble', true) }, tDirt: { value: tex('dirt', true) }, tRock: { value: tex('rock', true) }, tCliff: { value: tex('cliff', true) }, tSand: { value: tex('sand', true) },

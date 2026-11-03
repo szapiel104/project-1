@@ -1,5 +1,8 @@
 # Dziennik zmian
 
+## 0.90.0 — 3.11.2026
+- WebGPU, partia 0 (`docs/webgpu.md`): `src/render/gpu/webgpu.ts` (`?webgpu=1` / `?webgpu=gl`), `prepareGpu` w boot.ts przed main.ts, `GameRenderer.present()` (WebGL: composer; WebGPU: sama scena), `Precompiler(..., off)`, bez `watchRenderer`/`enableShadowLayer`/PMREM/odbić wody na WebGPU, `hideGlslMaterials`. Zasada bliźniaków TSL w CLAUDE.md. Boty: bez zmian.
+
 ## 0.89.6 — 3.11.2026
 - `rockmesh.ts`: `rockMask` + normalne przy brzegu skały mieszane z normalnymi narożników zwykłej siatki (`cornerNor`). Boty: bez zmian.
 

@@ -10,6 +10,11 @@ export type { ChangeEntry } from './changelogTypes';
  */
 const NEW: ChangeEntry[] = [
   {
+    v: '0.90.0', date: '2026-11-03',
+    pl: ['Początek przejścia na nowy silnik grafiki WebGPU (na razie tylko dla testerów, z dopiskiem w adresie) — zwykła gra bez zmian.'],
+    en: ['The first step towards the new WebGPU graphics engine (testers only for now, via the address) — the normal game is unchanged.'],
+  },
+  {
     v: '0.89.6', date: '2026-11-03',
     pl: ['Urwiska: przy krawędzi skały światło przechodzi płynnie w sąsiedni teren — bez prostej, ostrej granicy skały i piachu.'],
     en: ['Cliffs: at the edge of the rock the lighting blends smoothly into the ground next to it — no straight, hard line between rock and sand.'],
