@@ -164,16 +164,17 @@ const TIGHT = 0.6;
 const ZERO = new THREE.Matrix4().makeScale(0, 0, 0);
 /** Klatki kluczowe doby: godzina, barwa i siła słońca (albo księżyca), siła światła nieba, barwa mgły i tła */
 const DAY = [
-  // mroczniejszy, bardziej szary świat: ciemne noce, mglisty świt, zgaszone południe
-  { h: 0, sun: 0x8095c8, power: 0.36, sky: 0.32, haze: 0x0b0f1c },
-  { h: 4.5, sun: 0x8095c8, power: 0.36, sky: 0.32, haze: 0x10162a },
-  { h: 6, sun: 0xe0a070, power: 0.9, sky: 0.7, haze: 0x9a8f86 },
-  { h: 8, sun: 0xf2dcb8, power: 1.55, sky: 1.05, haze: 0xa9aa9f },
-  { h: 12, sun: 0xfaeedc, power: 1.8, sky: 1.15, haze: 0xb4b7ae },
-  { h: 17, sun: 0xf2dcb8, power: 1.6, sky: 1.05, haze: 0xaaa79a },
-  { h: 19.5, sun: 0xe88a58, power: 0.95, sky: 0.7, haze: 0x8a6650 },
-  { h: 21.5, sun: 0x8095c8, power: 0.36, sky: 0.32, haze: 0x10162a },
-  { h: 24, sun: 0x8095c8, power: 0.28, sky: 0.24, haze: 0x0b0f1c },
+  // (Michał 3.11.2026: „gra jest ogólnie za ciemna”) — jaśniejszy dzień z mocnym słońcem jak w Twierdzy, noce mniej czarne;
+  // nadal ciepły świt i zmierzch, chłodny księżyc
+  { h: 0, sun: 0x8095c8, power: 0.46, sky: 0.42, haze: 0x0e1322 },
+  { h: 4.5, sun: 0x8095c8, power: 0.46, sky: 0.42, haze: 0x141b30 },
+  { h: 6, sun: 0xe8a878, power: 1.15, sky: 0.85, haze: 0xa59a90 },
+  { h: 8, sun: 0xf6e2c0, power: 2.0, sky: 1.25, haze: 0xb4b5ab },
+  { h: 12, sun: 0xfff2e0, power: 2.35, sky: 1.38, haze: 0xbfc3bb },
+  { h: 17, sun: 0xf6e2c0, power: 2.1, sky: 1.25, haze: 0xb5b2a5 },
+  { h: 19.5, sun: 0xef9060, power: 1.2, sky: 0.85, haze: 0x957060 },
+  { h: 21.5, sun: 0x8095c8, power: 0.46, sky: 0.42, haze: 0x141b30 },
+  { h: 24, sun: 0x8095c8, power: 0.38, sky: 0.34, haze: 0x0e1322 },
 ];
 const WOOD = RESOURCES.indexOf('wood');
 const ALE = RESOURCES.indexOf('ale');
@@ -818,7 +819,7 @@ export class GameRenderer {
     // Cienie: jedno słońce, którego obszar cienia podąża za kamerą.
     // filmowe odwzorowanie tonów: jasne partie nie przepalają się, cienie zostają głębokie
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    this.renderer.toneMappingExposure = 0.9; // klimat Gothica: mrocznie, ale bez topienia się w czerni
+    this.renderer.toneMappingExposure = 1.02; // jaśniej niż dawniej (Michał 3.11.2026: za ciemno), dalej bez przepaleń
     this.renderer.info.autoReset = false;
     this.renderer.shadowMap.enabled = true;
     this.renderer.shadowMap.type = THREE.PCFShadowMap;
@@ -1350,7 +1351,7 @@ export class GameRenderer {
   /** Ustawienia → Grafika: jasność obrazu (1 = 100%) */
   set brightness(v: number) {
     const b = Math.max(0.5, Math.min(2, v));
-    this.renderer.toneMappingExposure = 0.9 * Math.sqrt(b);
+    this.renderer.toneMappingExposure = 1.02 * Math.sqrt(b);
     this.grade.uniforms.bright!.value = b;
   }
   /** Testy: budynki stawiane od ręki stoją od razu, bez kilkusekundowego pokazu budowy */

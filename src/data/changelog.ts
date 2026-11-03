@@ -10,6 +10,11 @@ export type { ChangeEntry } from './changelogTypes';
  */
 const NEW: ChangeEntry[] = [
   {
+    v: '0.87.1', date: '2026-11-03',
+    pl: ['Jaśniej: mocniejsze słońce i światło nieba za dnia, wyższa ekspozycja, noce mniej czarne (świt i zmierzch dalej ciepłe). Suwak Jasność w Ustawieniach działa jak dotąd.'],
+    en: ['Brighter: stronger sun and skylight by day, higher exposure, nights less pitch-black (dawn and dusk still warm). The Brightness slider in Settings works as before.'],
+  },
+  {
     v: '0.87.0', date: '2026-11-03',
     pl: [
       '„Nowa gra” na pergaminie, jak księgi w menu: czerwone nagłówki, jasne kafelki, zaznaczony wybór jak pieczęć.',

@@ -1,5 +1,8 @@
 # Dziennik zmian
 
+## 0.87.1 — 3.11.2026
+- `scene.ts`: `DAY` — słońce i niebo mocniej (południe 2,35 / 1,38), noc 0,46 / 0,42; `toneMappingExposure` 1,02 (było 0,9). Boty: bez zmian.
+
 ## 0.87.0 — 3.11.2026
 - „Nowa gra”: `panel.parch` + `src/ui/newgame.css` (pergamin), rząd „Kraina” (`biome` → `onPreviewMap`/`onNewGame` → `createGame(..., biome)` / `createGameAsync` / `mapworker`); `generateMap(seed, preset, gen, biome?)`; zapis ma `biome` (`save.ts`), stare zapisy bez niego = kraina z ziarna. Mecz przez sieć: kraina dalej z ziarna (do zrobienia w pokoju). Boty: bez zmian.
 
