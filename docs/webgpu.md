@@ -53,9 +53,19 @@ kwadratu, większa mapa 1 na 1.
 - Potoki karty zawsze asynchronicznie (`Pipelines.updateForRender` z obietnicą) — synchroniczne zawieszały cały Chrome.
 - Budżet składania materiałów na klatkę (`gpuFrameBudget`, 45 ms przy wczytywaniu, 6 ms w grze) — obiekt czeka klatkę zamiast blokować.
 - Wspólny klucz programu dla zwykłych materiałów (stare łatki GLSL nie mnożą wariantów); węzły dopinane do zwykłych materiałów niosą `userData.gpuKey`.
-- Oświetlenie klastrowe (ClusteredLighting) dla pochodni; pełne limity karty (`requiredLimits`).
+- Światła w tablicach (DynamicLighting; klastry były ok. 50× droższe przy składaniu, zostały pod `?swiatla=klastry`); pełne limity karty (`requiredLimits`).
 - Macierz instancji w własnych węzłach: `instanceMatrixNode()` (atrybut mat4 nie istnieje w WebGPU).
-- Do zrobienia: mniej pul instancji (każda InstancedMesh = osobne składanie w three.js), koszt rysowania na procesorze (~800–1000 wywołań, odbicie wody rysuje scenę drugi raz).
+- 0.94.5: pule instancji zawsze z macierzami w atrybucie (`getUniformBufferLimit = 0` dla InstancedMesh) — wcześniej każda mała pula miała własny kod shadera (374 programy wierzchołków → ok. 100).
+- 0.94.8: `Bindings.deleteForRender` nie zwalnia wiązań RenderObjectu, który nigdy się nie narysował (odłożony przez budżet) — inaczej wspólny bufor uniformów był niszczony i obraz padał (mleczny ekran).
+- 0.94.11: place budowy bez płaszczyzn przycinania (każda kopia = osobny ClippingContext w kluczu = składanie na każdą budowę); wspólna kopia na materiał z `maskNode` i `userData.siteCut`.
+- **Pułapki three.js r186 (dla wszystkich czatów):**
+  - złożony shader jest wspólny dla materiałów o tym samym kluczu (właściwości materiału + `customProgramCacheKey`), a węzły (`uniform(...)`, `texture(...)`) niesie tylko pierwszy z nich — węzeł z teksturą albo barwą konkretnego materiału wymaga własnego `userData.gpuKey` (np. z `m.uuid`), a wartości różne dla obiektów: `userData('nazwa', 'float')` (czyta z rysowanego obiektu);
+  - `materialReference(...)` w węzłach dopinanych do zwykłych materiałów wywrócił grę (0.94.9, cienie) — zamiast niego `uniform(m.color)` itp.;
+  - `renderOutput` w przejściach obrazu z jawnym tone mappingiem i przestrzenią barw (FXAA/SMAA liczą podgraf bez kontekstu);
+  - kamera cienia z samą warstwą 0 przejmuje warstwy rysującej kamery (lustro wody) — `sun.shadow.camera.layers` ma mieć też warstwę odbicia;
+  - zmiana AO (MRT z normalnymi) albo MSAA = nowy kontekst rysowania = składanie wszystkich materiałów od nowa.
+- **Testy w chmurze bez karty:** Chromium bez okna gubi urządzenie WebGPU („Instance dropped”), więc węzły sprawdza się z `&webgpu=gl` (WebGPURenderer na WebGL2, te same węzły; wolno — ok. 25 s do startu). Skrypt: `/home/claude/scripts/gpushot.mjs <url> <png> [s] [js]` (lokalnie `npx vite preview --port 4173`).
+- Do zrobienia: pula instancji = osobne składanie (three.js dokłada `object.uuid` do klucza InstancedMesh — TODO w RenderObject.js), osobne składanie na każde przejście (obraz, cień, odbicie wody), koszt rysowania na procesorze. (każda InstancedMesh = osobne składanie w three.js), koszt rysowania na procesorze (~800–1000 wywołań, odbicie wody rysuje scenę drugi raz).
 
 ## Rozjazdy (zmiany w GLSL, których jeszcze nie ma w TSL)
 - Cienie chmur: na WebGPU jedno przejście w postNode.ts (0.93.8), na WebGL dalej cloudShade.
