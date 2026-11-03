@@ -1031,7 +1031,9 @@ export function createOnline(ui: Ui): { showOnline(): void; showAccount(): void;
       note.classList.add('bad');
     }, 6000);
     paint();
-    screen(tx('Pokój', 'Room'), true, box, foot);
+    // układ zależy od szerokości panelu (obok podglądu mapy bywa wąski), nie od okna — stąd osobna ramka z @container
+    const outer = el('div', 'rm-wrap'); outer.append(box);
+    screen(tx('Pokój', 'Room'), true, outer, foot);
     showMap();
   }
 

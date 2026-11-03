@@ -18,6 +18,7 @@ const NEW: ChangeEntry[] = [
       'Menu po lewej czytelniejsze: wyraźna czcionka, ikona przy każdej pozycji, większe pola.',
       'Dzwoneczek pokazuje też przeczytane powiadomienia z ostatnich 7 dni; nowe są wyróżnione złotem i kropką.',
       'Znajomi: od razu zakładki z napisami i „Wczytuję…” zamiast pustych ramek.',
+      'Pokój układa się według szerokości panelu: obok podglądu mapy drużyny i czat idą pod sobą, bez ściskania.',
     ],
     en: [
       'New game room: a large header with the mode, map and seat count, settings as toggles (mode, game type, bots), teams in coloured cards.',
@@ -26,6 +27,7 @@ const NEW: ChangeEntry[] = [
       'Clearer menu on the left: a plain readable font, an icon for every entry, larger targets.',
       'The bell also shows read notifications from the last 7 days; new ones stand out in gold with a dot.',
       'Friends: tabs with labels and “Loading…” right away instead of empty frames.',
+      'The room lays itself out by the panel width: beside the map preview the teams and chat stack instead of squeezing.',
     ],
   },
   {
