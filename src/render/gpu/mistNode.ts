@@ -77,7 +77,7 @@ export function mistPuffNode(o: { hMap: THREE.Texture; hBox: THREE.Vector4; map:
   } = T;
   const u = {
     time: uniform(0), amount: uniform(0.3), hBox: uniform(o.hBox),
-    lit: uniform(new Wm.Color(0xeeeeea)), shade: uniform(new Wm.Color(0x8c9196)), spray: uniform(new Wm.Color(0xe8eef0)),
+    lit: uniform(new Wm.Color(0xeeeeea)), shade: uniform(new Wm.Color(0xa9aeb2)), spray: uniform(new Wm.Color(0xe8eef0)),
   };
   const c4 = attribute('aCenter', 'vec4'), mv = attribute('aMove', 'vec4'), kd = attribute('aKind', 'vec2');
   const ang = mv.y.add(u.time.mul(mv.z));
@@ -95,7 +95,8 @@ export function mistPuffNode(o: { hMap: THREE.Texture; hBox: THREE.Vector4; map:
   const wp = center.add(right.mul(positionGeometry.x).add(up.mul(positionGeometry.y)).mul(size));
   const vA = varying(a), vK = varying(kd.y), vWP = varying(wp);
   const t = texture(o.map, uv());
-  let alpha: any = t.a.mul(vA).mul(0.62).mul(smoothstep(-0.3, 2.2, vWP.y.sub(hgt(T, o.hMap, u.hBox, vWP.xz))));
+  // miękki brzeg kłębu (ostre krawędzie wyglądały jak wycięte z papieru) i jaśniejszy, mniej siny kolor
+  let alpha: any = smoothstep(0.02, 0.75, t.a).mul(t.a).mul(vA).mul(0.55).mul(smoothstep(-0.3, 2.2, vWP.y.sub(hgt(T, o.hMap, u.hBox, vWP.xz))));
   alpha = alpha.mul(softFade(3));
   let col: any = mix(u.shade, u.lit, t.r);
   col = select(vK.greaterThan(0.5), mix(col, u.spray, 0.35), col);

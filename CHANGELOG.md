@@ -1,5 +1,9 @@
 # Dziennik zmian
 
+## 0.94.20 — 2026-11-03
+- WebGPU: wspólne złożone shadery pul instancji ze zwykłymi materiałami domyślnie (`?pule=0` wyłącza, `?pule=2` także materiały z wiatrem i porami roku); sprawdzone na pustyni: 927 pul → 48 shaderów, bez błędów.
+- Cienie chmur: `smoothstep(0.28, 0.78)`, siła 0,3. Kłęby mgły: miękki brzeg z alfy, jaśniejszy cień.
+
 ## 0.94.19 — 2026-11-03
 - WebGPU post: GTAO i odszumianie z normalnymi odtwarzanymi z głębi (bez MRT z normalnymi). Przezroczyste bryły (dym) pisały do bufora normalnych mimo alfy 0 (bez mieszania na drugim wyjściu) — ciemne romby wokół dymu. Zmiana AO nie zmienia wyjść materiałów (bez składania od nowa).
 

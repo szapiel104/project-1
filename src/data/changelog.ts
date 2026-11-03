@@ -10,6 +10,19 @@ export type { ChangeEntry } from './changelogTypes';
  */
 const NEW: ChangeEntry[] = [
   {
+    v: '0.94.20', date: '2026-11-03',
+    pl: [
+      'Szybsze doczytywanie przy przelocie kamerą: kawałki lasu, kamienie i budynki tego samego rodzaju korzystają ze wspólnych shaderów, więc obiekty i ich cienie nie „doładowują się” po kolei.',
+      'Cienie chmur na ziemi miękkie i lżejsze (bez ostrych, ciemnych plam).',
+      'Kłęby mgły przy szczytach gór jaśniejsze i z miękkim brzegiem.',
+    ],
+    en: [
+      'Faster streaming when the camera flies around: chunks of forest, rocks and buildings of one kind share shaders, so objects and their shadows no longer pop in one by one.',
+      'Cloud shadows on the ground are soft and lighter (no sharp dark patches).',
+      'Mist puffs around mountain peaks are lighter with soft edges.',
+    ],
+  },
+  {
     v: '0.94.19', date: '2026-11-03',
     pl: ['Koniec z ciemnymi rombami i prostokątami na ziemi wokół dymu i pożarów: cieniowanie zagłębień liczy się teraz tylko z prawdziwych brył, a przełączenie go w ustawieniach nie przeładowuje już całej grafiki.'],
     en: ['No more dark diamonds and rectangles on the ground around smoke and fires: ambient occlusion now comes from solid geometry only, and toggling it in the settings no longer reloads all the graphics.'],

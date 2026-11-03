@@ -106,9 +106,9 @@ export class GpuPost {
       const cT = T.uniform(0).onFrameUpdate(() => CLOUD_U.cloudT.value), cK = T.uniform(0).onFrameUpdate(() => CLOUD_U.cloudK.value);
       const cuv = wpos.xz.div(70).add(vec2(0.006, 0.0035).mul(cT));
       const nz = T.texture(sharedNoise(), cuv).r.mul(0.65).add(T.texture(sharedNoise(), cuv.mul(2.3).add(0.37)).g.mul(0.35));
-      const ccm = cK.mul(smoothstep(0.38, 0.62, nz)).mul(T.step(dv, 0.9999)).mul(float(1).sub(this.u.indoor));
-      // łagodniej niż dawne 0,55 (całe kadry pod chmurą wychodziły o połowę ciemniejsze)
-      c = c.mul(float(1).sub(ccm.mul(0.38)));
+      const ccm = cK.mul(smoothstep(0.28, 0.78, nz)).mul(T.step(dv, 0.9999)).mul(float(1).sub(this.u.indoor));
+      // łagodniej niż dawne 0,55 i z miękkim brzegiem (Michał 3.11.2026: ostre, ciemne plamy na pustyni)
+      c = c.mul(float(1).sub(ccm.mul(0.3)));
     }
     // pod wodą: nurkowanie (gpu/underwaterNode.ts) — linia wody, załamanie, toń, kaustyki, promienie słońca
     c = underwater(T, { col, dep: sp.getTextureNode('depth'), c, night: this.u.night, sun: this.u.sun, cam: sceneCam });
