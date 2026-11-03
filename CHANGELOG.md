@@ -1,5 +1,11 @@
 # Dziennik zmian
 
+## 0.94.17 — 2026-11-03
+- WebGPU post: normalne do AO (MRT) piszą tylko materiały nieprzezroczyste (`Fn` z `builder.material.transparent` → `vec4(0)`); prostokąty wokół ognia i dymu brały się z płaskich normalnych przezroczystych brył.
+- Płomień i poświata: `outputNode` zamiast `colorNode` (three.js mnożył kolor przez kolor instancji = ziarno i jasność → zielony ogień).
+- Pożar (`blazeNode`): gęstość ognia i sadzy gaśnie przy ścianach i stropie bryły (bez ciemnego pudła).
+- Cienie chmur 0,38 zamiast 0,55; pod dachem w spacerze (sala, sztolnia) bez chmur i AO 0,32 zamiast 0,7 (`setIndoor`).
+
 ## 0.94.16 — 2026-11-03
 - WebGPU: najwyżej 3 potoki karty w kompilacji naraz (`MAX_PENDING` w `Pipelines.updateForRender`); obiekt bez potoku czeka klatkę. Proces grafiki Chrome'a jest wspólny dla wszystkich kart — przy kilkudziesięciu kompilacjach naraz stawał film w innym oknie.
 

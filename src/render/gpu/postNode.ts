@@ -25,11 +25,14 @@ export class GpuPost {
     this.pipe.outputColorTransform = false; // tone mapping i sRGB robimy sami przed gradacją (jak OutputPass przed `grade`)
     this.u = {
       night: T.uniform(0), rain: T.uniform(0), golden: T.uniform(0), bright: T.uniform(1),
-      sharpen: T.uniform(0), texel: T.uniform(new (W as any).Vector2(1, 1)), sun: T.uniform(new (W as any).Vector3(0, 1, 0)),
+      sharpen: T.uniform(0), texel: T.uniform(new (W as any).Vector2(1, 1)), sun: T.uniform(new (W as any).Vector3(0, 1, 0)), aoK: T.uniform(0.7), indoor: T.uniform(0),
     };
   }
 
   /** Wartości gradacji z ShaderPassa `grade` (scene.ts ustawia je jak dotąd) */
+  /** Pod dachem (sala, sztolnia w spacerze): bez cieni chmur i słabsze AO (w ciasnych wnętrzach zaciemniało wszystko) */
+  setIndoor(k: number): void { this.u.indoor.value = k; this.u.aoK.value = 0.7 - 0.38 * k; }
+
   /** Kierunek do słońca (świat) — kaustyki i promienie pod wodą */
   setSun(d: THREE.Vector3): void { this.u.sun.value.copy(d).normalize(); }
 
@@ -60,7 +63,11 @@ export class GpuPost {
     const o = this.opts;
     const msaa = o.ao === 'off' && o.aa.startsWith('msaa') ? 4 : 0;
     const sp = pass(this.scene, this.camera, { samples: msaa });
-    if (o.ao !== 'off') sp.setMRT(mrt({ output, normal: packNormalToRGB(normalView) }));
+    // normalne do AO piszą tylko bryły nieprzezroczyste: płomienie, dym, poświaty i mgła (przezroczyste prostokąty
+    // i pudła) zostawiały w buforze normalnych swoje płaskie normalne i AO rysowało wokół nich prostokąty
+    // (Michał 3.11.2026: „dym robi ten kwadrat”, „ogień i prostokąt”); alfa 0 = przy każdym mieszaniu bufor bez zmian
+    const nrmOut = T.Fn((_: unknown, b: any) => (b.material?.transparent ? vec4(0) : vec4(packNormalToRGB(normalView), 1)))();
+    if (o.ao !== 'off') sp.setMRT(mrt({ output, normal: nrmOut }));
     const col = sp.getTextureNode('output');
     let c: any = col.rgb;
     if (o.ao !== 'off') {
@@ -79,7 +86,7 @@ export class GpuPost {
       const aoT: any = aoN.getTextureNode();
       // odszumianie liczy się w miejscu (węzeł w tym samym przejściu), bez osobnej tekstury
       const raw = o.ao !== 'low' ? fx.denoise(aoT, dep, normal, this.camera).r : aoT.sample(screenUV).r;
-      const a = mix(float(1), pow(raw, num('aop', 1.2)), num('aok', 0.7));
+      const a = mix(float(1), pow(raw, num('aop', 1.2)), this.u.aoK.mul(num('aok', 1)));
       c = c.mul(mix(vec3(0.0103, 0.0060, 0.0030), vec3(1), a)); // ciepły brąz w zagłębieniach (0x1a120a w liniowym)
     }
     // cienie chmur sunące po ziemi: jedno przejście na cały obraz — położenie w świecie z bufora głębi, maska z szumu
@@ -101,8 +108,9 @@ export class GpuPost {
       const cT = T.uniform(0).onFrameUpdate(() => CLOUD_U.cloudT.value), cK = T.uniform(0).onFrameUpdate(() => CLOUD_U.cloudK.value);
       const cuv = wpos.xz.div(70).add(vec2(0.006, 0.0035).mul(cT));
       const nz = T.texture(sharedNoise(), cuv).r.mul(0.65).add(T.texture(sharedNoise(), cuv.mul(2.3).add(0.37)).g.mul(0.35));
-      const ccm = cK.mul(smoothstep(0.38, 0.62, nz)).mul(T.step(dv, 0.9999));
-      c = c.mul(float(1).sub(ccm.mul(0.55)));
+      const ccm = cK.mul(smoothstep(0.38, 0.62, nz)).mul(T.step(dv, 0.9999)).mul(float(1).sub(this.u.indoor));
+      // łagodniej niż dawne 0,55 (całe kadry pod chmurą wychodziły o połowę ciemniejsze)
+      c = c.mul(float(1).sub(ccm.mul(0.38)));
     }
     // pod wodą: nurkowanie (gpu/underwaterNode.ts) — linia wody, załamanie, toń, kaustyki, promienie słońca
     c = underwater(T, { col, dep: sp.getTextureNode('depth'), c, night: this.u.night, sun: this.u.sun, cam: sceneCam });

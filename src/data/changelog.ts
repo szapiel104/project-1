@@ -10,6 +10,19 @@ export type { ChangeEntry } from './changelogTypes';
  */
 const NEW: ChangeEntry[] = [
   {
+    v: '0.94.17', date: '2026-11-03',
+    pl: [
+      'Ogniska i pochodnie znów mają pomarańczowy płomień (był zielony).',
+      'Bez prostokątów wokół ognia, dymu i pożarów — ani ciemnych, ani jaśniejszych.',
+      'Cienie chmur łagodniejsze, a w salach i w kopalni ich nie ma; we wnętrzach jaśniej.',
+    ],
+    en: [
+      'Campfires and torches have an orange flame again (it was green).',
+      'No more rectangles around fire, smoke and burning buildings — neither dark nor bright.',
+      'Cloud shadows are softer and absent inside halls and mines; interiors are brighter.',
+    ],
+  },
+  {
     v: '0.94.16', date: '2026-11-03',
     pl: ['Wczytywanie gry na nowym silniku nie zatrzymuje już filmu ani innych kart: karta graficzna kompiluje najwyżej kilka shaderów naraz zamiast kilkudziesięciu.'],
     en: ['Loading the game on the new engine no longer freezes a video or other tabs: the graphics card compiles at most a few shaders at once instead of dozens.'],

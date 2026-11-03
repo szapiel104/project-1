@@ -133,7 +133,9 @@ export function flameNode(time: { value: number }, mesh?: THREE.InstancedMesh): 
   });
   const m = new Wm.MeshBasicNodeMaterial({ transparent: true, depthWrite: false, fog: false,
     blending: Wm.CustomBlending, blendSrc: Wm.OneFactor, blendDst: Wm.OneMinusSrcAlphaFactor });
-  m.colorNode = color();
+  // outputNode, nie colorNode: three.js mnoży colorNode przez kolor instancji, a tu kolor instancji to ziarno
+  // i jasność (r, g, 0) — płomień wychodził zielony (Michał 3.11.2026)
+  m.outputNode = color();
   // pozycja bryły: ta sama macierz, której użyliśmy wyżej (bez automatycznych instancji three.js)
   m.vertexNode = T.cameraProjectionMatrix.mul(T.cameraViewMatrix).mul(M).mul(vec4(positionGeometry, 1));
   m.uniforms = { time: tU };
@@ -157,7 +159,7 @@ export function flameGlowNode(time: { value: number }, mesh: THREE.InstancedMesh
   const a = pow(max(T.float(1).sub(length(c)), 0), 2.5).mul(vI).mul(fl).mul(0.42);
   const m = new Wm.MeshBasicNodeMaterial({ transparent: true, depthWrite: false, fog: false, blending: Wm.AdditiveBlending });
   m.vertexNode = cameraProjectionMatrix.mul(cameraViewMatrix).mul(vec4(p, 1));
-  m.colorNode = vec4(vec3(1, 0.55, 0.18).mul(a), 1);
+  m.outputNode = vec4(vec3(1, 0.55, 0.18).mul(a), 1); // jak płomień: bez mnożenia przez kolor instancji
   m.uniforms = { time: tU };
   return m;
 }
@@ -191,7 +193,12 @@ export function blazeNode(time: { value: number }, init: { heat: number; seed: n
     const tm = u.time.add(u.seed.mul(30));
     const col = vec3(0).toVar(), Tt = float(1).toVar(), fireSeen = float(0).toVar();
     Loop(N, () => {
-      const q = o.add(d.mul(t)).mul(vScale);
+      const pl = o.add(d.mul(t));
+      // miękko do zera przy ścianach i stropie bryły: inaczej cienka sadza wypełniała całe pudło i nad pożarem było
+      // widać ciemny prostokąt (Michał 3.11.2026: „dym robi ten kwadrat”)
+      const edge = smoothstep(0, 0.14, float(0.5).sub(abs(pl.x))).mul(smoothstep(0, 0.14, float(0.5).sub(abs(pl.z))))
+        .mul(smoothstep(0, 0.18, float(1).sub(pl.y)));
+      const q = pl.mul(vScale);
       const hs = n(vec3(q.xz.mul(0.6), tm.mul(0.03)).add(u.seed.mul(7)));
       const cover = clamp(u.heat.mul(1.25).sub(0.45).add(hs.sub(0.5).mul(1.4)), 0, 1);
       const above = max(0, q.y.sub(u.roof));
@@ -208,10 +215,10 @@ export function blazeNode(time: { value: number }, init: { heat: number; seed: n
       const v = above.div(max(0.3, u.tall.mul(cover.mul(0.65).add(0.35))));
       const m = lat.mul(low).mul(cover).mul(float(1).sub(smoothstep(0.35, 1, v.add(nn.sub(0.5).mul(0.5)))));
       const dens = clamp(nn.add(m.mul(0.55)).sub(0.74).mul(6), 0, 1).mul(step(0.01, m));
-      const ef = dens.mul(2);
+      const ef = dens.mul(2).mul(edge);
       const sm = fbm(vec3(xz.mul(0.8), q.y.mul(0.6).sub(tm.mul(0.45))).add(u.seed.mul(3)), 3);
       const sootMask = smoothstep(0.6, -0.3, db.add(above.mul(0.08))).mul(smoothstep(0.25, 0.9, v)).mul(u.heat);
-      const es = clamp(sm.sub(0.42).mul(2.4), 0, 1).mul(sootMask).mul(step(u.roof.mul(0.9), q.y));
+      const es = clamp(sm.sub(0.42).mul(2.4), 0, 1).mul(sootMask).mul(step(u.roof.mul(0.9), q.y)).mul(edge);
       If(ef.add(es).greaterThan(0.001), () => {
         const temp = clamp(dens.mul(float(0.95).sub(clamp(v, 0, 1).mul(0.55))).mul(nn.mul(0.8).add(0.35)), 0, 1);
         fireSeen.assign(max(fireSeen, temp));

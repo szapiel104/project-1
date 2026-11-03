@@ -240,6 +240,7 @@ export class GameRenderer {
       const r = this.renderer.getPixelRatio();
       this.gpuPost.sync(this.grade.uniforms, this.canvas.clientWidth * r, this.canvas.clientHeight * r);
       this.gpuPost.setSun(this.sunDir);
+      this.gpuPost.setIndoor(this.walk && (this.inMine || this.roomLight.intensity > 0) ? 1 : 0);
       this.gpuPost.configure({ ao: this.ao.enabled ? (this.aoMode as 'low' | 'medium' | 'high') : 'off', bloom: this.bloom.enabled,
         aa: this.aaMode, sharpen: this.sharpen.enabled ? (this.sharpen.uniforms.amount!.value as number) : 0 });
       this.gpuPost.render();
