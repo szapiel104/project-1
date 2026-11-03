@@ -154,6 +154,14 @@ export async function prepareGpu(canvas: HTMLCanvasElement): Promise<void> {
     };
     return b;
   };
+  // Obiekt odłożony przez budżet (wyżej) ma już RenderObject, ale jeszcze nie ma założonych grup wiązań (three.js
+  // zakłada je dopiero przy pierwszym rysowaniu i liczy użycia wspólnych grup). Gdy taki obiekt znikał, zanim się
+  // narysował, three.js i tak odejmował użycie — wspólny bufor uniformów schodził do zera i był niszczony, choć
+  // rysowały go inne obiekty: „used in submit while destroyed”, efekty obrazu padały i zostawał mleczny ekran
+  // (Michał 3.11.2026, dziennik po 440 s gry). Niezałożonych wiązań nie zwalniamy.
+  const bnd = (r as unknown as { _bindings: { get(o: unknown): { initialized?: boolean }; delete(o: unknown): void; deleteForRender(ro: unknown): void } })._bindings;
+  const delForRender = bnd.deleteForRender.bind(bnd);
+  bnd.deleteForRender = (ro: unknown): void => { if (bnd.get(ro).initialized === true) delForRender(ro); else bnd.delete(ro); };
   (window as unknown as { __gpuStat: () => unknown }).__gpuStat = () => ({ deferred: gpuDeferredCount, pending: gpuPendingCount, spent: buildSpent });
   const shim = r as unknown as Record<string, unknown>;
   shim.capabilities = { getMaxAnisotropy: () => 16, maxSamples: 4, isWebGL2: true };

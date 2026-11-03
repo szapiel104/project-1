@@ -30,7 +30,7 @@ export async function renderThumbnailsAsync(models: ModelFactory, teamColor: num
     // krok „przygotowany”: shadery budynku kompiluje karta w tle (bez tego miniatura kompilowała je na raz i gra
     // przycinała na 0,1–0,8 s przy każdym nowym rodzaju), dopiero potem rysowanie
     if (typeof r.value === 'object') { try { await r.value.renderer.compileAsync(r.value.scene, r.value.cam); } catch { /* skompiluje się przy rysowaniu */ } continue; }
-    if (r.value) onEach(r.value, out.get(r.value)!);
+    if (r.value && out.has(r.value)) onEach(r.value, out.get(r.value)!);
   }
   return out;
 }
@@ -62,6 +62,12 @@ function* thumbSteps(models: ModelFactory, teamColor: number, size: number, out:
     const model = models.building(def.id, teamColor);
     const base = model.getObjectByName('base');
     if (base) base.visible = false;
+    // miniatury rysuje zwykły WebGL: materiały węzłowe z WebGPU (ogień, pochodnie, flagi z gpu/) by go wywróciły —
+    // i to dla wszystkich następnych budynków (Michał 3.11.2026: „stodoła nie ma podglądu”); na miniaturze ich nie widać
+    model.traverse((o) => {
+      const mm = (o as THREE.Mesh).material as THREE.Material | THREE.Material[] | undefined;
+      if (mm && (Array.isArray(mm) ? mm : [mm]).some((x) => (x as { isNodeMaterial?: boolean }).isNodeMaterial)) o.visible = false;
+    });
     scene.add(model);
     const box = new THREE.Box3().setFromObject(model);
     const center = box.getCenter(new THREE.Vector3());
@@ -80,8 +86,11 @@ function* thumbSteps(models: ModelFactory, teamColor: number, size: number, out:
     cam.left = -half; cam.right = half; cam.top = half; cam.bottom = -half;
     cam.updateProjectionMatrix();
     yield { renderer, scene, cam };
-    renderer.render(scene, cam);
-    out.set(def.id, renderer.domElement.toDataURL('image/png'));
+    // jeden budynek z błędem nie zabiera miniatur pozostałym
+    try {
+      renderer.render(scene, cam);
+      out.set(def.id, renderer.domElement.toDataURL('image/png'));
+    } catch (e) { console.warn(`[miniatury] ${def.id}`, e); }
     scene.remove(model);
     yield def.id;
   }

@@ -1,5 +1,11 @@
 # Dziennik zmian
 
+## 0.94.8 — 2026-11-03
+- WebGPU, cienie: `sun.shadow.camera.layers.mask = 1 | 1<<REFLECT_LAYER` — z samą warstwą 0 ShadowNode przejmował warstwy rysującej kamery, a co drugą klatkę było to lustro wody (bez obiektów z NO_REFLECT).
+- WebGPU, niebo: kopuła z `vertexNode` tuż przy tylnej płaszczyźnie (z = 0,99995·w) — tylna płaszczyzna kamery w spacerze ucinała środek kopuły.
+- WebGPU: `Bindings.deleteForRender` nie zwalnia wiązań RenderObjectu, który nigdy się nie narysował (odłożony przez budżet składania) — wcześniej licznik wspólnej grupy schodził do zera, bufor był niszczony i obraz padał („used in submit while destroyed”, mleczny ekran).
+- Miniatury budynków (WebGL): bez materiałów węzłowych, błąd jednego budynku nie przerywa reszty (stodoła i dalsze nie miały podglądu).
+
 ## 0.94.7 — 2026-11-03
 - WebGPU post (`gpu/postNode.ts`): `renderOutput` z jawnym tone mappingiem i przestrzenią barw renderera. FXAA/SMAA liczą podgraf w osobnym przejściu bez kontekstu RenderPipeline, więc obraz wychodził liniowy (bez sRGB) — dużo ciemniejszy niż w WebGL i bez efektów.
 

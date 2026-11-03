@@ -35,6 +35,10 @@ export function skyDomeNode(): THREE.Material & { uniforms: U } {
   col = mix(col, u.fogCol, smoothstep(0.08, -0.02, d.y));
   const m = new Wm.MeshBasicNodeMaterial({ side: Wm.BackSide, depthWrite: true, fog: false });
   m.colorNode = vec4(col, 1);
+  // kopuła zawsze tuż przed tylną płaszczyzną kamery: przy krótszym zasięgu widoku (spacer) środek kopuły ucinała
+  // tylna płaszczyzna i na niebie było widać okrągłą dziurę w kolorze tła (Michał 3.11.2026: „niebo to jakieś kółko”)
+  const clip = T.cameraProjectionMatrix.mul(T.modelViewMatrix.mul(vec4(positionLocal, 1)));
+  m.vertexNode = vec4(clip.xy, clip.w.mul(0.99995), clip.w);
   m.toneMapped = true;
   m.uniforms = u;
   return m;

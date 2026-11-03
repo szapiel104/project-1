@@ -84,7 +84,7 @@ import { Snowfall } from './snowfall';
 import { gpuBackend, gpuDeferredCount, gpuFrameBudget, gpuPending, hideGlslMaterials, takeGpuRenderer } from './gpu/webgpu';
 import { GpuPost } from './gpu/postNode';
 import { makeGpuEnvironment } from './gpu/envNode';
-import { markReflect } from './gpu/waterNode';
+import { markReflect, REFLECT_LAYER } from './gpu/waterNode';
 import { SKIP as REFLECT_SKIP } from './waterReflect';
 import { Footprints } from './footprints';
 import { maxHp } from '../sim/systems/placement';
@@ -886,6 +886,10 @@ export class GameRenderer {
     sun.shadow.camera.far = 260;
     this.scene.add(sun, sun.target);
     this.sun = sun;
+    // WebGPU: kamera cienia z własnymi warstwami (zwykła 0 + warstwa odbicia w wodzie). Z samą warstwą 0 three.js
+    // przejmuje warstwy kamery, która akurat rysuje — co drugą klatkę było to lustro wody (tylko warstwa odbicia, bez
+    // ludzi, kamyków i kęp), więc cienie tych rzeczy znikały co drugą klatkę (Michał 3.11.2026: „mrugają mega cienie”)
+    if (this.gpu_) sun.shadow.camera.layers.mask = 1 | (1 << REFLECT_LAYER);
     this.scene.add(cat(this.buildingLayer, 'budynki'));
     this.scene.add(cat(this.ambience.group, 'dym, mgła, iskry'));
     this.scene.add(this.chips.group);

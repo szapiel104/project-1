@@ -10,6 +10,21 @@ export type { ChangeEntry } from './changelogTypes';
  */
 const NEW: ChangeEntry[] = [
   {
+    v: '0.94.8', date: '2026-11-03',
+    pl: [
+      'Cienie już nie mrugają: na nowym silniku cienie ludzi, kamieni i kęp znikały co drugą klatkę.',
+      'Niebo w spacerze jest całe — bez okrągłej dziury pośrodku.',
+      'Koniec z mlecznym ekranem po kilku minutach gry na nowym silniku.',
+      'Stodoła i budynki po niej znów mają podgląd w menu budowy.',
+    ],
+    en: [
+      'Shadows no longer flicker: on the new engine the shadows of people, rocks and tufts vanished every other frame.',
+      'The sky in walking view is whole again — no round hole in the middle.',
+      'No more milky screen after a few minutes of play on the new engine.',
+      'The barn and the buildings after it have their previews in the build menu again.',
+    ],
+  },
+  {
     v: '0.94.7', date: '2026-11-03',
     pl: ['Na nowym silniku obraz z wygładzaniem krawędzi znów ma właściwą jasność — zamek, trawa i woda nie są już ciemne jak o zmierzchu.'],
     en: ['On the new engine, the anti-aliased picture has its proper brightness again — the castle, grass and water no longer look as dark as at dusk.'],
