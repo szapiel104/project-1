@@ -313,7 +313,7 @@ function withoutDfgLut(frag: string): string {
 export function groundMaterial(): THREE.MeshStandardMaterial {
   if (shared) return shared;
   if (!TEST && loader && gpuMods) {
-    // WebGPU (?webgpu=1, docs/webgpu.md): bliźniak w TSL, te same tekstury
+    // WebGPU (domyślnie, docs/webgpu.md): bliźniak w TSL, te same tekstury
     const g = groundNodeMaterial({
       grass1: tex('grass1', true), grass2: tex('grass2', true), meadow: tex('meadow', true), forest: tex('forest', true), pebble: tex('pebble', true),
       dirt: tex('dirt', true), rock: tex('rock', true), cliff: tex('cliff', true), sand: tex('sand', true), noise: sharedNoise(),

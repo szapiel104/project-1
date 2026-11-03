@@ -10,6 +10,11 @@ export type { ChangeEntry } from './changelogTypes';
  */
 const NEW: ChangeEntry[] = [
   {
+    v: '0.91.0', date: '2026-11-03',
+    pl: ['Gra rysuje się teraz nowym silnikiem grafiki WebGPU — szybszym i z większymi możliwościami. Przez najbliższe wersje część efektów (woda, niebo, dym, cienie chmur) wraca po kolei.'],
+    en: ['The game now runs on the new WebGPU graphics engine — faster and far more capable. Over the next versions some effects (water, sky, smoke, cloud shadows) will return one by one.'],
+  },
+  {
     v: '0.90.1', date: '2026-11-03',
     pl: ['Nowy silnik grafiki WebGPU (dla testerów): ziemia ma już pełne tekstury — trawa, łąki, ściółka, żwir, skały, piach, śnieg w górach i dno pod wodą jak w zwykłej grze.'],
     en: ['New WebGPU graphics engine (for testers): the ground now has its full textures — grass, meadows, forest floor, gravel, rock, sand, mountain snow and riverbeds, just like the normal game.'],

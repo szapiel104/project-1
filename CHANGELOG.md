@@ -1,5 +1,8 @@
 # Dziennik zmian
 
+## 0.91.0 — 2026-11-03
+- WebGPU domyślnie na produkcji (Michał: „rób od razu na produkcji”). Stary WebGL tylko z `?webgl=1`. Materiały GLSL bez bliźniaka TSL dalej schowane (lista w docs/webgpu.md). Bot: bez zmian (tylko grafika).
+
 ## 0.90.1 — 2026-11-03
 - WebGPU partia 2: bliźniak TSL materiału ziemi (`src/render/gpu/groundNode.ts`, ta sama logika co FRAG_ALBEDO/FRAG_NORMAL w `ground.ts`); `groundMaterial()` bierze go przy `?webgpu=1`. Jeszcze bez cieni chmur i łatki pór roku (Rozjazdy w docs/webgpu.md). Bot: bez zmian (tylko grafika).
 

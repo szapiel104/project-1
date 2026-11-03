@@ -1,17 +1,17 @@
 import * as THREE from 'three';
 
 /**
- * Przejście na WebGPU — partia 0, szkielet (docs/webgpu.md). Tylko z flagą w adresie:
- *   ?webgpu=1   — WebGPURenderer na prawdziwym WebGPU (gdy przeglądarka go nie ma, three.js sam schodzi do WebGL2)
+ * Przejście na WebGPU (docs/webgpu.md). Od 0.91.0 domyślnie (Michał 3.11.2026: „rób od razu na produkcji”):
+ *   bez flagi   — WebGPURenderer na prawdziwym WebGPU (gdy przeglądarka go nie ma, three.js sam schodzi do WebGL2)
  *   ?webgpu=gl  — WebGPURenderer w trybie zgodności WebGL2 (do porównań)
- * Bez flagi gra działa jak dotąd (WebGLRenderer, wszystkie shadery GLSL).
+ *   ?webgl=1    — stary WebGLRenderer ze wszystkimi shaderami GLSL (zapas i porównanie, narzędzia w tools/check)
  *
  * Na tym etapie WebGPURenderer rysuje zwykłe materiały three.js (sam zamienia je na węzłowe), a materiały z własnym
  * GLSL (`ShaderMaterial`) chowa — ich bliźniaki w TSL dochodzą w kolejnych partiach. Wstawki `onBeforeCompile` (ziemia,
  * pory roku, wiatr) WebGPU pomija, więc obraz jest uboższy. Cel partii: gra wstaje, da się grać i zmierzyć FPS.
  */
 const q = typeof location !== 'undefined' ? new URLSearchParams(location.search) : null;
-export const GPU_MODE = !!q?.has('webgpu');
+export const GPU_MODE = !!q && !q.has('webgl');
 const FORCE_GL = q?.get('webgpu') === 'gl';
 
 let ready: THREE.WebGLRenderer | null = null;

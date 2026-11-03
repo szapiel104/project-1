@@ -7,7 +7,7 @@ też w trybie zgodności WebGL2 (`forceWebGL`), więc gracz bez WebGPU nadal zag
 
 ## Jak przechodzimy — flaga, nie długa gałąź
 Nad grą pracuje kilka czatów naraz, więc długa gałąź rozjechałaby się z `main` po jednym dniu. Zamiast tego:
-- `?webgpu=1` (tylko w adresie, na razie dla testów) uruchamia grę na `WebGPURenderer`. Bez flagi gra działa jak dziś (WebGL).
+- **Od 0.91.0 WebGPU jest domyślne na produkcji** (Michał 3.11.2026: „rób od razu na produkcji, nikt w to nie gra jeszcze”). Stary WebGL: `?webgl=1` (zapas, porównania, narzędzia w `tools/check`). Rzeczy bez bliźniaka w TSL są do czasu przeniesienia schowane albo uboższe.
 - Każdy własny shader dostaje **bliźniaka w TSL** obok wersji GLSL (wspólny moduł, wybór przy tworzeniu materiału).
   Shader jeszcze nieprzeniesiony na WebGPU rysuje się zwykłym `MeshStandardNodeMaterial` (brzydziej, ale gra działa).
 - Gdy wszystkie bliźniaki są gotowe i FPS na WebGPU ≥ WebGL — przełączamy domyślnie na WebGPU, potem usuwamy GLSL.
