@@ -16,6 +16,7 @@ const NEW: ChangeEntry[] = [
       'Ustawienia na tym samym pergaminie: czytelne przełączniki i suwaki, poziomy grafiki jako karty z paskami mocy i podświetlonym obecnym poziomem.',
       'Spis rozdziałów i stron z ikonami i wyraźną czcionką; „Co nowego” też na pergaminie.',
       'Strona księgi zawsze na całą wysokość okna, poziomy grafiki jako jasne karty.',
+      'Przełączniki z wieloma opcjami w ustawieniach zawijają się do drugiego wiersza i nie wychodzą poza stronę.',
       'Zapisy w chmurze konta, jedna nagroda PD za mecz i usuwanie uwag testerów działają już na serwerze.',
     ],
     en: [
@@ -23,6 +24,7 @@ const NEW: ChangeEntry[] = [
       'Settings on the same parchment: clear toggles and sliders, graphics presets as cards with power bars and the current level highlighted.',
       'The contents list with icons and a clear font; “What’s new” on parchment too.',
       'Book pages always fill the window height; graphics presets as light cards.',
+      'Settings toggles with many options wrap onto a second row instead of spilling off the page.',
       'Cloud saves on your account, one XP award per match and deleting tester notes now work on the server.',
     ],
   },
