@@ -10,6 +10,17 @@ export type { ChangeEntry } from './changelogTypes';
  */
 const NEW: ChangeEntry[] = [
   {
+    v: '0.89.2', date: '2026-11-03',
+    pl: [
+      '„Nowa gra”: karty trybu, poziomu i krainy z rysunkami (tarcze stron, miecze, pejzaże krain) w przewijanych rzędach — przeciągasz myszą, kręcisz kółkiem albo klikasz strzałki po bokach.',
+      'Wybrana karta unosi się jak pieczęć, a rysunek ożywa po najechaniu.',
+    ],
+    en: [
+      '“New game”: mode, difficulty and land cards with pictures (the sides’ shields, swords, landscapes) in scrolling rows — drag with the mouse, use the wheel or click the side arrows.',
+      'The chosen card lifts like a seal, and its picture comes alive on hover.',
+    ],
+  },
+  {
     v: '0.89.1', date: '2026-11-03',
     pl: ['Okno budynku: wyraźna plakietka „Twoje” (zielona), „Wróg” (czerwona) albo „Sojusznik” (niebieska); przyciski na dole równej szerokości; widoczna strzałka w przepisie warsztatu; bez przycisku „Zaznacz stojących na wieży”.'],
     en: ['Building window: a clear “Yours” (green), “Enemy” (red) or “Ally” (blue) badge; even-width buttons at the bottom; a visible arrow in the workshop recipe; no “Select the men on the tower” button.'],

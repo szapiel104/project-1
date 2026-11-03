@@ -1,5 +1,8 @@
 # Dziennik zmian
 
+## 0.89.2 — 3.11.2026
+- `src/ui/newgameArt.ts`: ilustracje kart (`pickArt`) i przewijany rząd (`slider`: przeciąganie, kółko, strzałki); `newgame.css` — karty w rzędach. Boty: bez zmian.
+
 ## 0.89.1 — 3.11.2026
 - Okno budynku (`tiles.css`): plakietka właściciela, `.actions` auto-fit, `.prod-arrow`; hud.ts bez `tSel` w oknie wieży. Boty: bez zmian.
 

@@ -1,3 +1,4 @@
+import { pickArt, slider as cardSlider } from './newgameArt';
 import { menuIcon, type MenuIcon } from './menuIcons';
 import { gameTagline, loadingScene } from './loadscreen';
 import { isTester, me as netMe, onAccount, onlinePlayers, onPresence, progress, restore } from '../net/supa';
@@ -489,7 +490,9 @@ export function createMenu(root: HTMLElement, events: MenuEvents): Menu {
       const radio = el('input');
       radio.type = 'radio'; radio.name = group; radio.checked = checked;
       radio.addEventListener('change', onPick);
-      lab.append(radio, el('strong', 'pick-big', big), el('span', 'pick-small', small));
+      const art = pickArt(extra);
+      if (art) { const a = el('span', 'pick-art'); a.innerHTML = art; lab.append(radio, a); } else lab.append(radio);
+      lab.append(el('strong', 'pick-big', big), el('span', 'pick-small', small));
       return lab;
     };
     const section = (name: string, ...kids: Node[]): HTMLElement => { const f = el('fieldset', 'pick-group'); f.append(el('legend', '', name), ...kids); return f; };
@@ -583,9 +586,10 @@ export function createMenu(root: HTMLElement, events: MenuEvents): Menu {
     // kraina i nazwa mapy, opcje dewelopera i przyciski; nad paskiem cała mapa z lotu ptaka
     const col = (cls: string, ...kids: Node[]): HTMLElement => { const c = el('div', `ng-col ${cls}`); c.append(...kids); return c; };
     form.append(
-      col('ng-a', section(t('hud.mode'), modeRow), section(t('menu.level'), levelRow)),
-      col('ng-b', section(tx('Kraina', 'Land'), biomeRow), seedWrap, status),
-      col('ng-c', devLab, instLab, wallLab, warn, foot),
+      col('ng-a', section(t('hud.mode'), cardSlider(modeRow, t('hud.mode')))),
+      col('ng-a2', section(t('menu.level'), cardSlider(levelRow, t('menu.level')))),
+      col('ng-b', section(tx('Kraina', 'Land'), cardSlider(biomeRow, tx('Kraina', 'Land')))),
+      col('ng-c', seedWrap, status, devLab, instLab, wallLab, warn, foot),
     );
     form.addEventListener('submit', (e) => { e.preventDefault(); clearTimeout(timer); wrap.classList.remove('previewing'); events.onNewGame(seed.value.trim() || 'project-1', preset, level, dev, instant, walls, biome); });
     screen(t('menu.newGame'), true, form);
