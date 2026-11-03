@@ -82,6 +82,7 @@ import { COLD, seasonAt, weatherOf, yearPos } from '../sim/weather';
 import { applySeason, SEASON_U, SnowTrails } from './season';
 import { Snowfall } from './snowfall';
 import { gpuBackend, hideGlslMaterials, takeGpuRenderer } from './gpu/webgpu';
+import { GpuPost } from './gpu/postNode';
 import { Footprints } from './footprints';
 import { maxHp } from '../sim/systems/placement';
 import { StrategyCamera } from './camera';
@@ -197,11 +198,27 @@ export class GameRenderer {
   /** Rysuje WebGPURenderer (domyślnie; ?webgl=1 = stary WebGL, docs/webgpu.md) */
   private gpu_ = false;
   private gpuScan = 0;
+  /** Efekty obrazu na WebGPU (bliźniak composera, gpu/postNode.ts) */
+  private gpuPost?: GpuPost;
+  private gpuPostFailed = new URLSearchParams(location.search).has('bezefektow');
+  private aaMode: string = 'off';
   /** Obraz klatki: efekty obrazu (WebGL) albo — na WebGPU, zanim efekty dostaną bliźniaki w TSL — prosto scena */
   private present(): void {
     if (!this.gpu_) { this.composer.render(); return; }
     if (this.gpuScan++ % 60 === 0) hideGlslMaterials(this.scene);
-    this.renderer.render(this.scene, this.cam.camera);
+    if (this.gpuPostFailed) { this.renderer.render(this.scene, this.cam.camera); return; }
+    try {
+      if (!this.gpuPost) this.gpuPost = new GpuPost(this.renderer, this.scene, this.cam.camera);
+      const r = this.renderer.getPixelRatio();
+      this.gpuPost.sync(this.grade.uniforms, this.canvas.clientWidth * r, this.canvas.clientHeight * r);
+      this.gpuPost.configure({ ao: this.ao.enabled ? (this.aoMode as 'low' | 'medium' | 'high') : 'off', bloom: this.bloom.enabled,
+        aa: this.aaMode, sharpen: this.sharpen.enabled ? (this.sharpen.uniforms.amount!.value as number) : 0 });
+      this.gpuPost.render();
+    } catch (e) {
+      // efekty obrazu się wysypały: dalej sama scena (gra ma działać), błąd w dzienniku
+      console.error('[webgpu] efekty obrazu wyłączone:', e);
+      this.gpuPostFailed = true;
+    }
   }
   private scene = new THREE.Scene();
   private cam: StrategyCamera;
@@ -1694,9 +1711,21 @@ export class GameRenderer {
     try { this.frame(0, 1, true); } finally { this.dry = false; }
     this.matQ.sweep(this.scene);
     this.warming = true;
-    try { await this.renderer.compileAsync(this.scene, this.cam.camera); }
+    try { await this.compileBg(); }
     catch { /* bez kompilacji w tle shadery skompilują się przy rysowaniu */ }
     finally { this.warming = false; }
+  }
+  /**
+   * Kompilacja shaderów sceny w tle. Na WebGPU najpierw chowamy materiały GLSL bez bliźniaka (inaczej compileAsync
+   * nigdy się nie kończyło — 0.91.0 wisiało na 95% wczytywania) i czekamy najwyżej 6 s: resztę dokompiluje pierwsza klatka.
+   */
+  private async compileBg(): Promise<void> {
+    if (!this.gpu_) { await this.renderer.compileAsync(this.scene, this.cam.camera); return; }
+    hideGlslMaterials(this.scene);
+    await Promise.race([
+      this.renderer.compileAsync(this.scene, this.cam.camera),
+      new Promise<void>((ok) => setTimeout(ok, 6000)),
+    ]);
   }
   private async warmupInner(onProgress?: (done: number, total: number) => void): Promise<void> {
     // Shadery wszystkiego, co stoi w scenie, kompiluje karta w tle (compileAsync); budynki, których jeszcze nie ma,
@@ -1709,8 +1738,8 @@ export class GameRenderer {
     const lap = (name: string): void => { const n = performance.now(); times.push([name, Math.round(n - tm)]); tm = n; };
     (window as unknown as { __warmTimes: unknown }).__warmTimes = times;
     const compile = async (): Promise<void> => {
-      try { await this.renderer.compileAsync(this.scene, this.cam.camera); }
-      catch { this.renderer.compile(this.scene, this.cam.camera); }
+      try { await this.compileBg(); }
+      catch { if (!this.gpu_) this.renderer.compile(this.scene, this.cam.camera); }
     };
     // klatka bez rysowania: budynki osady, mury, place budowy i to, co widać z kamery, powstają TERAZ, żeby ich shadery
     // skompilowały się w tle razem z resztą (30.10.2026: na mapie z 189 budynkami pierwsza prawdziwa klatka tworzyła je
@@ -1792,7 +1821,12 @@ export class GameRenderer {
       probe.position.set(0, -50, 0);
       probe.updateMatrixWorld(true);
       applySeason(probe);
-      waiting = this.pre.warm(probe, this.cam.camera);
+      if (this.gpu_) {
+        // WebGPU: potoki budynku kompiluje karta w tle, ze światłami sceny (targetScene), najwyżej 3 s na budynek
+        hideGlslMaterials(probe);
+        const r = this.renderer as unknown as { compileAsync(o: THREE.Object3D, c: THREE.Camera, t?: THREE.Scene): Promise<unknown> };
+        await Promise.race([r.compileAsync(probe, this.cam.camera, this.scene).catch(() => undefined), new Promise((ok) => setTimeout(ok, 3000))]);
+      } else waiting = this.pre.warm(probe, this.cam.camera);
       steps.push([def.id, Math.round(performance.now() - ts)]);
     }
     (window as unknown as { __prewarmMs: number }).__prewarmMs = Math.round(performance.now() - t0);
@@ -6017,6 +6051,7 @@ export class GameRenderer {
     }
     this.fxaa.enabled = aa === 'fxaa';
     this.smaa.enabled = aa === 'smaa';
+    this.aaMode = aa;
     this.sharpen.enabled = sharpen > 0;
     this.sharpen.uniforms.amount!.value = sharpen;
     this.sharpenTexel();

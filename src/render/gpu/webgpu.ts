@@ -16,7 +16,7 @@ const FORCE_GL = q?.get('webgpu') === 'gl';
 
 let ready: THREE.WebGLRenderer | null = null;
 /** Moduły three/webgpu i three/tsl (tylko z flagą) — bliźniaki materiałów biorą je stąd, bez statycznego importu */
-export let gpuMods: { W: typeof import('three/webgpu'); TSL: typeof import('three/tsl') } | null = null;
+export let gpuMods: { W: typeof import('three/webgpu'); TSL: typeof import('three/tsl'); FX: Record<string, unknown> } | null = null;
 /** Opis backendu do F3 i dziennika („WebGPU” albo „WebGL2 w WebGPURenderer”) */
 export let gpuBackend = '';
 
@@ -28,7 +28,13 @@ export async function prepareGpu(canvas: HTMLCanvasElement): Promise<void> {
   if (!GPU_MODE || ready) return;
   const W = await import('three/webgpu');
   const TSL = await import('three/tsl');
-  gpuMods = { W, TSL };
+  // efekty obrazu z three/addons (postNode.ts) — też tylko dynamicznie, żeby nie wciągać three/webgpu do zwykłej paczki
+  const [ao, dn, fx, sm, bl] = await Promise.all([
+    import('three/examples/jsm/tsl/display/GTAONode.js'), import('three/examples/jsm/tsl/display/DenoiseNode.js'),
+    import('three/examples/jsm/tsl/display/FXAANode.js'), import('three/examples/jsm/tsl/display/SMAANode.js'),
+    import('three/examples/jsm/tsl/display/BloomNode.js'),
+  ]);
+  gpuMods = { W, TSL, FX: { ao: ao.ao, denoise: dn.denoise, fxaa: fx.fxaa, smaa: sm.smaa, bloom: bl.bloom } };
   const r = new W.WebGPURenderer({ canvas, antialias: true, forceWebGL: FORCE_GL, powerPreference: 'high-performance' });
   await r.init();
   const backend = (r as unknown as { backend: { isWebGPUBackend?: boolean } }).backend;

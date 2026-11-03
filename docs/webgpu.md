@@ -30,7 +30,7 @@ Nad grą pracuje kilka czatów naraz, więc długa gałąź rozjechałaby się z
 0. [~] **Szkielet** (0.90.0: flaga `?webgpu=1`/`?webgpu=gl`, `src/render/gpu/webgpu.ts`, renderer przed sceną w boot.ts, GLSL chowany, bez efektów obrazu, bez odbić wody i mapy otoczenia; do sprawdzenia w Chrome): `?webgpu=1` → `WebGPURenderer` (await `init()`), mapa materiałów: każdy materiał bez bliźniaka →
    `MeshStandardNodeMaterial` z tą samą teksturą i kolorem. Gra ma się uruchomić i dać grać (brzydziej). Pomiar FPS
    (`__perf`) WebGL vs WebGPU na tej samej scenie. Lista tego, co się sypie.
-1. [ ] Efekty obrazu w TSL (AO, grading jak w `scene.ts`, wyostrzenie, wygładzanie).
+1. [~] Efekty obrazu w TSL (AO, grading jak w `scene.ts`, wyostrzenie, wygładzanie) — `src/render/gpu/postNode.ts` (0.91.1). Brakuje: mapa otoczenia (PMREM), odbicia wody.
 2. [~] Ziemia w TSL (najważniejsza dla wyglądu) — `src/render/gpu/groundNode.ts` (0.90.1: warstwy, skała z trzech rzutów, normalne, półki, śnieg w górach, mokry brzeg, dno, plamy). Brakuje: cienie chmur, łatka pór roku; tablica tekstur zamiast osobnych — później.
 3. [ ] Pory roku, wiatr, cienie chmur (wspólne funkcje węzłów).
 4. [ ] Woda, strumienie, kałuże.

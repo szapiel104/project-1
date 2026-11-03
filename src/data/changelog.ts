@@ -10,6 +10,11 @@ export type { ChangeEntry } from './changelogTypes';
  */
 const NEW: ChangeEntry[] = [
   {
+    v: '0.91.1', date: '2026-11-03',
+    pl: ['Naprawione: wczytywanie nie staje już na 95% („Przygotowanie grafiki”).', 'Wracają efekty obrazu na nowym silniku: cieniowanie zagłębień, ciepłe barwy dnia i chłodna noc, winieta, wygładzanie krawędzi i wyostrzenie.'],
+    en: ['Fixed: loading no longer gets stuck at 95% ("Preparing the graphics").', 'Image effects are back on the new engine: ambient occlusion, warm daylight colours and a cool night, vignette, edge smoothing and sharpening.'],
+  },
+  {
     v: '0.91.0', date: '2026-11-03',
     pl: ['Gra rysuje się teraz nowym silnikiem grafiki WebGPU — szybszym i z większymi możliwościami. Przez najbliższe wersje część efektów (woda, niebo, dym, cienie chmur) wraca po kolei.'],
     en: ['The game now runs on the new WebGPU graphics engine — faster and far more capable. Over the next versions some effects (water, sky, smoke, cloud shadows) will return one by one.'],
