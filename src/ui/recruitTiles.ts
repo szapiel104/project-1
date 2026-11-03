@@ -17,6 +17,8 @@ export interface RecruitDeps {
   svg(id: string): string;
   /** Ikony surowców (te same co na pasku) */
   icons: Record<string, string>;
+  /** Nazwa surowca po polsku/angielsku (do tabelki kosztu) */
+  resName(id: string): string;
 }
 
 const DESC: Record<string, [string, string]> = {
@@ -46,14 +48,10 @@ export function createRecruitTiles(d: RecruitDeps): { node: HTMLElement; draw(li
   let now: RecruitUnit[] = [];
   const unit = (id: string): RecruitUnit | undefined => now.find((r) => r.id === id);
 
-  const need = (icon: string, have: number, n: number, label: string): HTMLElement => {
-    const s = el('span', `rt-need${have < n ? ' short' : ''}`);
-    s.title = label;
-    s.innerHTML = `<svg viewBox="0 0 20 20" width="20" height="20" aria-hidden="true">${d.icons[icon] ?? ''}</svg>`;
-    s.append(el('strong', '', String(n)), el('em', '', `(${have})`));
-    return s;
-  };
-  /** Treść karty po najechaniu: nazwa z popiersiem, opis, koszt (czerwone = brakuje), siła i sterowanie */
+  /**
+   * Karta po najechaniu (Michał 3.11.2026: „zbyt małe informacje”): duża nazwa z portretem, opis, koszt jako tabelka
+   * „czego · potrzeba · masz” (braki na czerwono), siła w osobnych polach i jasno, czego brakuje do szkolenia.
+   */
   const tip = (id: string): Node[] => {
     const r = unit(id);
     if (!r) return [];
@@ -61,30 +59,52 @@ export function createRecruitTiles(d: RecruitDeps): { node: HTMLElement; draw(li
     const pic = el('span', 'hc-pic');
     const b = d.bust(id);
     if (b) { const i = el('img'); i.src = b; i.alt = ''; pic.append(i); } else pic.innerHTML = d.svg(id);
-    head.append(pic, el('strong', 'hc-name', r.name));
-    const desc = DESC[id];
-    const cost = el('div', 'hc-cost');
-    if (r.magic) {
-      cost.append(need('gold', r.gold, r.cost, tx('Ruda', 'Ore')));
-      if (r.gear) cost.append(need(r.gear.res, r.gear.have, 1, tx('Wyposażenie', 'Gear')));
-      cost.append(need('idle', r.idle, 1, tx('Wolny człowiek', 'Idle villager')));
-      cost.append(el('span', `rt-need${r.magic.have >= r.magic.cap ? ' short' : ''}`, tx(`magów ${r.magic.have} / ${r.magic.cap}`, `mages ${r.magic.have} / ${r.magic.cap}`)));
-    } else {
-      cost.append(need(r.weapon, r.have, r.need ?? 1, tx('Broń', 'Weapon')));
-      if (r.gear) cost.append(need(r.gear.res, r.gear.have, 1, tx('Wyposażenie', 'Gear')));
-      cost.append(need('gold', r.gold, r.cost, tx('Ruda', 'Ore')), need('idle', r.idle, 1, tx('Wolny człowiek', 'Idle villager')));
-    }
-    const stats = el('p', 'hc-stats');
-    const parts = [tx(`Wytrzymałość ${r.hp}`, `Health ${r.hp}`), r.attack ? tx(`atak ${r.attack}`, `attack ${r.attack}`) : tx('nie walczy', 'does not fight')];
-    if (r.range) parts.push(tx(`zasięg ${r.range}`, `range ${r.range}`));
-    if (r.armor) parts.push(tx(`zbroja ${r.armor}%`, `armour ${r.armor}%`));
-    stats.textContent = parts.join(' · ');
-    const can = el('p', `hc-can${r.max < 1 ? ' no' : ''}`, r.max < 1 ? tx('Teraz nie da się wyszkolić — brakuje tego, co na czerwono.', 'Cannot train now — you lack what is shown in red.') : tx(`Możesz wyszkolić teraz: ${r.max}`, `You can train now: ${r.max}`));
-    const keys = el('p', 'hc-keys', tx('Klik: 1 · Shift+klik: 5 · Ctrl+klik: wszyscy · prawy klik: flaga zbiórki', 'Click: 1 · Shift+click: 5 · Ctrl+click: all · right-click: rally flag'));
+    const ht = el('div', 'hc-head-t');
+    ht.append(el('strong', 'hc-name', r.name), el('span', `hc-sub${r.max < 1 ? ' no' : ''}`, r.max < 1 ? tx('Teraz nie da się wyszkolić', 'Cannot train now') : tx(`Możesz wyszkolić: ${r.max}`, `You can train: ${r.max}`)));
+    head.append(pic, ht);
     const out: Node[] = [head];
+    const desc = DESC[id];
     if (desc) out.push(el('p', 'hc-desc', lang() === 'en' ? desc[1] : desc[0]));
-    out.push(cost, stats, can);
-    if (r.rally) out.push(el('p', 'hc-flag', tx('⚑ Flaga zbiórki ustawiona — Shift+prawy klik ją zdejmuje.', '⚑ Rally flag set — Shift+right-click removes it.')));
+    // koszt: wiersze „ikona nazwa — potrzeba — masz”
+    const rows: [string, string, number, number][] = [];
+    if (!r.magic) rows.push([r.weapon, d.resName(r.weapon), r.need ?? 1, r.have]);
+    if (r.gear) rows.push([r.gear.res, d.resName(r.gear.res), 1, r.gear.have]);
+    rows.push(['gold', d.resName('gold'), r.cost, r.gold], ['idle', tx('Wolny chłop z obozowiska', 'Idle peasant from the camp'), 1, r.idle]);
+    const table = el('table', 'hc-table');
+    const hr = el('tr');
+    for (const h of [tx('Koszt', 'Cost'), tx('potrzeba', 'needed'), tx('masz', 'you have')]) hr.append(el('th', '', h));
+    table.append(hr);
+    const missing: string[] = [];
+    for (const [icon, name, n, have] of rows) {
+      const tr = el('tr', have < n ? 'short' : '');
+      const td = el('td', 'hc-res');
+      td.innerHTML = `<svg viewBox="0 0 20 20" width="24" height="24" aria-hidden="true">${d.icons[icon] ?? ''}</svg>`;
+      td.append(el('span', '', name));
+      tr.append(td, el('td', 'num', String(n)), el('td', 'num have', String(have)));
+      table.append(tr);
+      if (have < n) missing.push(name.toLowerCase());
+    }
+    if (r.magic) {
+      const tr = el('tr', r.magic.have >= r.magic.cap ? 'short' : '');
+      tr.append(el('td', 'hc-res', tx('Limit magów', 'Mage limit')), el('td', 'num', String(r.magic.cap)), el('td', 'num have', String(r.magic.have)));
+      table.append(tr);
+      if (r.magic.have >= r.magic.cap) missing.push(tx('miejsca na maga (limit)', 'room for a mage (limit)'));
+    }
+    out.push(table);
+    // siła w polach
+    const st = el('div', 'hc-stats');
+    const stat = (k: string, v: string): void => { const c = el('div', 'hc-stat'); c.append(el('span', '', k), el('strong', '', v)); st.append(c); };
+    stat(tx('Wytrzymałość', 'Health'), String(r.hp));
+    stat(tx('Atak', 'Attack'), r.attack ? String(r.attack) : '—');
+    if (r.range) stat(tx('Zasięg', 'Range'), String(r.range));
+    if (r.armor) stat(tx('Zbroja', 'Armour'), `${r.armor}%`);
+    out.push(st);
+    if (r.max < 1) out.push(el('p', 'hc-can no', missing.length ? tx(`Brakuje: ${missing.join(', ')}.`, `Missing: ${missing.join(', ')}.`) : tx('Brakuje tego, co na czerwono.', 'You lack what is shown in red.')));
+    if (r.rally) out.push(el('p', 'hc-flag', tx('⚑ Flaga zbiórki ustawiona — Shift + prawy klik ją zdejmuje.', '⚑ Rally flag set — Shift + right-click removes it.')));
+    const keys = el('div', 'hc-keys');
+    for (const [k, v] of [[tx('Klik', 'Click'), '1'], ['Shift + klik', '5'], ['Ctrl + klik', tx('wszyscy', 'all')], [tx('Prawy klik', 'Right-click'), tx('flaga zbiórki', 'rally flag')]] as const) {
+      const c = el('span', 'hc-key'); c.append(el('kbd', '', k), document.createTextNode(` ${v}`)); keys.append(c);
+    }
     out.push(keys);
     return out;
   };

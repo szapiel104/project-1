@@ -1,5 +1,8 @@
 # Dziennik zmian
 
+## 0.83.1 — 3.11.2026
+- Kafelki koszar v2 i karta po najechaniu v2 (`tiles.css`, `recruitTiles.ts`), kadr pełnej postaci bez włóczni (`thumbnails.ts`), karta bez `zoom` (złe położenie).
+
 ## 0.83.0 — 3.11.2026
 - `src/ui/hoverCard.ts` (wspólna karta po najechaniu), `src/ui/recruitTiles.ts` (kafelki koszar wydzielone z hud.ts), `src/ui/tiles.css`; pełne postacie `uf:<id>` w `renderUnitPortraits` (także w trybie testowym).
 - Boty: bez zmian (tylko interfejs).

@@ -134,10 +134,12 @@ export function renderUnitPortraits(teamColor: number, size = 240): Map<string, 
     renderer.render(scene, cam);
     out.set(`u:${kind}`, renderer.domElement.toDataURL('image/png'));
     // cała postać od stóp po czubek broni, lekko z dołu — jak na kafelku w koszarach
-    const fullH = box.max.y - box.min.y;
+    // kadr na człowieka (od stóp po czubek głowy z małym zapasem); długa włócznia może wyjść górą za kadr,
+    // inaczej postać włócznika była malutka (Michał 3.11.2026)
+    const fullH = Math.min(box.max.y - box.min.y, 0.74);
     const midY = box.min.y + fullH * 0.5;
     cam.aspect = FW / FH; cam.updateProjectionMatrix();
-    const dist = (fullH * 0.56) / Math.tan(THREE.MathUtils.degToRad(cam.fov / 2));
+    const dist = (fullH * 0.54) / Math.tan(THREE.MathUtils.degToRad(cam.fov / 2));
     cam.position.set(0.3 * dist, midY - 0.04 * fullH, dist);
     cam.lookAt(0, midY, 0);
     renderer.setSize(FW, FH, false);

@@ -10,6 +10,17 @@ export type { ChangeEntry } from './changelogTypes';
  */
 const NEW: ChangeEntry[] = [
   {
+    v: '0.83.1', date: '2026-11-03',
+    pl: [
+      'Koszary: większe kafelki, postać na cały kafelek (włócznik już nie jest malutki), duża tabliczka „×4” z liczbą, ilu możesz wyszkolić.',
+      'Karta po najechaniu większa i czytelniejsza: koszt jako tabelka „potrzeba / masz” z nazwami, siła w osobnych polach i dokładnie, czego brakuje.',
+    ],
+    en: [
+      'Barracks: larger tiles, the soldier fills the tile (the spearman is no longer tiny), a big “×4” plate with how many you can train.',
+      'The hover card is larger and clearer: cost as a “needed / you have” table with names, strength in separate boxes and exactly what is missing.',
+    ],
+  },
+  {
     v: '0.83.0', date: '2026-11-03',
     pl: [
       'Koszary jak w grach o zamkach: rząd wysokich kafelków z całą postacią żołnierza i liczbą, ilu możesz wyszkolić. Koszt, zapasy i siła — w karcie po najechaniu.',

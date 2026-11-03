@@ -756,6 +756,7 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
     bust: (id) => thumbs.get(`u:${id}`),
     svg: (id) => PORTRAITS[id] ?? PORTRAIT,
     icons: ICONS,
+    resName: (id) => (id in RESOURCE_DEFS ? t(RESOURCE_DEFS[id as ResourceId].name) : id === 'gold' ? tx('Ruda', 'Ore') : id),
   });
   recruit.append(tilesBox.node, rallyRow);
   const drawRecruit = (): void => tilesBox.draw(lastRecruit);
