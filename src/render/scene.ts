@@ -208,6 +208,7 @@ export class GameRenderer {
   private gpuPostRetries = new URLSearchParams(location.search).has('bezefektow') ? 3 : 0;
   private aaMode: string = 'off';
   private gpuStart = 0;
+  private lastPresentAt = 0;
   /** Obraz klatki: efekty obrazu (WebGL) albo — na WebGPU, zanim efekty dostaną bliźniaki w TSL — prosto scena */
   private present(): void {
     if (!this.gpu_) { this.composer.render(); return; }
@@ -215,7 +216,13 @@ export class GameRenderer {
     // ms składania materiałów na klatkę (reszta w kolejnych klatkach): przy wczytywaniu dużo, przez pierwsze 20 s gry
     // średnio (dokładanie tego, czego rozgrzewka nie zdążyła), potem mało
     if (!this.warming && !this.gpuStart) this.gpuStart = performance.now();
-    gpuFrameBudget(this.warming ? 45 : performance.now() - this.gpuStart < 20000 ? 14 : 6);
+    // gdy klatki przychodzą rzadko (przeglądarka zwalnia klatki, np. okno zasłonięte albo karta zajęta kompilacją),
+    // budżet rośnie z czasem od poprzedniej klatki — inaczej przy 1 klatce na sekundę budynki dochodziły po jednym
+    // na sekundę i zamek „nie wczytywał się” przez pół minuty (3.11.2026)
+    const nowT = performance.now(), gap = this.lastPresentAt ? nowT - this.lastPresentAt : 0;
+    this.lastPresentAt = nowT;
+    const base = this.warming ? 45 : nowT - this.gpuStart < 20000 ? 14 : 6;
+    gpuFrameBudget(gap > 100 ? Math.max(base, Math.min(gap * 0.5, 400)) : base);
     // po błędzie efektów obrazu: sama scena, a po 3 s (najwyżej trzy razy) nowa próba — przyczyna bywa chwilowa
     if (this.gpuPostFailed) {
       if (this.gpuPostRetries < 3 && performance.now() - this.gpuPostFailedAt > 3000) { this.gpuPostRetries++; this.gpuPostFailed = false; this.gpuPost = undefined; }

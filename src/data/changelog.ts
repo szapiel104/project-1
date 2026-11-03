@@ -10,6 +10,17 @@ export type { ChangeEntry } from './changelogTypes';
  */
 const NEW: ChangeEntry[] = [
   {
+    v: '0.94.6', date: '2026-11-03',
+    pl: [
+      'Gra nie zostaje już na ekranie wczytywania tuż po wydaniu nowej wersji: gdy przeglądarka trzyma starą stronę, sama wczytuje ją od nowa.',
+      'Gdy przeglądarka zwalnia klatki (zasłonięte okno, zajęta karta graficzna), budynki i drzewa i tak dochodzą szybko, a nie po jednym na sekundę.',
+    ],
+    en: [
+      'The game no longer hangs on the loading screen right after a new release: if the browser holds on to the old page, it reloads it by itself.',
+      'When the browser slows down frames (covered window, busy graphics card), buildings and trees still appear quickly rather than one per second.',
+    ],
+  },
+  {
     v: '0.94.5', date: '2026-11-03',
     pl: [
       'Gra na nowym silniku wczytuje się szybciej: drzewa, kamienie i budynki tego samego rodzaju dzielą jeden program karty graficznej zamiast kilkuset osobnych.',

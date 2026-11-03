@@ -2,6 +2,7 @@
 // Pliki z hashem w nazwie (kod) nigdy się nie zmieniają → z pamięci. Tekstury, dźwięki i czcionki → z pamięci,
 // a w tle sprawdzamy nowszą wersję. Sama strona (index.html) → najpierw sieć, żeby nowa wersja gry od razu działała.
 const CACHE = 'project1-v1';
+// v2 (0.94.6): strona zawsze sprawdzana u serwera (cache: 'no-cache')
 
 self.addEventListener('install', () => self.skipWaiting());
 self.addEventListener('activate', (e) => e.waitUntil(self.clients.claim()));
@@ -23,7 +24,9 @@ self.addEventListener('fetch', (e) => {
 async function networkFirst(req) {
   const c = await caches.open(CACHE);
   try {
-    const res = await fetch(req);
+    // bez pamięci HTTP przeglądarki (sprawdzenie u serwera, tanie): inaczej przez 10 min po wdrożeniu przychodziła
+    // stara strona ze starymi, już skasowanymi plikami gry
+    const res = await fetch(req, { cache: 'no-cache' });
     if (res.ok) c.put(req, res.clone());
     return res;
   } catch {

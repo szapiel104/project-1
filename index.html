@@ -34,6 +34,22 @@
     <p class="loading-line"><span id="loading-label">Wczytywanie gry…</span> <strong id="loading-count"></strong></p>
   </div>
 </div>
+<script>
+// Po wdrożeniu nowej wersji przeglądarka bywa ze starą stroną z pamięci (GitHub Pages trzyma ją do 10 min), a stare
+// pliki gry już nie istnieją — gra stała wtedy w nieskończoność na ekranie wczytywania (Michał 3.11.2026: „nie
+// wczytał się”). Gdy któryś plik gry się nie pobierze, wczytujemy stronę jeszcze raz z pominięciem pamięci
+// (najwyżej raz na minutę, żeby przy braku sieci nie kręcić się w kółko).
+(function () {
+  function fresh() {
+    try { var t = +sessionStorage.getItem('p1-fresh') || 0; if (Date.now() - t < 60000) return false; sessionStorage.setItem('p1-fresh', String(Date.now())); } catch (e) { /* bez sessionStorage też próbujemy */ }
+    var u = new URL(location.href); u.searchParams.set('v', Date.now().toString(36)); location.replace(u.href);
+    return true;
+  }
+  window.__fresh = fresh;
+  addEventListener('error', function (e) { var t = e.target; if (t && (t.tagName === 'SCRIPT' || (t.tagName === 'LINK' && /stylesheet|modulepreload/.test(t.rel)))) fresh(); }, true);
+  addEventListener('vite:preloadError', function (e) { e.preventDefault(); fresh(); });
+})();
+</script>
 <script type="module" src="./src/boot.ts"></script>
 </body>
 </html>

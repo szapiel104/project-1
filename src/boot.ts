@@ -163,6 +163,9 @@ async function load(): Promise<void> {
 function showFatal(e: unknown): void {
   console.error(e);
   const msg = e instanceof Error ? e.message : String(e);
+  // plik gry zniknął (nowa wersja wdrożona w trakcie): strona z pominięciem pamięci (index.html, window.__fresh)
+  const fresh = (window as unknown as { __fresh?: () => boolean }).__fresh;
+  if (/dynamically imported module|Importing a module script failed|error loading dynamically/i.test(msg) && fresh?.()) return;
   const gl = /webgl|context/i.test(msg);
   const card = document.querySelector('#loading .loading-card') ?? document.getElementById('ui') ?? document.body;
   const box = document.createElement('div');

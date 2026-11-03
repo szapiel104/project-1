@@ -1,5 +1,10 @@
 # Dziennik zmian
 
+## 0.94.6 — 2026-11-03
+- index.html: skrypt `__fresh()` — błąd pobrania pliku gry (`error` na SCRIPT/LINK, `vite:preloadError`, nieudany `import()` w `showFatal`) → ponowne wczytanie z `?v=` (raz na minutę). Przyczyna: stara strona z pamięci HTTP po wdrożeniu odwoływała się do skasowanych plików i gra stała na ekranie wczytywania.
+- sw.js: strona pobierana z `cache: 'no-cache'`.
+- WebGPU: budżet składania rośnie z przerwą między klatkami (rzadkie klatki → do 400 ms), wcześniej przy 1 kl./s budynki doczytywały się pół minuty.
+
 ## 0.94.5 — 2026-11-03
 - WebGPU: pule instancji zawsze z macierzami w atrybucie (`getUniformBufferLimit = 0` dla InstancedMesh w `_createNodeBuilder`) — wcześniej każda mała pula miała własny kod shadera (374 programy wierzchołków, 104 różniące się tylko nazwą tablicy uniformów).
 - Woda WebGPU: pochłanianie jak w prawdziwej wodzie (czerwień najszybciej), jaśniejsza toń, przejrzysta woda oazy na pustyni (`clear`), mocniejsze minimum Fresnela.
