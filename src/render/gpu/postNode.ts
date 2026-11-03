@@ -65,13 +65,17 @@ export class GpuPost {
       const aoN = fx.ao(dep, normal, this.camera);
       // pół rozdzielczości zawsze (odszumianie i tak wygładza): pełna przy 4K kosztowała kartę więcej niż cała scena
       aoN.resolutionScale = 0.5;
-      aoN.radius.value = 1.6;
+      // siła i zasięg cienia w zagłębieniach (do strojenia: ?aor=promień&aop=wykładnik&aok=siła). Dawne 1,6 / 2,2 / pełna
+      // siła zaciemniały całą scenę — trawa i mury wychodziły o połowę ciemniejsze niż w WebGL (Michał 3.11.2026: „zamek ciemny”)
+      const qp = new URLSearchParams(location.search);
+      const num = (k: string, d: number): number => { const v = parseFloat(qp.get(k) ?? ''); return Number.isFinite(v) ? v : d; };
+      aoN.radius.value = num('aor', 0.9);
       aoN.distanceFallOff.value = 0.6;
       aoN.samples.value = o.ao === 'high' ? 16 : o.ao === 'low' ? 8 : 12;
       const aoT: any = aoN.getTextureNode();
       // odszumianie liczy się w miejscu (węzeł w tym samym przejściu), bez osobnej tekstury
       const raw = o.ao !== 'low' ? fx.denoise(aoT, dep, normal, this.camera).r : aoT.sample(screenUV).r;
-      const a = pow(raw, 2.2); // siła jak intensity 2.2 w N8AO
+      const a = mix(float(1), pow(raw, num('aop', 1.2)), num('aok', 0.7));
       c = c.mul(mix(vec3(0.0103, 0.0060, 0.0030), vec3(1), a)); // ciepły brąz w zagłębieniach (0x1a120a w liniowym)
     }
     // cienie chmur sunące po ziemi: jedno przejście na cały obraz — położenie w świecie z bufora głębi, maska z szumu

@@ -18,7 +18,7 @@ export function pomGpu(m: THREE.MeshStandardMaterial, height: THREE.Texture, sca
     if (!gpuMods || !m.map) return null;
     const T = gpuMods.TSL as any;
     const { Fn, uv, texture, vec3, float, normalize, cross, dot, max, smoothstep, mix, clamp, positionView, dFdx, dFdy,
-      inverseSqrt, Loop, If, Break, normalMap, materialReference } = T;
+      inverseSqrt, Loop, If, Break, normalMap, uniform } = T;
     const map = m.map;
     map.updateMatrix();
     const pomUV = Fn(() => {
@@ -51,8 +51,10 @@ export function pomGpu(m: THREE.MeshStandardMaterial, height: THREE.Texture, sca
       const w = after.div(after.sub(before).add(1e-5));
       return mix(p, back, clamp(w, 0, 1));
     })().toVar();
-    const color = texture(map, pomUV).mul(materialReference('color', 'color'));
-    const normal = m.normalMap ? normalMap(texture(m.normalMap, pomUV), materialReference('normalScale', 'vec2')) : null;
+    // barwa i siła normalnych jako zwykłe uniformy z obiektów materiału (materialReference czytał je z materiału, który
+    // akurat rysuje — przy cieniach i przejściach bez koloru wywracał całą grę, 0.94.9)
+    const color = texture(map, pomUV).mul(uniform(m.color));
+    const normal = m.normalMap ? normalMap(texture(m.normalMap, pomUV), uniform(m.normalScale)) : null;
     built = { color, normal };
     return built;
   };

@@ -1,5 +1,8 @@
 # Dziennik zmian
 
+## 0.94.10 — 2026-11-03
+- WebGPU post: GTAO łagodniej — promień 0,9 (było 1,6), wykładnik 1,2 (było 2,2), siła 0,7; strojenie z adresu `?aor=&aop=&aok=`. Przyczyna „ciemnego zamku”: sprawdzone w grze — z AO wyłączonym obraz jasny jak w WebGL.
+
 ## 0.94.9 — 2026-11-03
 - WebGPU: parallax occlusion mapping w TSL (`gpu/pomNode.ts`, bliźniak `parallax.ts`): styczne z pochodnych, odczyty z gradientem, wygaszanie pod ostrym kątem; węzły koloru i normalnych dopinane leniwie (getter), klucz `pom<kroki>`.
 

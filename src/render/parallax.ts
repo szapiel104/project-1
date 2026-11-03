@@ -16,7 +16,8 @@ import { pomGpu } from './gpu/pomNode';
 export function applyParallax(m: THREE.MeshStandardMaterial, height: THREE.Texture, scale: number, steps = 14): void {
   m.userData.parallax = { height, scale, steps };
   // WebGPU: ten sam efekt w węzłach (gpu/pomNode.ts); łatka GLSL niżej na WebGPU i tak się nie wykonuje
-  if (GPU_MODE) pomGpu(m, height, scale, steps);
+  // (0.94.9 wywróciło grę — do sprawdzenia pod ?pom=1, zanim wróci dla wszystkich)
+  if (GPU_MODE && typeof location !== 'undefined' && new URLSearchParams(location.search).has('pom')) pomGpu(m, height, scale, steps);
   const prev = m.onBeforeCompile;
   m.onBeforeCompile = function (this: THREE.Material, sh, r) {
     prev.call(this, sh, r);
