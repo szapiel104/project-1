@@ -1,5 +1,8 @@
 # Dziennik zmian
 
+## 0.85.2 — 3.11.2026
+- `highmist.ts`: opar na planszy wygasa 12 pól przed brzegiem (`edgeFade`), warstwy ramy od 2 do 22 pól za brzegiem, otwór ramy ciaśniej. Boty: bez zmian.
+
 ## 0.85.1 — 3.11.2026
 - `ground.ts`: skała — mniej `tCliff` (smugi), próbka `tRock` w skali 19 m pod spodem, słabsze warstwy (`strata`). Boty: bez zmian.
 

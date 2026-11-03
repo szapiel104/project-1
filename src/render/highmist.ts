@@ -142,7 +142,7 @@ void main() {
   float depth = layerY - terrainH(vWP.xz);
   float a = smoothstep(0.0, thick, depth);
   vec2 q = abs(vWP.xz - board.xy) - board.zw;
-  a *= smoothstep(5.0, 20.0, max(q.x, q.y));
+  a *= smoothstep(2.0, 22.0, max(q.x, q.y)); // od brzegu planszy narasta powoli (bez widocznej linii)
   if (a < 0.003) discard;
   vec2 p = vWP.xz;
   float n1 = texture2D(noise, p / 61.0 + drift * time).r;
@@ -308,7 +308,7 @@ export function buildHighMist(g: HeightGrid, board: { cx: number; cz: number; hw
 
   // --- warstwy mgły dolinnej: rama wokół planszy (środek planszy zostaje pusty — tam i tak nic nie widać)
   const x0 = g.x0, z0 = g.z0, x1 = g.x0 + (g.nx - 1) * g.step, z1 = g.z0 + (g.ny - 1) * g.step;
-  const ix0 = board.cx - board.hw - 3, ix1 = board.cx + board.hw + 3, iz0 = board.cz - board.hh - 3, iz1 = board.cz + board.hh + 3;
+  const ix0 = board.cx - board.hw - 1, ix1 = board.cx + board.hw + 1, iz0 = board.cz - board.hh - 1, iz1 = board.cz + board.hh + 1;
   const frame = new THREE.BufferGeometry();
   {
     const quads: [number, number, number, number][] = [
@@ -395,7 +395,15 @@ export function buildHighMist(g: HeightGrid, board: { cx: number; cz: number; hw
   // na koniec szerokie rozmycie: przejścia między oparem a czystą ziemią na kilka pól, bez ostrej linii
   // (węzły co 2 pola — skok 0→1 między sąsiadami wyglądał jak krawędź płyty), i nigdy pełna, zwarta płachta
   vall = boxBlur(boxBlur(vall, 2), 1);
-  for (let k = 0; k < vall.length; k++) vall[k] = Math.min(1, vall[k]! * 1.15) * 0.8 * Math.max(0, Math.min(1, (1.6 - hb[k]!) / 0.6));
+  for (let k = 0; k < vall.length; k++) {
+    // przy brzegu planszy opar wygasa łagodnie (Michał 3.11.2026: na granicy mapy mgła urywała się prostą linią);
+    // dalej za brzegiem zaczynają się warstwy mgły dolinnej z ramy, też płynnie
+    const jj = Math.floor(k / BW), ii = k - jj * BW;
+    const px = g.x0 + (ii + bi0) * g.step, pz = g.z0 + (jj + bj0) * g.step;
+    const inside = Math.min(board.hw - Math.abs(px - board.cx), board.hh - Math.abs(pz - board.cz));
+    const e = Math.max(0, Math.min(1, inside / 12)), edgeFade = e * e * (3 - 2 * e);
+    vall[k] = Math.min(1, vall[k]! * 1.15) * 0.8 * Math.max(0, Math.min(1, (1.6 - hb[k]!) / 0.6)) * edgeFade;
+  }
   const DP: number[] = [], DV: number[] = [], DI: number[] = [];
   for (let j = 0; j < BH; j++) for (let i = 0; i < BW; i++) {
     DP.push(g.x0 + (i + bi0) * g.step, Math.max(hb[j * BW + i]!, -0.08) + 0.42, g.z0 + (j + bj0) * g.step);

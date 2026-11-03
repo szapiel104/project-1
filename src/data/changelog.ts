@@ -10,6 +10,11 @@ export type { ChangeEntry } from './changelogTypes';
  */
 const NEW: ChangeEntry[] = [
   {
+    v: '0.85.2', date: '2026-11-03',
+    pl: ['Mgła przy granicy mapy nie urywa się już prostą linią: opar nad planszą łagodnie wygasa przy brzegu, a mgła w dolinach za mapą narasta płynnie.'],
+    en: ['Mist at the map border no longer ends in a straight line: the haze over the board fades gently at the edge and the valley fog beyond builds up smoothly.'],
+  },
+  {
     v: '0.85.1', date: '2026-11-03',
     pl: ['Skała gór bez podłużnych smug „jak kora”: spokojniejsza faktura, duży wzór pod spodem, żeby na wielkich ścianach nie było widać powtórek.'],
     en: ['Mountain rock without the long bark-like streaks: a calmer texture with a large-scale pattern beneath, so big rock faces show no repeats.'],
