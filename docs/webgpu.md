@@ -72,3 +72,4 @@ kwadratu, większa mapa 1 na 1.
 - Ślady na śniegu w ziemi (uTrail) i jesienne łaty na ziemi — tylko GLSL.
 - Parallax: gpu/pomNode.ts gotowe, ale włączone tylko pod ?pom=1 (0.94.9 wywróciło grę: materialReference przy cieniach).
 - Mapa otoczenia: na WebGPU od 0.94.4 (gpu/envNode.ts).
+- Widok spod wody: tylko WebGPU (gpu/underwaterNode.ts), na WebGL brak.

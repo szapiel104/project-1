@@ -1,6 +1,7 @@
 import type * as THREE from 'three';
 import { gpuMods } from './webgpu';
 import { CLOUD_U, sharedNoise } from '../ground';
+import { underwater } from './underwaterNode';
 
 /**
  * Efekty obrazu na WebGPU (docs/webgpu.md, partia 1) — bliźniak łańcucha EffectComposer z `scene.ts`:
@@ -24,11 +25,14 @@ export class GpuPost {
     this.pipe.outputColorTransform = false; // tone mapping i sRGB robimy sami przed gradacją (jak OutputPass przed `grade`)
     this.u = {
       night: T.uniform(0), rain: T.uniform(0), golden: T.uniform(0), bright: T.uniform(1),
-      sharpen: T.uniform(0), texel: T.uniform(new (W as any).Vector2(1, 1)),
+      sharpen: T.uniform(0), texel: T.uniform(new (W as any).Vector2(1, 1)), sun: T.uniform(new (W as any).Vector3(0, 1, 0)),
     };
   }
 
   /** Wartości gradacji z ShaderPassa `grade` (scene.ts ustawia je jak dotąd) */
+  /** Kierunek do słońca (świat) — kaustyki i promienie pod wodą */
+  setSun(d: THREE.Vector3): void { this.u.sun.value.copy(d).normalize(); }
+
   sync(grade: Record<string, { value: unknown }>, w: number, h: number): void {
     this.u.night.value = grade.night!.value; this.u.rain.value = grade.rain!.value;
     this.u.golden.value = grade.golden!.value; this.u.bright.value = grade.bright!.value;
@@ -91,6 +95,8 @@ export class GpuPost {
       const ccm = cK.mul(smoothstep(0.38, 0.62, nz)).mul(T.step(dv, 0.9999));
       c = c.mul(float(1).sub(ccm.mul(0.55)));
     }
+    // pod wodą: nurkowanie (gpu/underwaterNode.ts) — linia wody, załamanie, toń, kaustyki, promienie słońca
+    c = underwater(T, { col, dep: sp.getTextureNode('depth'), c, night: this.u.night, sun: this.u.sun });
     c = clamp(c, 0, 40);
     if (o.bloom) c = c.add(fx.bloom(vec4(c, 1), 0.18, 0.45, 1.6).rgb);
     // tone mapping i sRGB jawnie z renderera: bez tego węzeł brał je z kontekstu przejścia, a FXAA/SMAA liczą obraz

@@ -1,5 +1,9 @@
 # Dziennik zmian
 
+## 0.94.12 — 2026-11-03
+- WebGPU, place budowy (`sites.ts`): zamiast płaszczyzn przycinania (każda kopia materiału = osobny ClippingContext z numerem w kluczu → osobne składanie obrazu i cienia dla każdej budowy) jedna wspólna kopia na materiał z `maskNode`/`maskShadowNode`: `positionWorld.y <= userData.siteCut` siatki; kopii nie zwalniamy.
+- Parallax (pod `?pom=1`): klucz z numerem materiału (węzły niosą teksturę i barwę konkretnego materiału).
+
 ## 0.94.11 — 2026-11-03
 - WebGPU, place budowy (`sites.ts`): zamiast płaszczyzn przycinania (każda kopia materiału = osobny ClippingContext z numerem w kluczu → osobne składanie obrazu i cienia dla każdej budowy) jedna wspólna kopia na materiał z `maskNode`/`maskShadowNode`: `positionWorld.y <= userData.siteCut` siatki; kopii nie zwalniamy.
 - Parallax (pod `?pom=1`): klucz z numerem materiału (węzły niosą teksturę i barwę konkretnego materiału).

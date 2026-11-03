@@ -10,6 +10,11 @@ export type { ChangeEntry } from './changelogTypes';
  */
 const NEW: ChangeEntry[] = [
   {
+    v: '0.94.12', date: '2026-11-03',
+    pl: ['Na nowym silniku place budowy nie przycinają już gry: rosnący budynek nie składa za każdym razem od nowa wszystkich swoich shaderów (wcześniej kilkaset składań na 10 sekund i spadek do ok. 28 FPS, gdy w osadzie trwały budowy).'],
+    en: ['On the new engine, construction sites no longer stutter the game: a rising building does not rebuild all its shaders every time (previously several hundred rebuilds per 10 seconds and a drop to about 28 FPS while building was going on).'],
+  },
+  {
     v: '0.94.11', date: '2026-11-03',
     pl: ['Na nowym silniku place budowy nie przycinają już gry: rosnący budynek nie składa za każdym razem od nowa wszystkich swoich shaderów (wcześniej kilkaset składań na 10 sekund i spadek do ok. 28 FPS, gdy w osadzie trwały budowy).'],
     en: ['On the new engine, construction sites no longer stutter the game: a rising building does not rebuild all its shaders every time (previously several hundred rebuilds per 10 seconds and a drop to about 28 FPS while building was going on).'],

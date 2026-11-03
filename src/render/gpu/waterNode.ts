@@ -104,6 +104,13 @@ export function waterNodeMaterial(waves: THREE.Texture, waterY: number, clear = 
   let col: any = refl.rgb.mul(F).add(body.mul(float(1).sub(F))).add(spec);
   // przy samym brzegu woda wygasa w obraz dna (bez kantu)
   col = mix(viewportSharedTexture(screenUV).rgb, col, smoothstep(0, 0.035, depth0));
+  // tafla od spodu (kamera pod wodą): świat nad wodą widać przez falującą powierzchnię, przyćmiony i zielonkawy;
+  // pod ostrym kątem całkowite odbicie — tafla jak ciemne lustro toni (okno Snella)
+  const under = cameraPosition.y.lessThan(waterY);
+  const up = viewportSharedTexture(screenUV.add(slope.mul(0.05))).rgb;
+  const snell = smoothstep(0.55, 0.75, clamp(dot(V, vec3(0, -1, 0)), 0, 1));
+  const fromBelow = mix(vec3(0.02, 0.09, 0.1), up.mul(vec3(0.75, 0.95, 0.95)), snell);
+  col = select(under, fromBelow, col);
 
   const m = new Wm.MeshStandardNodeMaterial({ roughness: 0.45, metalness: 0 });
   m.colorNode = clear ? vec3(0.035, 0.16, 0.165) : vec3(0.045, 0.1, 0.085); // barwa rozproszona w toni
@@ -112,6 +119,7 @@ export function waterNodeMaterial(waves: THREE.Texture, waterY: number, clear = 
   // rysowana po całej nieprzezroczystej scenie (obraz spod tafli), ale sama zapisuje głębię jak bryła
   m.transparent = true;
   m.depthWrite = true;
+  m.side = Wm.DoubleSide; // od spodu też (pływanie pod wodą)
   void sky;
   return { mat: m, time, sky, sunDir, sunCol, target: refl.target };
 }

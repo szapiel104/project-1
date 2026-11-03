@@ -232,6 +232,7 @@ export class GameRenderer {
       if (!this.gpuPost) this.gpuPost = new GpuPost(this.renderer, this.scene, this.cam.camera);
       const r = this.renderer.getPixelRatio();
       this.gpuPost.sync(this.grade.uniforms, this.canvas.clientWidth * r, this.canvas.clientHeight * r);
+      this.gpuPost.setSun(this.sunDir);
       this.gpuPost.configure({ ao: this.ao.enabled ? (this.aoMode as 'low' | 'medium' | 'high') : 'off', bloom: this.bloom.enabled,
         aa: this.aaMode, sharpen: this.sharpen.enabled ? (this.sharpen.uniforms.amount!.value as number) : 0 });
       this.gpuPost.render();
