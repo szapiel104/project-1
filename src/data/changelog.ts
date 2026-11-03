@@ -10,6 +10,11 @@ export type { ChangeEntry } from './changelogTypes';
  */
 const NEW: ChangeEntry[] = [
   {
+    v: '0.93.6', date: '2026-11-03',
+    pl: ['Wraca dym i para z czarów magów (kłęby z samocieniem, młody dym żarzy się od spodu).'],
+    en: ['Smoke and steam from mages’ spells are back (self-shadowed puffs, young smoke glowing from below).'],
+  },
+  {
     v: '0.93.5', date: '2026-11-03',
     pl: ['Wracają kałuże w deszczu (z kręgami od kropel, wysychają od brzegów) i ślady stóp na śniegu, które z czasem zasypuje.'],
     en: ['Rain puddles are back (with ripples from raindrops, drying from the edges), along with footprints in the snow that slowly fill in.'],

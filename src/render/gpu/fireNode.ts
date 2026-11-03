@@ -231,3 +231,67 @@ export function blazeNode(time: { value: number }, init: { heat: number; seed: n
   m.uniforms = u;
   return m;
 }
+
+/** Dym i para z czarów (spellsmoke.ts): kłęby jako bryły z marszem promienia, szum 3D z tekstury, samocień z góry */
+export function spellSmokeNode(time: { value: number }, mesh: THREE.InstancedMesh): THREE.Material {
+  const { T, fbm, box, jitter } = kit();
+  const Wm = gpuMods!.W as any;
+  const { Fn, Loop, Break, If, Discard, vec3, vec4, float, length, normalize, max, pow, smoothstep, exp, clamp, mix, cos, sin,
+    attribute, varying, positionGeometry, cameraPosition, modelWorldMatrix, uniform, cameraProjectionMatrix, cameraViewMatrix } = T;
+  const tU = uniform(0).onFrameUpdate(() => time.value);
+  const M = modelWorldMatrix.mul(instanceMatrixNode(mesh.instanceMatrix));
+  const puff = attribute('aPuff', 'vec4');
+  const S = vec3(length(M.element(0).xyz), length(M.element(1).xyz), length(M.element(2).xyz));
+  // odwrotność macierzy: przesunięcie, obrót wokół pionu o kąt z ziarna (jak w spellsmoke.ts), skala
+  const a = puff.y.mul(6.283);
+  const rel = cameraPosition.sub(M.element(3).xyz);
+  const rx = rel.x.mul(cos(a)).sub(rel.z.mul(sin(a))), rz = rel.x.mul(sin(a)).add(rel.z.mul(cos(a)));
+  const vCam = varying(vec3(rx, rel.y, rz).div(S)), vPuff = varying(puff), vSize = varying(S.x);
+  const density = (q: any, age: any, seed: any, steam: any): any => {
+    const w = q.mul(3.2).add(vec3(seed.mul(7.1), seed.mul(3.7).sub(tU.mul(0.55)), seed.mul(5.3)));
+    const n = fbm(w, 4);
+    const r = length(q.mul(vec3(1, 0.85, 1))).mul(2);
+    const edge = float(1).sub(age).mul(0.3).add(0.62).sub(steam.mul(0.08));
+    const d = float(1).sub(smoothstep(edge.sub(0.45), edge, r.add(n.sub(0.5).mul(age.mul(0.55).add(0.75)))));
+    return d.mul(n.mul(1.15).add(0.35));
+  };
+  const color = Fn(() => {
+    const age = vPuff.x, seed = vPuff.y, steam = vPuff.z, power = vPuff.w;
+    const o = vCam, d = normalize(positionGeometry.sub(vCam));
+    const tt = box(o, d, vec3(-0.5), vec3(0.5));
+    const t0 = max(tt.x, 0), t1 = tt.y;
+    If(t1.lessThanEqual(t0), () => { Discard(); });
+    const N = 14;
+    const ds = t1.sub(t0).div(N);
+    const t = t0.add(ds.mul(jitter(tU))).toVar();
+    const dsm = ds.mul(vSize);
+    const isSteam = steam.greaterThan(0.5);
+    const k = power.mul(T.select(isSteam, float(9), float(13))).mul(float(1).sub(age.mul(0.55))).div(max(0.06, vSize));
+    const lit = T.select(isSteam, vec3(0.86, 0.91, 0.96), mix(vec3(0.16, 0.14, 0.12), vec3(0.38, 0.36, 0.34), age));
+    const shade = T.select(isSteam, vec3(0.52, 0.6, 0.7), vec3(0.05, 0.045, 0.04));
+    const ember = vec3(1, 0.36, 0.08).mul(float(1).sub(steam)).mul(pow(float(1).sub(age), 3)).mul(1.4);
+    const col = vec3(0).toVar(), Tt = float(1).toVar();
+    Loop(N, () => {
+      const q = o.add(d.mul(t));
+      const dn = density(q, age, seed, steam);
+      If(dn.greaterThan(0.01), () => {
+        const above = density(q.add(vec3(0, 0.16, 0)), age, seed, steam);
+        const light = clamp(float(1).sub(above.mul(1.3)), 0, 1);
+        const low = float(1).sub(smoothstep(-0.45, 0.1, q.y));
+        const c = mix(shade, lit, light.mul(0.85).add(0.15)).add(ember.mul(low));
+        const al = float(1).sub(exp(dn.mul(k).mul(dsm).negate()));
+        col.addAssign(Tt.mul(c).mul(al));
+        Tt.mulAssign(float(1).sub(al));
+        If(Tt.lessThan(0.04), () => { Break(); });
+      });
+      t.addAssign(ds);
+    });
+    const alpha = float(1).sub(Tt);
+    If(alpha.lessThan(0.01), () => { Discard(); });
+    return vec4(col.div(max(alpha, 0.001)), alpha);
+  });
+  const m = new Wm.MeshBasicNodeMaterial({ transparent: true, depthWrite: false, side: Wm.BackSide, toneMapped: false, fog: false });
+  m.colorNode = color();
+  m.vertexNode = cameraProjectionMatrix.mul(cameraViewMatrix).mul(M).mul(vec4(positionGeometry, 1));
+  return m;
+}

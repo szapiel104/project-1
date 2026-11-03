@@ -1,3 +1,5 @@
+import { gpuMods } from './gpu/webgpu';
+import { spellSmokeNode } from './gpu/fireNode';
 import * as THREE from 'three';
 import { FIRE_NOISE } from './fireGlsl';
 
@@ -107,6 +109,8 @@ export class SpellSmoke {
     });
     this.mesh = new THREE.InstancedMesh(geo, this.mat, MAX);
     this.mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+    // WebGPU: te same kłęby w węzłach (gpu/fireNode.ts)
+    if (gpuMods) this.mesh.material = spellSmokeNode(this.mat.uniforms.time as { value: number }, this.mesh);
     this.mesh.count = 0;
     this.mesh.frustumCulled = false;
     this.mesh.renderOrder = 4;

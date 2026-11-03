@@ -1,5 +1,8 @@
 # Dziennik zmian
 
+## 0.93.6 — 2026-11-03
+- WebGPU: dym czarów `spellSmokeNode` w `gpu/fireNode.ts` (marsz promienia, szum 3D z tekstury, odwrotność macierzy instancji z kąta ziarna).
+
 ## 0.93.5 — 2026-11-03
 - WebGPU: kałuże i ślady na śniegu `gpu/groundFxNode.ts` (colorNode/roughnessNode/normalNode/vertexNode i opacityNode doklejone do zwykłych materiałów).
 
