@@ -60,6 +60,7 @@ nowy wygląd mapy = nowy numer generatora (`MAP_GEN`), stare zapisy dostają daw
   kształtów: głaz, płyta, ściana skalna, rumosz; dopiero z nimi wracają skałki i ładne urwiska.
 
 ## Zaległe — robimy po WebGPU
+- [x] 0.94.2: krawędź mapy bez kwadratu — teren za planszą z tych samych szumów (terrainSampler), las tylko tam, gdzie generator daje las.
 - [x] 0.94.0: roślinność pustyni z 0 A.D. (palmy w oazach jako las, uschnięte palmy, krzewy, suche trawy). (Michał 3.11.2026, 12:56: „najpierw WebGPU, potem to, co da efekty”)
 - [ ] **Pustynia: palmy, suche krzewy, przesuszone trawy** z 0 A.D. (repozytorium github.com/0ad/0ad, CC BY-SA 3.0):
   palmy `meshes/gaia/palm_date_new_{1..6}.dae` (tekstury `palm_date_new_1/2.png` + `_norm`), uschnięte `palm_dead_{1..5}`

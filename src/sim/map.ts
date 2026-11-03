@@ -533,3 +533,36 @@ function stamp(tiles: Uint8Array, w: number, h: number, cx: number, cy: number, 
 export function tileAt(map: GameMap, x: number, y: number): Terrain {
   return map.tiles[y * map.width + x] as Terrain;
 }
+
+/**
+ * Teren w dowolnym miejscu, także za planszą — te same wzory co pierwsze przejście `generateMap` (wysokość, woda,
+ * las, pas gór w masywach), bez późniejszych poprawek (rzeka, place pod zamki, ścieżki, rzeźba). Tylko do wyglądu:
+ * rysowanie ciągnie nim teren dalej za krawędź planszy, więc świat nie kończy się kwadratem (Michał 3.11.2026:
+ * „widać, że to kwadrat… ma nie patrzeć, gdzie koniec dla gracza”). Symulacja z tego nie korzysta.
+ * Za planszą „odległość od krawędzi” jest ujemna, więc masywy gór (szum `massif`) rosną dalej w głąb, a między nimi
+ * ciągną się las, łąki i woda z tych samych szumów co na planszy.
+ */
+export function terrainSampler(map: GameMap, rim: number, waterLevel: number): (x: number, y: number) => { t: Terrain; e: number } {
+  const { seed, width, height, gen } = map;
+  const B = map.biome ? BIOME[map.biome] : null;
+  const forestAt = B ? B.forest : 146;
+  const S = gen >= BIOME_GEN ? (f: (x: number, y: number) => number, x: number, y: number): number => symNoise(x, y, width, height, f) : (f: (x: number, y: number) => number, x: number, y: number): number => f(x, y);
+  return (x: number, y: number) => {
+    const h = S((a, b) => fractal(a, b, seed), x, y);
+    const forest = S((a, b) => fractal(a, b, seed ^ 0x51ed270b), x, y);
+    let t: Terrain = Terrain.Grass;
+    let e = h;
+    const edge = Math.min(x, y, width - 1 - x, height - 1 - y);
+    const r = rim + Math.floor((S((a, b) => valueNoise(a, b, 9, seed ^ 0x3c6ef372), x, y) * 5) / 256) - 2;
+    const massif = S((a, b) => valueNoise(a, b, 13, seed ^ 0x6a09e667), x, y);
+    if (edge < r && massif > 150) {
+      t = Terrain.Mountain;
+      e = Math.min(255, 170 + Math.min(r - edge, (massif - 150) >> 3) * 9 + (hash2(x, y, seed) & 15));
+    } else if (B && (e = Math.max(0, Math.min(255, h - B.water))) < waterLevel) t = Terrain.Water;
+    else if (!B && h < waterLevel) t = Terrain.Water;
+    else if (forest > forestAt) t = Terrain.Forest;
+    // pustynia: las tylko przy wodzie (jak sim/desert.ts) — za mapą wystarczy rzadki gaj
+    if (map.biome === 'desert' && t === Terrain.Forest && (hash2(x >> 2, y >> 2, seed ^ 0xde5e) & 7) !== 0) t = Terrain.Grass;
+    return { t, e };
+  };
+}

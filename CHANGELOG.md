@@ -1,5 +1,8 @@
 # Dziennik zmian
 
+## 0.94.2 — 2026-11-03
+- Teren za planszą z generatora mapy: `terrainSampler` w sim/map.ts (te same szumy co pierwsze przejście generateMap; tylko do rysowania, symulacja i zapisy bez zmian), w terrain.ts wysokość, warstwy (ściółka, skała, piach) i las za mapą z próbnika; rzeka płynie dalej za krawędź (do 16 pól); dalekie pasma i masywy z zaszumioną odległością.
+
 ## 0.94.1 — 2026-11-03
 - WebGPU: domyślnie DynamicLighting (światła w tablicach) zamiast ClusteredLighting — klastry robiły każde składanie materiału ok. 50 ms zamiast ok. 1 ms (`?swiatla=klastry` / `?swiatla=zwykle` do porównań).
 - Generator 11: mapa 1v1 240×240 (`PRESETS_V11` w data/maps.ts, starty 31/35 %); stare zapisy na dawnym rozmiarze. Bot: `ROCK_REACH` 60 → 90 (góry dalej od zamku). Test walki stawia wroga na wolnym polu.

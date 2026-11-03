@@ -17,7 +17,7 @@ import { createNoise2D } from 'simplex-noise';
 import { rng } from './craft';
 import { TERRAIN, Terrain } from '../data/terrain';
 import { RELIEF_M, type Biome } from '../data/biomes';
-import type { GameMap } from '../sim/map';
+import { terrainSampler, type GameMap } from '../sim/map';
 import { hash2 } from '../sim/rng';
 import { fernTexture } from './foliage';
 import { bushKinds, kindsOf, waterPlants, type BushKind, type TreeKind } from './forest';
@@ -635,21 +635,56 @@ function* terrainSteps(map: GameMap, models: ModelFactory, waterLevel: number): 
       massifs.push({ x, y, r: 20 + rnd() * 16, hgt: 26 + rnd() * 18 });
     }
   }
+  // Teren za planszą ciągnie się dalej z TYCH SAMYCH szumów co plansza (sim/map.ts, terrainSampler): masywy gór,
+  // lasy, łąki i jeziora nie kończą się na krawędzi, więc świat nie wygląda jak kwadrat (Michał 3.11.2026). Rzeka
+  // z planszy płynie dalej prosto za krawędź. Dopiero daleko (we mgle) dochodzą dawne pasma i wielkie masywy.
+  const OD = D + 2, OW = w + 2 * OD;
+  const outT = new Uint8Array(OW * (h + 2 * OD)), outE = new Uint8Array(OW * (h + 2 * OD));
+  {
+    const sample = terrainSampler(map, 10, waterLevel);
+    for (let y = -OD; y < h + OD; y++) for (let x = -OD; x < w + OD; x++) {
+      const k = (y + OD) * OW + x + OD;
+      if (x >= 0 && y >= 0 && x < w && y < h) { outT[k] = map.tiles[y * w + x]!; outE[k] = map.elevation[y * w + x]!; continue; }
+      const sm = sample(x, y);
+      // rzeka (i bród) z krawędzi planszy płynie dalej prosto w las — do 16 pól, potem już tylko szum
+      const bx = Math.max(0, Math.min(w - 1, x)), by = Math.max(0, Math.min(h - 1, y));
+      const bt = map.tiles[by * w + bx] as Terrain;
+      const far = Math.max(bx - x, x - bx, by - y, y - by);
+      if ((bt === Terrain.Water || bt === Terrain.Ford) && map.river?.[by * w + bx] && far < 16) { outT[k] = Terrain.Water; outE[k] = Math.min(sm.e, waterLevel - 8); continue; }
+      outT[k] = sm.t; outE[k] = sm.e;
+    }
+  }
+  const outTile = (x: number, y: number): Terrain => {
+    const cx = Math.max(-OD, Math.min(w + OD - 1, x)), cy = Math.max(-OD, Math.min(h + OD - 1, y));
+    return outT[(cy + OD) * OW + cx + OD]! as Terrain;
+  };
+  /** Wysokość pola za planszą — jak tileHeight, bez rzeźby i półek (tych za planszą nie ma) */
+  const outTileH = (x: number, y: number): number => {
+    const cx = Math.max(-OD, Math.min(w + OD - 1, x)), cy = Math.max(-OD, Math.min(h + OD - 1, y));
+    const k = (cy + OD) * OW + cx + OD, t = outT[k]! as Terrain, e = outE[k]!;
+    if (t === Terrain.Mountain) return 1.3 + (e - 170) * 0.15;
+    if (t === Terrain.Water || t === Terrain.Ford) return Math.max(-2.6, Math.min((e - waterLevel) * HEIGHT_SCALE, -0.25) * 0.5 - 0.15);
+    const d = e - waterLevel, xx = Math.max(0, d - 95);
+    return 0.12 + Math.max(0, d) * 0.004 + ((xx * xx) / (xx + 60)) * 0.014;
+  };
   const outerH = (X: number, Y: number): number => {
     if (X >= 0 && X <= w && Y >= 0 && Y <= h) return corner(Math.round(X), Math.round(Y));
     const cx = Math.max(0, Math.min(w, X)), cy = Math.max(0, Math.min(h, Y));
     const d = Math.max(Math.abs(X - cx), Math.abs(Y - cy));
-    const base = Math.max(0.12, corner(Math.round(cx), Math.round(cy)));
-    const fade = Math.max(0, 1 - d / 9);
-    let hh = 0.12 + (base - 0.12) * fade * fade * (3 - 2 * fade);
-    // pagórki pod lasem przy brzegu, dalej coraz wyższe zalesione pasma
+    // narożnik siatki = średnia czterech pól wokół (jak corner na planszy)
+    const ix = Math.round(X), iy = Math.round(Y);
+    let hh = (outTileH(ix - 1, iy - 1) + outTileH(ix, iy - 1) + outTileH(ix - 1, iy) + outTileH(ix, iy)) / 4;
+    // tuż przy krawędzi wtapiamy się w narożnik planszy (tam generator dołożył rzekę, place i ścieżki)
+    if (d < 3) hh += (corner(Math.round(cx), Math.round(cy)) - hh) * (1 - d / 3) * (1 - d / 3);
+    // daleko, we mgle: dawne pasma z szumu „ridged” — odległość zaszumiona, żeby i tam nie było kwadratu
+    const dn = d + nz(X / 23, Y / 23) * 14;
     const rr = ridged(X / 46, Y / 46);
-    hh += (0.4 + nz(X / 11, Y / 11) * 0.3) * Math.min(1, d / 5) + Math.pow(rr, 1.6) * 14 * smoothstep(8, 45, d);
+    hh += Math.pow(rr, 1.6) * 14 * smoothstep(30, 75, dn);
     for (const m of massifs) {
       const dx = X - m.x, dy = Y - m.y, q = (dx * dx + dy * dy) / (m.r * m.r);
       if (q > 9) continue;
       const g = Math.exp(-q * 1.4);
-      hh += m.hgt * g * (0.6 + 0.4 * ridged(X / 13 + m.x, Y / 13 + m.y, 5)) * smoothstep(1, 12, d);
+      hh += m.hgt * g * (0.6 + 0.4 * ridged(X / 13 + m.x, Y / 13 + m.y, 5)) * smoothstep(6, 22, dn);
     }
     // od strony morza: szeroka, płaska plaża łagodnie schodząca do wody, dalej coraz głębiej
     const t = seaT(X, Y);
@@ -698,9 +733,13 @@ function* terrainSteps(map: GameMap, models: ModelFactory, waterLevel: number): 
           continue;
         }
         const d = Math.max(Math.abs(X - cx), Math.abs(Y - cy));
+        // rodzaj terenu za planszą z tego samego generatora (las, góra, woda, łąka) — barwa i warstwy jak na planszy
+        const ot = outTile(Math.round(X) - 1, Math.round(Y) - 1), ot2 = outTile(Math.round(X), Math.round(Y));
+        const oForest = (ot === Terrain.Forest ? 0.5 : 0) + (ot2 === Terrain.Forest ? 0.5 : 0);
+        const oRock = (ot === Terrain.Mountain ? 0.5 : 0) + (ot2 === Terrain.Mountain ? 0.5 : 0);
         c3.setRGB(cornerCol[ci]!, cornerCol[ci + 1]!, cornerCol[ci + 2]!);
         if (corner(cx, cy) < 0) c3.copy(floorCol);
-        c3.lerp(tmp.copy(floorCol).multiplyScalar(0.92 + ((hash2(X >> 2, Y >> 2, map.seed) & 63) / 63) * 0.12), Math.min(1, d / 10));
+        c3.lerp(tmp.copy(floorCol).multiplyScalar(0.92 + ((hash2(X >> 2, Y >> 2, map.seed) & 63) / 63) * 0.12), Math.min(1, d / 3));
         C[k * 3] = c3.r; C[k * 3 + 1] = c3.g; C[k * 3 + 2] = c3.b;
         const iL = Math.max(0, i - 1), iR = Math.min(NX - 1, i + 1), jU = Math.max(0, j - 1), jD = Math.min(NY - 1, j + 1);
         const sx = (hs[j * NX + iR]! - hs[j * NX + iL]!) / Math.max(1e-3, xs[iR]! - xs[iL]!), sz = (hs[jD * NX + i]! - hs[jU * NX + i]!) / Math.max(1e-3, ys[jD]! - ys[jU]!);
@@ -709,9 +748,11 @@ function* terrainSteps(map: GameMap, models: ModelFactory, waterLevel: number): 
         // pod lasem ściółka; skała, gdzie stromo albo wysoko (śnieg dokłada shader)
         const rockK = Math.max(smoothstep(0.82, 0.6, nv2.y), smoothstep(13, 17, hs[k]!));
         // step: piach i łaty gołej ziemi także za mapą (inaczej plansza kończyłaby się zieloną ramą)
-        const sandK = map.biome === 'desert' ? Math.max(outerSand(X, Y), smoothstep(0, 6, d) * 0.95) : map.biome === 'steppe' ? Math.max(outerSand(X, Y), smoothstep(0.55, 1.05, nz(X / 9 + 13, Y / 9 - 5) * 0.7 + nz(X / 17 + 3, Y / 17 + 9) * 0.5) * 0.4) : outerSand(X, Y);
+        const rockA = Math.max(rockK, oRock * smoothstep(0.6, 1.6, hs[k]!));
+        const sandK = map.biome === 'desert' ? Math.max(outerSand(X, Y), 0.95 * (1 - oRock)) : map.biome === 'steppe' ? Math.max(outerSand(X, Y), smoothstep(0.55, 1.05, nz(X / 9 + 13, Y / 9 - 5) * 0.7 + nz(X / 17 + 3, Y / 17 + 9) * 0.5) * 0.4) : outerSand(X, Y);
         SD[k] = sandK;
-        S[k * 4] = Math.min(0.9, d / 4) * (1 - rockK) * (1 - sandK); S[k * 4 + 2] = rockK * (1 - sandK);
+        // ściółka pod lasem z generatora (a nie pas wokół planszy), skała w górach i na stromiznach
+        S[k * 4] = 0.9 * oForest * (1 - rockA) * (1 - sandK); S[k * 4 + 2] = rockA * (1 - sandK);
       }
     const idx: number[] = [];
     for (let j = 0; j < NY - 1; j++)
@@ -1500,6 +1541,14 @@ function* terrainSteps(map: GameMap, models: ModelFactory, waterLevel: number): 
         }
         const X = px - ox, Y = pz - oz;
         if (seaT(X, Y) > -16) continue; // plaża i morze bez drzew
+        if (dd >= 0.9) {
+          // za planszą drzewa rosną tam, gdzie generator daje las (jak na planszy); w górach pod granicą lasu rzadziej,
+          // na łąkach pojedyncze — bez równego pasa puszczy wokół planszy, który zdradzał kwadrat mapy
+          const ot = outTile(Math.floor(X), Math.floor(Y));
+          if (ot === Terrain.Water || ot === Terrain.Ford) continue;
+          if (ot === Terrain.Grass && (r >>> 26) % 19 !== 0) continue;
+          if (ot === Terrain.Mountain && (r >>> 26) % 3 !== 0) continue;
+        }
         const groundY = hAny(X, Y);
         const treeline = 10.5 + nz(X / 30, Y / 30) * 2.0;
         if (groundY > treeline || slopeAt(X, Y) > 1.3) continue;

@@ -10,6 +10,11 @@ export type { ChangeEntry } from './changelogTypes';
  */
 const NEW: ChangeEntry[] = [
   {
+    v: '0.94.2', date: '2026-11-03',
+    pl: ['Świat nie kończy się kwadratem: za krawędzią mapy ciągną się dalej te same góry, lasy, łąki, jeziora i rzeki co na mapie (a nie równy pas puszczy dookoła), pustynia za mapą to dalej pustynia.'],
+    en: ['The world no longer ends in a square: past the map edge the same mountains, forests, meadows, lakes and rivers carry on (instead of an even band of woodland all around), and a desert stays a desert beyond the map.'],
+  },
+  {
     v: '0.94.1', date: '2026-11-03',
     pl: ['Znacznie szybsze doczytywanie i mniej przycięć na nowym silniku grafiki (tańsze oświetlenie od pochodni i ognisk).', 'Większa mapa 1 na 1: 240 pól zamiast 192, zamki dalej od siebie (dotyczy nowych gier; zapisane gry zostają na swojej mapie).'],
     en: ['Much faster loading and less stutter on the new graphics engine (cheaper lighting from torches and fires).', 'A bigger 1v1 map: 240 tiles instead of 192, keeps further apart (new games only; saved games keep their map).'],
