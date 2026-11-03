@@ -10,6 +10,11 @@ export type { ChangeEntry } from './changelogTypes';
  */
 const NEW: ChangeEntry[] = [
   {
+    v: '0.94.21', date: '2026-11-03',
+    pl: ['Stodoła otwiera dach jak inne budynki, gdy ktoś w niej pracuje — widać zapasy na klepisku.'],
+    en: ['The barn opens its roof like other buildings while someone works inside — you can see the stores on the floor.'],
+  },
+  {
     v: '0.94.20', date: '2026-11-03',
     pl: [
       'Szybsze doczytywanie przy przelocie kamerą: kawałki lasu, kamienie i budynki tego samego rodzaju korzystają ze wspólnych shaderów, więc obiekty i ich cienie nie „doładowują się” po kolei.',

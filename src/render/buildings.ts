@@ -662,8 +662,7 @@ export function animateBuilding(model: THREE.Object3D, active: boolean, time: nu
     // budynek bez wnętrza w modelu (np. siedziby magów ognia i wody): pusta grupa — dachu nie zdejmujemy,
     // bo pod nim nic nie ma i zostają same dziurawe mury
     // wyjątek: wieże (openTop w modelu) nie mają wnętrza, ale po zdjęciu dachu widać pomost z łucznikami i ich sprzętem
-    // stodoła zostaje pod dachem (Michał 2.11.2026: „stodoła inaczej wygląda na podglądzie, a inaczej bez” —
-    // po zdjęciu strzechy zostawały gołe ściany i białe bloki kamienia na klepisku); zapasy widać przez otwarte wrota
+    // `keepRoof` w modelu: dach zostaje na stałe (stodoła miała tak od 2.11 do 3.11.2026)
     const keep = model.userData.keepRoof ?? model.children[0]?.userData.keepRoof;
     const hollow = keep || (!interior.children.length && !(model.userData.openTop ?? model.children[0]?.userData.openTop));
     // wszystkie części o tych nazwach (np. twierdza ma kilka warstw „shell”: donżon i bryłę murów z dziedzińcem)
@@ -1281,7 +1280,8 @@ const BUILDERS: Record<string, Builder> = {
     // stodoła z Blendera (tools/models/barn.py): deski na słupach, strzecha z lukarną, wrota otwarte na oścież,
     // w środku puste klepisko, na którym gra układa zapasy składu (stodoła trzyma tylko surowce)
     blenderModel(g, BARN_MODEL as unknown as BlenderBuilding, flag);
-    g.userData.keepRoof = true;
+    // dach zdejmuje się jak w innych budynkach, gdy ktoś pracuje (Michał 3.11.2026: „stodoła nie ma otwartego dachu”;
+    // 2.11 był zostawiony na stałe)
     // klepisko na dwie części (Michał 30.10.2026: „stodoła pokazuje worki zboża”): z lewej towary składu, z prawej
     // snopki zboża i worki mąki (rodzaj 'grain', trzyma go tylko stodoła)
     const floorY = (BARN_MODEL as unknown as { floorY: number }).floorY;
