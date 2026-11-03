@@ -31,6 +31,7 @@ import { SHADOW_LAYER, shadowProxyMaterial } from './shadowlayer';
 import { createGrassField, type GrassField } from './grass';
 import { buildHighMist, type Atmosphere, type HighMist } from './highmist';
 import { buildStreams, type Streams } from './streams';
+import { buildRockGeometry, rockDisplacer } from './rockmesh';
 
 const HEIGHT_SCALE = 0.03;
 const smoothstep = (a: number, b: number, x: number): number => { const t = Math.max(0, Math.min(1, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
@@ -51,14 +52,19 @@ const BIOME_TINT: Record<Biome, [number, number, number]> = {
 };
 
 /** Wysokość pola w świecie 3D. Woda leży poniżej zera, góry wyrastają stromo. */
-function tileHeight(map: GameMap, x: number, y: number, waterLevel: number, shelf?: Float32Array): number {
+function tileHeight(map: GameMap, x: number, y: number, waterLevel: number, shelf?: Float32Array, mdepth?: Uint8Array): number {
   const cx = Math.min(map.width - 1, Math.max(0, x));
   const cy = Math.min(map.height - 1, Math.max(0, y));
   const e = map.elevation[cy * map.width + cx]!;
   const t = map.tiles[cy * map.width + cx] as Terrain;
   // rzeźba (generator 8): płaskowyże i skały wewnątrz mapy stoją na zwykłym terenie, wyżej o `relief`
   const lift = map.relief ? map.relief[cy * map.width + cx]! * RELIEF_M : 0;
-  if (t === Terrain.Mountain && !map.crag?.[cy * map.width + cx]) return 1.3 + (e - 170) * 0.15;
+  // góry na krańcach: wysokość z mapy, ale najwyżej tyle, ile pozwala odległość od podnóża (ok. 2,4 m na pole w głąb
+  // masywu) — pojedyncze pole góry to skalny garb, a nie 14-metrowa iglica (Michał 3.11.2026: „dziwne piki”)
+  if (t === Terrain.Mountain && !map.crag?.[cy * map.width + cx]) {
+    const full = 1.3 + (e - 170) * 0.15;
+    return mdepth ? Math.min(full, 0.6 + mdepth[cy * map.width + cx]! * 2.4) : full;
+  }
   const h = (e - waterLevel) * HEIGHT_SCALE;
   // dno jeziora: przy brzegu łagodna półka (płycizna, przez którą widać dno), dalej coraz głębiej aż do dna z mapy
   // (jeziora z mapy są płytkie, ok. 60 cm, więc środek pogłębiamy według odległości od brzegu: tam dna już nie widać)
@@ -182,13 +188,29 @@ function* terrainSteps(map: GameMap, models: ModelFactory, waterLevel: number): 
     }
   }
   yield;
+  // głębokość w masywie gór (pola od najbliższego pola bez góry; brzeg mapy to dalszy ciąg gór): masyw rośnie
+  // od podnóża stopniowo, więc góry tworzą zbocza i pasma zamiast samotnych szpikulców
+  const mdepth = new Uint8Array(w * h);
+  {
+    const q: number[] = [];
+    for (let i = 0; i < w * h; i++) if (map.tiles[i] !== Terrain.Mountain || map.crag?.[i]) q.push(i); else mdepth[i] = 255;
+    for (let qi = 0; qi < q.length; qi++) {
+      const i = q[qi]!, x = i % w, y = (i - x) / w;
+      for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]] as const) {
+        const nx = x + dx, ny = y + dy;
+        if (nx < 0 || ny < 0 || nx >= w || ny >= h) continue;
+        const j = ny * w + nx;
+        if (mdepth[j]! > mdepth[i]! + 1) { mdepth[j] = mdepth[i]! + 1; q.push(j); }
+      }
+    }
+  }
   // wysokości narożników = średnia z czterech sąsiednich pól
   const corners = new Float32Array((w + 1) * (h + 1));
   for (let y = 0; y <= h; y++)
     for (let x = 0; x <= w; x++)
       corners[y * (w + 1) + x] =
-        (tileHeight(map, x - 1, y - 1, waterLevel, shelf) + tileHeight(map, x, y - 1, waterLevel, shelf) +
-          tileHeight(map, x - 1, y, waterLevel, shelf) + tileHeight(map, x, y, waterLevel, shelf)) / 4;
+        (tileHeight(map, x - 1, y - 1, waterLevel, shelf, mdepth) + tileHeight(map, x, y - 1, waterLevel, shelf, mdepth) +
+          tileHeight(map, x - 1, y, waterLevel, shelf, mdepth) + tileHeight(map, x, y, waterLevel, shelf, mdepth)) / 4;
   // Góry na planszy (pole gór przy krawędzi): bryła z szumu grzbietowego, im wyżej, tym bardziej poszarpana —
   // granie, żleby i turnie zamiast gładkiego kopca. To tylko wygląd: po górach i tak nikt nie chodzi.
   const nz = createNoise2D(rng(map.seed ^ 0x6d0f));
@@ -455,6 +477,24 @@ function* terrainSteps(map: GameMap, models: ModelFactory, waterLevel: number): 
   // góry za mapą to osobna siatka i nie są tu ruszane
   ground.castShadow = false;
   group.add(cat(ground, 'teren'));
+  // skała (góry i urwiska) w gęstej, wyrzeźbionej siatce (rockmesh.ts); na planszy jej pola znikają (trójkąty bez pola)
+  const isRockTile = (tx: number, ty: number): boolean => !TEST && map.tiles[ty * w + tx] === Terrain.Mountain;
+  const rockSrc = { w, h, ox, oz, rock: isRockTile, corner, col: cornerCol, splat: cornerSplat, sand: cornerSand, noise: createNoise2D(rng(map.seed ^ 0x70c4)) };
+  const rockDisp = TEST ? (): number => 0 : rockDisplacer(rockSrc);
+  {
+    const rg = TEST ? null : buildRockGeometry(rockSrc, rockDisp);
+    if (rg) {
+      for (let t = 0; t < w * h; t++) {
+        if (map.tiles[t] !== Terrain.Mountain) continue;
+        const o = t * 18;
+        for (let k = 1; k < 6; k++) { pos[o + k * 3] = pos[o]!; pos[o + k * 3 + 1] = pos[o + 1]!; pos[o + k * 3 + 2] = pos[o + 2]!; }
+      }
+      const rock = new THREE.Mesh(rg, ground.material);
+      rock.receiveShadow = true;
+      rock.castShadow = false;
+      group.add(cat(rock, 'teren — skała'));
+    }
+  }
 
   yield;
   // Woda: dwie warstwy drobnych fal przesuwające się w różne strony, lekko przejrzysta, z połyskiem słońca
@@ -778,9 +818,11 @@ function* terrainSteps(map: GameMap, models: ModelFactory, waterLevel: number): 
     const x = Math.max(0, Math.min(w - 0.001, fx)), y = Math.max(0, Math.min(h - 0.001, fy));
     const ix = Math.floor(x), iy = Math.floor(y);
     const tx = x - ix, ty = y - iy;
-    if (tx + ty <= 1) { const a = corner(ix, iy); return a + (corner(ix + 1, iy) - a) * tx + (corner(ix, iy + 1) - a) * ty; }
+    // na skale: wyrzeźbiona powierzchnia z rockmesh.ts (drzewa i strumienie stoją na tym, co widać)
+    const rd = map.tiles[iy * w + ix] === Terrain.Mountain ? rockDisp(x, y) : 0;
+    if (tx + ty <= 1) { const a = corner(ix, iy); return a + (corner(ix + 1, iy) - a) * tx + (corner(ix, iy + 1) - a) * ty + rd; }
     const d = corner(ix + 1, iy + 1);
-    return d + (corner(ix, iy + 1) - d) * (1 - tx) + (corner(ix + 1, iy) - d) * (1 - ty);
+    return d + (corner(ix, iy + 1) - d) * (1 - tx) + (corner(ix + 1, iy) - d) * (1 - ty) + rd;
   };
   /** Spadek terenu w punkcie (metry na pole) — o tyle zagłębiamy drzewa, żeby pień nie wisiał nad zboczem od dołu */
   const slopeOf = (fx: number, fy: number): number => Math.hypot(heightAt(fx + 0.35, fy) - heightAt(fx - 0.35, fy), heightAt(fx, fy + 0.35) - heightAt(fx, fy - 0.35)) / 0.7;
@@ -794,9 +836,10 @@ function* terrainSteps(map: GameMap, models: ModelFactory, waterLevel: number): 
     const cornerAny = (X: number, Y: number): number => (X >= 0 && Y >= 0 && X <= w && Y <= h ? corner(X, Y) : outerH(X, Y));
     const meshH = (fx: number, fy: number): number => {
       const ix = Math.floor(fx), iy = Math.floor(fy), tx = fx - ix, ty = fy - iy;
-      if (tx + ty <= 1) { const a = cornerAny(ix, iy); return a + (cornerAny(ix + 1, iy) - a) * tx + (cornerAny(ix, iy + 1) - a) * ty; }
+      const rd = fx >= 0 && fy >= 0 && fx < w && fy < h ? rockDisp(fx, fy) : 0;
+      if (tx + ty <= 1) { const a = cornerAny(ix, iy); return a + (cornerAny(ix + 1, iy) - a) * tx + (cornerAny(ix, iy + 1) - a) * ty + rd; }
       const d = cornerAny(ix + 1, iy + 1);
-      return d + (cornerAny(ix, iy + 1) - d) * (1 - tx) + (cornerAny(ix + 1, iy) - d) * (1 - ty);
+      return d + (cornerAny(ix, iy + 1) - d) * (1 - tx) + (cornerAny(ix + 1, iy) - d) * (1 - ty) + rd;
     };
     const STEP = 2, x0 = -D, z0 = -D, nx = Math.floor((w + 2 * D) / STEP) + 1, ny = Math.floor((h + 2 * D) / STEP) + 1;
     const data = new Float32Array(nx * ny);
@@ -2215,6 +2258,7 @@ function* terrainSteps(map: GameMap, models: ModelFactory, waterLevel: number): 
       for (let ty = Math.max(0, y - 4); ty < Math.min(h, y + fh + 4); ty++)
         for (let tx = Math.max(0, x - 4); tx < Math.min(w, x + fw + 4); tx++)
           for (let k = 0; k < 6; k++) {
+            if (isRockTile(tx, ty)) break; // skała jest w osobnej siatce (rockmesh.ts), na planszy jej pole zostaje zwinięte
             const [dx, dy] = SLOT_OF[k]!;
             pos[(ty * w + tx) * 18 + k * 3 + 1] = corner(tx + dx, ty + dy);
           }
@@ -2229,6 +2273,7 @@ function* terrainSteps(map: GameMap, models: ModelFactory, waterLevel: number): 
       for (let ty = Math.max(0, y - 1); ty < Math.min(h, y + fh + 1); ty++)
         for (let tx = Math.max(0, x - 1); tx < Math.min(w, x + fw + 1); tx++)
           for (let k = 0; k < 6; k++) {
+            if (isRockTile(tx, ty)) break;
             const [dx, dy] = SLOT_OF[k]!;
             const cx = tx + dx, cy = ty + dy;
             if (cx < x || cx > x + fw || cy < y || cy > y + fh) continue;

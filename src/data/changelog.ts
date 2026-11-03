@@ -10,6 +10,17 @@ export type { ChangeEntry } from './changelogTypes';
  */
 const NEW: ChangeEntry[] = [
   {
+    v: '0.85.0', date: '2026-11-03',
+    pl: [
+      'Góry rosną od podnóża stopniowo i tworzą zbocza i pasma — koniec samotnych skalnych iglic wysokich na kilkanaście metrów.',
+      'Skała gór i urwisk jest wyrzeźbiona: żebra, żleby i półki w gęstej siatce, więc tekstura skały nie rozciąga się już po zboczach.',
+    ],
+    en: [
+      'Mountains now rise gradually from their foot into slopes and ranges — no more lone rock spires tens of feet tall.',
+      'Mountain and cliff rock is sculpted: ribs, gullies and ledges in a fine mesh, so the rock texture no longer stretches across the slopes.',
+    ],
+  },
+  {
     v: '0.84.2', date: '2026-11-03',
     pl: [
       'Iskry nad ogniskami i pożarami to teraz małe, ostre, rozżarzone punkty — z bliska nie rosną już w wielkie rozmyte pomarańczowe kule.',

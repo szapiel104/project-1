@@ -1,5 +1,9 @@
 # Dziennik zmian
 
+## 0.85.0 — 3.11.2026
+- `render/rockmesh.ts`: pola gór (i skały generatora 8) w osobnej siatce 4×4 na pole z rzeźbą (`rockDisplacer`, zero na brzegu z polami bez skały i na brzegu mapy), na planszy te pola zwinięte; `heightAt` i `meshH` (strumienie) z tą samą rzeźbą; `level`/`dig` pomijają pola skały.
+- `tileHeight`: wysokość gór ograniczona głębokością w masywie (`mdepth`, ok. 2,4 m na pole) — bez iglic. Boty: bez zmian.
+
 ## 0.84.2 — 3.11.2026
 - `ambience.ts`: osobna ostra tekstura iskier, `maxPx` w shaderze cząstek (iskry 9 px, blask 70 px × DPR), mniejsze iskry i blask okien.
 
