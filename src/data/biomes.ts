@@ -4,8 +4,8 @@
  * i klimat (temperatura). Zasady gry są te same — to nadal ten sam świat, tylko inny krajobraz.
  * Wszystkie liczby całkowite (mapa liczy się identycznie u każdego gracza).
  */
-export type Biome = 'meadow' | 'highland' | 'steppe' | 'north';
-export const BIOMES: Biome[] = ['meadow', 'highland', 'steppe', 'north'];
+export type Biome = 'meadow' | 'highland' | 'steppe' | 'north' | 'desert';
+export const BIOMES: Biome[] = ['meadow', 'highland', 'steppe', 'north', 'desert'];
 
 export interface BiomeDef {
   /** Klucz tłumaczenia nazwy */
@@ -37,6 +37,8 @@ export const BIOME: Record<Biome, BiomeDef> = {
   steppe: { name: 'biome.steppe', water: -11, forest: 168, plateau: 160, plateau2: 255, step: 62, outcrop: 244, boulder: 90, temp: 4 },
   // północ: gęsta tajga, chłodno (śnieg leży dłużej), niskie progi skalne
   north: { name: 'biome.north', water: 2, forest: 134, plateau: 172, plateau2: 255, step: 40, outcrop: 247, boulder: 110, temp: -5 },
+  // pustynia (generator 10): piach i wydmy, stoliwa, oazy — woda i las tylko przy oazach (sim/desert.ts), gorąco
+  desert: { name: 'biome.desert', water: -15, forest: 150, plateau: 168, plateau2: 255, step: 66, outcrop: 255, boulder: 100, temp: 7 },
 };
 
 /** Jednostka rzeźby (relief) w metrach */
@@ -51,9 +53,24 @@ export const BIOME_GEN = 8;
 let forced: Biome | null = null;
 export function forceBiome(b: Biome | null): void { forced = b; }
 
-/** Kraina mapy z ziarna: łęgi 3 na 8, wyżyna i step po 2 na 8, północ 1 na 8 */
-export function biomeOfSeed(seed: number, hash: (x: number, y: number, s: number) => number): Biome {
+/**
+ * Kraina mapy z ziarna. Generator 8–9: łęgi 3 na 8, wyżyna i step po 2 na 8, północ 1 na 8 (bez zmian — stare zapisy
+ * bez zapisanej krainy liczą ją stąd). Od generatora 10 dochodzi pustynia: łęgi 3, wyżyna 2, step 2, pustynia 2, północ 1 na 10.
+ */
+export function biomeOfSeed(seed: number, hash: (x: number, y: number, s: number) => number, gen = 99): Biome {
   if (forced) return forced;
-  const r = hash(seed, 8, 0x0b10e) % 8;
-  return r < 3 ? 'meadow' : r < 5 ? 'highland' : r < 7 ? 'steppe' : 'north';
+  if (gen < 10) {
+    const r = hash(seed, 8, 0x0b10e) % 8;
+    return r < 3 ? 'meadow' : r < 5 ? 'highland' : r < 7 ? 'steppe' : 'north';
+  }
+  const r = hash(seed, 10, 0x0b10e) % 10;
+  return r < 3 ? 'meadow' : r < 5 ? 'highland' : r < 7 ? 'steppe' : r < 9 ? 'desert' : 'north';
+}
+
+/** Woda na mapie (generator 10, Michał 3.11.2026: „woda nie zawsze musi iść środkiem”) */
+export type RiverMode = 'mid' | 'twin' | 'none';
+export function riverOfSeed(seed: number, biome: Biome, hash: (x: number, y: number, s: number) => number): RiverMode {
+  const r = hash(seed, 10, 0x71e5) % 10;
+  if (biome === 'desert') return r < 6 ? 'mid' : 'none'; // pustynia: rzeka przez środek (zielone brzegi) albo same oazy
+  return r < 5 ? 'mid' : r < 8 ? 'twin' : 'none';
 }

@@ -45,10 +45,11 @@ const VEG: Record<Biome, { leafy: number; lone: number; bush: number; pebble: nu
   highland: { leafy: 0.8, lone: 160, bush: 15, pebble: 0.45 },
   steppe: { leafy: 2.2, lone: 95, bush: 8, pebble: 0.6 },
   north: { leafy: 0.25, lone: 260, bush: 30, pebble: 0.8 },
+  desert: { leafy: 2.4, lone: 520, bush: 34, pebble: 0.7 },
 };
 /** Barwa podłoża krainy (mnożnik koloru wierzchołków; zdjęcia trawy dają resztę) */
 const BIOME_TINT: Record<Biome, [number, number, number]> = {
-  meadow: [1, 1.02, 0.96], highland: [0.98, 1, 0.9], steppe: [1.1, 1.02, 0.76], north: [0.86, 0.95, 1.0],
+  meadow: [1, 1.02, 0.96], highland: [0.98, 1, 0.9], steppe: [1.1, 1.02, 0.76], north: [0.86, 0.95, 1.0], desert: [1.08, 1.0, 0.82],
 };
 
 /** Wysokość pola w świecie 3D. Woda leży poniżej zera, góry wyrastają stromo. */
@@ -247,6 +248,32 @@ function* terrainSteps(map: GameMap, models: ModelFactory, waterLevel: number): 
       const lift = hh - 1.6;
       corners[k] = hh + (ridged(x / 11, y / 11, 5) - 0.45) * lift * 0.55 + Math.pow(ridged(x / 26 + 7, y / 26 - 3), 2) * Math.min(lift, 8) * 0.6;
     }
+  // Pustynia (generator 10): odległość od zieleni (woda, las oazy) w polach, do 5 — dalej sam piach i wydmy
+  const greenDist = new Uint8Array(w * h).fill(5);
+  if (map.biome === 'desert') {
+    const q: number[] = [];
+    for (let i = 0; i < w * h; i++) { const t = map.tiles[i]; if (t === Terrain.Water || t === Terrain.Ford || t === Terrain.Forest) { greenDist[i] = 0; q.push(i); } }
+    for (let qi = 0; qi < q.length; qi++) {
+      const i = q[qi]!, x = i % w, y = (i - x) / w;
+      for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]] as const) {
+        const nx = x + dx, ny = y + dy;
+        if (nx < 0 || ny < 0 || nx >= w || ny >= h) continue;
+        const j = ny * w + nx;
+        if (greenDist[j]! > greenDist[i]! + 1) { greenDist[j] = greenDist[i]! + 1; q.push(j); }
+      }
+    }
+    // wydmy: długie, łagodne grzbiety (szum grzbietowy rozciągnięty w poprzek wiatru) — tylko na piachu, z dala od
+    // zamków (tam równy plac pod osadę), wody i skały; to sam wygląd, symulacja o nich nie wie
+    for (let y = 0; y <= h; y++) for (let x = 0; x <= w; x++) {
+      const tx = Math.min(w - 1, x), ty = Math.min(h - 1, y), i = ty * w + tx;
+      if (map.tiles[i] === Terrain.Mountain) continue;
+      const far = Math.min(...map.starts.map((s) => Math.hypot(s.x - x, s.y - y)));
+      const k = smoothstep(2, 5, greenDist[i]!) * smoothstep(16, 26, far);
+      if (k <= 0) continue;
+      const n = 1 - Math.abs(nz(x / 11 + y / 34, y / 7 - x / 40));
+      corners[y * (w + 1) + x] = corners[y * (w + 1) + x]! + (n * n * 1.1 + nz(x / 23, y / 23) * 0.35) * k;
+    }
+  }
   const corner = (x: number, y: number): number => corners[y * (w + 1) + x]!;
 
   yield;
@@ -346,6 +373,12 @@ function* terrainSteps(map: GameMap, models: ModelFactory, waterLevel: number): 
           // wyżyna: żwir i kamienie przebijają przez trawę, najwięcej na płaskowyżach
           peb = smoothstep(0.35, 0.8, n2 * 0.6 + n1 * 0.5) * (0.35 + Math.min(0.4, (map.relief?.[Math.min(h - 1, y) * w + Math.min(w - 1, x)] ?? 0) / 120));
           dry = smoothstep(0.55, 0.85, n3) * 0.25;
+        } else if (map.biome === 'desert') {
+          // pustynia: piach wszędzie poza oazami (przy wodzie i gajach zielono), żwirowe łaty, przejście przez gołą ziemię
+          const gd = Math.min(...([[-1, -1], [0, -1], [-1, 0], [0, 0]] as const).map(([dx, dy]) => greenDist[Math.min(h - 1, Math.max(0, y + dy)) * w + Math.min(w - 1, Math.max(0, x + dx))]!));
+          sd = Math.max(sd, smoothstep(0.6, 2.6, gd) * (0.92 + n1 * 0.08));
+          dry = smoothstep(0.2, 1.4, gd) * (1 - smoothstep(1.8, 3.2, gd)) * 0.6;
+          peb = smoothstep(0.62, 0.9, n2 * 0.7 + n3 * 0.4) * 0.45;
         } else {
           // północ: kamienie z mchem i ciemniejsze plamy
           peb = smoothstep(0.5, 0.85, n2) * 0.3;
@@ -477,6 +510,7 @@ function* terrainSteps(map: GameMap, models: ModelFactory, waterLevel: number): 
   // góry za mapą to osobna siatka i nie są tu ruszane
   ground.castShadow = false;
   group.add(cat(ground, 'teren'));
+  { const gu = (ground.material as THREE.Material).userData.ground as { uDry?: { value: number } } | undefined; if (gu?.uDry) gu.uDry.value = map.biome === 'desert' ? 1 : map.biome === 'steppe' ? 0.4 : 0; }
   // skała (góry i urwiska) w gęstej, wyrzeźbionej siatce (rockmesh.ts); na planszy jej pola znikają (trójkąty bez pola)
   const isRockTile = (tx: number, ty: number): boolean => !TEST && map.tiles[ty * w + tx] === Terrain.Mountain;
   const rockSrc = { w, h, ox, oz, rock: isRockTile, corner, col: cornerCol, splat: cornerSplat, sand: cornerSand, noise: createNoise2D(rng(map.seed ^ 0x70c4)) };
@@ -668,7 +702,7 @@ function* terrainSteps(map: GameMap, models: ModelFactory, waterLevel: number): 
         // pod lasem ściółka; skała, gdzie stromo albo wysoko (śnieg dokłada shader)
         const rockK = Math.max(smoothstep(0.82, 0.6, nv2.y), smoothstep(13, 17, hs[k]!));
         // step: piach i łaty gołej ziemi także za mapą (inaczej plansza kończyłaby się zieloną ramą)
-        const sandK = map.biome === 'steppe' ? Math.max(outerSand(X, Y), smoothstep(0.55, 1.05, nz(X / 9 + 13, Y / 9 - 5) * 0.7 + nz(X / 17 + 3, Y / 17 + 9) * 0.5) * 0.4) : outerSand(X, Y);
+        const sandK = map.biome === 'desert' ? Math.max(outerSand(X, Y), smoothstep(0, 6, d) * 0.95) : map.biome === 'steppe' ? Math.max(outerSand(X, Y), smoothstep(0.55, 1.05, nz(X / 9 + 13, Y / 9 - 5) * 0.7 + nz(X / 17 + 3, Y / 17 + 9) * 0.5) * 0.4) : outerSand(X, Y);
         SD[k] = sandK;
         S[k * 4] = Math.min(0.9, d / 4) * (1 - rockK) * (1 - sandK); S[k * 4 + 2] = rockK * (1 - sandK);
       }
@@ -694,7 +728,7 @@ function* terrainSteps(map: GameMap, models: ModelFactory, waterLevel: number): 
     outer.castShadow = false;
     group.add(cat(outer, 'teren za mapą'));
     // daleko za górami płaska ciemna równina, którą i tak zakrywa mgła
-    const far = new THREE.Mesh(new THREE.PlaneGeometry(W2 + 600, H2 + 600), new THREE.MeshStandardMaterial({ color: 0x2c3a1c, roughness: 1 }));
+    const far = new THREE.Mesh(new THREE.PlaneGeometry(W2 + 600, H2 + 600), new THREE.MeshStandardMaterial({ color: map.biome === 'desert' ? 0x8a7348 : 0x2c3a1c, roughness: 1 }));
     far.rotation.x = -Math.PI / 2;
     far.position.y = -4; // pod najgłębszym dnem (morze do -3,5): wyżej przykrywała dno jezior ciemnozieloną płytą
     group.add(cat(far, 'teren za mapą'));
@@ -1398,6 +1432,7 @@ function* terrainSteps(map: GameMap, models: ModelFactory, waterLevel: number): 
         // dalej rzadziej: co drugi punkt za 40 pól, co trzeci za 75 (mgła)
         // z obrazkami dalekich drzew las może być gęstszy (co trzeci punkt za 70 pól, co drugi za 35)
         if (dist > 70 ? r % 3 !== 0 : dist > 35 ? (r & 1) === 1 : false) continue;
+        if (map.biome === 'desert' && (r >>> 5) % 9 !== 0) continue; // pustynia: za mapą tylko pojedyncze drzewa
         const step = dist > 70 ? 5 : dist > 35 ? 3.5 : dist > 18 ? 2.4 : 1.7;
         const px = gx + ((r & 255) / 255 - 0.5) * step * 0.9;
         const pz = gz + (((r >>> 8) & 255) / 255 - 0.5) * step * 0.9;

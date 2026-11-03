@@ -10,6 +10,19 @@ export type { ChangeEntry } from './changelogTypes';
  */
 const NEW: ChangeEntry[] = [
   {
+    v: '0.88.0', date: '2026-11-03',
+    pl: [
+      'Nowa kraina: Pustynia — piach i łagodne wydmy, stoliwa z urwiskami, zielone oazy przy jeziorkach i rzece (tylko tam rośnie las), po dwa gaje przy każdym zamku. Gorąco: susza latem, śnieg prawie nigdy.',
+      'Woda nie zawsze środkiem: na nowych mapach płynie jedna rzeka przez środek, dwie rzeki po bokach (każda z brodami) albo nie ma rzeki — same jeziora.',
+      'Pustynię i pozostałe krainy wybierasz w „Nowej grze”.',
+    ],
+    en: [
+      'A new land: Desert — sand and gentle dunes, mesas with cliffs, green oases by the pools and the river (the only place woods grow), and two groves by every keep. Hot: droughts in summer, hardly ever snow.',
+      'The water is not always in the middle: new maps have one river through the middle, two rivers on the flanks (each with fords) or no river at all — just lakes.',
+      'Pick the Desert or any other land in “New game”.',
+    ],
+  },
+  {
     v: '0.87.4', date: '2026-11-03',
     pl: [
       'Menu główne: herb i nazwa gry w jednej linii, bez opisów pod listą pozycji.',

@@ -68,6 +68,41 @@ describe('krainy', () => {
   });
 });
 
+describe('pustynia i woda (generator 10)', () => {
+  it('pustynia: las tylko w oazach przy wodzie i w gajach przy zamkach', () => {
+    forceBiome('desert');
+    for (const seed of [2, 5, 8]) {
+      const m = generateMap(seed, '1v1');
+      const W = m.width;
+      let far = 0;
+      for (let i = 0; i < m.tiles.length; i++) {
+        if (m.tiles[i] !== Terrain.Forest) continue;
+        const x = i % W, y = (i - x) / W;
+        let near = false;
+        for (let dy = -4; dy <= 4 && !near; dy++) for (let dx = -4; dx <= 4; dx++) { const t = m.tiles[(y + dy) * W + x + dx]; if (t === Terrain.Water || t === Terrain.Ford) { near = true; break; } }
+        if (!near && !m.starts.some((s) => Math.hypot(s.x - x, s.y - y) < m.width * 0.12)) far++;
+      }
+      expect(far).toBe(0);
+      expect(m.tiles.filter((t) => t === Terrain.Forest).length).toBeGreaterThan(30); // drewno jest (gaje przy zamkach, oazy)
+    }
+    forceBiome(null);
+  });
+
+  it('woda nie zawsze środkiem: są mapy z dwiema rzekami i bez rzeki, każdy zamek dojdzie do każdego', () => {
+    forceBiome('meadow');
+    const seen = new Set<string>();
+    for (let seed = 1; seed <= 30; seed++) {
+      const m = generateMap(seed, '1v1');
+      const rivers = m.river!.filter(Boolean).length;
+      const cx = m.width >> 1, cy = m.height >> 1, mid = m.river![cy * m.width + cx] || m.river![cy * m.width + cx + 1] || m.river![(cy + 1) * m.width + cx];
+      seen.add(!rivers ? 'none' : mid ? 'mid' : 'twin');
+    }
+    expect(seen.has('none')).toBe(true);
+    expect(seen.has('twin')).toBe(true);
+    forceBiome(null);
+  });
+});
+
 describe('wybrana kraina', () => {
   it('kraina wybrana w „Nowej grze” wchodzi do mapy i wraca z zapisu', async () => {
     const { createGame } = await import('../src/sim/state');

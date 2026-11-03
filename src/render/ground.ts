@@ -86,6 +86,7 @@ const FRAG_HEAD = /* glsl */ `
 uniform sampler2D tGrass1, tGrass2, tMeadow, tForest, tPebble, tDirt, tRock, tCliff, tSand, tNoise;
 uniform sampler2D nGF, nPR; // pary normalnych: RG = trawa/żwir, BA = las/skała (normalpack.ts; skała = cliff_n)
 uniform float uDark;
+uniform float uDry; // pustynia: suchy, jasny piach zamiast wilgotnego brzegu jeziora (0..1)
 varying vec4 vSplat;
 varying float vSand;
 varying vec3 vWP;
@@ -149,7 +150,8 @@ const FRAG_ALBEDO = /* glsl */ `
   float steep = smoothstep(0.82, 0.62, vWN.y);
   wRock = max(wRock, steep);
   // piasek plaż (jeziora z plażą, morze za mapą): na plaży trawa i kamienie ustępują
-  vec3 sandC = texture2D(tSand, rot(w, 0.8) / 4.0).rgb * vec3(0.98, 0.9, 0.72); // przygaszony, wilgotny piasek (nie jaskrawa plaża)
+  vec3 sandC = texture2D(tSand, rot(w, 0.8) / 4.0).rgb * mix(vec3(0.98, 0.9, 0.72), vec3(1.1, 0.98, 0.78), uDry); // przygaszony, wilgotny piasek (nie jaskrawa plaża); na pustyni suchy i jasny
+  sandC *= mix(1.0, 0.9 + nM.g * 0.2, uDry); // wielkie, łagodne plamy na piachu pustyni
   float wSand = clamp(vSand * 1.1, 0.0, 1.0) * (1.0 - wRock);
   wPeb *= 1.0 - wSand * 0.7; wDirt *= 1.0 - wSand; wForest *= 1.0 - wSand;
 
@@ -317,6 +319,7 @@ export function groundMaterial(): THREE.MeshStandardMaterial {
     tNoise: { value: sharedNoise() },
     nGF: packGF.uniform, nPR: packPR.uniform,
     uDark: { value: 1.0 },
+    uDry: { value: 0.0 },
     uCloudT: cloudT, uCloud: cloudK,
   };
   mat.userData.ground = uniforms;

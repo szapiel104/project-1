@@ -2,7 +2,8 @@ import { hash2 } from './rng';
 import { Terrain } from '../data/terrain';
 import { LEGACY_PRESETS, MAP_GEN, MAP_PRESETS, type MapPreset } from '../data/maps';
 import { symNoise, valueNoise } from './noise';
-import { BIOME, BIOME_GEN, biomeOfSeed, type Biome } from '../data/biomes';
+import { BIOME, BIOME_GEN, biomeOfSeed, riverOfSeed, type Biome } from '../data/biomes';
+import { desertify } from './desert';
 import { shapeRelief } from './relief';
 export { valueNoise } from './noise';
 
@@ -58,7 +59,7 @@ export function generateMap(seed: number, presetId: keyof typeof MAP_PRESETS = '
   const { width, height } = preset;
   const tiles = new Uint8Array(width * height);
   const elevation = new Uint8Array(width * height);
-  const biome: Biome | undefined = gen >= BIOME_GEN ? biomeChoice ?? biomeOfSeed(seed, hash2) : undefined;
+  const biome: Biome | undefined = gen >= BIOME_GEN ? biomeChoice ?? biomeOfSeed(seed, hash2, gen) : undefined;
   // kraina: mniej albo więcej wody (przesuwamy wysokość, nie próg — rysowanie liczy brzeg od progu z presetu) i lasu
   const B = biome ? BIOME[biome] : null;
   const forestAt = B ? B.forest : 146;
@@ -113,7 +114,10 @@ export function generateMap(seed: number, presetId: keyof typeof MAP_PRESETS = '
   });
 
   const river = new Uint8Array(width * height);
-  if (gen >= 2) carveRiver(tiles, elevation, width, height, starts, seed, preset, river);
+  const riverMode = biome && gen >= 10 ? riverOfSeed(seed, biome, hash2) : 'mid';
+  if (gen >= 2 && riverMode !== 'none') carveRiver(tiles, elevation, width, height, starts, seed, preset, river, riverMode);
+  // pustynia: las tylko w oazach przy wodzie (sim/desert.ts)
+  if (biome === 'desert') desertify(tiles, width, height, seed);
   // płaskowyże, urwiska i skałki (generator 8) — przed placami pod zamki (rzeźba i tak schodzi przy nich do zera)
   const shaped = biome ? shapeRelief(tiles, width, height, starts, seed, biome, preset.startRadius, gen) : null;
 
@@ -133,6 +137,8 @@ export function generateMap(seed: number, presetId: keyof typeof MAP_PRESETS = '
         elevation[i] = Math.round(elevation[i]! + (flat - elevation[i]!) * k);
       }
     stamp(tiles, width, height, s.x - dir * (preset.startRadius + 1), s.y + dir * 3, 3, Terrain.Forest);
+    // pustynia: drugi gaj po drugiej stronie zamku (drewna i tak mało, ale bez niego gra stoi)
+    if (biome === 'desert') stamp(tiles, width, height, s.x + dir * (preset.startRadius + 2), s.y - dir * 4, 3, Terrain.Forest);
     // dawne mapy (generator 1–2) miały złoża kamienia i żelaza tuż za zamkiem; od generatora 3 urobek daje tylko kopalnia w górach
     if (gen < 3) {
       stamp(tiles, width, height, s.x + dir * 2, s.y - dir * (preset.startRadius + 2), 1, Terrain.Stone);
@@ -225,7 +231,11 @@ function carveDens(tiles: Uint8Array, elev: Uint8Array, w: number, h: number, st
  * Krzywa jest nieparzysta względem środka (obrót o 180° daje ją samą), więc mapa zostaje symetryczna.
  * Przejść są tylko brody — na środku i po jednym bliżej każdej drużyny — więc przeprawa to ważne miejsce na mapie.
  */
-function carveRiver(tiles: Uint8Array, elev: Uint8Array, w: number, h: number, starts: StartPosition[], seed: number, preset: MapPreset, river: Uint8Array): void {
+/**
+ * Generator 10: `mode` — 'mid' jak dotąd (rzeka przez środek), 'twin' — dwie rzeki po bokach, każda między środkiem
+ * mapy a zamkami jednej drużyny (druga to jej odbicie), z brodami. Bez rzeki ('none') tej funkcji się nie woła.
+ */
+function carveRiver(tiles: Uint8Array, elev: Uint8Array, w: number, h: number, starts: StartPosition[], seed: number, preset: MapPreset, river: Uint8Array, mode: 'mid' | 'twin' = 'mid'): void {
   const size = w * h, cx = (w - 1) / 2, cy = (h - 1) / 2;
   const own = starts.filter((s) => s.team === 0);
   let ax = 0, ay = 0;
@@ -236,13 +246,16 @@ function carveRiver(tiles: Uint8Array, elev: Uint8Array, w: number, h: number, s
   // jak daleko wolno rzece odbić w bok, żeby nie weszła na plac pod zamkiem
   let room = Infinity;
   for (const s of own) room = Math.min(room, Math.abs((s.x - cx) * nx + (s.y - cy) * ny));
-  const amp = Math.max(0, Math.min(w * 0.07, room - preset.startRadius - 8));
+  const free = Math.max(0, room - preset.startRadius - 8);
+  // dwie rzeki: przesunięte o połowę wolnego pasa w stronę drużyny 0 (odbicie leży po stronie drużyny 1)
+  const shift = mode === 'twin' ? free * 0.5 : 0;
+  const amp = Math.max(0, Math.min(w * 0.07, (free - shift) * (mode === 'twin' ? 0.8 : 1)));
   const r0 = hash2(seed, 77, 0x72697665);
   const k1 = 1.2 + (r0 & 255) / 255, k2 = 3.5 + ((r0 >>> 8) & 255) / 120;
   const a1 = amp * 0.72, a2 = amp * 0.28 * (((r0 >>> 16) & 1) ? 1 : -1);
   const L = Math.hypot(w, h) * 0.55;
   const off = (u: number): number => a1 * Math.sin(Math.PI * u * k1) + a2 * Math.sin(Math.PI * u * k2); // nieparzysta: off(-u) = -off(u)
-  const at = (u: number): [number, number] => [cx + tx * u * L + nx * off(u), cy + ty * u * L + ny * off(u)];
+  const at = (u: number): [number, number] => [cx + tx * u * L + nx * (off(u) + shift), cy + ty * u * L + ny * (off(u) + shift)];
   const water = (t: number, deep: number): void => {
     if (tiles[t] === Terrain.Mountain) return;
     tiles[t] = Terrain.Water; elev[t] = Math.min(elev[t]!, Math.max(0, preset.waterLevel - deep));
@@ -252,11 +265,12 @@ function carveRiver(tiles: Uint8Array, elev: Uint8Array, w: number, h: number, s
   };
   const du = 0.25 / L;
   /** Brody: odległość wzdłuż rzeki (w polach) od najbliższego brodu */
-  const fordU = [0, 0.4];
+  const fordU = mode === 'twin' ? [-0.4, 0, 0.4] : [0, 0.4];
   const fordTiles: number[] = [];
-  for (let u = 0; u <= 1; u += du) {
+  // rzeka środkiem: połowa biegu (resztę daje odbicie); dwie rzeki: cały bieg jednej (odbicie to druga)
+  for (let u = mode === 'twin' ? -1.2 : 0; u <= (mode === 'twin' ? 1.2 : 1); u += du) {
     const [px, py] = at(u);
-    if (px < -3 || py < -3 || px > w + 2 || py > h + 2) break;
+    if (px < -3 || py < -3 || px > w + 2 || py > h + 2) { if (mode === 'twin') continue; break; }
     // szerokość płynie wolno (szum wzdłuż biegu), przy brodzie rzeka się rozlewa i spłyca
     const fd = Math.min(...fordU.map((f) => Math.abs(u - f) * L));
     const r = 1.0 + (valueNoise(Math.round(u * L), 0, 9, seed ^ 0x52495645) * 0.9) / 256 + (fd < 3 ? 0.5 : 0);

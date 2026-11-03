@@ -210,6 +210,7 @@ export const pl = {
   'biome.highland': 'Wyżyna',
   'biome.steppe': 'Step',
   'biome.north': 'Północ',
+  'biome.desert': 'Pustynia',
   'res.wood': 'Drewno',
   'res.stone': 'Kamień',
   'res.iron': 'Żelazo',

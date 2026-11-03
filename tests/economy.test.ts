@@ -72,7 +72,9 @@ describe('budowanie', () => {
     let far = false; // przy wrogiej twierdzy jest wolna łąka, ale to ziemia wroga
     for (let d = 4; d < 12 && !far; d++) far = canPlace(g, 0, house, enemy.x - d, enemy.y - d) === 'place.enemyLand';
     expect(far).toBe(true);
-    expect(canPlace(g, 0, house, 0, 0)).toBe('place.terrain'); // góry na krańcu mapy
+    // góry na krańcu mapy (od generatora 10 róg mapy bywa przejściem między masywami — szukamy pola gór)
+    const rimT = g.map.tiles.findIndex((t, i) => t === Terrain.Mountain && !g.map.crag?.[i] && i % g.map.width > 2 && i % g.map.width < g.map.width - 4);
+    expect(canPlace(g, 0, house, rimT % g.map.width, Math.floor(rimT / g.map.width))).toBe('place.terrain');
     // daleko od obu twierdz (połowa drogi do wroga) można budować: zasięgu od twierdzy już nie ma
     const own = playerKeep(g, 0)!;
     let open = false;

@@ -216,6 +216,7 @@ export const en: Record<TextKey, string> = {
   'biome.highland': 'Highlands',
   'biome.steppe': 'Steppe',
   'biome.north': 'Northlands',
+  'biome.desert': 'Desert',
   'res.wood': 'Wood',
   'res.stone': 'Stone',
   'res.iron': 'Iron',

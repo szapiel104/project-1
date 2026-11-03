@@ -513,6 +513,7 @@ export function createMenu(root: HTMLElement, events: MenuEvents): Menu {
     const BIOME_DESC: Record<Biome, string> = {
       meadow: tx('łąki, lasy, jeziora', 'meadows, woods, lakes'), highland: tx('płaskowyże i urwiska', 'plateaus and cliffs'),
       steppe: tx('sucha trawa, cieplej', 'dry grass, warmer'), north: tx('tajga, zimno, śnieg', 'taiga, cold, snow'),
+      desert: tx('piach, wydmy, oazy', 'sand, dunes, oases'),
     };
     const biomeRow = el('div', 'pick-row lands');
     biomeRow.append(tile('biome', true, tx('Losowa', 'Random'), tx('z nazwy mapy', 'from the map name'), () => { biome = undefined; preview(); }, 'biome-any'));

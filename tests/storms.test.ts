@@ -56,6 +56,7 @@ describe('burze i susza', () => {
     const far = g.buildings.find((o) => o.id === fid)!, near = g.buildings.find((o) => o.id === nid)!;
     expect(placeReady(g, 'well', x + 10, y + 5)).not.toBeNull();
     g.seasonShift = shiftToSeason(g.tick, 'summer');
+    g.map.biome = 'meadow'; // klimat bez przesunięcia krainy (północ ma za zimne lato na suszę)
     let found = false;
     for (let i = 0; i < RULES.dayTicks * 5 && !found; i += 25) { g.tick += 25; if (droughtAt(g)) found = true; }
     expect(found).toBe(true);

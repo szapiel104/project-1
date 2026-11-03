@@ -48,7 +48,8 @@ describe('mapa', () => {
   it.each(presets)('%s: rzeka dzieli drużyny, ale przez brody da się dojść od każdego zamku do każdego', (p) => {
     for (const seed of [1, 7, 2026]) {
       const m = generateMap(seed, p);
-      expect(m.tiles.some((t) => t === Terrain.Ford)).toBe(true);
+      // generator 10: część map bez rzeki (same jeziora) — brody tylko tam, gdzie płynie rzeka
+      if (m.river?.some(Boolean)) expect(m.tiles.some((t) => t === Terrain.Ford)).toBe(true);
       const seen = new Uint8Array(m.tiles.length), q = [m.starts[0]!.y * m.width + m.starts[0]!.x];
       seen[q[0]!] = 1;
       for (let i = 0; i < q.length; i++) {

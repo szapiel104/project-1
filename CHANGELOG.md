@@ -1,5 +1,9 @@
 # Dziennik zmian
 
+## 0.88.0 — 3.11.2026
+- Generator 10 (`MAP_GEN`): kraina `desert` (`data/biomes.ts`, `sim/desert.ts`: las tylko do 3 pól od wody, drugi gaj przy zamku), `riverOfSeed` → `carveRiver(..., 'mid' | 'twin')` albo bez rzeki; `biomeOfSeed(seed, hash, gen)` — dla generatora 8–9 bez zmian (stare zapisy).
+- Rysowanie pustyni (`terrain.ts`): `greenDist`, wydmy w narożnikach (z dala od zamków i wody), piach/żwir/goła ziemia w warstwach, rzadkie drzewa za mapą, piaskowa równina; `ground.ts` `uDry` (suchy, jasny piach). Boty: bez zmian w `bot.ts` (drewno z gajów przy zamku i oaz).
+
 ## 0.87.4 — 3.11.2026
 - `src/ui/menuhead.css`: herb + tytuł w jednym rzędzie, `.menu-hint` schowany, rada na ekranie wczytywania jako karta. Boty: bez zmian.
 
