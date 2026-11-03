@@ -24,6 +24,13 @@ const place = (el: HTMLElement): void => {
   const r = el.getBoundingClientRect();
   const w = c.offsetWidth, h = c.offsetHeight;
   const gap = 10;
+  // w oknie budynku (koszary) karta staje obok okna, żeby nie zasłaniała innych kafelków
+  const side = el.closest<HTMLElement>('.info')?.getBoundingClientRect();
+  if (side && side.right + gap + w <= innerWidth - 8) {
+    c.style.left = `${Math.round(side.right + gap)}px`;
+    c.style.top = `${Math.round(Math.max(8, Math.min(innerHeight - h - 8, r.top)))}px`;
+    return;
+  }
   let x = r.left + r.width / 2 - w / 2;
   x = Math.max(8, Math.min(innerWidth - w - 8, x));
   // nad kafelkiem, a gdy brak miejsca — pod nim

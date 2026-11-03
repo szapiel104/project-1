@@ -14,10 +14,12 @@ const NEW: ChangeEntry[] = [
     pl: [
       'Koszary: większe kafelki, postać na cały kafelek (włócznik już nie jest malutki), duża tabliczka „×4” z liczbą, ilu możesz wyszkolić.',
       'Karta po najechaniu większa i czytelniejsza: koszt jako tabelka „potrzeba / masz” z nazwami, siła w osobnych polach i dokładnie, czego brakuje.',
+      'W koszarach karta szczegółów staje obok okna i nie zasłania innych jednostek.',
     ],
     en: [
       'Barracks: larger tiles, the soldier fills the tile (the spearman is no longer tiny), a big “×4” plate with how many you can train.',
       'The hover card is larger and clearer: cost as a “needed / you have” table with names, strength in separate boxes and exactly what is missing.',
+      'In the barracks the details card sits beside the window and no longer covers other units.',
     ],
   },
   {
