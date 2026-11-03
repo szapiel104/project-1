@@ -10,6 +10,11 @@ export type { ChangeEntry } from './changelogTypes';
  */
 const NEW: ChangeEntry[] = [
   {
+    v: '0.93.0', date: '2026-11-03',
+    pl: ['Nowe oświetlenie od pochodni, ognisk i okien: liczone na karcie graficznej, więc świateł może być bardzo dużo bez spadku płynności, a zapalanie pochodni o zmroku nie przycina gry.'],
+    en: ['New lighting from torches, campfires and windows: computed on the graphics card, so there can be very many lights without losing smoothness, and lighting torches at dusk no longer makes the game stutter.'],
+  },
+  {
     v: '0.92.9', date: '2026-11-03',
     pl: ['Naprawione błędy cieni na nowym silniku przy oddalaniu i przybliżaniu kamery.'],
     en: ['Fixed shadow errors on the new engine when zooming the camera in and out.'],

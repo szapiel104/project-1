@@ -47,6 +47,19 @@ export async function prepareGpu(canvas: HTMLCanvasElement): Promise<void> {
   await r.init();
   const backend = (r as unknown as { backend: { isWebGPUBackend?: boolean } }).backend;
   gpuBackend = backend.isWebGPUBackend ? 'WebGPU' : 'WebGL2 (WebGPURenderer)';
+  // Światła punktowe (pochodnie, ogniska, okna): oświetlenie klastrowe Forward+ liczone przez compute — kod materiału
+  // nie zależy od liczby świateł (wcześniej 13 pochodni = 13 kopii kodu światła w każdym materiale i ponowne składanie
+  // wszystkiego, gdy zapalała się kolejna). Bez prawdziwego WebGPU: światła w tablicach (też bez przebudowy).
+  // ?swiatla=zwykle — zwykłe światła three.js (do porównań)
+  if (!q?.has('swiatla')) try {
+    if (backend.isWebGPUBackend) {
+      const { ClusteredLighting } = await import('three/examples/jsm/lighting/ClusteredLighting.js');
+      (r as unknown as { lighting: unknown }).lighting = new ClusteredLighting(256);
+    } else {
+      const { DynamicLighting } = await import('three/examples/jsm/lighting/DynamicLighting.js');
+      (r as unknown as { lighting: unknown }).lighting = new DynamicLighting({ maxPointLights: 32 });
+    }
+  } catch (e) { console.warn('[webgpu] oświetlenie klastrowe niedostępne', e); }
   console.info(`[webgpu] renderer gotowy: ${gpuBackend}`);
   // zgodność z miejscami, które pytają WebGLRenderer o rzeczy, których WebGPURenderer nie ma
   // Klucze programów ze starych łatek GLSL (onBeforeCompile, customProgramCacheKey: „ground-v4”, „wind-<drzewo>”…)

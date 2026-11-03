@@ -1,5 +1,8 @@
 # Dziennik zmian
 
+## 0.93.0 — 2026-11-03
+- WebGPU: `renderer.lighting = ClusteredLighting(256)` (Forward+, compute; WebGL2-backend: DynamicLighting) — kod materiału niezależny od liczby PointLight (13 pochodni mnożyło kod i przebudowy). `?swiatla=zwykle` wyłącza.
+
 ## 0.92.9 — 2026-11-03
 - WebGPU: stały rozmiar mapy cieni (bez przełączania 4096/2048 przy oddalaniu) i bez `shadow.map.dispose()` — „Destroyed texture ShadowDepthTexture used in a submit”.
 
