@@ -10,6 +10,11 @@ export type { ChangeEntry } from './changelogTypes';
  */
 const NEW: ChangeEntry[] = [
   {
+    v: '0.91.3', date: '2026-11-03',
+    pl: ['Szybsze wczytywanie na nowym silniku grafiki: „Przygotowanie grafiki” trwa sekundę zamiast kilku.'],
+    en: ['Faster loading on the new graphics engine: "Preparing the graphics" takes a second instead of several.'],
+  },
+  {
     v: '0.91.2', date: '2026-11-03',
     pl: ['Naprawione: wczytywanie nie staje już na 95% („Przygotowanie grafiki”).', 'Wracają efekty obrazu na nowym silniku: cieniowanie zagłębień, ciepłe barwy dnia i chłodna noc, winieta, wygładzanie krawędzi i wyostrzenie.'],
     en: ['Fixed: loading no longer gets stuck at 95% ("Preparing the graphics").', 'Image effects are back on the new engine: ambient occlusion, warm daylight colours and a cool night, vignette, edge smoothing and sharpening.'],

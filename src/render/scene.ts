@@ -1721,11 +1721,10 @@ export class GameRenderer {
    */
   private async compileBg(): Promise<void> {
     if (!this.gpu_) { await this.renderer.compileAsync(this.scene, this.cam.camera); return; }
+    // WebGPU: compileAsync w three r186 jest bardzo wolne (ok. 13 ms na obiekt, 23 s na scenę 1,8 tys. siatek nawet gdy
+    // wszystko już skompilowane), a zwykła klatka buduje te same potoki w ułamku tego czasu — więc tylko chowamy GLSL
+    // i niczego nie kompilujemy z góry (pierwsza klatka zrobi to sama)
     hideGlslMaterials(this.scene);
-    await Promise.race([
-      this.renderer.compileAsync(this.scene, this.cam.camera),
-      new Promise<void>((ok) => setTimeout(ok, 6000)),
-    ]);
   }
   private async warmupInner(onProgress?: (done: number, total: number) => void): Promise<void> {
     // Shadery wszystkiego, co stoi w scenie, kompiluje karta w tle (compileAsync); budynki, których jeszcze nie ma,
@@ -1779,7 +1778,8 @@ export class GameRenderer {
    * i tak czeka w ukryciu na swoje shadery (precompile.ts), więc niczego nie widać „na żywo”.
    */
   private async prewarmLater(): Promise<void> {
-    if (this.prewarmed) return;
+    // WebGPU: bez rozgrzewki budynków (compileAsync za wolne, patrz compileBg) — budynek kompiluje się przy pierwszym rysowaniu
+    if (this.prewarmed || this.gpu_) return;
     this.prewarmed = true;
     const idle = (): Promise<void> => new Promise((ok) => {
       const ric = (window as unknown as { requestIdleCallback?: (f: () => void, o: { timeout: number }) => void }).requestIdleCallback;
@@ -1821,12 +1821,7 @@ export class GameRenderer {
       probe.position.set(0, -50, 0);
       probe.updateMatrixWorld(true);
       applySeason(probe);
-      if (this.gpu_) {
-        // WebGPU: potoki budynku kompiluje karta w tle, ze światłami sceny (targetScene), najwyżej 3 s na budynek
-        hideGlslMaterials(probe);
-        const r = this.renderer as unknown as { compileAsync(o: THREE.Object3D, c: THREE.Camera, t?: THREE.Scene): Promise<unknown> };
-        await Promise.race([r.compileAsync(probe, this.cam.camera, this.scene).catch(() => undefined), new Promise((ok) => setTimeout(ok, 3000))]);
-      } else waiting = this.pre.warm(probe, this.cam.camera);
+      waiting = this.pre.warm(probe, this.cam.camera);
       steps.push([def.id, Math.round(performance.now() - ts)]);
     }
     (window as unknown as { __prewarmMs: number }).__prewarmMs = Math.round(performance.now() - t0);
