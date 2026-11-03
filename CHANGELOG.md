@@ -1,5 +1,8 @@
 # Dziennik zmian
 
+## 0.90.1 — 2026-11-03
+- WebGPU partia 2: bliźniak TSL materiału ziemi (`src/render/gpu/groundNode.ts`, ta sama logika co FRAG_ALBEDO/FRAG_NORMAL w `ground.ts`); `groundMaterial()` bierze go przy `?webgpu=1`. Jeszcze bez cieni chmur i łatki pór roku (Rozjazdy w docs/webgpu.md). Bot: bez zmian (tylko grafika).
+
 ## 0.90.0 — 3.11.2026
 - WebGPU, partia 0 (`docs/webgpu.md`): `src/render/gpu/webgpu.ts` (`?webgpu=1` / `?webgpu=gl`), `prepareGpu` w boot.ts przed main.ts, `GameRenderer.present()` (WebGL: composer; WebGPU: sama scena), `Precompiler(..., off)`, bez `watchRenderer`/`enableShadowLayer`/PMREM/odbić wody na WebGPU, `hideGlslMaterials`. Zasada bliźniaków TSL w CLAUDE.md. Boty: bez zmian.
 

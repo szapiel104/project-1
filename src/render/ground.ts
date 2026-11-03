@@ -3,6 +3,8 @@ import { TEST } from '../testmode';
 import { loadTexture } from './ktx';
 import { packNormals } from './normalpack';
 import { terrainUrl } from './prefetch';
+import { gpuMods } from './gpu/webgpu';
+import { groundNodeMaterial } from './gpu/groundNode';
 
 /**
  * Podłoże jak w nowych silnikach: kilka zdjęciowych warstw (dwie trawy, łąka z ziemią i kamykami, ściółka leśna,
@@ -310,6 +312,17 @@ function withoutDfgLut(frag: string): string {
 
 export function groundMaterial(): THREE.MeshStandardMaterial {
   if (shared) return shared;
+  if (!TEST && loader && gpuMods) {
+    // WebGPU (?webgpu=1, docs/webgpu.md): bliźniak w TSL, te same tekstury
+    const g = groundNodeMaterial({
+      grass1: tex('grass1', true), grass2: tex('grass2', true), meadow: tex('meadow', true), forest: tex('forest', true), pebble: tex('pebble', true),
+      dirt: tex('dirt', true), rock: tex('rock', true), cliff: tex('cliff', true), sand: tex('sand', true), noise: sharedNoise(),
+      grassN: tex('grass_n', false), forestN: tex('forest_n', false), pebbleN: tex('pebble_n', false), cliffN: tex('cliff_n', false),
+    });
+    g.material.userData.ground = g.uniforms;
+    shared = g.material;
+    return shared;
+  }
   const mat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.97, metalness: 0 });
   if (TEST || !loader) { shared = mat; return mat; }
   // pary normalnych w jednej teksturze (o 2 próbniki mniej: limit 16 na wielu kartach, opis w normalpack.ts)

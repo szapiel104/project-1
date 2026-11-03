@@ -31,7 +31,7 @@ Nad grą pracuje kilka czatów naraz, więc długa gałąź rozjechałaby się z
    `MeshStandardNodeMaterial` z tą samą teksturą i kolorem. Gra ma się uruchomić i dać grać (brzydziej). Pomiar FPS
    (`__perf`) WebGL vs WebGPU na tej samej scenie. Lista tego, co się sypie.
 1. [ ] Efekty obrazu w TSL (AO, grading jak w `scene.ts`, wyostrzenie, wygładzanie).
-2. [ ] Ziemia w TSL (najważniejsza dla wyglądu) — od razu z tablicą tekstur (koniec limitu 16).
+2. [~] Ziemia w TSL (najważniejsza dla wyglądu) — `src/render/gpu/groundNode.ts` (0.90.1: warstwy, skała z trzech rzutów, normalne, półki, śnieg w górach, mokry brzeg, dno, plamy). Brakuje: cienie chmur, łatka pór roku; tablica tekstur zamiast osobnych — później.
 3. [ ] Pory roku, wiatr, cienie chmur (wspólne funkcje węzłów).
 4. [ ] Woda, strumienie, kałuże.
 5. [ ] Cząstki, niebo, mgła (od razu jako instancje/compute).
@@ -45,4 +45,4 @@ Trawa i krzewy, gęstsza siatka terenu, roślinność pustyni (palmy, suche krze
 kwadratu, większa mapa 1 na 1.
 
 ## Rozjazdy (zmiany w GLSL, których jeszcze nie ma w TSL)
-- (pusto)
+- Ziemia: cienie chmur (`cloudShadow` w ground.ts) i łatka pór roku (śnieg na ziemi, ślady) — jeszcze tylko w GLSL.

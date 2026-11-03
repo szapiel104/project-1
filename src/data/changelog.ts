@@ -10,6 +10,11 @@ export type { ChangeEntry } from './changelogTypes';
  */
 const NEW: ChangeEntry[] = [
   {
+    v: '0.90.1', date: '2026-11-03',
+    pl: ['Nowy silnik grafiki WebGPU (dla testerów): ziemia ma już pełne tekstury — trawa, łąki, ściółka, żwir, skały, piach, śnieg w górach i dno pod wodą jak w zwykłej grze.'],
+    en: ['New WebGPU graphics engine (for testers): the ground now has its full textures — grass, meadows, forest floor, gravel, rock, sand, mountain snow and riverbeds, just like the normal game.'],
+  },
+  {
     v: '0.90.0', date: '2026-11-03',
     pl: ['Początek przejścia na nowy silnik grafiki WebGPU (na razie tylko dla testerów, z dopiskiem w adresie) — zwykła gra bez zmian.'],
     en: ['The first step towards the new WebGPU graphics engine (testers only for now, via the address) — the normal game is unchanged.'],
