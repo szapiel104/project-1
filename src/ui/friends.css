@@ -245,6 +245,7 @@ body .menu .menu-panel .menu-btn.sv-btn[aria-pressed='true'] { background-image:
 .cd-input { min-height: 44px; padding: 6px 12px; font: inherit; font-size: 16px; color: #fff4dc; background: #241a11; border: 1px solid #9a7838; border-radius: 3px; }
 .cd-input:focus-visible, .cd-btn:focus-visible { outline: 2px solid #f0c75a; outline-offset: 2px; }
 .cd-acts { display: flex; justify-content: flex-end; gap: 10px; margin-top: 4px; }
+.cd-btn:focus { box-shadow: 0 0 0 2px #ffd76a, 0 0 0 4px #0e0906; }
 .cd-btn { min-height: 44px; min-width: 120px; padding: 6px 16px; font-size: 15px; cursor: pointer; }
 @media (prefers-reduced-motion: reduce) { .cd-box { animation: none; } }
 /* kafelki zapisów: większe, czytelniejsze opisy */

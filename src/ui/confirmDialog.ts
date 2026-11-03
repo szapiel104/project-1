@@ -43,7 +43,8 @@ export function confirmDialog(o: ConfirmOpts): Promise<boolean | string | null> 
     const acts = document.createElement('div'); acts.className = 'cd-acts';
     const cancel = document.createElement('button'); cancel.type = 'button'; cancel.className = 'btn-plain cd-btn'; cancel.textContent = tx('Anuluj', 'Cancel');
     const ok = document.createElement('button'); ok.type = 'button'; ok.className = `${o.tone === 'danger' ? 'btn-danger' : 'btn-ok'} cd-btn`; ok.textContent = o.ok;
-    acts.append(cancel, ok);
+    // kolejność jak w Windowsie i w Steamie: działanie po lewej, „Anuluj” po prawej
+    acts.append(ok, cancel);
     box.append(acts);
     wrap.append(box);
     const finish = (v: boolean): void => {
@@ -54,9 +55,10 @@ export function confirmDialog(o: ConfirmOpts): Promise<boolean | string | null> 
     };
     const key = (e: KeyboardEvent): void => {
       if (e.key === 'Escape') { e.preventDefault(); e.stopImmediatePropagation(); finish(false); }
-      else if (e.key === 'Enter' && document.activeElement !== cancel) { e.preventDefault(); e.stopImmediatePropagation(); finish(true); }
+      // Enter działa na przycisk z fokusem (przy usuwaniu fokus stoi na „Anuluj”, więc Enter niczego nie skasuje)
+      else if (e.key === 'Enter') { e.preventDefault(); e.stopImmediatePropagation(); finish(document.activeElement === cancel ? false : document.activeElement === input ? true : document.activeElement === ok); }
       else if (e.key === 'Tab') { // fokus nie wychodzi z okienka
-        const f = [input, cancel, ok].filter(Boolean) as HTMLElement[];
+        const f = [input, ok, cancel].filter(Boolean) as HTMLElement[];
         const i = f.indexOf(document.activeElement as HTMLElement);
         e.preventDefault(); f[(i + (e.shiftKey ? f.length - 1 : 1)) % f.length]!.focus();
       } else e.stopPropagation();
@@ -66,6 +68,7 @@ export function confirmDialog(o: ConfirmOpts): Promise<boolean | string | null> 
     wrap.addEventListener('click', (e) => { if (e.target === wrap) finish(false); });
     document.addEventListener('keydown', key, true);
     document.body.append(wrap);
-    if (input) { input.focus(); input.select(); } else ok.focus();
+    // przy działaniu nieodwracalnym (usuń, nadpisz) fokus na bezpiecznym „Anuluj”
+    if (input) { input.focus(); input.select(); } else if (o.tone === 'danger') cancel.focus(); else ok.focus();
   });
 }

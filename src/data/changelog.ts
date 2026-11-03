@@ -10,6 +10,11 @@ export type { ChangeEntry } from './changelogTypes';
  */
 const NEW: ChangeEntry[] = [
   {
+    v: '0.79.5', date: '2026-11-03',
+    pl: ['Okienka z pytaniem: przycisk działania po lewej, „Anuluj” po prawej (jak w Windowsie i Steamie); przy usuwaniu i nadpisywaniu wyróżniony jest „Anuluj”, więc przypadkowy Enter niczego nie skasuje.'],
+    en: ['Confirmation dialogs: the action button on the left, “Cancel” on the right (as in Windows and Steam); when deleting or overwriting, “Cancel” is focused, so an accidental Enter deletes nothing.'],
+  },
+  {
     v: '0.79.4', date: '2026-11-03',
     pl: ['Uwagi testerów: administrator może usunąć uwagę na zawsze (z pytaniem w okienku) — znika z listy i z dzwoneczków.'],
     en: ['Tester notes: the administrator can delete a note for good (with a confirmation dialog) — it disappears from the list and from the bells.'],
