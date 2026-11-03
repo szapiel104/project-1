@@ -156,7 +156,7 @@ const M = {
   window: mat(0xb08a5a, 'window'), dark: mat(0x1c1611), pane: mat(0x1c1611),
   turf: mat(0x7f9a48, 'grass'),
   trodden: new THREE.MeshStandardMaterial({ color: 0x8c8a4e, roughness: 1, map: pattern('grass'), transparent: true, opacity: 0.4, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -1 }),
-  ash: mat(0x4a4540), slate: mat(0x8a8d94, 'slate'), sack: mat(0xbfa77c, 'burlap'), rock: mat(0xb3ae9f, 'rock'), rockDark: mat(0x8d877a, 'rock'),
+  ash: mat(0x4a4540), slate: mat(0xa4a7ae, 'slate'), sack: mat(0xbfa77c, 'burlap'), rock: mat(0xb3ae9f, 'rock'), rockDark: mat(0x8d877a, 'rock'),
   flameLight: new THREE.MeshBasicMaterial({ color: 0xffc04a }), flameCore: new THREE.MeshBasicMaterial({ color: 0xfff0a8 }),
   roadSand: mat(0xd4b77c, 'soil'), roadStone: mat(0xf4f0e8, 'cobble'), roadWood: mat(0xc49a6a, 'planks'),
   // miniatury dróg w menu: te same barwy co na mapie (ciepła szarość bruku, ubita ziemia)
@@ -177,7 +177,9 @@ const M = {
   thatchDark: mat(0xa9862f, 'thatch'), fish: mat(0x9cc3d6), sawdust: mat(0xd9c08a, 'soil'), needle: mat(0x3c7a3a, 'needles'),
   // woda w studni i korycie: ciemna, gładka tafla z połyskiem (bez tekstury)
   water: new THREE.MeshStandardMaterial({ color: 0x1b3a40, roughness: 0.15, metalness: 0.1 }),
-  castle: mat(0xa9a08c, 'ashlar'), castleDark: mat(0x857b68, 'ashlar'), castlePlain: mat(0xd6c49a),
+  // kamień zamku jaśniejszy (Michał 3.11.2026: „zamek taki czarny, ciemny, dziwnie”): tekstura ciosów ma średnio ok. 0,25
+  // jasności liniowej, więc przy dawnym 0xa9a08c lico wychodziło prawie czarne; teraz jak jasny, ciosany wapień
+  castle: mat(0xe4dac4, 'ashlar'), castleDark: mat(0xc2b59c, 'ashlar'), castlePlain: mat(0xd6c49a),
   // magowie: czerwona dachówka wieży magów ognia, płachty w barwach obu kręgów (zgrzebna wełna)
   roofTile: mat(0x8a3a26, 'tiles'), robeRed: mat(0x6a1a14, 'burlap'), robeBlue: mat(0x24406e, 'burlap'),
   smoke: new THREE.MeshStandardMaterial({ color: 0xd8d4c8, flatShading: true, transparent: true, opacity: 0.8 }),

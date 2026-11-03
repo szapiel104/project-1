@@ -10,6 +10,19 @@ export type { ChangeEntry } from './changelogTypes';
  */
 const NEW: ChangeEntry[] = [
   {
+    v: '0.89.3', date: '2026-11-03',
+    pl: [
+      'Zamek i mury z jasnego, ciosanego kamienia zamiast prawie czarnego; łupek na dachach jaśniejszy.',
+      'Urwiska bez schodkowych granic skały i piachu: skała tylko tam, gdzie ściana jest stroma, płaskie półki zostają piachem albo trawą.',
+      'Na pustyni i stepie skała urwisk ma ciepły, piaskowy odcień zamiast szarego.',
+    ],
+    en: [
+      'The keep and walls are built of light dressed stone instead of near-black; the slate on the roofs is lighter too.',
+      'Cliffs without stair-stepped edges between rock and sand: rock shows only where the face is steep, flat ledges stay sand or grass.',
+      'In the desert and on the steppe the cliff rock has a warm, sandy tone instead of grey.',
+    ],
+  },
+  {
     v: '0.89.2', date: '2026-11-03',
     pl: [
       '„Nowa gra”: karty trybu, poziomu i krainy z rysunkami (tarcze stron, miecze, pejzaże krain) w przewijanych rzędach — przeciągasz myszą, kręcisz kółkiem albo klikasz strzałki po bokach.',

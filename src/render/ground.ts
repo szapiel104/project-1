@@ -138,6 +138,8 @@ const FRAG_ALBEDO = /* glsl */ `
   float rl = lum(rock);
   rock = rock * vec3(0.84, 0.8, 0.74) * (0.72 + rl * 0.42);
   rock = mix(rock, rock * vec3(1.12, 0.96, 0.8), smoothstep(0.55, 0.85, nS.r) * 0.35);
+  // pustynia i step: skała piaskowa, ciepła (szara skała na żółtym piachu wyglądała jak wklejona)
+  rock *= mix(vec3(1.0), vec3(1.2, 1.0, 0.74), uDry * 0.85);
 
   // udziały: łąka w plamach, drobne kamienie i prześwity ziemi rozsiane po trawie
   float wMeadow = smoothstep(0.86, 1.02, nS.g * 0.75 + nD.b * 0.3) * 0.5;
@@ -187,7 +189,7 @@ const FRAG_ALBEDO = /* glsl */ `
 
   // góry: na płaskich półkach trawa i mech, wysoko śnieg (mniej na stromiznach), granica postrzępiona szumem
   float ledge = bR / sum * smoothstep(0.8, 0.95, vWN.y) * smoothstep(0.45, 0.7, nS.b) * (1.0 - smoothstep(9.0, 13.0, vWP.y));
-  alb = mix(alb, grass * 0.8, ledge * 0.85);
+  alb = mix(alb, mix(grass * 0.8, sandC, uDry), ledge * 0.85); // na pustyni na półkach piach, nie trawa
   float line = 11.5 + nM.g * 3.0 + (nD.r - 0.5) * 1.5;
   float snow = smoothstep(line, line + 1.4, vWP.y) * mix(0.55, 1.0, smoothstep(0.3, 0.75, vWN.y));
   vec3 snowC = vec3(0.78, 0.81, 0.86) * (0.8 + lum(rock) * 0.45) * (0.9 + nD.g * 0.16);

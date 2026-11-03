@@ -103,7 +103,8 @@ export function buildRockGeometry(s: RockSource, disp: (fx: number, fy: number) 
       const ao = Math.max(0.72, Math.min(1.12, 1 + d * 0.35));
       for (let k = 0; k < 3; k++) col[v * 3 + k] = lerpC(s.col, 3, k, fx, fy) * ao;
       for (let k = 0; k < 4; k++) spl[v * 4 + k] = lerpC(s.splat, 4, k, fx, fy);
-      spl[v * 4 + 2] = Math.max(spl[v * 4 + 2]!, 0.85); // skała to skała (płaskie półki dostają trawę w shaderze)
+      // bez wymuszania skały na całe pole: na krawędzi pola byłby skok (schodki skała/piach, Michał 3.11.2026);
+      // skałę na stromych ścianach daje sam shader ziemi (stromizna), a płaskie półki zostają piachem albo trawą
       snd[v] = lerpC(s.sand, 1, 0, fx, fy);
       uv[v * 2] = fx / 5; uv[v * 2 + 1] = fy / 5;
       v++;
