@@ -1,5 +1,8 @@
 # Dziennik zmian
 
+## 0.80.2 — 3.11.2026
+- Lobby: `.lob-form-row` jako siatka (nazwa / tryb + przycisk).
+
 ## 0.80.1 — 3.11.2026
 - Lobby: `.lob-hero` (przycisk `.lob-play` + formularz w jednym wierszu) zamiast trzech kart, ranking przy nagłówku listy, równe wysokości.
 

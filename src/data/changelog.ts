@@ -10,6 +10,11 @@ export type { ChangeEntry } from './changelogTypes';
  */
 const NEW: ChangeEntry[] = [
   {
+    v: '0.80.2', date: '2026-11-03',
+    pl: ['Lobby: „Własna gra” w dwóch równych wierszach — nazwa na całą szerokość, pod nią tryb i „Załóż grę”; przycisk już się nie łamie.'],
+    en: ['Lobby: “Custom game” in two even rows — the name across the full width, below it the mode and “Create game”; the button no longer wraps.'],
+  },
+  {
     v: '0.80.1', date: '2026-11-03',
     pl: ['Lobby gry przez sieć równiej i nowocześniej: jedna belka startu — duży zielony „Graj teraz” i obok w jednym wierszu własna gra (nazwa, tryb, „Załóż grę”), wszystko tej samej wysokości; nagłówek listy gier z licznikiem, filtrami i rankingiem w jednej linii; panel znajomych na całą wysokość.'],
     en: ['The online lobby is tidier and more modern: one start bar — a big green “Play now” and beside it, on one line, a custom game (name, mode, “Create game”), all the same height; the game list header with count, filters and ranking on one line; the friends panel full height.'],

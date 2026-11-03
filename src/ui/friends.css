@@ -414,3 +414,10 @@ body .menu .lob-chip.lob-rank { border-radius: 3px; }
 @media (max-width: 1250px) { .lob-hero { grid-template-columns: 1fr; } }
 @media (max-width: 1100px) { .lob { grid-template-columns: 1fr; } }
 @media (max-width: 700px) { .lob-list-h { grid-template-columns: 1fr; } .lob-list-h .lob-filters { justify-self: start; } }
+/* własna gra w dwóch równych wierszach: nazwa na całą szerokość, pod nią tryb i „Załóż grę” (bez łamania przycisku) */
+.lob-form-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; }
+.lob-form-row input { grid-column: 1 / -1; width: 100%; }
+.lob-form-row .lob-seg { gap: 6px; }
+body .menu .lob-form-row .lob-chip { flex: 1 1 auto; height: 40px; min-height: 40px; }
+body .menu .lob-make { height: 40px; white-space: nowrap; }
+.lob-play-t span { white-space: nowrap; }
