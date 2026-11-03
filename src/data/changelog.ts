@@ -10,6 +10,11 @@ export type { ChangeEntry } from './changelogTypes';
  */
 const NEW: ChangeEntry[] = [
   {
+    v: '0.79.7', date: '2026-11-03',
+    pl: ['Nowe okienka z pytaniem: ikonka działania, czytelny tytuł, kadr z datą zapisu, liczby (dzień, ludzie, wojsko, budynki, złoto), ostrzeżenie na czerwonym tle przy nieodwracalnych działaniach i dwa równe, duże przyciski; krzyżyk w rogu.'],
+    en: ['New confirmation dialogs: an action icon, a readable title, the picture with the save date, numbers (day, people, army, buildings, gold), a red warning for irreversible actions and two equal, large buttons; a close cross in the corner.'],
+  },
+  {
     v: '0.79.6', date: '2026-11-03',
     pl: ['Nowy wygląd kafelków zapisów: nazwa i data na kadrze z gry, tryb i boty w jednym wierszu, ludzie, wojsko, budynki, złoto i dzień jako liczby z ikonkami, jedno duże „Wczytaj” (albo klik w kadr), a rzadsze działania — nadpisz, zmień nazwę, pobierz plik, wyślij do chmury, usuń — w menu „⋯”.'],
     en: ['A new look for save tiles: name and date on the game picture, mode and bots on one line, people, army, buildings, gold and day as numbers with icons, one big “Load” (or click the picture), and the rarer actions — overwrite, rename, download, upload to cloud, delete — in a “⋯” menu.'],

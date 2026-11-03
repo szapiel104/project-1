@@ -157,9 +157,11 @@ export function savesPanel(mode: 'save' | 'load', go: SavesActions): HTMLElement
     c.setAttribute('aria-label', m.name);
     const doLoad = (): void => {
       void confirmDialog({
-        title: tx(`Wczytać „${m.name}”?`, `Load “${m.name}”?`), image: m.thumb || undefined,
-        text: go.canSave() ? tx('Obecna gra zostanie zamknięta — to, czego nie zapisałeś, przepadnie.', 'The current game will close — anything you have not saved will be lost.') : tx(`Dzień ${m.day}, ${MODE(m.preset)}, zapisano ${when(m.created)}.`, `Day ${m.day}, ${MODE(m.preset)}, saved ${when(m.created)}.`),
-        ok: tx('Wczytaj', 'Load'),
+        title: tx(`Wczytać „${m.name}”?`, `Load “${m.name}”?`), image: m.thumb || undefined, icon: 'load',
+        caption: `${tx('zapisano', 'saved')} ${when(m.created)} · ${MODE(m.preset)}${m.level !== undefined ? ` · ${tx('boty', 'bots')} ${LEVELS()[m.level] ?? m.level}` : ''}`,
+        facts: [[tx('dzień', 'day'), String(m.day)], [tx('ludzie', 'people'), String(m.people)], [tx('wojsko', 'army'), String(m.soldiers)], [tx('budynki', 'buildings'), String(m.buildings)], [tx('złoto', 'gold'), String(m.gold)]],
+        text: go.canSave() ? tx('Obecna gra zostanie zamknięta — to, czego nie zapisałeś, przepadnie.', 'The current game will close — anything you have not saved will be lost.') : undefined,
+        ok: tx('Wczytaj grę', 'Load game'),
       }).then((yes) => {
         if (!yes) return;
         load.disabled = true; say(tx('Wczytuję zapis…', 'Loading the save…'));
@@ -202,20 +204,20 @@ export function savesPanel(mode: 'save' | 'load', go: SavesActions): HTMLElement
     const acts = el('div', 'sv-acts');
     const load = btn(tx('Wczytaj', 'Load'), doLoad, 'menu-btn btn-ok sv-btn sv-load');
     const overwrite = (): void => {
-      void confirmDialog({ title: tx(`Nadpisać „${m.name}”?`, `Overwrite “${m.name}”?`), image: m.thumb || undefined, text: tx('Ten zapis zostanie zastąpiony obecną grą. Tego nie da się cofnąć.', 'This save will be replaced with the current game. This cannot be undone.'), ok: tx('Nadpisz', 'Overwrite'), tone: 'danger' }).then((yes) => {
+      void confirmDialog({ title: tx(`Nadpisać „${m.name}”?`, `Overwrite “${m.name}”?`), image: m.thumb || undefined, text: tx('Ten zapis zostanie zastąpiony obecną grą. Tego nie da się cofnąć.', 'This save will be replaced with the current game. This cannot be undone.'), ok: tx('Nadpisz', 'Overwrite'), tone: 'danger', icon: 'save', caption: `${tx('zapisano', 'saved')} ${when(m.created)}` }).then((yes) => {
         if (!yes) return;
         say(tx('Zapisuję…', 'Saving…'));
         void go.save(m.name, m.id).then((r) => { if (typeof r === 'string') say(r, true); else { say(tx(`Nadpisano „${r.name}”.`, `Overwrote “${r.name}”.`)); go.changed?.(); void refresh(); } });
       });
     };
     const rename = (): void => {
-      void confirmDialog({ title: tx('Zmień nazwę zapisu', 'Rename the save'), ok: tx('Zapisz nazwę', 'Save name'), input: { label: tx('Nowa nazwa', 'New name'), value: m.name } }).then((v) => {
+      void confirmDialog({ title: tx('Zmień nazwę zapisu', 'Rename the save'), ok: tx('Zapisz nazwę', 'Save name'), icon: 'edit', input: { label: tx('Nowa nazwa', 'New name'), value: m.name } }).then((v) => {
         if (v === null || v === m.name) return;
         void renameSave(m.id, v).then((e) => { if (e) say(e, true); else say(tx(`Nowa nazwa: „${v}”.`, `New name: “${v}”.`)); void refresh(); });
       });
     };
     const del = (): void => {
-      void confirmDialog({ title: tx(`Usunąć „${m.name}”?`, `Delete “${m.name}”?`), image: m.thumb || undefined, text: m.where !== 'local' ? tx('Zapis zniknie z tej przeglądarki i z chmury. Tego nie da się cofnąć.', 'The save will be removed from this browser and the cloud. This cannot be undone.') : tx('Zapis zniknie z tej przeglądarki. Tego nie da się cofnąć.', 'The save will be removed from this browser. This cannot be undone.'), ok: tx('Usuń', 'Delete'), tone: 'danger' }).then((yes) => {
+      void confirmDialog({ title: tx(`Usunąć „${m.name}”?`, `Delete “${m.name}”?`), image: m.thumb || undefined, text: m.where !== 'local' ? tx('Zapis zniknie z tej przeglądarki i z chmury. Tego nie da się cofnąć.', 'The save will be removed from this browser and the cloud. This cannot be undone.') : tx('Zapis zniknie z tej przeglądarki. Tego nie da się cofnąć.', 'The save will be removed from this browser. This cannot be undone.'), ok: tx('Usuń zapis', 'Delete save'), tone: 'danger', icon: 'delete', caption: `${tx('zapisano', 'saved')} ${when(m.created)}` }).then((yes) => {
         if (!yes) return;
         void deleteSave(m.id).then(() => { say(tx(`Usunięto „${m.name}”.`, `Deleted “${m.name}”.`)); go.changed?.(); void refresh(); });
       });
