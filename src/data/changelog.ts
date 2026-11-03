@@ -10,6 +10,21 @@ export type { ChangeEntry } from './changelogTypes';
  */
 const NEW: ChangeEntry[] = [
   {
+    v: '0.85.3', date: '2026-11-03',
+    pl: [
+      'Okno budynku na pergaminie: ciemny atrament, czerwone nagłówki sekcji, jasny tytuł na belce; braki na ciemnoczerwono, „Budynek działa” na zielono — wszystko czytelne.',
+      'Kronika stoi tuż obok otwartego okna budynku, a nie daleko po prawej; okno koszar nie zwija się już do paska.',
+      'Budynki na kartach budowy trochę jaśniejsze.',
+      'Kominek w komnacie twierdzy i palenisko w kuchni to prawdziwe wnęki z węgarami, sadzą, polanami, żarem i ogniem (wcześniej płaska czarna płachta).',
+    ],
+    en: [
+      'The building window on parchment: dark ink, red section headings, a light title on the bar; shortages in dark red, “Building working” in green — all easy to read.',
+      'The chronicle sits right next to an open building window rather than far to the right; the barracks window no longer shrinks to a strip.',
+      'Buildings on the build cards are a little brighter.',
+      'The fireplace in the keep’s chamber and the kitchen hearth are real recesses with jambs, soot, logs, embers and flames (before: a flat black sheet).',
+    ],
+  },
+  {
     v: '0.85.2', date: '2026-11-03',
     pl: ['Mgła przy granicy mapy nie urywa się już prostą linią: opar nad planszą łagodnie wygasa przy brzegu, a mgła w dolinach za mapą narasta płynnie.'],
     en: ['Mist at the map border no longer ends in a straight line: the haze over the board fades gently at the edge and the valley fog beyond builds up smoothly.'],

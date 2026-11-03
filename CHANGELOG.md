@@ -1,5 +1,8 @@
 # Dziennik zmian
 
+## 0.85.3 — 3.11.2026
+- Okno budynku na pergaminie (`tiles.css`), kronika obok okna (`fitInfo` w hud.ts), jaśniejsze miniatury na kartach budowy, `keep.py`: kominek i palenisko kuchenne jako wnęki. Boty: bez zmian.
+
 ## 0.85.2 — 3.11.2026
 - `highmist.ts`: opar na planszy wygasa 12 pól przed brzegiem (`edgeFade`), warstwy ramy od 2 do 22 pól za brzegiem, otwór ramy ciaśniej. Boty: bez zmian.
 
