@@ -10,6 +10,11 @@ export type { ChangeEntry } from './changelogTypes';
  */
 const NEW: ChangeEntry[] = [
   {
+    v: '0.94.9', date: '2026-11-03',
+    pl: ['Na nowym silniku wraca głębia kamienia: fugi w murach, łupek, strzecha, bruk i cegła mają prawdziwą wypukłość, a nie tylko namalowany wzór.'],
+    en: ['Stone depth is back on the new engine: joints in walls, slate, thatch, cobbles and brick have real relief rather than a painted pattern.'],
+  },
+  {
     v: '0.94.8', date: '2026-11-03',
     pl: [
       'Cienie już nie mrugają: na nowym silniku cienie ludzi, kamieni i kęp znikały co drugą klatkę.',

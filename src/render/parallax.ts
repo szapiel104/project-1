@@ -1,4 +1,6 @@
 import * as THREE from 'three';
+import { GPU_MODE } from './gpu/webgpu';
+import { pomGpu } from './gpu/pomNode';
 
 /**
  * Głębia kamienia (Michał 2.11.2026: „tekstury na zamku, wieżach, kamienia nie mają 3D głębi”).
@@ -13,6 +15,8 @@ import * as THREE from 'three';
  */
 export function applyParallax(m: THREE.MeshStandardMaterial, height: THREE.Texture, scale: number, steps = 14): void {
   m.userData.parallax = { height, scale, steps };
+  // WebGPU: ten sam efekt w węzłach (gpu/pomNode.ts); łatka GLSL niżej na WebGPU i tak się nie wykonuje
+  if (GPU_MODE) pomGpu(m, height, scale, steps);
   const prev = m.onBeforeCompile;
   m.onBeforeCompile = function (this: THREE.Material, sh, r) {
     prev.call(this, sh, r);

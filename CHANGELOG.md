@@ -1,5 +1,8 @@
 # Dziennik zmian
 
+## 0.94.9 — 2026-11-03
+- WebGPU: parallax occlusion mapping w TSL (`gpu/pomNode.ts`, bliźniak `parallax.ts`): styczne z pochodnych, odczyty z gradientem, wygaszanie pod ostrym kątem; węzły koloru i normalnych dopinane leniwie (getter), klucz `pom<kroki>`.
+
 ## 0.94.8 — 2026-11-03
 - WebGPU, cienie: `sun.shadow.camera.layers.mask = 1 | 1<<REFLECT_LAYER` — z samą warstwą 0 ShadowNode przejmował warstwy rysującej kamery, a co drugą klatkę było to lustro wody (bez obiektów z NO_REFLECT).
 - WebGPU, niebo: kopuła z `vertexNode` tuż przy tylnej płaszczyźnie (z = 0,99995·w) — tylna płaszczyzna kamery w spacerze ucinała środek kopuły.
