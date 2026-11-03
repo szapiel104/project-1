@@ -3,7 +3,9 @@
  * Atrament #2a1b0c na pergaminie #eddcb5 (kontrast ok. 12:1), brąz #5c4224 (ok. 6:1), czerwień #8a1f14 (ok. 6,5:1);
  * zaznaczony kafelek: jasny tekst #fff6e0 na czerwieni #7a1a10 (ok. 9:1). Fokus klawiatury: czerwona obwódka 3 px.
  */
-body .menu .menu-panel.parch {
+/* `.menu.previewing .menu-panel.wide` (style.css) ma większą wagę niż `body .menu .menu-panel.parch` i zostawiał
+   ciemne tło pod jasnymi kafelkami (Michał 3.11.2026: „wszystko rozjechane”) — stąd drugi selektor */
+body .menu .menu-panel.parch, body .menu.previewing .menu-panel.wide.parch {
   --ink: #2a1b0c; --ink-soft: #5c4224; --rubric: #8a1f14; --parch: #eddcb5; --parch-edge: #b48a4c;
   color: var(--ink);
   background-color: var(--parch);

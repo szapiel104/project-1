@@ -94,4 +94,4 @@ Autorzy grafiki na licencjach CC BY i CC BY-SA są wymienieni w grze: Ustawienia
 Zakony, bóstwa, miejsca i postacie w grze są nasze (np. Zakon Płomienia, Bractwo Źródła, Ojciec Płomienia). Gra nie używa nazw, postaci ani grafiki z innych gier.
 
 ## Własne (generator w repo)
-- `ashlar.jpg` / `ashlar_n.jpg` (mury zamku) i `slate.jpg` / `slate_n.jpg` (łupek dachów) — `tools/textures/gen_stone.py` (2.11.2026): ciosy i płytki liczone w Pythonie, faktura lica z `rock.jpg` (Poly Haven / ambientCG, CC0).
+- `ashlar.jpg` / `ashlar_n.jpg` (mury zamku) i `slate.jpg` / `slate_n.jpg` (łupek dachów) — `tools/textures/gen_stone.py` (2.11.2026, wersja 2: 3.11.2026): ciosy i płytki liczone w Pythonie, faktura lica z `rock.jpg` (Poly Haven / ambientCG, CC0).

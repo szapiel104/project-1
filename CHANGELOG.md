@@ -1,5 +1,8 @@
 # Dziennik zmian
 
+## 0.87.3 — 3.11.2026
+- `gen_stone.py` v2 (ashlar, slate) + KTX2; `newgame.css`: selektor `.menu.previewing .menu-panel.wide.parch` (wcześniej przegrywał ze style.css). Boty: bez zmian.
+
 ## 0.87.2 — 3.11.2026
 - `walls.ts`: krawędzie muru wschód/zachód skracane na narożnikach zewnętrznych (macierz lokalna), +6 mm w górę; `stoneWallKit` → `cornerR`/`cornerL` (cokół i gzyms rogu). Boty: bez zmian.
 

@@ -10,6 +10,19 @@ export type { ChangeEntry } from './changelogTypes';
  */
 const NEW: ChangeEntry[] = [
   {
+    v: '0.87.3', date: '2026-11-03',
+    pl: [
+      'Nowe kamienie murów i zamku: prostokątne ciosy różnej wielkości z obtłuczonymi krawędziami, wypukłe lica z fakturą, wgłębione fugi z zaprawy zamiast czarnych falujących kresek.',
+      'Nowy łupek na dachach: prostokątne płytki różnej szerokości na zakładkę, z cieniem pod dolnym brzegiem — bez powtarzających się „łusek”.',
+      '„Nowa gra” ma znowu pergaminowe tło pod kafelkami (było ciemne i wszystko się zlewało).',
+    ],
+    en: [
+      'New stone for walls and the castle: rectangular blocks of different sizes with chipped edges, bulging textured faces and recessed mortar joints instead of black wavy lines.',
+      'New roof slate: rectangular tiles of varied width in overlapping rows, shadowed under the lower edge — no repeating “scales”.',
+      '“New game” has its parchment background under the tiles again (it was dark and everything blurred together).',
+    ],
+  },
+  {
     v: '0.87.2', date: '2026-11-03',
     pl: ['Mur kamienny nie miga na narożnikach: krawędzie z blankami nie zachodzą już na siebie w rogu, a cokół i gzyms domyka osobny kawałek narożnika.'],
     en: ['The stone wall no longer flickers at its corners: the crenellated edges no longer overlap in the corner, and a separate corner piece closes the plinth and cornice.'],
