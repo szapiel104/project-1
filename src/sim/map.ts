@@ -1,6 +1,6 @@
 import { hash2 } from './rng';
 import { Terrain } from '../data/terrain';
-import { LEGACY_PRESETS, MAP_GEN, MAP_PRESETS, type MapPreset } from '../data/maps';
+import { LEGACY_PRESETS, MAP_GEN, MAP_PRESETS, PRESETS_V11, type MapPreset } from '../data/maps';
 import { symNoise, valueNoise } from './noise';
 import { BIOME, BIOME_GEN, biomeOfSeed, riverOfSeed, type Biome } from '../data/biomes';
 import { desertify } from './desert';
@@ -55,7 +55,7 @@ function fractal(x: number, y: number, seed: number): number {
  */
 /** `biome`: kraina wybrana przez gracza (generator 8+); bez niej kraina z ziarna */
 export function generateMap(seed: number, presetId: keyof typeof MAP_PRESETS = '1v1', gen = MAP_GEN, biomeChoice?: Biome): GameMap {
-  const preset: MapPreset = (gen < 2 ? LEGACY_PRESETS[presetId] : undefined) ?? MAP_PRESETS[presetId];
+  const preset: MapPreset = (gen < 2 ? LEGACY_PRESETS[presetId] : undefined) ?? (gen >= 11 && PRESETS_V11[presetId] ? { ...MAP_PRESETS[presetId], ...PRESETS_V11[presetId] } : MAP_PRESETS[presetId]);
   const { width, height } = preset;
   const tiles = new Uint8Array(width * height);
   const elevation = new Uint8Array(width * height);

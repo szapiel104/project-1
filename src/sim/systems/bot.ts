@@ -32,7 +32,7 @@ const ORDER = ['woodcutter', 'orchard', 'woodcutter', 'house', 'oremine', 'woodc
 /** Ilu magów bojowych trzyma bot (limit gracza to MAGE_CAP; bot na trudnym bierze pełny limit) */
 const botMages = (level: number): number => (level >= 3 ? MAGE_CAP : 6);
 /** Jak daleko od bramy bot szuka skały pod kopalnię i ile miejsc najwyżej sprawdza w jednym myśleniu */
-const ROCK_REACH = 60;
+const ROCK_REACH = 90; // mapa 1 na 1 ma od generatora 11 240 pól — góry są dalej od zamku
 const ROCK_TRIES = 400;
 /** Gracz → do którego ticku bot nie szuka miejsca pod kopalnię (ostatnio nie znalazł); poza stanem gry, ale liczy się tak samo u wszystkich */
 /** Promień palisady wokół twierdzy (budynki stawia tylko w środku) */

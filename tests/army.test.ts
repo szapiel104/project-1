@@ -93,8 +93,10 @@ describe('walka', () => {
     waitSoldiers(g, 1);
     for (let i = 0; i < 200; i++) step(g, []);
     const mine = g.soldiers[0]!;
-    // wróg dostawiony dwa pola obok
-    g.soldiers.push({ ...mine, id: g.nextId++, owner: 1, px: mine.px + 2 * 256, path: [], goal: -1, target: 0, cd: 0, hp: 30 });
+    // wróg dostawiony dwa pola obok — na wolnym polu (od generatora 11 mapa 1v1 jest większa i obok bywa budynek)
+    const mx = mine.px >> 8, my = mine.py >> 8, W = g.map.width;
+    const [ox, oy] = ([[2, 0], [-2, 0], [0, 2], [0, -2]] as const).find(([dx, dy]) => walkable(g, (my + dy) * W + mx + dx)) ?? [2, 0];
+    g.soldiers.push({ ...mine, id: g.nextId++, owner: 1, px: mine.px + ox * 256, py: mine.py + oy * 256, path: [], goal: -1, target: 0, cd: 0, hp: 30 });
     for (let i = 0; i < 400; i++) step(g, []);
     // słabszy wróg pada albo ciężko ranny ucieka z walki
     const foe = g.soldiers.find((s) => s.owner === 1);

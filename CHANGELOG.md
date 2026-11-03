@@ -1,5 +1,9 @@
 # Dziennik zmian
 
+## 0.94.1 — 2026-11-03
+- WebGPU: domyślnie DynamicLighting (światła w tablicach) zamiast ClusteredLighting — klastry robiły każde składanie materiału ok. 50 ms zamiast ok. 1 ms (`?swiatla=klastry` / `?swiatla=zwykle` do porównań).
+- Generator 11: mapa 1v1 240×240 (`PRESETS_V11` w data/maps.ts, starty 31/35 %); stare zapisy na dawnym rozmiarze. Bot: `ROCK_REACH` 60 → 90 (góry dalej od zamku). Test walki stawia wroga na wolnym polu.
+
 ## 0.94.0 — 2026-11-03
 - Roślinność pustyni z 0 A.D. (`tools/models/desert_0ad.py` → `src/render/models/desert0ad.json`, `src/render/desert0ad.ts`): drzewa lasu na pustyni = palmy daktylowe (co siódma uschnięta, ścinanie jak las), ozdobnie uschnięte palmy, krzewy, suche trawy, palmy przy wodzie; wiatr. Bot: bez zmian (drewno z palm jak z lasu). CREDITS.md uzupełnione.
 - WebGPU: pule wspólnego rysowania budynków z zapasem (mniej składań przy rozbudowie).

@@ -10,6 +10,11 @@ export type { ChangeEntry } from './changelogTypes';
  */
 const NEW: ChangeEntry[] = [
   {
+    v: '0.94.1', date: '2026-11-03',
+    pl: ['Znacznie szybsze doczytywanie i mniej przycięć na nowym silniku grafiki (tańsze oświetlenie od pochodni i ognisk).', 'Większa mapa 1 na 1: 240 pól zamiast 192, zamki dalej od siebie (dotyczy nowych gier; zapisane gry zostają na swojej mapie).'],
+    en: ['Much faster loading and less stutter on the new graphics engine (cheaper lighting from torches and fires).', 'A bigger 1v1 map: 240 tiles instead of 192, keeps further apart (new games only; saved games keep their map).'],
+  },
+  {
     v: '0.94.0', date: '2026-11-03',
     pl: ['Pustynia ożywa: w oazach rosną palmy daktylowe (można je ścinać na drewno jak las), między wydmami stoją uschnięte palmy i suche krzewy, a piach porastają kępy wysuszonej trawy. Palmy i krzaki kołyszą się na wietrze.', 'Mniej przycięć, gdy na mapie przybywa budynków.'],
     en: ['The desert comes alive: date palms grow in the oases (you can fell them for wood like a forest), dead palms and dry shrubs stand among the dunes, and tufts of parched grass cover the sand. Palms and shrubs sway in the wind.', 'Less stutter as more buildings appear on the map.'],

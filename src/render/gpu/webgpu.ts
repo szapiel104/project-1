@@ -77,15 +77,19 @@ export async function prepareGpu(canvas: HTMLCanvasElement): Promise<void> {
   // nie zależy od liczby świateł (wcześniej 13 pochodni = 13 kopii kodu światła w każdym materiale i ponowne składanie
   // wszystkiego, gdy zapalała się kolejna). Bez prawdziwego WebGPU: światła w tablicach (też bez przebudowy).
   // ?swiatla=zwykle — zwykłe światła three.js (do porównań)
-  if (!q?.has('swiatla')) try {
-    if (backend.isWebGPUBackend) {
+  // Domyślnie światła w tablicach (DynamicLighting): zmiana liczby świateł nie przebudowuje materiałów, a składanie
+  // materiału jest tanie. Oświetlenie klastrowe (0.93.0) robiło każde składanie ok. 50× droższym (ok. 50 ms zamiast
+  // ok. 1 ms) — gra doczytywała się wolno i przycinała (Michał 3.11.2026); zostaje do porównań pod ?swiatla=klastry.
+  const lightMode = q?.get('swiatla') ?? 'tablice';
+  if (lightMode !== 'zwykle') try {
+    if (lightMode === 'klastry' && backend.isWebGPUBackend) {
       const { ClusteredLighting } = await import('three/examples/jsm/lighting/ClusteredLighting.js');
       (r as unknown as { lighting: unknown }).lighting = new ClusteredLighting(256);
     } else {
       const { DynamicLighting } = await import('three/examples/jsm/lighting/DynamicLighting.js');
-      (r as unknown as { lighting: unknown }).lighting = new DynamicLighting({ maxPointLights: 32 });
+      (r as unknown as { lighting: unknown }).lighting = new DynamicLighting({ maxPointLights: 24 });
     }
-  } catch (e) { console.warn('[webgpu] oświetlenie klastrowe niedostępne', e); }
+  } catch (e) { console.warn('[webgpu] oświetlenie w tablicach niedostępne', e); }
   console.info(`[webgpu] renderer gotowy: ${gpuBackend}`);
   // zgodność z miejscami, które pytają WebGLRenderer o rzeczy, których WebGPURenderer nie ma
   // Klucze programów ze starych łatek GLSL (onBeforeCompile, customProgramCacheKey: „ground-v4”, „wind-<drzewo>”…)
