@@ -1,5 +1,8 @@
 # Dziennik zmian
 
+## 0.92.6 — 2026-11-03
+- WebGPU: `Pipelines.updateForRender` przekazuje obietnice → potoki zawsze przez `createRenderPipelineAsync` (obiekt rysowany dopiero po `isReady`); synchroniczne createRenderPipeline blokowało proces GPU Chrome'a (zawieszenie wszystkich kart). `warmGpu` czeka na `gpuPending() == 0` (do 20 s).
+
 ## 0.92.5 — 2026-11-03
 - WebGPU: drzewa z daleka `gpu/impostorNode.ts` (macierz instancji z obiektu w Fn(builder), wybór klatki, zima bez liści). Wodospady wyłączone (`WATERFALLS = false` w terrain.ts, Michał: „na razie całkowicie do kosza”); kod streams.ts i testy zostają.
 

@@ -10,6 +10,11 @@ export type { ChangeEntry } from './changelogTypes';
  */
 const NEW: ChangeEntry[] = [
   {
+    v: '0.92.6', date: '2026-11-03',
+    pl: ['Naprawione zawieszanie całej przeglądarki przy wczytywaniu (95%): grafika kompiluje się w tle, a gra i inne karty działają w tym czasie normalnie.'],
+    en: ['Fixed the whole browser freezing while loading (95%): graphics now compile in the background, and the game and other tabs keep running meanwhile.'],
+  },
+  {
     v: '0.92.5', date: '2026-11-03',
     pl: ['Wracają drzewa z daleka: dalekie lasy obracają się do patrzącego jak dawniej, liściaste zimą stoją bez liści.', 'Wodospady na razie usunięte z mapy.'],
     en: ['Distant trees are back: far forests turn to face the viewer as before, and broadleaf trees stand bare in winter.', 'Waterfalls are removed from the map for now.'],

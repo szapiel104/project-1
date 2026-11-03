@@ -81,7 +81,7 @@ import { clockAt, rainAt } from '../sim/clock';
 import { COLD, seasonAt, weatherOf, yearPos } from '../sim/weather';
 import { applySeason, SEASON_U, SnowTrails } from './season';
 import { Snowfall } from './snowfall';
-import { gpuBackend, hideGlslMaterials, takeGpuRenderer } from './gpu/webgpu';
+import { gpuBackend, gpuPending, hideGlslMaterials, takeGpuRenderer } from './gpu/webgpu';
 import { GpuPost } from './gpu/postNode';
 import { Footprints } from './footprints';
 import { maxHp } from '../sim/systems/placement';
@@ -1805,6 +1805,13 @@ export class GameRenderer {
       }
     } finally { for (const o of items) o.visible = true; }
     this.present();
+    // programy karty kompilują się w tle: czekamy, aż będą gotowe (najwyżej 20 s), żeby gra nie startowała z dziurami
+    const t0 = performance.now();
+    while (gpuPending() > 0 && performance.now() - t0 < 20000) {
+      onProgress?.(items.length, items.length);
+      await new Promise<void>((ok) => requestAnimationFrame(() => ok()));
+      this.present();
+    }
   }
 
   /**

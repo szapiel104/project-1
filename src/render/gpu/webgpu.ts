@@ -17,6 +17,9 @@ const FORCE_GL = q?.get('webgpu') === 'gl';
 let ready: THREE.WebGLRenderer | null = null;
 /** Moduły three/webgpu i three/tsl (tylko z flagą) — bliźniaki materiałów biorą je stąd, bez statycznego importu */
 export let gpuMods: { W: typeof import('three/webgpu'); TSL: typeof import('three/tsl'); FX: Record<string, unknown> } | null = null;
+/** Ile programów karty kompiluje się teraz w tle (rozgrzewka czeka, aż spadnie do zera) */
+export let gpuPendingCount = 0;
+export const gpuPending = (): number => gpuPendingCount;
 /** Opis backendu do F3 i dziennika („WebGPU” albo „WebGL2 w WebGPURenderer”) */
 export let gpuBackend = '';
 
@@ -49,6 +52,13 @@ export async function prepareGpu(canvas: HTMLCanvasElement): Promise<void> {
   const noop = (): void => undefined;
   Object.defineProperty(THREE.Material.prototype, 'customProgramCacheKey', { configurable: true, get: () => blank, set: () => undefined });
   Object.defineProperty(THREE.Material.prototype, 'onBeforeCompile', { configurable: true, get: () => noop, set: () => undefined });
+  // Programy karty (potoki) zawsze w tle: three.js domyślnie woła createRenderPipeline synchronicznie, a wtedy proces
+  // grafiki Chrome'a — wspólny dla wszystkich kart — stoi na czas kompilacji (Michał 3.11.2026: „zawiesza całą
+  // przeglądarkę przy 95%”). Z obietnicą three.js tworzy potok przez createRenderPipelineAsync i nie rysuje obiektu,
+  // dopóki potok nie jest gotowy (Pipelines.isReady) — obiekt pojawia się klatkę czy dwie później, nic nie staje.
+  const pipes = (r as unknown as { _pipelines: { updateForRender(ro: unknown): void; getForRender(ro: unknown, p: unknown): unknown } })._pipelines;
+  const sink = { push(p: Promise<unknown>): void { gpuPendingCount++; void p.finally(() => { gpuPendingCount--; }); } };
+  pipes.updateForRender = function (ro: unknown): void { this.getForRender(ro, sink); };
   const shim = r as unknown as Record<string, unknown>;
   shim.capabilities = { getMaxAnisotropy: () => 16, maxSamples: 4, isWebGL2: true };
   shim.localClippingEnabled = true;
