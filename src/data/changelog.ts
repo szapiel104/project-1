@@ -10,6 +10,11 @@ export type { ChangeEntry } from './changelogTypes';
  */
 const NEW: ChangeEntry[] = [
   {
+    v: '0.79.4', date: '2026-11-03',
+    pl: ['Uwagi testerów: administrator może usunąć uwagę na zawsze (z pytaniem w okienku) — znika z listy i z dzwoneczków.'],
+    en: ['Tester notes: the administrator can delete a note for good (with a confirmation dialog) — it disappears from the list and from the bells.'],
+  },
+  {
     v: '0.79.3', date: '2026-11-03',
     pl: [
       'Zapisy: wczytanie, nadpisanie, usunięcie i nowy zapis pytają w okienku (z miniaturą zapisu); przy nowym zapisie od razu wpisujesz nazwę — koniec z przypadkowymi zapisami po każdym kliknięciu.',

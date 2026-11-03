@@ -29,3 +29,10 @@ export async function markNote(id: number, done: boolean, reply: string): Promis
   const { error } = await supa.rpc('admin_note', { p_id: id, p_done: done, p_reply: reply });
   return error ? why(error.message) : null;
 }
+
+/** Administrator: uwaga znika na zawsze (z powiadomieniami o niej) — migracja 20261103_note_delete.sql */
+export async function deleteNote(id: number): Promise<string | null> {
+  const { error } = await supa.rpc('admin_note_delete', { p_id: id });
+  if (error && /admin_note_delete|PGRST202/i.test(error.message)) return tx('Usuwanie uwag będzie po aktualizacji bazy (migracja 20261103_note_delete.sql).', 'Deleting notes comes with the database update (migration 20261103_note_delete.sql).');
+  return error ? why(error.message) : null;
+}

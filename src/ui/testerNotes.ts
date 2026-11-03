@@ -1,4 +1,5 @@
-import { addNote, listNotes, markNote, type Note } from '../net/notes';
+import { addNote, deleteNote, listNotes, markNote, type Note } from '../net/notes';
+import { confirmDialog } from './confirmDialog';
 import { lang, tx } from '../i18n';
 import { plainRich, renderRich, richEditor } from './richNote';
 
@@ -159,7 +160,16 @@ export function adminNotesPane(focusId?: number): Node[] {
       if (err) { say(msgP, err, true); return; }
       refresh();
     }, done ? 'menu-btn admin-btn' : 'menu-btn admin-btn btn-ok');
-    const row = el('div', 'admin-nick'); row.append(rl, reply, act);
+    // usuń na zawsze (z pytaniem w okienku): uwaga znika też z dzwoneczków
+    const del = btn(tx('Usuń', 'Delete'), () => {
+      void confirmDialog({ title: tx('Usunąć uwagę na zawsze?', 'Delete the note for good?'), text: `${n.nick}: „${plainRich(n.body).slice(0, 160)}”`, ok: tx('Usuń na zawsze', 'Delete for good'), tone: 'danger' }).then((yes) => {
+        if (!yes) return;
+        del.disabled = true;
+        void deleteNote(n.id).then((err) => { del.disabled = false; if (err) { say(msgP, err, true); return; } refresh(); });
+      });
+    }, 'menu-btn admin-btn btn-danger');
+    del.setAttribute('aria-label', tx(`Usuń uwagę od ${n.nick}`, `Delete the note from ${n.nick}`));
+    const row = el('div', 'admin-nick'); row.append(rl, reply, act, del);
     li.append(noteHead(n, true), body(n.body), row, msgP);
     return li;
   }, true, focusId);

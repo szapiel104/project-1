@@ -1,5 +1,8 @@
 # Dziennik zmian
 
+## 0.79.4 — 3.11.2026
+- Migracja `20261103_note_delete.sql` (`admin_note_delete`); przycisk „Usuń” w uwagach testerów u administratora.
+
 ## 0.79.3 — 3.11.2026
 - `src/ui/confirmDialog.ts` (okienko z pytaniem, opcjonalne pole i miniatura); `savesPanel` używa go do wczytaj/nadpisz/usuń/zapisz. `onContinue` wczytuje najnowszy zapis (`listSaves()[0]`), `refreshContinue()` po zapisie, usunięciu i zmianie konta.
 
