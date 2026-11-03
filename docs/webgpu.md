@@ -58,7 +58,7 @@ kwadratu, większa mapa 1 na 1.
 - Do zrobienia: mniej pul instancji (każda InstancedMesh = osobne składanie w three.js), koszt rysowania na procesorze (~800–1000 wywołań, odbicie wody rysuje scenę drugi raz).
 
 ## Rozjazdy (zmiany w GLSL, których jeszcze nie ma w TSL)
-- Cienie chmur (`cloudShade` w ground.ts) — jeszcze tylko w GLSL.
+- Cienie chmur: na WebGPU jedno przejście w postNode.ts (0.93.8), na WebGL dalej cloudShade.
 - Ślady na śniegu w ziemi (uTrail) i jesienne łaty na ziemi — tylko GLSL.
 - Parallax (applyParallax) — tylko GLSL.
 - Mapa otoczenia (PMREM) i odbicia w kałużach — tylko WebGL.

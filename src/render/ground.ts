@@ -253,6 +253,8 @@ export function groundGrassTexture(): THREE.Texture | null { return TEST || !loa
 const cloudT = { value: 0 }, cloudK = { value: 0 };
 /** Cienie chmur na ziemi: czas (przesuw z wiatrem) i siła (0 = bez chmur, nocą i w gęstej mgle też 0) */
 export function setCloudShadows(time: number, strength: number): void { cloudT.value = time; cloudK.value = strength; }
+/** Pokrętła cieni chmur (WebGPU: jedno przejście na cały obraz w gpu/postNode.ts) */
+export const CLOUD_U = { cloudT, cloudK };
 /**
  * Te same cienie chmur na wszystkim, co stoi na ziemi (trawa, drzewa, krzaki, pnie): plama cienia przesuwa się
  * po łące i lesie jednocześnie, a nie tylko po gołej ziemi pod spodem. Dokleja się do istniejącego shadera materiału.

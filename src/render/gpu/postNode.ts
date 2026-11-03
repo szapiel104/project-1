@@ -1,5 +1,6 @@
 import type * as THREE from 'three';
 import { gpuMods } from './webgpu';
+import { CLOUD_U, sharedNoise } from '../ground';
 
 /**
  * Efekty obrazu na WebGPU (docs/webgpu.md, partia 1) — bliźniak łańcucha EffectComposer z `scene.ts`:
@@ -71,6 +72,19 @@ export class GpuPost {
       const raw = o.ao !== 'low' ? fx.denoise(aoT, dep, normal, this.camera).r : aoT.sample(screenUV).r;
       const a = pow(raw, 2.2); // siła jak intensity 2.2 w N8AO
       c = c.mul(mix(vec3(0.0103, 0.0060, 0.0030), vec3(1), a)); // ciepły brąz w zagłębieniach (0x1a120a w liniowym)
+    }
+    // cienie chmur sunące po ziemi: jedno przejście na cały obraz — położenie w świecie z bufora głębi, maska z szumu
+    // (jak cloudShade w ground.ts dla WebGL), niebo bez zmian
+    {
+      const dep = sp.getTextureNode('depth');
+      const dv = dep.sample(screenUV).r;
+      const vp = T.getViewPosition(screenUV, dv, T.cameraProjectionMatrixInverse);
+      const wpos = T.cameraWorldMatrix.mul(T.vec4(vp, 1)).xyz;
+      const cT = T.uniform(0).onFrameUpdate(() => CLOUD_U.cloudT.value), cK = T.uniform(0).onFrameUpdate(() => CLOUD_U.cloudK.value);
+      const cuv = wpos.xz.div(70).add(vec2(0.006, 0.0035).mul(cT));
+      const nz = T.texture(sharedNoise(), cuv).r.mul(0.65).add(T.texture(sharedNoise(), cuv.mul(2.3).add(0.37)).g.mul(0.35));
+      const ccm = cK.mul(smoothstep(0.38, 0.62, nz)).mul(T.step(dv, 0.9999));
+      c = c.mul(float(1).sub(ccm.mul(0.55)));
     }
     c = clamp(c, 0, 40);
     if (o.bloom) c = c.add(fx.bloom(vec4(c, 1), 0.18, 0.45, 1.6).rgb);
