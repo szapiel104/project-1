@@ -39,8 +39,8 @@ rysowania na cały efekt, bez czekania na kompilację przy wczytywaniu.
 2. [~] Ziemia w TSL (najważniejsza dla wyglądu) — `src/render/gpu/groundNode.ts` (0.90.1: warstwy, skała z trzech rzutów, normalne, półki, śnieg w górach, mokry brzeg, dno, plamy). Brakuje: cienie chmur, łatka pór roku; tablica tekstur zamiast osobnych — później.
 3. [~] Pory roku, wiatr, cienie chmur — 0.93.1 wiatr i flagi (`gpu/deformNode.ts`), 0.93.4 pory roku (`gpu/seasonNode.ts`, śnieg w ziemi i trawie). Brakuje: cienie chmur, ślady na śniegu, jesienne łaty na ziemi.
 4. [~] Woda, strumienie, kałuże — 0.92.0: nowa woda `gpu/waterNode.ts` (grubość z bufora głębokości, załamanie dna, lustro `reflector`, Beer–Lambert, fale, odblask). Strumienie i kałuże — dalej.
-5. [~] Cząstki, niebo, mgła (od razu jako instancje/compute) — 0.92.0: niebo i gwiazdy `gpu/skyNode.ts`; 0.92.1: mgła w dolinach, opar i kłęby przy szczytach `gpu/mistNode.ts` (miękkie przecięcie ze sceną z bufora głębokości). 0.92.2: dym z kominów, iskry, blask okien jako czworokąty z instancji (`gpu/pointsNode.ts`), ogień pochodni/ognisk i pożary (`gpu/fireNode.ts`, szum 3D z tekstury zamiast haszy). Dalej: chmury, czary, śnieg, strumienie.
-6. [ ] Postacie, flagi, obrazki drzew, ślady, trawa.
+5. [~] Cząstki, niebo, mgła (od razu jako instancje/compute) — 0.92.0: niebo i gwiazdy `gpu/skyNode.ts`; 0.92.1: mgła w dolinach, opar i kłęby przy szczytach `gpu/mistNode.ts` (miękkie przecięcie ze sceną z bufora głębokości). 0.92.2: dym z kominów, iskry, blask okien jako czworokąty z instancji (`gpu/pointsNode.ts`), ogień pochodni/ognisk i pożary (`gpu/fireNode.ts`, szum 3D z tekstury zamiast haszy). 0.92.7 chmury i śnieg, 0.93.6 dym czarów. Strumienie/wodospady wyłączone (Michał).
+6. [x] Postacie (0.92.3), trawa (0.92.4), drzewa z daleka (0.92.5), flagi i wiatr (0.93.1), ślady i kałuże (0.93.5).
 7. [ ] Narzędzia (kompilacja z góry, dziennik błędów, autojakość, sprawdzanie wywołań rysowania).
 8. [ ] Przełączenie domyślne na WebGPU (WebGL2 jako zapas), usunięcie GLSL.
 9. [ ] Nowe możliwości: trawa liczona na karcie, gęsta siatka terenu przy kamerze, mgła z promieniami słońca, TAA, dym i pył jako cząstki na karcie.
@@ -49,5 +49,16 @@ rysowania na cały efekt, bez czekania na kompilację przy wczytywaniu.
 Trawa i krzewy, gęstsza siatka terenu, roślinność pustyni (palmy, suche krzewy, trawy — 0 A.D.), krawędź mapy bez
 kwadratu, większa mapa 1 na 1.
 
+## Wydajność i wczytywanie na WebGPU (3.11.2026)
+- Potoki karty zawsze asynchronicznie (`Pipelines.updateForRender` z obietnicą) — synchroniczne zawieszały cały Chrome.
+- Budżet składania materiałów na klatkę (`gpuFrameBudget`, 45 ms przy wczytywaniu, 6 ms w grze) — obiekt czeka klatkę zamiast blokować.
+- Wspólny klucz programu dla zwykłych materiałów (stare łatki GLSL nie mnożą wariantów); węzły dopinane do zwykłych materiałów niosą `userData.gpuKey`.
+- Oświetlenie klastrowe (ClusteredLighting) dla pochodni; pełne limity karty (`requiredLimits`).
+- Macierz instancji w własnych węzłach: `instanceMatrixNode()` (atrybut mat4 nie istnieje w WebGPU).
+- Do zrobienia: mniej pul instancji (każda InstancedMesh = osobne składanie w three.js), koszt rysowania na procesorze (~800–1000 wywołań, odbicie wody rysuje scenę drugi raz).
+
 ## Rozjazdy (zmiany w GLSL, których jeszcze nie ma w TSL)
-- Ziemia: cienie chmur (`cloudShadow` w ground.ts) i łatka pór roku (śnieg na ziemi, ślady) — jeszcze tylko w GLSL.
+- Cienie chmur (`cloudShade` w ground.ts) — jeszcze tylko w GLSL.
+- Ślady na śniegu w ziemi (uTrail) i jesienne łaty na ziemi — tylko GLSL.
+- Parallax (applyParallax) — tylko GLSL.
+- Mapa otoczenia (PMREM) i odbicia w kałużach — tylko WebGL.
