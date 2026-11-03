@@ -830,7 +830,8 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
   const tDown = el('button', 'btn-main', tx('Zejdźcie z wieży', 'Come down from the tower')); tDown.type = 'button';
   tSel.addEventListener('click', () => events.onSelectGarrison(infoId));
   tDown.addEventListener('click', () => events.onDismount(infoId));
-  towerBtns.append(tSel, tDown);
+  // „Zaznacz stojących na wieży” zdjęte (Michał 3.11.2026: „już niepotrzebne”) — klik na żołnierzy na pomoście robi to samo
+  towerBtns.append(tDown);
   towerBox.append(towerState, towerBtns);
   towerBox.hidden = true;
   // twierdza w czasie buntu: tłum pod bramą i dwa wyjścia — chleb albo pałki straży

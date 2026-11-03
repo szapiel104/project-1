@@ -197,3 +197,13 @@ body.build-open .scribe { display: flex; }
 #ui .info .stock-total strong, #ui .info strong.bad, #ui .info .bad strong { color: #a8281f; }
 /* zabezpieczenie: każdy jasny napis w oknie (poza przyciskami i paskiem tytułu) dostaje atrament, żeby nie znikał na pergaminie */
 #ui .info :is(p, li, span, strong, em, small, label, h3, h4):not(button *):not(.info-head *):not(.rt-tile *):not([class*='badge']):not([class*='bad']):not([class*='warn']) { text-shadow: none; }
+
+/* okno budynku: czyje to — mocno widoczne; przyciski równej szerokości; strzałka przepisu widoczna (Michał 3.11.2026) */
+#ui .info .info-owner { display: flex; align-items: center; gap: 10px; padding: 6px 8px; border-left: 4px solid var(--team, #8a6d3b); }
+#ui .info .info-owner-rel { padding: 4px 12px; font: 800 13px/1.2 var(--text, sans-serif); letter-spacing: .1em; text-transform: uppercase; border-radius: 3px; border: 0; color: #fff; background: #2f6a28; box-shadow: 0 1px 2px rgba(0, 0, 0, .35); }
+#ui .info .info-owner[data-rel='enemy'] .info-owner-rel { background: #a8281f; }
+#ui .info .info-owner[data-rel='ally'] .info-owner-rel { background: #1f5a8a; }
+#ui .info .info-owner-name { font-size: 15px; font-weight: 700; }
+#ui .info .actions { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 8px; }
+#ui .info .actions button, #ui .info > .btn-main, #ui .info .gate-box .btn-main { width: 100%; }
+#ui .info .prod-arrow { color: var(--parch-ink); font-size: 22px; font-weight: 800; opacity: .8; }

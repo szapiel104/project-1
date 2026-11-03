@@ -10,6 +10,11 @@ export type { ChangeEntry } from './changelogTypes';
  */
 const NEW: ChangeEntry[] = [
   {
+    v: '0.89.1', date: '2026-11-03',
+    pl: ['Okno budynku: wyraźna plakietka „Twoje” (zielona), „Wróg” (czerwona) albo „Sojusznik” (niebieska); przyciski na dole równej szerokości; widoczna strzałka w przepisie warsztatu; bez przycisku „Zaznacz stojących na wieży”.'],
+    en: ['Building window: a clear “Yours” (green), “Enemy” (red) or “Ally” (blue) badge; even-width buttons at the bottom; a visible arrow in the workshop recipe; no “Select the men on the tower” button.'],
+  },
+  {
     v: '0.89.0', date: '2026-11-03',
     pl: [
       'Nowe kamienie i głazy z gry 0 A.D.: 23 różne kształty (duże i średnie bloki granitu, małe kamienie, okrągłe głazy) ze zdjęciową skałą i prawdziwą fakturą — zamiast trzech gładkich brył.',

@@ -1,5 +1,8 @@
 # Dziennik zmian
 
+## 0.89.1 — 3.11.2026
+- Okno budynku (`tiles.css`): plakietka właściciela, `.actions` auto-fit, `.prod-arrow`; hud.ts bez `tSel` w oknie wieży. Boty: bez zmian.
+
 ## 0.89.0 — 3.11.2026
 - `tools/models/rocks_0ad.py` → `src/render/models/rocks0ad.json` + `public/textures/cc0/oad_stone_*.jpg` (0 A.D., CC BY-SA 3.0, `CREDITS.md`); `src/render/rocks0ad.ts` (geometrie, materiały z mapą normalnych); `terrain.ts`: wszystkie głazy i kamyki (także z symulacji i rumowisk) z tych modeli wg wielkości, na pustyni tekstura Sahary i skały bruzdowane; podgląd modeli: grupa „skała 0 A.D.”. Boty: bez zmian.
 
