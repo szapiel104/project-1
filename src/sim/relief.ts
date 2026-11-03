@@ -17,7 +17,7 @@ import { symNoise, valueNoise } from './noise';
  * Wszystko na liczbach całkowitych i symetrycznie (obrót o 180°), tak jak reszta mapy.
  */
 export function shapeRelief(
-  tiles: Uint8Array, w: number, h: number, starts: { x: number; y: number }[], seed: number, biome: Biome, startRadius: number,
+  tiles: Uint8Array, w: number, h: number, starts: { x: number; y: number }[], seed: number, biome: Biome, startRadius: number, gen = 9,
 ): { relief: Uint8Array; crag: Uint8Array } {
   const B = BIOME[biome];
   const size = w * h, mirror = (t: number): number => size - 1 - t;
@@ -85,6 +85,8 @@ export function shapeRelief(
   // 3) skałki: kamienne garby w niedużych skupiskach, z dala od wody i zamków
   for (let t = 0; t < size; t++) {
     const m0 = mirror(t);
+    // generator 9: bez skałek, dopóki nie ma porządnych modeli skał (Michał 3.11.2026: „wygląda tragicznie”) — docs/teren.md
+    if (gen >= 9) break;
     if (m0 < t || crag[t] || rim[t] || isWater(t) || dW[t]! < 3) continue;
     const x = t % w, y = (t - x) / w;
     if (symNoise(x, y, w, h, (a, b) => valueNoise(a, b, 5, seed ^ 0x0c4a6)) <= B.outcrop) continue;

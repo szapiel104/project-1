@@ -38,6 +38,18 @@ nowy wygląd mapy = nowy numer generatora (`MAP_GEN`), stare zapisy dostają daw
     przy niższej skale).
 13. [ ] Erozja: żleby na zboczach urwisk i stożki usypiskowe u ich stóp (tylko wygląd).
 
+## Uwagi Michała po 0.84.0 (3.11.2026, 11:25) — do zrobienia w pierwszej kolejności
+- [x] 0.84.1: skałki wyglądały tragicznie (kopie jednego kamienia „grzyba” na białym kopcu) — wyłączone od generatora 9,
+  trzy odmiany głazów zamiast jednego modelu, skała ciemniejsza; step bez pomarańczowych „bunkrów” z piachu.
+- [ ] **Zbocza i urwiska: tekstury rozciągnięte.** Siatka terenu ma jeden wierzchołek na pole (ok. 3 m) — za mało na
+  urwisko. Potrzebne: gęstsza siatka przy skale (4×4 na pole) z drobnym szumem skały, rzut z trzech stron (triplanar)
+  dla WSZYSTKICH warstw ziemi na stromym, a nie tylko dla skały.
+- [ ] **Góry: pojedyncze, dziwne iglice zamiast pasma.** Masywy przy krańcach łączyć w ciągłe pasma (szum grzbietowy
+  w dużej skali, wygładzanie pojedynczych pól gór), bez samotnych szpikulców.
+- [ ] **Morze za mapą „popsute”** (płaska beżowa tafla w oddali, zwłaszcza na stepie) — sprawdzić wodę za mapą i mgłę.
+- [ ] **Modele skał i głazów** z prawdziwych skanów (paczki CC0/CC-BY z GitHuba, np. 0 A.D. jak trzciny) — kilka
+  kształtów: głaz, płyta, ściana skalna, rumosz; dopiero z nimi wracają skałki i ładne urwiska.
+
 ## Uwagi do sprawdzenia
 - Wydajność: płaskowyże nie dokładają trójkątów (ta sama siatka planszy), skałki to pola gór; śnieg to jedna pula punktów.
 - Boty: krainy nie zmieniają zasad, ale skałki i urwiska zabierają miejsce — bot szuka miejsc jak dotąd (placement).

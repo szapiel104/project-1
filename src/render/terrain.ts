@@ -47,7 +47,7 @@ const VEG: Record<Biome, { leafy: number; lone: number; bush: number; pebble: nu
 };
 /** Barwa podłoża krainy (mnożnik koloru wierzchołków; zdjęcia trawy dają resztę) */
 const BIOME_TINT: Record<Biome, [number, number, number]> = {
-  meadow: [1, 1.02, 0.96], highland: [0.98, 1, 0.9], steppe: [1.16, 1.02, 0.66], north: [0.86, 0.95, 1.0],
+  meadow: [1, 1.02, 0.96], highland: [0.98, 1, 0.9], steppe: [1.1, 1.02, 0.76], north: [0.86, 0.95, 1.0],
 };
 
 /** Wysokość pola w świecie 3D. Woda leży poniżej zera, góry wyrastają stromo. */
@@ -315,8 +315,10 @@ function* terrainSteps(map: GameMap, models: ModelFactory, waterLevel: number): 
         const n1 = nz(x / 9 + 13, y / 9 - 5), n2 = nz(x / 4.5 - 7, y / 4.5 + 21), n3 = nz(x / 17 + 3, y / 17 + 9);
         if (map.biome === 'steppe') {
           // step: wielkie łaty piachu i gołej ziemi między kępami suchej trawy
-          sd = Math.max(sd, smoothstep(0.25, 0.7, n1 * 0.7 + n3 * 0.5) * 0.95);
-          dry = smoothstep(0.2, 0.75, n2 * 0.6 + n3 * 0.4) * 0.55;
+          // (Michał 3.11.2026: pomarańczowe plamy piachu o ostrych brzegach wyglądały jak bunkry z pola golfowego) —
+          // step to przede wszystkim sucha, płowa trawa (barwa krainy); piach tylko rzadko i miękko, gołej ziemi trochę
+          sd = Math.max(sd, smoothstep(0.55, 1.05, n1 * 0.7 + n3 * 0.5) * 0.4);
+          dry = smoothstep(0.3, 0.9, n2 * 0.6 + n3 * 0.4) * 0.35;
           peb = smoothstep(0.55, 0.85, n2) * 0.35;
         } else if (map.biome === 'highland') {
           // wyżyna: żwir i kamienie przebijają przez trawę, najwięcej na płaskowyżach
@@ -334,7 +336,10 @@ function* terrainSteps(map: GameMap, models: ModelFactory, waterLevel: number): 
       tmp.setRGB((r / 4) * patch * tint[0] * (1 + up), (g / 4) * patch * tint[1] * (1 + up * 0.5), (b / 4) * patch * tint[2] * (1 - up));
       const hh = corner(x, y);
       // generator 8: wysoko leżą też płaskowyże (łąka) — skała i śnieg tylko przy górach na krańcach
-      const rimNear = !BIOMED || rockAround(x, y)[0] > 0;
+      const around: [number, number] = BIOMED ? rockAround(x, y) : [0, 0];
+      const rimNear = !BIOMED || around[0] > 0;
+      // skała wewnątrz mapy: ciemniejsza, omszała, nie biała jak zdjęcie skały w pełnym słońcu
+      if (BIOMED && around[1] > 0 && !around[0]) { const k = around[1] / 4; tmp.setRGB(tmp.r * (1 - 0.36 * k), tmp.g * (1 - 0.32 * k), tmp.b * (1 - 0.4 * k)); }
       if (hh > 3 && rimNear) {
         // skała: ciemniejsze i jaśniejsze warstwy, powyżej nierównej linii śniegu biało
         const strata = 0.82 + ((hash2(x >> 1, Math.round(hh * 2.2), map.seed ^ 0x99) & 31) / 31) * 0.3;
@@ -623,7 +628,7 @@ function* terrainSteps(map: GameMap, models: ModelFactory, waterLevel: number): 
         // pod lasem ściółka; skała, gdzie stromo albo wysoko (śnieg dokłada shader)
         const rockK = Math.max(smoothstep(0.82, 0.6, nv2.y), smoothstep(13, 17, hs[k]!));
         // step: piach i łaty gołej ziemi także za mapą (inaczej plansza kończyłaby się zieloną ramą)
-        const sandK = map.biome === 'steppe' ? Math.max(outerSand(X, Y), smoothstep(0.3, 0.75, nz(X / 9 + 13, Y / 9 - 5) * 0.7 + nz(X / 17 + 3, Y / 17 + 9) * 0.5) * 0.9) : outerSand(X, Y);
+        const sandK = map.biome === 'steppe' ? Math.max(outerSand(X, Y), smoothstep(0.55, 1.05, nz(X / 9 + 13, Y / 9 - 5) * 0.7 + nz(X / 17 + 3, Y / 17 + 9) * 0.5) * 0.4) : outerSand(X, Y);
         SD[k] = sandK;
         S[k * 4] = Math.min(0.9, d / 4) * (1 - rockK) * (1 - sandK); S[k * 4 + 2] = rockK * (1 - sandK);
       }
@@ -890,6 +895,8 @@ function* terrainSteps(map: GameMap, models: ModelFactory, waterLevel: number): 
     const tree = list === pines || list === leafy;
     // pień i krzak stoją w ziemi, a nie na niej: na zboczu dolna strona pnia zagłębiona o spadek × promień podstawy
     if (tree || list === firs || list === bushes) pos.y -= 0.04 + slopeOf(x + 0.5 + jx, y + 0.5 + jz) * 0.3 * s;
+    // głaz na zboczu wrasta w nie (inaczej od dołu stoku wisiał nad ziemią jak położony na górce)
+    else if (list === rocks || list === pebbles) pos.y -= slopeOf(x + 0.5 + jx, y + 0.5 + jz) * 0.35 * s;
     // drzewa z Poly Haven mają prawdziwe proporcje: skala jednakowa, tylko wysokość trochę się waha
     const scale = new THREE.Vector3(s, s * (0.9 + ((r >>> 12) & 15) / 60) * (tree ? 1.05 : 1), s);
     m.compose(pos, q, scale);
@@ -943,10 +950,11 @@ function* terrainSteps(map: GameMap, models: ModelFactory, waterLevel: number): 
         if ((r >>> 28) % 9 === 0) put(firs, x, y, 10, 0.6 + ((r >>> 9) & 3) * 0.06, 0.9);
       } else if (t === Terrain.Mountain && map.crag?.[y * w + x]) {
         // skała wewnątrz mapy (generator 8): skałka to garb z kilku zrośniętych głazów, urwisko — bloki wzdłuż progu
+        // (Michał 3.11.2026: „czemu nie ma różnych wersji kamieni” — tu leżały kopie jednego modelu jak grzyby na kopcu):
+        // teraz trzy odmiany głazu z gry, mniej i większe, wrośnięte w skałę; samą bryłę skałki daje teren
         const c = map.crag[y * w + x]!;
-        const n = c === 2 ? 2 + ((r >>> 9) & 1) : 1 + ((r >>> 9) % 3 === 0 ? 1 : 0);
-        for (let k = 0; k < n; k++) put(rocks, x, y, 60 + k, (c === 2 ? 1.05 : 0.8) + ((r >>> (12 + k * 3)) & 7) / 12, 0.95);
-        if ((r >>> 21) & 1) put(pebbles, x, y, 65, 0.35, 0.95);
+        if ((r >>> 9) % 5 === 0) put(pebbles, x, y, 60, (c === 2 ? 1.2 : 0.85) + ((r >>> 12) & 7) / 14, 0.8);
+        if ((r >>> 21) % 4 === 0) put(pebbles, x, y, 65, 0.3 + ((r >>> 24) & 3) * 0.08, 0.95);
       } else if (t === Terrain.Stone) { put(rocks, x, y, 0, 1.1); if ((r >>> 6) & 1) put(pebbles, x, y, 5, 0.5, 0.9); }
       else if (t === Terrain.Iron) put(ores, x, y, 0, 1);
       // brzeg wody: kępy trzcin i pałek po obu stronach linii wody, na płyciźnie liście grzybieni
@@ -1444,6 +1452,9 @@ function* terrainSteps(map: GameMap, models: ModelFactory, waterLevel: number): 
   void rockFar;
   const BOULDERS = models.boulders();
   const pebbleSplit: Item[][] = BOULDERS.map(() => []);
+  // dawny pojedynczy model „rock” (jeden kształt powtarzany w kółko) zastąpiony trzema odmianami głazu: rumowisko pod
+  // górami, wychodnie na wzgórzach i skały na polach kamienia biorą te same głazy co łąka
+  pebbles.push(...rocks.splice(0));
   for (const it of pebbles) pebbleSplit[hash2(Math.round(it.pos.x * 10) + 31, Math.round(it.pos.z * 10), 0x5eed) % BOULDERS.length]!.push(it);
   // płaskie ściany jak skały (próba gładkiego cieniowania 30.10.2026 dała czarne trójkąty na zawiniętych ścianach bryły);
   // mniej kanciaste dzięki dokładniejszej bryle z bliska (plants.py)

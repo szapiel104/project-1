@@ -114,7 +114,7 @@ export function generateMap(seed: number, presetId: keyof typeof MAP_PRESETS = '
   const river = new Uint8Array(width * height);
   if (gen >= 2) carveRiver(tiles, elevation, width, height, starts, seed, preset, river);
   // płaskowyże, urwiska i skałki (generator 8) — przed placami pod zamki (rzeźba i tak schodzi przy nich do zera)
-  const shaped = biome ? shapeRelief(tiles, width, height, starts, seed, biome, preset.startRadius) : null;
+  const shaped = biome ? shapeRelief(tiles, width, height, starts, seed, biome, preset.startRadius, gen) : null;
 
   // Wokół każdego startu czysta łąka pod zamek, a tuż obok las na start.
   for (const s of starts) {

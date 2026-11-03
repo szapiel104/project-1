@@ -1,5 +1,9 @@
 # Dziennik zmian
 
+## 0.84.1 — 3.11.2026
+- `terrain.ts`: lista `rocks` (jeden model) → `pebbles` (trzy odmiany `models.boulders()`), głazy wrastają w zbocze, ciemniejsza skała wewnątrz mapy, step: mniej i miękciej piachu.
+- Generator 9 (`MAP_GEN`): bez skałek (`relief.ts`, gen ≥ 9); mapy z generatora 8 bez zmian. Uwagi Michała do dalszej pracy w `docs/teren.md`. Boty: bez zmian.
+
 ## 0.84.0 — 3.11.2026
 - Teren (plan w `docs/teren.md`): generator mapy 8 (`MAP_GEN`) — krainy `data/biomes.ts` (łęgi, wyżyna, step, północ; z ziarna, w piaskownicy `?kraina=`), rzeźba `sim/relief.ts` (`map.relief`, `map.crag`: płaskowyże z urwiskami jako `Terrain.Mountain`, podjazdy, skałki, sprawdzanie przejść), szum symetryczny `sim/noise.ts` (`symNoise`, bez szwu na środku). Stare zapisy (generator ≤ 7) bez zmian.
 - Rysowanie: `tileHeight` + rzeźba, poszarpane tylko góry na krańcach i skała wewnątrz mapy, barwa/łaty krainy w kolorach wierzchołków i `splat` (bez nowych tekstur — limit 16), roślinność wg krainy (`VEG`), głazy na skałkach i urwiskach.

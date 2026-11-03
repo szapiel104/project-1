@@ -10,6 +10,19 @@ export type { ChangeEntry } from './changelogTypes';
  */
 const NEW: ChangeEntry[] = [
   {
+    v: '0.84.1', date: '2026-11-03',
+    pl: [
+      'Zamiast kopii jednego kamienia leżą trzy różne odmiany głazów, wrośnięte w zbocze; skała przy urwiskach jest ciemniejsza.',
+      'Nowe mapy bez skałek na łąkach — wrócą z porządnymi modelami skał.',
+      'Step: zamiast pomarańczowych plam piachu o ostrych brzegach płowa, sucha trawa i tylko miejscami miękkie łaty piachu.',
+    ],
+    en: [
+      'Instead of copies of one stone there are three different boulders, sunk into the slope; rock by the cliffs is darker.',
+      'New maps have no rocky knolls on the meadows for now — they will return with proper rock models.',
+      'Steppe: pale dry grass with only the odd soft patch of sand instead of hard-edged orange sand blotches.',
+    ],
+  },
+  {
     v: '0.84.0', date: '2026-11-03',
     pl: [
       'Krainy: każda nowa mapa ma swój krajobraz — Łęgi (łąki, lasy, jeziora), Wyżyna (płaskowyże ze skalnymi urwiskami), Step (suche trawy, piach, rzadkie gaje, cieplej i częściej susza) albo Północ (gęsta tajga, chłodno, śnieg leży dłużej). Nazwa krainy jest przy minimapie i przy podglądzie mapy w „Nowej grze”.',
