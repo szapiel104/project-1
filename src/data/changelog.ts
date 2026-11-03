@@ -10,6 +10,11 @@ export type { ChangeEntry } from './changelogTypes';
  */
 const NEW: ChangeEntry[] = [
   {
+    v: '0.94.22', date: '2026-11-03',
+    pl: ['Drzewa, palmy i krzaki na wietrze też korzystają ze wspólnych shaderów — mniej doczytywania przy przelocie nad lasem.'],
+    en: ['Trees, palms and bushes swaying in the wind share shaders too — less streaming when flying over forests.'],
+  },
+  {
     v: '0.94.21', date: '2026-11-03',
     pl: ['Stodoła otwiera dach jak inne budynki, gdy ktoś w niej pracuje — widać zapasy na klepisku.'],
     en: ['The barn opens its roof like other buildings while someone works inside — you can see the stores on the floor.'],

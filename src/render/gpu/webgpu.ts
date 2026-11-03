@@ -136,9 +136,9 @@ export async function prepareGpu(canvas: HTMLCanvasElement): Promise<void> {
   // shader, a bufory instancji podstawiamy każdej puli jej własne przy wiązaniu atrybutów.
   const srcMat = new WeakMap<object, any>();
   const imArrays = new WeakSet<object>(), icArrays = new WeakSet<object>();
-  // zwykłe materiały: dla wszystkich (sprawdzone 3.11.2026: 927 pul → 48 złożonych shaderów, las na swoich miejscach);
-  // materiały z dopiętymi węzłami (wiatr, pory roku) na próbę pod ?pule=2; ?pule=0 wyłącza
-  const POOLS = q?.get('pule') ?? '1';
+  // wszystkie pule ze zwykłymi materiałami, także z dopiętym wiatrem i porami roku (sprawdzone 3.11.2026: las, palmy
+  // i kamienie na swoich miejscach, 927 pul → 48 shaderów); ?pule=1 — bez materiałów z węzłami, ?pule=0 — wyłączone
+  const POOLS = q?.get('pule') ?? '2';
   const sharedPool = (o: any, m: any): boolean => POOLS !== '0' && !!o?.isInstancedMesh && !o.morphTexture && !!m && !m.isNodeMaterial
     && (!m.userData?.gpuKey || POOLS === '2');
   type Sub = { ib: any; at: Map<number, any>; col?: any };

@@ -1,5 +1,8 @@
 # Dziennik zmian
 
+## 0.94.22 — 2026-11-03
+- WebGPU: wspólne shadery pul domyślnie także dla materiałów z wiatrem i porami roku (`?pule=2` → domyślne; sprawdzone w lesie: drzewa na miejscach, 0 błędów).
+
 ## 0.94.21 — 2026-11-03
 - Stodoła bez `keepRoof` (dach i szczyty, grupa `shell`, zdejmują się przy pracy jak w innych budynkach).
 
