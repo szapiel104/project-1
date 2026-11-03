@@ -10,6 +10,11 @@ export type { ChangeEntry } from './changelogTypes';
  */
 const NEW: ChangeEntry[] = [
   {
+    v: '0.79.2', date: '2026-11-03',
+    pl: ['Cisza przy wczytywaniu: bełkot skryby (dźwięk „gadającej osoby”) nie odzywa się już pod ekranem ładowania ani w menu — tylko w trakcie gry.'],
+    en: ['Quiet while loading: the scribe’s babble (the “talking person” sound) no longer plays under the loading screen or in the menu — only during play.'],
+  },
+  {
     v: '0.79.1', date: '2026-11-02',
     pl: [
       'Uczciwe poziomy: każdy mecz ma swój numer i doświadczenie dostaje się za niego tylko raz — wczytanie zapisu tuż przed zwycięstwem i ponowna wygrana nie dają już drugi raz PD.',

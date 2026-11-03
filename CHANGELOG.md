@@ -1,5 +1,8 @@
 # Dziennik zmian
 
+## 0.79.2 — 3.11.2026
+- `main.ts`: `play('babble')` skryby pomijany przy `titleScreen`, `entering`, `#loading` i otwartym menu.
+
 ## 0.79.1 — 2.11.2026 (przegląd poziomów)
 - Migracja `20261102g_award_once.sql`: `xp_awards.match` + unikalny indeks, `award_match(..., p_match)` przyznaje raz na mecz.
 - `main.ts`: `matchId` (nowy mecz losowy, w zapisie `UiSave.match`, online = pokój); `supa.ts`: kolejka nieprzyznanych nagród `p1.pendingAwards` (per konto, 7 dni), `flushAwards` przy zmianie konta.

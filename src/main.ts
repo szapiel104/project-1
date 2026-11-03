@@ -1876,7 +1876,9 @@ const scribeClock = (): string => {
   const c = clockAt(game.tick), h = Math.floor(c.hour), m = Math.floor((c.hour - h) * 60);
   return tx(`dzień ${c.day}, ${h}:${String(m).padStart(2, '0')}`, `day ${c.day}, ${h}:${String(m).padStart(2, '0')}`);
 };
-const scribe = createScribe(() => play('babble'), scribeClock);
+// „mowa” skryby tylko w trakcie gry: przy wczytywaniu i w menu (osada w tle ekranu tytułowego też pisze kronikę)
+// bełkot skrzeczał spod ekranu ładowania (Michał 3.11.2026)
+const scribe = createScribe(() => { if (!titleScreen && !entering && !document.getElementById('loading') && !document.body.classList.contains('menu-open')) play('babble'); }, scribeClock);
 let wolvesSeen = false, wolfKillsSeen = 0;
 /** Zbóje z lasu: ostatnio widziane liczniki napadów, zabitych i rozbitych obozów (wiadomość skryby przy każdej zmianie) */
 let banditSeen: { raids: number; kills: number; razed: number } | null = null;
