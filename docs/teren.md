@@ -75,7 +75,8 @@ nowy wygląd mapy = nowy numer generatora (`MAP_GEN`), stare zapisy dostają daw
   krawędzi), przy każdym zamku gwarantowany masyw na kopalnię w zasięgu; teren za mapą liczony tymi samymi szumami co
   plansza (las w plamach, góry, piach), a nie ściana puszczy i osobne pasma.
 - [ ] **Większa mapa 1 na 1** (np. 240 pól zamiast 192) — tylko od nowego generatora (stare zapisy na starym rozmiarze).
-- [ ] Trawa i krzewy z powrotem (gęste, z paczek), gęstsza siatka całego terenu przy kamerze, więcej warstw ziemi
+- [ ] Trawa i krzewy z powrotem (gęste, z paczek), więcej warstw ziemi
+- [x] 0.94.13: gęstsza siatka terenu przy kamerze (`render/groundDetail.ts`, wyłączenie `?teren=rzadki`)
   (po WebGPU — tablica tekstur).
 
 ## Uwagi do sprawdzenia

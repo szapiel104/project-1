@@ -37,6 +37,7 @@ import { buildStreams, type Streams } from './streams';
 /** Wodospady: wyłączone do odwołania (Michał 3.11.2026) */
 const WATERFALLS = false;
 import { buildRockGeometry, rockDisplacer } from './rockmesh';
+import { GroundDetail } from './groundDetail';
 import { rockMaterial, rocks0ad } from './rocks0ad';
 import { desertPlants, plantMaterial, type PlantKind } from './desert0ad';
 
@@ -536,6 +537,14 @@ function* terrainSteps(map: GameMap, models: ModelFactory, waterLevel: number): 
       group.add(cat(rock, 'teren — skała'));
     }
   }
+  // gęstsza siatka terenu przy kamerze (groundDetail.ts); ?teren=rzadki — sama plansza (do porównań)
+  const detail = TEST || (typeof location !== 'undefined' && new URLSearchParams(location.search).get('teren') === 'rzadki')
+    ? null : new GroundDetail({ w, h, ox, oz, geo, rock: isRockTile }, ground.material);
+  const groundDetail = detail;
+  if (detail) {
+    group.add(cat(detail.mesh, 'teren (gęsto przy kamerze)'));
+    ground.raycast = (r, out) => detail.raycastWhole(ground, r, out);
+  }
 
   yield;
   // Woda: dwie warstwy drobnych fal przesuwające się w różne strony, lekko przejrzysta, z połyskiem słońca
@@ -901,6 +910,9 @@ function* terrainSteps(map: GameMap, models: ModelFactory, waterLevel: number): 
   // ziemią albo w nią wchodziły.
   const heightAt = (fx: number, fy: number): number => {
     const x = Math.max(0, Math.min(w - 0.001, fx)), y = Math.max(0, Math.min(h - 0.001, fy));
+    // przy kamerze: gładka, gęsta łata (groundDetail.ts) — ludzie i rzeczy stoją na tym, co widać
+    const dh = detail?.heightAt(x, y);
+    if (dh != null) return dh;
     const ix = Math.floor(x), iy = Math.floor(y);
     const tx = x - ix, ty = y - iy;
     // na skale: wyrzeźbiona powierzchnia z rockmesh.ts (drzewa i strumienie stoją na tym, co widać)
@@ -2450,6 +2462,7 @@ function* terrainSteps(map: GameMap, models: ModelFactory, waterLevel: number): 
     /** Roślinność do wspólnych pul na tę klatkę (wywołanie tuż przed rysowaniem) */
     cullVegetation(view: THREE.Frustum, shadow: THREE.Frustum | null) { cullVeg(view, shadow); },
     lod(x: number, z: number, reach: number, detail = 1, walk = false) {
+      groundDetail?.update(x - ox, z - oz, performance.now());
       mistFx?.detail(detail);
       for (const c of lodChunks) {
         const d = Math.hypot(c.x - x, c.z - z) - c.r; // od krawędzi kawałka, nie od środka

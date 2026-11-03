@@ -10,6 +10,11 @@ export type { ChangeEntry } from './changelogTypes';
  */
 const NEW: ChangeEntry[] = [
   {
+    v: '0.94.13', date: '2026-11-03',
+    pl: ['Gładszy teren przy kamerze: wokół widoku ziemia ma trzy razy gęstszą siatkę i łagodnie zaokrąglone pagórki zamiast płaskich, kanciastych trójkątów — najbardziej widać to w spacerze i na zboczach. Ludzie i zwierzęta chodzą po tym, co widać.'],
+    en: ['Smoother ground near the camera: around the view the terrain has a mesh three times denser and gently rounded hills instead of flat, angular triangles — most visible in walking view and on slopes. People and animals walk on what you see.'],
+  },
+  {
     v: '0.94.12', date: '2026-11-03',
     pl: ['Na nowym silniku place budowy nie przycinają już gry: rosnący budynek nie składa za każdym razem od nowa wszystkich swoich shaderów (wcześniej kilkaset składań na 10 sekund i spadek do ok. 28 FPS, gdy w osadzie trwały budowy).'],
     en: ['On the new engine, construction sites no longer stutter the game: a rising building does not rebuild all its shaders every time (previously several hundred rebuilds per 10 seconds and a drop to about 28 FPS while building was going on).'],

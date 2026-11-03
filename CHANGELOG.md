@@ -1,5 +1,8 @@
 # Dziennik zmian
 
+## 0.94.13 — 2026-11-03
+- Teren: `render/groundDetail.ts` — łata 64×64 pól w siatce 3×3 na pole jedzie za kamerą (co 8 pól, odświeżenie po zmianach planszy najwyżej co 2 s); Catmull–Rom przez narożniki planszy, przycięty do wysokości narożników pola, przy brzegu łaty i przy skale wygasa do zwykłych trójkątów (bez szpar). Plansza dostała indeks, który pomija pola pod łatą; klikanie liczone po całej planszy (`raycastWhole`). `heightAt` przy kamerze z łaty. Wyłączenie: `?teren=rzadki`. Test: `tests/groundDetail.test.ts`.
+
 ## 0.94.12 — 2026-11-03
 - WebGPU, place budowy (`sites.ts`): zamiast płaszczyzn przycinania (każda kopia materiału = osobny ClippingContext z numerem w kluczu → osobne składanie obrazu i cienia dla każdej budowy) jedna wspólna kopia na materiał z `maskNode`/`maskShadowNode`: `positionWorld.y <= userData.siteCut` siatki; kopii nie zwalniamy.
 - Parallax (pod `?pom=1`): klucz z numerem materiału (węzły niosą teksturę i barwę konkretnego materiału).
