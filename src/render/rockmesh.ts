@@ -23,6 +23,25 @@ export interface RockSource {
   col: Float32Array; splat: Float32Array; sand: Float32Array;
   /** Szum 2D −1..1 */
   noise(x: number, y: number): number;
+  /** Normalne narożników zwykłej siatki (3 na narożnik) — przy brzegu skały światło jak na sąsiednim polu */
+  nor?: Float32Array;
+}
+
+/** 0 na brzegu pola skały, które graniczy z polem bez skały (albo z brzegiem mapy), 1 od ok. 0,7 pola w głąb */
+export function rockMask(s: RockSource, fx: number, fy: number): number {
+  const { w, h } = s;
+  const isRock = (x: number, y: number): boolean => x >= 0 && y >= 0 && x < w && y < h && s.rock(x, y);
+  const tx = Math.floor(fx), ty = Math.floor(fy);
+  if (!isRock(tx, ty)) return 0;
+  let near = 2;
+  for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
+    if (!dx && !dy) continue;
+    if (isRock(tx + dx, ty + dy)) continue;
+    const bx = Math.max(tx + dx - fx, 0, fx - (tx + dx + 1)), by = Math.max(ty + dy - fy, 0, fy - (ty + dy + 1));
+    near = Math.min(near, Math.hypot(bx, by));
+  }
+  const k = Math.min(1, near / 0.7);
+  return k * k * (3 - 2 * k);
 }
 
 /** Ile kawałków na bok pola */
@@ -98,6 +117,15 @@ export function buildRockGeometry(s: RockSource, disp: (fx: number, fy: number) 
       const d = disp(fx, fy), hy = base(fx, fy) + d;
       pos[v * 3] = fx + ox; pos[v * 3 + 1] = hy; pos[v * 3 + 2] = fy + oz;
       nv.set(H(fx - e, fy) - H(fx + e, fy), 2 * e, H(fx, fy - e) - H(fx, fy + e)).normalize();
+      // przy brzegu z polem bez skały normalna przechodzi w normalną zwykłej siatki: shader rozstrzyga skała/piach
+      // po stromiźnie, więc inna normalna po dwóch stronach krawędzi dawała prostą, ostrą granicę (Michał 3.11.2026)
+      if (s.nor) {
+        const m = rockMask(s, fx, fy);
+        if (m < 1) {
+          const cx = lerpC(s.nor, 3, 0, fx, fy), cy = lerpC(s.nor, 3, 1, fx, fy), cz = lerpC(s.nor, 3, 2, fx, fy);
+          nv.set(cx + (nv.x - cx) * m, cy + (nv.y - cy) * m, cz + (nv.z - cz) * m).normalize();
+        }
+      }
       nor[v * 3] = nv.x; nor[v * 3 + 1] = nv.y; nor[v * 3 + 2] = nv.z;
       // żleby ciemniejsze, żebra jaśniejsze (cień w zagłębieniach jak w prawdziwej skale)
       const ao = Math.max(0.72, Math.min(1.12, 1 + d * 0.35));

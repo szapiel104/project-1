@@ -514,7 +514,7 @@ function* terrainSteps(map: GameMap, models: ModelFactory, waterLevel: number): 
   { const gu = (ground.material as THREE.Material).userData.ground as { uDry?: { value: number } } | undefined; if (gu?.uDry) gu.uDry.value = map.biome === 'desert' ? 1 : map.biome === 'steppe' ? 0.4 : 0; }
   // skała (góry i urwiska) w gęstej, wyrzeźbionej siatce (rockmesh.ts); na planszy jej pola znikają (trójkąty bez pola)
   const isRockTile = (tx: number, ty: number): boolean => !TEST && map.tiles[ty * w + tx] === Terrain.Mountain;
-  const rockSrc = { w, h, ox, oz, rock: isRockTile, corner, col: cornerCol, splat: cornerSplat, sand: cornerSand, noise: createNoise2D(rng(map.seed ^ 0x70c4)) };
+  const rockSrc = { w, h, ox, oz, rock: isRockTile, corner, col: cornerCol, splat: cornerSplat, sand: cornerSand, nor: cornerNor, noise: createNoise2D(rng(map.seed ^ 0x70c4)) };
   const rockDisp = TEST ? (): number => 0 : rockDisplacer(rockSrc);
   {
     const rg = TEST ? null : buildRockGeometry(rockSrc, rockDisp);

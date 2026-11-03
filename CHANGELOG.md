@@ -1,5 +1,8 @@
 # Dziennik zmian
 
+## 0.89.6 — 3.11.2026
+- `rockmesh.ts`: `rockMask` + normalne przy brzegu skały mieszane z normalnymi narożników zwykłej siatki (`cornerNor`). Boty: bez zmian.
+
 ## 0.89.5 — 3.11.2026
 - main.ts: `SaveMeta.match`, skończone mecze w `p1.endedMatches` (starsze zapisy po mapie i czasie w `p1.endedMaps`), `continuable()` w „Kontynuuj” i `refreshContinue`; `tiles.css`: `.logi-list` na pergaminie. Boty: bez zmian.
 

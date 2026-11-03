@@ -10,6 +10,11 @@ export type { ChangeEntry } from './changelogTypes';
  */
 const NEW: ChangeEntry[] = [
   {
+    v: '0.89.6', date: '2026-11-03',
+    pl: ['Urwiska: przy krawędzi skały światło przechodzi płynnie w sąsiedni teren — bez prostej, ostrej granicy skały i piachu.'],
+    en: ['Cliffs: at the edge of the rock the lighting blends smoothly into the ground next to it — no straight, hard line between rock and sand.'],
+  },
+  {
     v: '0.89.5', date: '2026-11-03',
     pl: [
       'Po wygranej albo przegranej „Kontynuuj” nie wraca już do skończonego meczu — bierze najnowszy zapis innej, niedokończonej gry (zapisy skończonego meczu zostają w „Wczytaj grę”).',
