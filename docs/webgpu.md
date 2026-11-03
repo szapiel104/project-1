@@ -39,7 +39,7 @@ rysowania na cały efekt, bez czekania na kompilację przy wczytywaniu.
 2. [~] Ziemia w TSL (najważniejsza dla wyglądu) — `src/render/gpu/groundNode.ts` (0.90.1: warstwy, skała z trzech rzutów, normalne, półki, śnieg w górach, mokry brzeg, dno, plamy). Brakuje: cienie chmur, łatka pór roku; tablica tekstur zamiast osobnych — później.
 3. [ ] Pory roku, wiatr, cienie chmur (wspólne funkcje węzłów).
 4. [~] Woda, strumienie, kałuże — 0.92.0: nowa woda `gpu/waterNode.ts` (grubość z bufora głębokości, załamanie dna, lustro `reflector`, Beer–Lambert, fale, odblask). Strumienie i kałuże — dalej.
-5. [~] Cząstki, niebo, mgła (od razu jako instancje/compute) — 0.92.0: niebo i gwiazdy `gpu/skyNode.ts`; 0.92.1: mgła w dolinach, opar i kłęby przy szczytach `gpu/mistNode.ts` (miękkie przecięcie ze sceną z bufora głębokości). Cząstki — dalej.
+5. [~] Cząstki, niebo, mgła (od razu jako instancje/compute) — 0.92.0: niebo i gwiazdy `gpu/skyNode.ts`; 0.92.1: mgła w dolinach, opar i kłęby przy szczytach `gpu/mistNode.ts` (miękkie przecięcie ze sceną z bufora głębokości). 0.92.2: dym z kominów, iskry, blask okien jako czworokąty z instancji (`gpu/pointsNode.ts`), ogień pochodni/ognisk i pożary (`gpu/fireNode.ts`, szum 3D z tekstury zamiast haszy). Dalej: chmury, czary, śnieg, strumienie.
 6. [ ] Postacie, flagi, obrazki drzew, ślady, trawa.
 7. [ ] Narzędzia (kompilacja z góry, dziennik błędów, autojakość, sprawdzanie wywołań rysowania).
 8. [ ] Przełączenie domyślne na WebGPU (WebGL2 jako zapas), usunięcie GLSL.

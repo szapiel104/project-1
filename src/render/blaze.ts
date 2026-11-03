@@ -1,5 +1,7 @@
 import * as THREE from 'three';
 import { FIRE_NOISE } from './fireGlsl';
+import { gpuMods } from './gpu/webgpu';
+import { blazeNode } from './gpu/fireNode';
 
 /**
  * Pożar budynku jako prawdziwy, objętościowy ogień (28.10.2026, wcześniej kilka płaskich płomyków zwróconych do kamery).
@@ -134,7 +136,8 @@ export class Blaze {
     const span = Math.max(sx, sz);
     const tall = 0.7 + span * 0.22;
     if (!f) {
-      const mat = new THREE.ShaderMaterial({
+      // WebGPU: pożar w TSL (gpu/fireNode.ts), te same pokrętła
+      const mat = gpuMods ? blazeNode(this.time, { heat: 0.1, seed: (id * 0.6180339) % 1, roof: h, tall, foot: new THREE.Vector2(sx / 2, sz / 2) }) : new THREE.ShaderMaterial({
         uniforms: {
           time: this.time, heat: { value: 0.1 }, seed: { value: (id * 0.6180339) % 1 }, roof: { value: h }, tall: { value: tall },
           foot: { value: new THREE.Vector2(sx / 2, sz / 2) },

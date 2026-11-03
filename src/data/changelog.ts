@@ -10,6 +10,11 @@ export type { ChangeEntry } from './changelogTypes';
  */
 const NEW: ChangeEntry[] = [
   {
+    v: '0.92.2', date: '2026-11-03',
+    pl: ['Wraca dym z kominów, iskry nad ogniskami i blask okien nocą.', 'Wraca ogień: płomienie pochodni i ognisk oraz pożary budynków — liczone kilka razy taniej niż wcześniej.', 'Za dnia na niebie nie widać już czarnych kropek.'],
+    en: ['Chimney smoke, sparks over campfires and glowing windows at night are back.', 'Fire is back: torch and campfire flames and burning buildings — now several times cheaper to draw.', 'No more black dots in the daytime sky.'],
+  },
+  {
     v: '0.92.1', date: '2026-11-03',
     pl: ['Wraca mgła w dolinach, poranny opar i chmury przy szczytach — teraz miękko gasną wszędzie, gdzie dotykają zboczy, drzew i murów (bez ostrych linii).', 'Naprawione gwiazdy na nocnym niebie.'],
     en: ['Valley mist, morning haze and clouds around the peaks are back — now they fade softly wherever they touch slopes, trees and walls (no hard lines).', 'Fixed the stars in the night sky.'],

@@ -139,6 +139,7 @@ export class SkyDome {
     const su = (sk.stars.material as THREE.ShaderMaterial).uniforms;
     su.opacity!.value = Math.max(0, (p.night - 0.2) / 0.8) * (1 - p.cover * 0.8);
     su.time!.value = p.time;
+    sk.stars.visible = su.opacity!.value > 0.003; // za dnia gwiazd wcale nie rysujemy
     // księżyc idzie łukiem po nocnym niebie
     const d = p.sunDir.clone().normalize();
     sk.moon.position.set(d.x * 340, Math.max(60, d.y * 340), d.z * 340); // nocą kierunek „słońca” to droga księżyca

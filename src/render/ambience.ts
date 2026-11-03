@@ -1,5 +1,7 @@
 import { touch } from './touch';
 import * as THREE from 'three';
+import { gpuMods } from './gpu/webgpu';
+import { pointsSprite } from './gpu/pointsNode';
 
 /**
  * Klimat osady: dym z kominów, iskry nad ogniskami i pożarami, świecące nocą okna i mgła snująca się przy ziemi.
@@ -185,7 +187,7 @@ class Pool {
   readonly spin: Float32Array;
   readonly turn: Float32Array;
   private next = 0;
-  readonly mat: THREE.ShaderMaterial;
+  mat: THREE.ShaderMaterial;
   constructor(readonly n: number, map: THREE.Texture, additive: boolean, atlas = false, maxPx = 4096) {
     this.pos = new Float32Array(n * 3); this.size = new Float32Array(n); this.alpha = new Float32Array(n);
     this.tint = new Float32Array(n * 3); this.vel = new Float32Array(n * 3); this.age = new Float32Array(n).fill(1);
@@ -206,7 +208,19 @@ class Pool {
     this.mat.uniforms.map!.value = map;
     this.points = new THREE.Points(geo, this.mat);
     this.points.frustumCulled = false;
+    // WebGPU: czworokąty z instancji (gpu/pointsNode.ts) zamiast punktów; te same tablice i pokrętła `uniforms`
+    if (gpuMods) {
+      const sp = pointsSprite(geo, { map, additive, atlas, maxPx });
+      this.sprite = sp;
+      this.mat = sp.material as unknown as THREE.ShaderMaterial;
+    }
   }
+  /** Na WebGPU: obiekt rysowany zamiast `points` */
+  sprite: (THREE.Object3D & { count: number }) | null = null;
+  /** To, co trafia do sceny (punkty albo czworokąty z instancji) */
+  get object(): THREE.Object3D { return this.sprite ?? this.points; }
+  /** Ile cząstek rysować (zamiast setDrawRange na WebGPU) */
+  drawCount(n: number): void { this.points.geometry.setDrawRange(0, n); if (this.sprite) this.sprite.count = n; }
   private atlas: boolean;
   /** Nowa cząstka (nadpisuje najstarszą, gdy pula pełna) */
   emit(x: number, y: number, z: number, vx: number, vy: number, vz: number, life: number, base: number): number {
@@ -293,7 +307,7 @@ export class Ambience {
       const r = (k: number): number => { const v = Math.sin(i * 91.7 + k * 13.1) * 43758.5453; return v - Math.floor(v); };
       this.mistSeed.push({ x: r(1) * 220, z: r(2) * 220, s: 10 + r(3) * 12, r: r(4) * Math.PI, v: 0.5 + r(5) * 0.7 });
     }
-    this.group.add(this.mist, this.smoke.points, this.sparks.points, this.glow.points);
+    this.group.add(this.mist, this.smoke.object, this.sparks.object, this.glow.object);
   }
 
   /** Nowe miejsca emisji (wołane rzadko, np. raz na sekundę): kominy, ogniska, okna */
@@ -323,7 +337,7 @@ export class Ambience {
       }
     }
     for (let i = gi; i < G.n; i++) G.size[i] = 0;
-    G.points.geometry.setDrawRange(0, gi);
+    G.drawCount(gi);
     this.windows = gi;
     G.flush();
   }

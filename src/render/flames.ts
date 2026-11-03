@@ -1,5 +1,7 @@
 import { touch } from './touch';
 import * as THREE from 'three';
+import { gpuMods } from './gpu/webgpu';
+import { flameGlowNode, flameNode } from './gpu/fireNode';
 import { FIRE_NOISE } from './fireGlsl';
 
 /**
@@ -129,7 +131,7 @@ void main() {
 
 /** Pojedynczy płomień jako zwykła siatka (np. pochodnia w ręce przy kamerze): ta sama bryła ognia co w puli */
 export function flameSprite(time: { value: number }, w = 0.06, h = 0.13): THREE.Mesh {
-  const m = new THREE.Mesh(UNIT_BOX, flameMaterial(time));
+  const m = new THREE.Mesh(UNIT_BOX, gpuMods ? flameNode(time) : flameMaterial(time));
   m.scale.set(w, h, w);
   m.renderOrder = 7;
   m.frustumCulled = false;
@@ -161,6 +163,11 @@ export class Flames {
     }
     this.flame.renderOrder = 6;
     this.glow.renderOrder = 5;
+    // WebGPU: ogień w TSL (gpu/fireNode.ts) — szum 3D z tekstury, ta sama bryła i poświata
+    if (gpuMods) {
+      this.flame.material = flameNode(this.uni.time, this.flame);
+      this.glow.material = flameGlowNode(this.uni.time, this.glow);
+    }
   }
 
   begin(time: number): void { this.uni.time.value = time; this.n = 0; }

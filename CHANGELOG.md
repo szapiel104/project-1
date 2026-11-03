@@ -1,5 +1,8 @@
 # Dziennik zmian
 
+## 0.92.2 — 2026-11-03
+- WebGPU: `gpu/pointsNode.ts` (pule cząstek ambience jako Sprite z count, atrybuty → InstancedBufferAttribute na tych samych tablicach), `gpu/fireNode.ts` (flameNode/flameGlowNode/blazeNode: Loop/Break w TSL, szum 3D 64³ z tekstury zamiast fHash), gwiazdy addytywnie + ukryte za dnia.
+
 ## 0.92.1 — 2026-11-03
 - WebGPU: mgła (`gpu/mistNode.ts`: warstwy, opar, kłęby) z miękkim przecięciem przez viewportDepthTexture; gwiazdy jako Sprite z `count` + instancedBufferAttribute (gl_PointCoord nie istnieje w WGSL).
 

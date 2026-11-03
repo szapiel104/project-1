@@ -59,8 +59,9 @@ export function starsNode(geo: THREE.BufferGeometry): THREE.Object3D & { materia
   const m = new Wm.PointsNodeMaterial({ transparent: true, depthWrite: false, fog: false, sizeAttenuation: false });
   m.positionNode = inst('position', 3);
   m.sizeNode = size.mul(tw.mul(0.5).add(0.7)).mul(1.3);
-  m.colorNode = vec4(color, 1);
-  m.opacityNode = a.mul(tw).mul(u.opacity);
+  // jasność gwiazdy i jej przezroczystość razem (dodawane do nieba, więc bez czarnych kropek za dnia)
+  m.blending = Wm.AdditiveBlending;
+  m.colorNode = vec4(color.mul(a).mul(tw).mul(u.opacity), 1);
   m.uniforms = u;
   const sprite = new Wm.Sprite(m);
   sprite.count = (geo.getAttribute('position') as THREE.BufferAttribute).count;
