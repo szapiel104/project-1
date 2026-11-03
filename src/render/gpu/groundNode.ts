@@ -1,5 +1,6 @@
 import type * as THREE from 'three';
 import { gpuMods } from './webgpu';
+import { snowMix, type SeasonU } from './seasonNode';
 
 /**
  * Bliźniak materiału ziemi w TSL (WebGPU, docs/webgpu.md, partia 2) — ta sama logika co GLSL w `ground.ts`
@@ -16,7 +17,7 @@ export interface GroundTextures {
   grassN: THREE.Texture; forestN: THREE.Texture; pebbleN: THREE.Texture; cliffN: THREE.Texture;
 }
 
-export function groundNodeMaterial(t: GroundTextures): { material: THREE.MeshStandardMaterial; uniforms: { uDark: { value: number }; uDry: { value: number } } } {
+export function groundNodeMaterial(t: GroundTextures, season?: SeasonU): { material: THREE.MeshStandardMaterial; uniforms: { uDark: { value: number }; uDry: { value: number } } } {
   const { W, TSL } = gpuMods!;
   const {
     attribute, positionWorld, normalWorld, positionView, texture, uniform, vec2, vec3, float, mix, smoothstep, clamp, max,
@@ -137,7 +138,10 @@ export function groundNodeMaterial(t: GroundTextures): { material: THREE.MeshSta
   alb = mix(alb, alb.mul(vec3(1.12, 1.04, 0.78)), ss(0.62, 0.85, nM.g).mul(0.5).mul(bG).div(sum));
 
   const m = new W.MeshStandardNodeMaterial({ roughness: 0.97, metalness: 0 });
-  m.colorNode = vec4(alb.mul(vertexColor().rgb), 1);
+  let outC: any = alb.mul(vertexColor().rgb);
+  // zima: śnieg na płaskim (wierzch z normalnej terenu), szron; jak `ground` w season.ts
+  if (season) outC = snowMix(TSL as any, season, outC, wp.xz, wn.y).color;
+  m.colorNode = vec4(outC, 1);
   // normalna: osie świata X i Z rzutowane na powierzchnię (jak FRAG_NORMAL), wynik w przestrzeni widoku
   const T = normalize(vec3(1, 0, 0).sub(wn.mul(wn.x)));
   const Bv = normalize(vec3(0, 0, 1).sub(wn.mul(wn.z)).sub(T.mul(dot(vec3(0, 0, 1), T))));

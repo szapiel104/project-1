@@ -1,5 +1,7 @@
 import type * as THREE from 'three';
 import { gpuMods } from './webgpu';
+import { snowMix } from './seasonNode';
+import { SEASON_U } from '../season';
 
 /**
  * Dywan trawy na WebGPU (grass.ts): kępy z czterech pochylonych kart, rozłożone po siatce przyklejonej do świata,
@@ -94,6 +96,7 @@ export function grassNode(u0: GrassUniforms, o: { STEP: number; BASE: number; WE
     col = col.mul(nM.b.mul(0.3).add(0.84).add(nS.r.sub(0.5).mul(0.14))).mul(mix(0.9, 1.08, vGTone));
     col = mix(vec3(dot(col, lw)), col, 0.78).mul(vec3(0.96, 0.98, 0.86)).mul(0.66);
     col = col.mul(mix(0.8, 1, smoothstep(0, 0.6, vGUv.y)));
+    col = snowMix(T, SEASON_U, col, vGW, float(1)).color; // zimą kępy przysypane śniegiem jak ziemia
     // ostre krawędzie źdźbeł także z daleka (mipmapy rozmywają przezroczystość)
     const aLod = log2(max(max(fwidth(vAUv.x).mul(2048), fwidth(vAUv.y).mul(1024)), 1));
     let a: any = bl.a.mul(aLod.mul(0.45).add(1));

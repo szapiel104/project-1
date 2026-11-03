@@ -37,7 +37,7 @@ rysowania na cały efekt, bez czekania na kompilację przy wczytywaniu.
    (`__perf`) WebGL vs WebGPU na tej samej scenie. Lista tego, co się sypie.
 1. [~] Efekty obrazu w TSL (AO, grading jak w `scene.ts`, wyostrzenie, wygładzanie) — `src/render/gpu/postNode.ts` (0.91.1). Brakuje: mapa otoczenia (PMREM), odbicia wody.
 2. [~] Ziemia w TSL (najważniejsza dla wyglądu) — `src/render/gpu/groundNode.ts` (0.90.1: warstwy, skała z trzech rzutów, normalne, półki, śnieg w górach, mokry brzeg, dno, plamy). Brakuje: cienie chmur, łatka pór roku; tablica tekstur zamiast osobnych — później.
-3. [ ] Pory roku, wiatr, cienie chmur (wspólne funkcje węzłów).
+3. [~] Pory roku, wiatr, cienie chmur — 0.93.1 wiatr i flagi (`gpu/deformNode.ts`), 0.93.4 pory roku (`gpu/seasonNode.ts`, śnieg w ziemi i trawie). Brakuje: cienie chmur, ślady na śniegu, jesienne łaty na ziemi.
 4. [~] Woda, strumienie, kałuże — 0.92.0: nowa woda `gpu/waterNode.ts` (grubość z bufora głębokości, załamanie dna, lustro `reflector`, Beer–Lambert, fale, odblask). Strumienie i kałuże — dalej.
 5. [~] Cząstki, niebo, mgła (od razu jako instancje/compute) — 0.92.0: niebo i gwiazdy `gpu/skyNode.ts`; 0.92.1: mgła w dolinach, opar i kłęby przy szczytach `gpu/mistNode.ts` (miękkie przecięcie ze sceną z bufora głębokości). 0.92.2: dym z kominów, iskry, blask okien jako czworokąty z instancji (`gpu/pointsNode.ts`), ogień pochodni/ognisk i pożary (`gpu/fireNode.ts`, szum 3D z tekstury zamiast haszy). Dalej: chmury, czary, śnieg, strumienie.
 6. [ ] Postacie, flagi, obrazki drzew, ślady, trawa.

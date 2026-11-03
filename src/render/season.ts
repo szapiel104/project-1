@@ -1,5 +1,6 @@
 import { cloneMaterial } from './matclone';
 import * as THREE from 'three';
+import { seasonNode } from './gpu/seasonNode';
 
 /**
  * Wygląd pór roku wspólny dla całej sceny: śnieg na ziemi, dachach i koronach świerków (na powierzchniach zwróconych
@@ -234,6 +235,7 @@ export function seasonMaterial(m: THREE.Material, kind: SeasonKind): boolean {
     sh.fragmentShader = FRAG_HEAD(kind) + sh.fragmentShader.replace('#include <lights_physical_fragment>', FRAG_BODY(kind) + '#include <lights_physical_fragment>');
   };
   m.customProgramCacheKey = function (this: THREE.Material) { return indoor.has(this) ? prevKey.call(this) : `${prevKey.call(this)}|season-${kind}`; };
+  if (!indoor.has(m)) seasonNode(m, kind, SEASON_U); // WebGPU: ta sama pora roku w węzłach (gpu/seasonNode.ts)
   m.needsUpdate = true;
   return true;
 }

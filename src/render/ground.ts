@@ -5,6 +5,7 @@ import { packNormals } from './normalpack';
 import { terrainUrl } from './prefetch';
 import { gpuMods } from './gpu/webgpu';
 import { groundNodeMaterial } from './gpu/groundNode';
+import { SEASON_U } from './season';
 
 /**
  * Podłoże jak w nowych silnikach: kilka zdjęciowych warstw (dwie trawy, łąka z ziemią i kamykami, ściółka leśna,
@@ -318,7 +319,7 @@ export function groundMaterial(): THREE.MeshStandardMaterial {
       grass1: tex('grass1', true), grass2: tex('grass2', true), meadow: tex('meadow', true), forest: tex('forest', true), pebble: tex('pebble', true),
       dirt: tex('dirt', true), rock: tex('rock', true), cliff: tex('cliff', true), sand: tex('sand', true), noise: sharedNoise(),
       grassN: tex('grass_n', false), forestN: tex('forest_n', false), pebbleN: tex('pebble_n', false), cliffN: tex('cliff_n', false),
-    });
+    }, SEASON_U);
     g.material.userData.ground = g.uniforms;
     shared = g.material;
     return shared;

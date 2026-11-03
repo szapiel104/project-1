@@ -10,6 +10,11 @@ export type { ChangeEntry } from './changelogTypes';
  */
 const NEW: ChangeEntry[] = [
   {
+    v: '0.93.4', date: '2026-11-03',
+    pl: ['Wracają pory roku na nowym silniku: śnieg na dachach, ziemi i trawie zimą, szron, wiosenna zieleń, rude korony jesienią i gołe drzewa zimą.'],
+    en: ['Seasons are back on the new engine: snow on roofs, ground and grass in winter, frost, fresh spring green, russet treetops in autumn and bare trees in winter.'],
+  },
+  {
     v: '0.93.3', date: '2026-11-03',
     pl: ['Dziennik błędów (F3) pokazuje czasy poszczególnych etapów wczytywania.'],
     en: ['The error log (F3) now shows how long each loading stage took.'],
