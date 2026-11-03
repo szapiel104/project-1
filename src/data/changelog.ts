@@ -10,6 +10,17 @@ export type { ChangeEntry } from './changelogTypes';
  */
 const NEW: ChangeEntry[] = [
   {
+    v: '0.87.0', date: '2026-11-03',
+    pl: [
+      '„Nowa gra” na pergaminie, jak księgi w menu: czerwone nagłówki, jasne kafelki, zaznaczony wybór jak pieczęć.',
+      'Wybór krainy w „Nowej grze”: Losowa (z nazwy mapy), Łęgi, Wyżyna, Step albo Północ — podgląd mapy od razu pokazuje wybraną krainę, a zapis gry ją pamięta.',
+    ],
+    en: [
+      '“New game” on parchment, like the books in the menu: red headings, light tiles, the chosen option sealed like a stamp.',
+      'Pick the land in “New game”: Random (from the map name), Lowland meadows, Highlands, Steppe or Northlands — the map preview shows it at once and the save remembers it.',
+    ],
+  },
+  {
     v: '0.86.0', date: '2026-11-03',
     pl: [
       'Nowy wygląd skał w górach i na urwiskach: poszarpana, szarobrązowa skała zamiast białych i „słoistych” płatów, z prawdziwą rzeźbą światła (nowa mapa nierówności) i bez rozmytych podwójnych wzorów na zboczach.',

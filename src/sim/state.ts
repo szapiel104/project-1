@@ -1,3 +1,4 @@
+import type { Biome } from '../data/biomes';
 import { KEEP_GATE, KEEP_SIZE } from '../data/keep';
 import { BUILDINGS, buildingIndex } from '../data/buildings';
 import type { MAP_PRESETS } from '../data/maps';
@@ -709,8 +710,9 @@ export interface GameState {
 /** Mury miasta w trybie deweloperskim: kamienne, drewniane (palisada) albo mieszane (tył i prawy bok z kamienia) */
 export type DevWalls = 'mix' | 'stone' | 'wood';
 /** `coop` = kooperacja: wszyscy ludzie w drużynie 0, boty przeciwników mocniejsze (zapasy, ludzie, fale) — tym bardziej, im więcej ludzi */
-export function createGame(seed: number, preset: keyof typeof MAP_PRESETS = '1v1', level = 2, dev = false, humans?: number[], instantBuild = true, devWalls: DevWalls = 'mix', coop = false): GameState {
-  const map = generateMap(seed, preset);
+/** `biome` = kraina wybrana w „Nowej grze” (brak = z ziarna, jak w meczu przez sieć) */
+export function createGame(seed: number, preset: keyof typeof MAP_PRESETS = '1v1', level = 2, dev = false, humans?: number[], instantBuild = true, devWalls: DevWalls = 'mix', coop = false, biome?: Biome): GameState {
+  const map = generateMap(seed, preset, undefined, biome);
   const size = map.width * map.height;
   const g: GameState = {
     tick: 0, map, rng: new Rng(seed), players: [], buildings: [], units: [], soldiers: [], corpses: [], travelers: [], wolves: [],

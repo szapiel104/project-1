@@ -9,13 +9,14 @@
  */
 import { createGame, type DevWalls } from './state';
 import type { MapPresetId } from '../data/maps';
+import type { Biome } from '../data/biomes';
 
-export interface MapJob { id: number; seed: number; preset: MapPresetId; level: number; dev: boolean; walls: DevWalls }
+export interface MapJob { id: number; seed: number; preset: MapPresetId; level: number; dev: boolean; walls: DevWalls; biome?: Biome }
 
 self.onmessage = (e: MessageEvent): void => {
   const m = e.data as MapJob;
   try {
-    const state = createGame(m.seed, m.preset, m.level, m.dev, undefined, true, m.walls);
+    const state = createGame(m.seed, m.preset, m.level, m.dev, undefined, true, m.walls, false, m.biome);
     (self as unknown as Worker).postMessage({ id: m.id, state });
   } catch (err) {
     (self as unknown as Worker).postMessage({ id: m.id, error: String(err) });

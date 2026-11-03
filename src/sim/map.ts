@@ -52,12 +52,13 @@ function fractal(x: number, y: number, seed: number): number {
  * Generuje mapę z ziarna. Mapa jest symetryczna środkowo (obrót o 180°),
  * więc obie drużyny mają identyczny teren i tyle samo surowców.
  */
-export function generateMap(seed: number, presetId: keyof typeof MAP_PRESETS = '1v1', gen = MAP_GEN): GameMap {
+/** `biome`: kraina wybrana przez gracza (generator 8+); bez niej kraina z ziarna */
+export function generateMap(seed: number, presetId: keyof typeof MAP_PRESETS = '1v1', gen = MAP_GEN, biomeChoice?: Biome): GameMap {
   const preset: MapPreset = (gen < 2 ? LEGACY_PRESETS[presetId] : undefined) ?? MAP_PRESETS[presetId];
   const { width, height } = preset;
   const tiles = new Uint8Array(width * height);
   const elevation = new Uint8Array(width * height);
-  const biome: Biome | undefined = gen >= BIOME_GEN ? biomeOfSeed(seed, hash2) : undefined;
+  const biome: Biome | undefined = gen >= BIOME_GEN ? biomeChoice ?? biomeOfSeed(seed, hash2) : undefined;
   // kraina: mniej albo więcej wody (przesuwamy wysokość, nie próg — rysowanie liczy brzeg od progu z presetu) i lasu
   const B = biome ? BIOME[biome] : null;
   const forestAt = B ? B.forest : 146;

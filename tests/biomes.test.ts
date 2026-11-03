@@ -67,3 +67,16 @@ describe('krainy', () => {
     expect(m.relief).toBeUndefined();
   });
 });
+
+describe('wybrana kraina', () => {
+  it('kraina wybrana w „Nowej grze” wchodzi do mapy i wraca z zapisu', async () => {
+    const { createGame } = await import('../src/sim/state');
+    const { serialize, deserialize } = await import('../src/sim/save');
+    forceBiome(null);
+    const g = createGame(1234, '1v1', 2, false, undefined, true, 'mix', false, 'north');
+    expect(g.map.biome).toBe('north');
+    const back = deserialize(JSON.parse(JSON.stringify(serialize(g, '1v1'))));
+    expect(back?.map.biome).toBe('north');
+    expect(back?.map.tiles).toEqual(g.map.tiles);
+  });
+});

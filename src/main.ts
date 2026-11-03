@@ -16,6 +16,7 @@ import { lang, t, tx } from './i18n';
 import { GameRenderer, type TileRef } from './render/scene';
 import { clockAt, rainAt } from './sim/clock';
 import { seedFromText } from './sim/rng';
+import type { Biome } from './data/biomes';
 import { deserialize, serialize, SAVE_VERSION, type SaveData } from './sim/save';
 import { listSaves, readSave, writeSave, type SaveKind, type SaveMeta, type SaveFile } from './saves/store';
 import { enemyRoad } from './sim/systems/roadwreck';
@@ -343,7 +344,7 @@ mark.push(['hud+miniatury', Math.round(performance.now() - T0)]);
 let preview: GameState | null = null;
 /** Ustawienia, z którymi policzono `preview` — „Graj” z tymi samymi bierze gotową mapę zamiast liczyć ją drugi raz */
 let previewKey = '';
-const previewKeyOf = (seedText: string, preset: MapPresetId, level: number, dev: boolean, walls: DevWalls | undefined): string => JSON.stringify([seedText, preset, level, dev, walls ?? 'mix']);
+const previewKeyOf = (seedText: string, preset: MapPresetId, level: number, dev: boolean, walls: DevWalls | undefined, biome?: Biome): string => JSON.stringify([seedText, preset, level, dev, walls ?? 'mix', biome ?? '']);
 /** Zasłona na czas generowania mapy w podglądzie nowej gry (za panelem menu) */
 let previewJob = 0;
 const previewCover = document.createElement('div');
@@ -365,7 +366,7 @@ const menu = createMenu(document.body, {
     });
   },
   // podgląd nowej mapy: generujemy ją obok bieżącej gry i pokazujemy z lotu ptaka; bieżąca gra czeka nietknięta
-  onPreviewMap: (seedText, preset, level, dev, walls) => {
+  onPreviewMap: (seedText, preset, level, dev, walls, biome) => {
     // najpierw ciemna zasłona z kręciołkiem za menu (lewy panel zostaje),
     // potem mapa, a zasłona schodzi dopiero, gdy pierwsze klatki nowej mapy są narysowane i kamera rusza
     const job = ++previewJob;
@@ -374,10 +375,10 @@ const menu = createMenu(document.body, {
     requestAnimationFrame(() => requestAnimationFrame(async () => {
       if (job !== previewJob) return; // w międzyczasie wylosowano kolejną mapę
       // sama mapa liczy się w osobnym wątku (sim/mapthread.ts): kręciołek się kręci, menu nie staje
-      const next = await createGameAsync(seedFromText(seedText), preset, level, dev, walls ?? 'mix');
+      const next = await createGameAsync(seedFromText(seedText), preset, level, dev, walls ?? 'mix', biome);
       if (job !== previewJob) return; // w międzyczasie wylosowano kolejną mapę albo zamknięto podgląd
       preview = next;
-      previewKey = previewKeyOf(seedText, preset, level, dev, walls);
+      previewKey = previewKeyOf(seedText, preset, level, dev, walls, biome);
       // teren etapami, z przerwą na klatkę między nimi: kręciołek się kręci, strona nie staje
       const built = await renderer.setStateAsync(preview, MAP_PRESETS[preset].waterLevel, MAP_PRESETS[preset].rim, 0, pauseFrame);
       if (!built || job !== previewJob) return;
@@ -403,15 +404,15 @@ const menu = createMenu(document.body, {
     // powrót do bieżącej gry: teren etapami, bez zatrzymania strony
     void renderer.setStateAsync(game, MAP_PRESETS[currentPreset].waterLevel, MAP_PRESETS[currentPreset].rim, ME, pauseFrame).catch((e) => console.error(e));
   },
-  onNewGame: (seedText, preset, level, dev, instant, walls) => {
+  onNewGame: (seedText, preset, level, dev, instant, walls, biome) => {
     previewJob++; previewCover.hidden = true;
     // mapa z podglądu jest jeszcze nieruszona (tick 0, symulacja w podglądzie nie rusza): przy tych samych ustawieniach bierzemy ją
-    const ready = preview && instant && preview.tick === 0 && previewKey === previewKeyOf(seedText, preset, level, dev, walls) ? preview : undefined;
+    const ready = preview && instant && preview.tick === 0 && previewKey === previewKeyOf(seedText, preset, level, dev, walls, biome) ? preview : undefined;
     preview = null;
     renderer.endPreview();
     // nowa mapa buduje się za ekranem wczytywania, a nie w zawieszonym menu
     enterGame(t('load.map'), () => {
-      start(seedText, preset, undefined, level, dev, undefined, instant, walls, ready);
+      start(seedText, preset, undefined, level, dev, undefined, instant, walls, ready, biome);
       setStatus({ where: 'solo' });
     });
   },
@@ -840,7 +841,7 @@ export async function worldReady(onStage?: (stage: number) => void): Promise<voi
   finally { bootProgress = null; bootWorld = null; }
 }
 /** `fresh` = nowa, jeszcze nieruszona gra policzona wcześniej z tymi samymi ustawieniami (mapa z podglądu „Nowej gry”) */
-function start(seedText: string, preset: MapPresetId, loaded?: GameState, level = 2, dev = false, online?: OnlineStart, instant = true, walls: DevWalls = URL_WALLS, fresh?: GameState): void {
+function start(seedText: string, preset: MapPresetId, loaded?: GameState, level = 2, dev = false, online?: OnlineStart, instant = true, walls: DevWalls = URL_WALLS, fresh?: GameState, biome?: Biome): void {
   tierSeen = -1;
   endShown = false;
   gameOver = false;
@@ -850,7 +851,7 @@ function start(seedText: string, preset: MapPresetId, loaded?: GameState, level 
   caravanSeen = -1; allies.close(); pings.clear();
   // nowy mecz = nowy numer; wczytany dostaje swój z zapisu (applyUi), a zapis bez numeru — stały numer z mapy
   matchId = online ? online.room.id : loaded ? `${seedText}|${preset}|stary-zapis` : newMatchId();
-  game = loaded ?? (!online && fresh ? fresh : createGame(seedFromText(seedText), preset, level, dev, online?.humans, instant, walls, online?.coop === true));
+  game = loaded ?? (!online && fresh ? fresh : createGame(seedFromText(seedText), preset, level, dev, online?.humans, instant, walls, online?.coop === true, online ? undefined : biome));
   if (EMPTY && !loaded && !online) emptyScene(game);
   // wątek symulacji: gra z botami, także w trybie dewelopera (akcje panelu dewelopera idą przez resyncSim);
   // bez testów (tam pomocniki __test zmieniają stan bez resyncSim) i bez meczu przez sieć (lockstep w wątku głównym)

@@ -30,7 +30,7 @@ nowy wygląd mapy = nowy numer generatora (`MAP_GEN`), stare zapisy dostają daw
 7. [x] **Światło dnia** (0.82.0): mniej szaro, cieplejsze słońce i żywsze barwy za dnia (noc i deszcz jak dotąd).
 8. [ ] Roślinność wg krainy: gęstość krzaków i kamieni (step: kępy krzewów i głazy, wyżyna: rumowiska pod
    urwiskami, północ: same świerki i jodły), więcej podszytu na skraju lasu.
-9. [ ] Wybór krainy w „Nowej grze” i w pokoju gry przez sieć (dziś z ziarna; trzeba zapisać krainę w zapisie i w pokoju).
+9. [x] Wybór krainy w „Nowej grze” (0.87, pergamin, zapis pamięta krainę). [ ] Zostaje: wybór w pokoju gry przez sieć.
 10. [ ] Nowe modele kamieni i krzaków z gotowych paczek (CC0, z GitHuba — strony z teksturami są z czatu
     zablokowane), oryginalne trójkąty i tekstury.
 11. [ ] Kwiaty i plamy innej trawy na łąkach (dziś wyłączone), kępy przy kamieniach i u stóp drzew.

@@ -7,7 +7,7 @@ import { levelOf, titleOf } from '../data/progress';
 import { createOnline, type OnlineStart } from './online';
 import { avatarSvg } from './avatars';
 import { MAP_PRESETS, type MapPresetId } from '../data/maps';
-import { BIOME, biomeOfSeed } from '../data/biomes';
+import { BIOME, BIOMES, biomeOfSeed, type Biome } from '../data/biomes';
 import { hash2, seedFromText } from '../sim/rng';
 import { t, tx, lang, setLang, LANGS } from '../i18n';
 import { HELP_CHAPTERS, type HelpBlock } from './helpText';
@@ -83,7 +83,7 @@ export interface MenuEvents {
   onContinue(): void;
   /** „Plan na start od nowa” (przycisk w „Jak grać”) */
   onTutorialReset?(): void;
-  onNewGame(seedText: string, preset: MapPresetId, level: number, dev: boolean, instant: boolean, walls: 'mix' | 'stone' | 'wood'): void;
+  onNewGame(seedText: string, preset: MapPresetId, level: number, dev: boolean, instant: boolean, walls: 'mix' | 'stone' | 'wood', biome?: Biome): void;
   onVolume(v: number): void;
   onMute(): boolean;
   onSettings(s: Settings): void;
@@ -94,7 +94,7 @@ export interface MenuEvents {
   /** Czy to mecz przez sieć (inny opis poddania) */
   isOnline(): boolean;
   /** Podgląd mapy przy tworzeniu nowej gry: wygeneruj i pokaż z lotu ptaka */
-  onPreviewMap(seedText: string, preset: MapPresetId, level: number, dev: boolean, walls?: 'mix' | 'stone' | 'wood'): void;
+  onPreviewMap(seedText: string, preset: MapPresetId, level: number, dev: boolean, walls?: 'mix' | 'stone' | 'wood', biome?: Biome): void;
   /** Koniec podglądu (powrót z ekranu nowej gry bez startu) */
   onPreviewEnd(): void;
   /** Mecz przez sieć się zaczyna: pokój, skład, mój numer gracza i kanał gry */
@@ -236,7 +236,7 @@ export function createMenu(root: HTMLElement, events: MenuEvents): Menu {
   /** Ekran z nagłówkiem; szeroki = dwie kolumny (zakładki po lewej, treść po prawej) */
   const screen = (heading: string, wide: boolean, ...nodes: Node[]): void => {
     panel.classList.toggle('wide', wide);
-    panel.classList.remove('book'); wrap.classList.remove('book-open');
+    panel.classList.remove('book', 'parch'); wrap.classList.remove('book-open');
     panel.hidden = false;
     wrap.classList.add('sub-open');
     markBar(heading);
@@ -508,6 +508,16 @@ export function createMenu(root: HTMLElement, events: MenuEvents): Menu {
       levelRow.append(tile('level', lv === level, name ?? '', desc ?? '', () => { level = lv; }, `lvl-${lv}`));
     }
 
+    // kraina (docs/teren.md): losowa z nazwy mapy albo wybrana; wybrana idzie do zapisu gry
+    let biome: Biome | undefined;
+    const BIOME_DESC: Record<Biome, string> = {
+      meadow: tx('łąki, lasy, jeziora', 'meadows, woods, lakes'), highland: tx('płaskowyże i urwiska', 'plateaus and cliffs'),
+      steppe: tx('sucha trawa, cieplej', 'dry grass, warmer'), north: tx('tajga, zimno, śnieg', 'taiga, cold, snow'),
+    };
+    const biomeRow = el('div', 'pick-row lands');
+    biomeRow.append(tile('biome', true, tx('Losowa', 'Random'), tx('z nazwy mapy', 'from the map name'), () => { biome = undefined; preview(); }, 'biome-any'));
+    for (const b of BIOMES) biomeRow.append(tile('biome', false, t(BIOME[b].name), BIOME_DESC[b], () => { biome = b; preview(); }, `biome-${b}`));
+
     const seedWrap = el('div', 'field');
     const seedLabel = el('label', '', t('menu.mapName'));
     seedLabel.htmlFor = 'menu-seed';
@@ -525,8 +535,8 @@ export function createMenu(root: HTMLElement, events: MenuEvents): Menu {
       clearTimeout(timer);
       status.textContent = tx('Generuję mapę…', 'Generating the map…');
       timer = window.setTimeout(() => requestAnimationFrame(() => setTimeout(() => {
-        events.onPreviewMap(seed.value.trim() || 'project-1', preset, level, dev, walls);
-        const name = seed.value.trim() || 'project-1', land = t(BIOME[biomeOfSeed(seedFromText(name), hash2)].name);
+        events.onPreviewMap(seed.value.trim() || 'project-1', preset, level, dev, walls, biome);
+        const name = seed.value.trim() || 'project-1', land = t(BIOME[biome ?? biomeOfSeed(seedFromText(name), hash2)].name);
         status.textContent = tx(`Mapa „${name}” (kraina: ${land}) — widok z lotu ptaka. Losuj, aż trafisz na swoją.`, `Map “${name}” (land: ${land}) — bird’s-eye view. Keep rolling until you find the one you like.`);
       }, 20)), delay);
     };
@@ -568,9 +578,10 @@ export function createMenu(root: HTMLElement, events: MenuEvents): Menu {
     start.type = 'submit';
     const foot = el('div', 'newgame-foot');
     foot.append(back(), start);
-    form.append(section(t('hud.mode'), modeRow), section(t('menu.level'), levelRow), seedWrap, status, devLab, instLab, wallLab, warn, foot);
-    form.addEventListener('submit', (e) => { e.preventDefault(); clearTimeout(timer); wrap.classList.remove('previewing'); events.onNewGame(seed.value.trim() || 'project-1', preset, level, dev, instant, walls); });
+    form.append(section(t('hud.mode'), modeRow), section(t('menu.level'), levelRow), section(tx('Kraina', 'Land'), biomeRow), seedWrap, status, devLab, instLab, wallLab, warn, foot);
+    form.addEventListener('submit', (e) => { e.preventDefault(); clearTimeout(timer); wrap.classList.remove('previewing'); events.onNewGame(seed.value.trim() || 'project-1', preset, level, dev, instant, walls, biome); });
     screen(t('menu.newGame'), true, form);
+    panel.classList.add('parch'); // pergamin jak w księgach (Michał 3.11.2026)
     wrap.classList.add('previewing');
     preview();
   }

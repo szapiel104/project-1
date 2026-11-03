@@ -1,3 +1,4 @@
+import { BIOMES, type Biome } from '../data/biomes';
 import { BUILDINGS, footprint } from '../data/buildings';
 import type { MapPresetId } from '../data/maps';
 import { MAP_PRESETS } from '../data/maps';
@@ -17,6 +18,8 @@ export interface SaveData {
   seed: number;
   /** Wersja generatora map (brak = 1, zapisy sprzed większej mapy 1 na 1 i leśnych ścieżek) */
   gen?: number;
+  /** Kraina wybrana w „Nowej grze” (brak = z ziarna) */
+  biome?: Biome;
   preset: MapPresetId;
   tick: number;
   /** Przesunięcie pory roku (menu dewelopera); brak w starych zapisach — wtedy pora z kalendarza */
@@ -60,7 +63,7 @@ function shapeOk(s: string): boolean {
 /** Zapis gry jako zwykłe dane (JSON). Mapy nie zapisujemy: odtwarza się z ziarna. */
 export function serialize(g: GameState, preset: MapPresetId): SaveData {
   return {
-    v: SAVE_VERSION, shape: shape(), seed: g.map.seed, gen: g.map.gen, preset, tick: g.tick, ...(g.seasonShift ? { seasonShift: g.seasonShift } : {}), rng: g.rng.state, nextId: g.nextId, cut: [...g.cut], wear: [...g.wear].flatMap((n, i) => (n ? [[i, n] as [number, number]] : [])),
+    v: SAVE_VERSION, shape: shape(), seed: g.map.seed, gen: g.map.gen, ...(g.map.biome ? { biome: g.map.biome } : {}), preset, tick: g.tick, ...(g.seasonShift ? { seasonShift: g.seasonShift } : {}), rng: g.rng.state, nextId: g.nextId, cut: [...g.cut], wear: [...g.wear].flatMap((n, i) => (n ? [[i, n] as [number, number]] : [])),
     roads: [...g.roads].flatMap((n, i) => (n ? [[i, n] as [number, number]] : [])),
     roadPlan: [...g.roadPlan].flatMap((n, i) => (n ? [[i, n] as [number, number]] : [])),
     roadOwner: [...g.roadOwner].flatMap((n, i) => (n ? [[i, n] as [number, number]] : [])),
@@ -88,7 +91,7 @@ export function serialize(g: GameState, preset: MapPresetId): SaveData {
 export function deserialize(d: SaveData): GameState | null {
   try {
     if (d.v !== SAVE_VERSION || !shapeOk(d.shape) || !(d.preset in MAP_PRESETS)) return null;
-    const map = generateMap(d.seed, d.preset, d.gen ?? 1);
+    const map = generateMap(d.seed, d.preset, d.gen ?? 1, d.biome && (BIOMES as string[]).includes(d.biome) ? d.biome : undefined);
     const size = map.width * map.height;
     const g: GameState = {
       tick: d.tick, ...(Number.isFinite(d.seasonShift) && d.seasonShift ? { seasonShift: d.seasonShift } : {}), map, rng: new Rng(d.rng, true), nextId: d.nextId,

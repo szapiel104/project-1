@@ -1,5 +1,8 @@
 # Dziennik zmian
 
+## 0.87.0 — 3.11.2026
+- „Nowa gra”: `panel.parch` + `src/ui/newgame.css` (pergamin), rząd „Kraina” (`biome` → `onPreviewMap`/`onNewGame` → `createGame(..., biome)` / `createGameAsync` / `mapworker`); `generateMap(seed, preset, gen, biome?)`; zapis ma `biome` (`save.ts`), stare zapisy bez niego = kraina z ziarna. Mecz przez sieć: kraina dalej z ziarna (do zrobienia w pokoju). Boty: bez zmian.
+
 ## 0.86.0 — 3.11.2026
 - `ground.ts`: skała od nowa — triplanar z ostrym przejściem (`pow 8`), główna `cliff` + duża skala 26 m, `rock` (warstwy) tylko w płatach na ścianach, odcień i AO z jasności, normalna skały z trzech rzutów; plamy `macro` nie na skale.
 - Nowa tekstura `public/textures/terrain/cliff_n.jpg/.ktx2` (normalne liczone z `cliff.jpg`, `CREDITS.md`) zamiast `rock_n` w parze `nPR`; `TERRAIN_V` 6. Boty: bez zmian.

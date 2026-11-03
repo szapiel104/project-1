@@ -4,6 +4,7 @@
  */
 import { MAP_PRESETS, type MapPresetId } from '../data/maps';
 import { Rng } from './rng';
+import type { Biome } from '../data/biomes';
 import { createGame, type DevWalls, type GameState } from './state';
 
 let worker: Worker | null | undefined;
@@ -40,13 +41,13 @@ function getWorker(): Worker | null {
 }
 
 /** To samo co `createGame(seed, preset, level, dev, undefined, true, walls)`, ale bez zatrzymywania strony */
-export function createGameAsync(seed: number, preset: MapPresetId, level: number, dev: boolean, walls: DevWalls): Promise<GameState> {
-  const local = (): GameState => createGame(seed, preset, level, dev, undefined, true, walls);
+export function createGameAsync(seed: number, preset: MapPresetId, level: number, dev: boolean, walls: DevWalls, biome?: Biome): Promise<GameState> {
+  const local = (): GameState => createGame(seed, preset, level, dev, undefined, true, walls, false, biome);
   const w = getWorker();
   if (!w || !(preset in MAP_PRESETS)) return Promise.resolve().then(local);
   return new Promise((resolve, reject) => {
     const id = ++nextId;
     waiting.set(id, { resolve, fallback: () => { try { resolve(local()); } catch (e) { reject(e); } } });
-    w.postMessage({ id, seed, preset, level, dev, walls });
+    w.postMessage({ id, seed, preset, level, dev, walls, biome });
   });
 }
