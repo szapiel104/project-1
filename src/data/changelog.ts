@@ -10,6 +10,21 @@ export type { ChangeEntry } from './changelogTypes';
  */
 const NEW: ChangeEntry[] = [
   {
+    v: '0.82.0', date: '2026-11-03',
+    pl: [
+      '„Jak grać” jak prawdziwa księga: pergaminowe strony, czerwone nagłówki, inicjał na początku rozdziału, rady z pieczęcią i przejście do poprzedniego i następnego rozdziału.',
+      'Ustawienia na tym samym pergaminie: czytelne przełączniki i suwaki, poziomy grafiki jako karty z paskami mocy i podświetlonym obecnym poziomem.',
+      'Spis rozdziałów i stron z ikonami i wyraźną czcionką; „Co nowego” też na pergaminie.',
+      'Zapisy w chmurze konta, jedna nagroda PD za mecz i usuwanie uwag testerów działają już na serwerze.',
+    ],
+    en: [
+      '“How to play” as a real book: parchment pages, red headings, an initial letter at the start of each chapter, sealed tips and links to the previous and next chapter.',
+      'Settings on the same parchment: clear toggles and sliders, graphics presets as cards with power bars and the current level highlighted.',
+      'The contents list with icons and a clear font; “What’s new” on parchment too.',
+      'Cloud saves on your account, one XP award per match and deleting tester notes now work on the server.',
+    ],
+  },
+  {
     v: '0.81.0', date: '2026-11-03',
     pl: [
       'Nowy pokój gry: duży nagłówek z trybem, mapą i licznikiem miejsc, ustawienia jako przełączniki (tryb, rodzaj gry, boty), drużyny w kartach z kolorem.',

@@ -1,5 +1,10 @@
 # Dziennik zmian
 
+## 0.82.0 — 3.11.2026
+- Księgi menu na pergaminie (`src/ui/book.css`), nagłówki rozdziałów (`bookHead`), ikony spisu, pager rozdziałów, karty poziomów grafiki z `aria-pressed`.
+- Migracje f, g i note_delete wykonane w Supabase.
+- Boty: bez zmian (tylko interfejs menu).
+
 ## 0.81.0 — 3.11.2026
 - Pokój v2 (`.rm-*` w online.ts/friends.css), ranking v2 (`.rk-*`), ikony menu (`menuIcons.ts`), dzwoneczek: 7 dni wstecz (`NOTICE_DAYS`), nowe/przeczytane osobno; friendsView: zakładki od razu.
 - Boty: bez zmian (zmiany tylko w interfejsie sieciowym).

@@ -3,12 +3,13 @@
 Michał wykonuje migracje ręcznie: Supabase → projekt „project-1” → SQL Editor → wklej plik → Run.
 Każdy czat, który dodaje nową migrację, dopisuje ją tutaj. Po wykonaniu: przenieść do „Wykonane” i dopisać „wykonane DATA” w pierwszej linijce pliku.
 
-## Czekają (stan 2.11.2026)
-- `20261102f_saves_storage.sql` — kubeł `saves` w Supabase Storage na zapisy gry (folder na gracza). Bez niego zapisy są tylko w przeglądarce.
-- `20261102g_award_once.sql` — jeden mecz = jedna nagroda PD (numer meczu; wczytany zapis i ponowna wygrana nie dają drugi raz). Bez niej gra działa po staremu.
-- `20261103_note_delete.sql` — administrator usuwa uwagę testera na zawsze.
+## Czekają (stan 3.11.2026)
+- (nic)
 
 ## Wykonane
+- `20261103_note_delete.sql` — wykonane 3.11.2026
+- `20261102g_award_once.sql` — wykonane 3.11.2026
+- `20261102f_saves_storage.sql` — wykonane 3.11.2026
 - `20261102e_messages.sql` — wykonane 2.11.2026
 - `20261102d_seen_backfill.sql` — wykonane 2.11.2026
 - `20261102c_social.sql` — wykonane 2.11.2026

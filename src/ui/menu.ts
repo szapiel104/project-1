@@ -617,6 +617,17 @@ export function createMenu(root: HTMLElement, events: MenuEvents): Menu {
     return lab;
   };
 
+  /** Liczby rzymskie do numerów rozdziałów (1–39 wystarcza) */
+  const roman = (n: number): string => ['', 'I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X'][n % 10 === n ? n : 0] ?? (n >= 10 ? 'X'.repeat(Math.floor(n / 10)) + ['', 'I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX'][n % 10] : String(n));
+  /** Nagłówek strony księgi: mała linijka (rozdział / grupa), tytuł z ikoną i ozdobnik */
+  const bookHead = (kicker: string, title: string, icon: MenuIcon): HTMLElement => {
+    const h = el('header', 'bk-head');
+    const ic = el('span', 'bk-head-ico'); ic.setAttribute('aria-hidden', 'true'); ic.innerHTML = menuIcon(icon);
+    const tt = el('div', 'bk-head-t');
+    tt.append(el('span', 'bk-kicker', kicker), el('h2', 'help-title', title));
+    h.append(ic, tt);
+    return h;
+  };
   /**
    * Ustawienia jak księga „Jak grać”: duże okno, spis po lewej, strona po prawej. Grafika rozbita na strony
    * (od najważniejszych dla wyglądu), a wszystko, co gra poświęca dla płynności, osobno na samym końcu.
@@ -707,15 +718,30 @@ export function createMenu(root: HTMLElement, events: MenuEvents): Menu {
     };
     const intro = (text: string): HTMLElement => el('p', 'help-p', text);
     let current = 0;
-    const preset = (label: string, tier: number): HTMLButtonElement => button(label, () => {
+    const preset = (label: string, tier: number, desc = ''): HTMLButtonElement => {
       const q = TIERS[tier]!;
-      Object.assign(settings, { scale: q.scale, shadows: q.shadows, ao: q.ao, grass: q.grass, soft: !!q.soft, aa: q.aa, reflections: q.reflections, aniso: 16, sharpen: q.aa === 'fxaa' || q.aa === 'smaa' ? 0.3 : 0 });
-      manual(); showSettings(current);
-    }, 'menu-btn set-preset');
+      const b = button('', () => {
+        Object.assign(settings, { scale: q.scale, shadows: q.shadows, ao: q.ao, grass: q.grass, soft: !!q.soft, aa: q.aa, reflections: q.reflections, aniso: 16, sharpen: q.aa === 'fxaa' || q.aa === 'smaa' ? 0.3 : 0 });
+        manual(); showSettings(current);
+      }, 'menu-btn set-preset');
+      // obecny poziom podświetlony, żeby było widać, na czym gra stoi
+      const on = settings.scale === q.scale && settings.shadows === q.shadows && settings.ao === q.ao && settings.aa === q.aa && settings.grass === q.grass;
+      b.setAttribute('aria-pressed', String(on));
+      const bars = el('span', 'set-preset-bars'); bars.setAttribute('aria-hidden', 'true');
+      const lvl = [1, 2, 4, TIERS.length - 1].indexOf(tier);
+      for (let k = 0; k < 4; k++) bars.append(el('span', k <= lvl ? 'on' : ''));
+      b.append(bars, el('strong', '', label), el('span', 'set-preset-d', desc));
+      return b;
+    };
     const graphics: [string, () => Node[]][] = [
       [tx('Poziom grafiki', 'Graphics level'), () => {
         const presets = el('div', 'set-presets');
-        presets.append(preset(tx('Niska', 'Low'), 1), preset(tx('Średnia', 'Medium'), 2), preset(tx('Wysoka', 'High'), 4), preset('Ultra', TIERS.length - 1));
+        presets.append(
+          preset(tx('Niska', 'Low'), 1, tx('stary laptop', 'old laptop')),
+          preset(tx('Średnia', 'Medium'), 2, tx('zwykły komputer', 'ordinary PC')),
+          preset(tx('Wysoka', 'High'), 4, tx('dobra karta', 'good graphics card')),
+          preset('Ultra', TIERS.length - 1, tx('mocna karta', 'strong graphics card')),
+        );
         return [
           intro(tx('Gotowy poziom ustawia wszystkie opcje grafiki naraz. Potem na kolejnych stronach możesz poprawić pojedyncze rzeczy.', 'A preset sets every graphics option at once. You can fine-tune single things on the following pages.')),
           presets,
@@ -759,10 +785,12 @@ export function createMenu(root: HTMLElement, events: MenuEvents): Menu {
     ];
 
     // ---- księga: spis po lewej, strona po prawej ----
-    const pages: { title: string; group: number; make: () => Node[] }[] = [
-      ...graphics.map(([title, make]) => ({ title, group: 0, make })),
-      ...other.map(([title, make]) => ({ title, group: 1, make })),
+    const SET_ICONS: MenuIcon[] = ['eye', 'gem', 'sun', 'tree', 'gauge', 'speaker', 'layout', 'crown', 'mouse', 'hammer', 'scroll'];
+    const pages: { title: string; group: number; icon: MenuIcon; make: () => Node[] }[] = [
+      ...graphics.map(([title, make]) => ({ title, group: 0, icon: 'eye' as MenuIcon, make })),
+      ...other.map(([title, make]) => ({ title, group: 1, icon: 'eye' as MenuIcon, make })),
     ];
+    pages.forEach((p, i) => { p.icon = SET_ICONS[i] ?? 'scroll'; });
     const book = el('div', 'help-book set-book');
     const nav = el('nav', 'help-nav');
     nav.setAttribute('aria-label', t('menu.settings'));
@@ -774,7 +802,8 @@ export function createMenu(root: HTMLElement, events: MenuEvents): Menu {
       btns.forEach((b, k) => { b.setAttribute('aria-selected', String(k === i)); b.tabIndex = k === i ? 0 : -1; });
       const pg = pages[i]!;
       const sheet = el('article', 'help-text set-sheet');
-      sheet.append(el('h2', 'help-title', pg.title), ...pg.make());
+      const inGroup = pages.filter((x) => x.group === pg.group);
+      sheet.append(bookHead(`${pg.group === 0 ? t('menu.graphics') : tx('Pozostałe', 'Other')} · ${inGroup.indexOf(pg) + 1} / ${inGroup.length}`, pg.title, pg.icon), ...pg.make());
       pane.replaceChildren(sheet);
       pane.scrollTop = 0;
     };
@@ -784,7 +813,8 @@ export function createMenu(root: HTMLElement, events: MenuEvents): Menu {
       n++;
       const b = button('', () => show(i), 'help-toc-item');
       b.setAttribute('role', 'tab'); b.setAttribute('aria-controls', pane.id);
-      b.append(el('span', 'help-toc-n', pg.group === 0 ? String(n) : '◆'), el('span', 'help-toc-t', pg.title));
+      const ic = el('span', 'help-toc-n bk-ico'); ic.innerHTML = menuIcon(pg.icon);
+      b.append(ic, el('span', 'help-toc-t', pg.title));
       btns.push(b); list.append(b);
     });
     list.addEventListener('keydown', (e) => {
@@ -823,8 +853,22 @@ export function createMenu(root: HTMLElement, events: MenuEvents): Menu {
       });
       return table;
     };
-    const pages: { title: string; group: number; make: () => Node[] }[] = [
-      ...HELP_CHAPTERS.map((c) => ({ title: c.title, group: 0, make: () => { const box = el('article', 'help-text'); box.append(el('h2', 'help-title', c.title), ...c.blocks.map(block)); return [box]; } })),
+    // Księga „Jak grać” (Michał 3.11.2026: „nie czuć klimatu”): pergaminowa strona, nagłówek rozdziału z numerem,
+    // inicjał, ikony w spisie i przejście do poprzedniego / następnego rozdziału na dole strony
+    const HELP_ICONS: MenuIcon[] = ['flag', 'axe', 'wheat', 'friends', 'flask', 'hammer', 'moon', 'sword', 'shield', 'online', 'mouse'];
+    const total = HELP_CHAPTERS.length;
+    const pages: { title: string; group: number; icon: MenuIcon; make: () => Node[] }[] = [
+      ...HELP_CHAPTERS.map((c, ci) => ({ title: c.title, group: 0, icon: HELP_ICONS[ci] ?? 'scroll', make: () => {
+        const box = el('article', 'help-text bk-chapter');
+        box.append(bookHead(tx(`Rozdział ${roman(ci + 1)} · ${ci + 1} z ${total}`, `Chapter ${roman(ci + 1)} · ${ci + 1} of ${total}`), c.title, HELP_ICONS[ci] ?? 'scroll'), ...c.blocks.map(block));
+        const pager = el('nav', 'bk-pager'); pager.setAttribute('aria-label', tx('Rozdziały', 'Chapters'));
+        const prev = HELP_CHAPTERS[ci - 1], next = HELP_CHAPTERS[ci + 1];
+        if (prev) { const b = button('', () => { show(ci - 1); btns[ci - 1]!.focus(); }, 'bk-turn prev'); b.append(el('span', 'bk-turn-k', tx('← Poprzedni', '← Previous')), el('strong', '', prev.title)); pager.append(b); }
+        else pager.append(el('span'));
+        if (next) { const b = button('', () => { show(ci + 1); btns[ci + 1]!.focus(); }, 'bk-turn next'); b.append(el('span', 'bk-turn-k', tx('Następny →', 'Next →')), el('strong', '', next.title)); pager.append(b); }
+        box.append(pager);
+        return [box];
+      } })),
     ];
     const book = el('div', 'help-book');
     const nav = el('nav', 'help-nav');
@@ -843,7 +887,8 @@ export function createMenu(root: HTMLElement, events: MenuEvents): Menu {
       n++;
       const b = button('', () => show(i), 'help-toc-item');
       b.setAttribute('role', 'tab'); b.setAttribute('aria-controls', pane.id);
-      b.append(el('span', 'help-toc-n', pg.group === 0 ? String(n) : '◆'), el('span', 'help-toc-t', pg.title));
+      const ic = el('span', 'help-toc-n bk-ico'); ic.innerHTML = menuIcon(pg.icon);
+      b.append(ic, el('span', 'help-toc-t', pg.title));
       btns.push(b); list.append(b);
     });
     list.addEventListener('keydown', (e) => {

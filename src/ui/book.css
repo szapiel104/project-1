@@ -1,0 +1,119 @@
+/*
+ * Księgi w menu: „Jak grać”, „Ustawienia” i „Co nowego” (Michał 3.11.2026: „dramat, nie czuć klimatu, brzydkie”).
+ * Spis po lewej jak skórzany grzbiet z ikonami, strona po prawej jak pergamin: ciemny atrament, czerwone nagłówki,
+ * inicjał na początku rozdziału, rady jak notki z pieczęcią i przejście do poprzedniego / następnego rozdziału.
+ * Kontrast tekstu na pergaminie ≥ 7:1 (atrament #2a1b0c na #eddcb5), czerwieni i brązów ≥ 5:1.
+ */
+body .menu .menu-panel.book { --ink: #2a1b0c; --ink-soft: #5c4224; --rubric: #8a1f14; --parch: #eddcb5; --parch-edge: #b48a4c; }
+
+/* ---------- spis (grzbiet) ---------- */
+body .menu .help-book { gap: 0; grid-template-columns: clamp(250px, 21vw, 320px) minmax(0, 1fr); }
+body .menu .help-nav { padding: 6px 18px 4px 4px; border-right: 0; }
+body .menu .help-toc-group { margin: 14px 0 6px; font: 700 12.5px/1 var(--text, sans-serif); letter-spacing: .14em; text-transform: uppercase; color: #d9b968; }
+body .menu .help-toc-group:first-child { margin-top: 2px; }
+body .menu .help-toc-item { grid-template-columns: 34px 1fr; gap: 12px; min-height: 46px; padding: 6px 12px 6px 8px; font: 700 16.5px/1.2 var(--text, sans-serif); letter-spacing: .01em; text-transform: none; font-variant: normal;
+  color: #eadcbc; border: 1px solid transparent; border-left: 3px solid transparent; border-radius: 3px; background: none; }
+body .menu .help-toc-item:hover { color: #fff3d6; background: rgba(226, 194, 122, .1); }
+body .menu .help-toc-item[aria-selected='true'] { color: #fff6e0; background: linear-gradient(90deg, rgba(138, 31, 20, .75), rgba(138, 31, 20, .15)); border-left-color: #f0cf72; }
+body .menu .help-toc-item:focus-visible { outline: 2px solid #ffe6a0; outline-offset: -2px; }
+body .menu .help-toc-n.bk-ico { width: 32px; height: 32px; display: grid; place-items: center; padding: 0; font-size: 0; color: #e2c27a; background: rgba(10, 7, 4, .55); border: 1px solid rgba(154, 122, 42, .6); border-radius: 50%; }
+body .menu .help-toc-n.bk-ico svg { width: 18px; height: 18px; }
+body .menu .help-toc-item[aria-selected='true'] .help-toc-n.bk-ico, body .menu .help-toc-item:hover .help-toc-n.bk-ico { color: #2a1406; background: radial-gradient(circle at 35% 30%, #fff1c0, #e2b75a 70%); border-color: #fff1c0; }
+body .menu .help-nav .help-again { font-family: var(--text, sans-serif); font-size: 14.5px; text-transform: none; letter-spacing: 0; }
+
+/* ---------- strona (pergamin) ---------- */
+body .menu .help-pane { position: relative; padding: clamp(22px, 3.4vh, 40px) clamp(22px, 3.4vw, 56px) 28px; color: var(--ink);
+  background-color: var(--parch);
+  background-image: radial-gradient(ellipse at 50% 35%, rgba(255, 250, 232, .7), rgba(255, 250, 232, 0) 65%), linear-gradient(rgba(246, 232, 200, .62), rgba(246, 232, 200, .62)), url('/textures/cc0/plaster.jpg');
+  background-blend-mode: normal, normal, multiply; background-size: 100% 100%, auto, 520px auto; background-attachment: local;
+  border: 1px solid #120c08; border-radius: 2px;
+  box-shadow: 0 0 0 2px #6e5226, 0 0 0 3px #0e0906, inset 0 0 60px rgba(120, 78, 28, .38), inset 0 0 6px rgba(80, 50, 15, .5);
+  scrollbar-color: #8b6a38 transparent; }
+body .menu .help-pane .help-text { max-width: 860px; margin: 0 auto; gap: 14px; color: var(--ink); }
+body .menu .help-pane .help-text.set-sheet { max-width: 1000px; }
+
+/* nagłówek strony */
+body .menu .bk-head { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 16px; align-items: center; padding-bottom: 14px; margin-bottom: 6px;
+  background: linear-gradient(90deg, transparent, var(--parch-edge) 15%, var(--parch-edge) 85%, transparent) bottom / 100% 1px no-repeat; position: relative; }
+body .menu .bk-head::after { content: '◆'; position: absolute; left: 50%; bottom: -8px; transform: translateX(-50%); padding: 0 10px; font-size: 12px; line-height: 16px; color: var(--rubric); background: var(--parch); }
+body .menu .bk-head-ico { width: 54px; height: 54px; display: grid; place-items: center; color: #fff1c8; background: radial-gradient(circle at 35% 30%, #b8382a, #6e140c 72%); border: 2px solid #3a0a05; border-radius: 50%; box-shadow: 0 2px 6px rgba(60, 20, 5, .45), inset 0 0 0 2px rgba(255, 210, 160, .25); }
+body .menu .bk-head-ico svg { width: 26px; height: 26px; }
+body .menu .bk-head-t { display: grid; gap: 4px; min-width: 0; }
+body .menu .bk-kicker { font: 700 13px/1.2 var(--text, sans-serif); letter-spacing: .14em; text-transform: uppercase; color: var(--ink-soft); }
+body .menu .help-pane .help-title { margin: 0; font-family: 'Cinzel', var(--display); font-size: clamp(26px, 3.4vh, 36px); font-weight: 800; letter-spacing: .03em; line-height: 1.1; color: var(--rubric); text-shadow: none; }
+
+/* tekst */
+body .menu .help-pane .help-p { margin: 0; font-size: 18px; line-height: 1.65; color: var(--ink); }
+body .menu .help-pane .bk-chapter > .bk-head + .help-p::first-letter { float: left; margin: 6px 10px 0 0; font-family: 'Cinzel Decorative', 'Cinzel', serif; font-size: 3.4em; font-weight: 900; line-height: .82; color: var(--rubric); text-shadow: 1px 1px 0 rgba(255, 240, 200, .8); }
+body .menu .help-pane .help-h { margin: 18px 0 2px; display: flex; align-items: center; gap: 12px; font-family: 'Cinzel', var(--display); font-size: 19px; font-weight: 800; letter-spacing: .06em; text-transform: none; color: var(--rubric); }
+body .menu .help-pane .help-h::before { content: '❧'; font-size: 20px; color: var(--rubric); }
+body .menu .help-pane .help-h::after { content: ''; flex: 1; height: 1px; background: linear-gradient(90deg, var(--parch-edge), transparent); }
+body .menu .help-pane .help-tip { position: relative; margin: 4px 0; padding: 14px 18px 14px 62px; font-size: 17px; line-height: 1.55; font-style: normal; color: var(--ink);
+  background: rgba(255, 248, 228, .65); border: 1px solid rgba(138, 100, 50, .45); border-left: 4px solid var(--rubric); border-radius: 2px; }
+body .menu .help-pane .help-tip::before { content: '!'; position: absolute; left: 16px; top: 13px; width: 32px; height: 32px; display: grid; place-items: center; font: 900 17px/1 'Cinzel', serif; color: #fff1c8;
+  background: radial-gradient(circle at 35% 30%, #c0402e, #7a160c 70%); border-radius: 50%; box-shadow: 0 1px 3px rgba(60, 20, 5, .5); }
+body .menu .help-pane .help-tip strong { margin-right: 6px; font-family: 'Cinzel', var(--display); font-size: 14px; letter-spacing: .08em; text-transform: uppercase; color: var(--rubric); }
+body .menu .help-pane .help-tip.set-warn { border-left-color: #a8741a; background: rgba(255, 236, 190, .7); }
+body .menu .help-pane .help-tip.set-warn::before { background: radial-gradient(circle at 35% 30%, #e0a43a, #8a5a10 70%); }
+body .menu .help-pane .help-tip.set-warn strong { color: #7a4a08; }
+body .menu .help-pane .help-table { width: 100%; border-collapse: collapse; font-size: 16.5px; background: rgba(255, 248, 228, .45); border: 1px solid rgba(138, 100, 50, .45); }
+body .menu .help-pane .help-table th { padding: 10px 14px; text-align: left; font: 800 13px/1.2 var(--text, sans-serif); letter-spacing: .1em; text-transform: uppercase; color: #fff1c8; background: #5a2a14; border-bottom: 0; }
+body .menu .help-pane .help-table td { padding: 10px 14px; color: var(--ink); border-bottom: 1px solid rgba(138, 100, 50, .3); line-height: 1.45; }
+body .menu .help-pane .help-table tr:nth-child(even) td { background: rgba(180, 138, 76, .12); }
+body .menu .help-pane .help-table td:first-child { font-weight: 800; color: #4a2410; }
+body .menu .help-pane .hint, body .menu .help-pane .set-sheet > .hint { margin: 8px 0 0; font-size: 15.5px; line-height: 1.5; font-style: italic; color: var(--ink-soft); }
+
+/* przejście do sąsiednich rozdziałów */
+body .menu .bk-pager { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 22px; padding-top: 18px; border-top: 1px solid rgba(138, 100, 50, .45); }
+body .menu .bk-turn { display: grid; gap: 4px; min-height: 64px; padding: 10px 16px; text-align: left; font: inherit; text-transform: none; letter-spacing: 0; cursor: pointer;
+  color: var(--ink); background: rgba(255, 248, 228, .6); background-image: none; border: 1px solid rgba(138, 100, 50, .55); border-radius: 3px; box-shadow: none; }
+body .menu .bk-turn.next { text-align: right; justify-items: end; }
+body .menu .bk-turn:hover { background: rgba(255, 252, 238, .95); border-color: var(--rubric); }
+body .menu .bk-turn:focus-visible { outline: 3px solid var(--rubric); outline-offset: 2px; }
+body .menu .bk-turn-k { font: 700 12.5px/1 var(--text, sans-serif); letter-spacing: .12em; text-transform: uppercase; color: var(--ink-soft); }
+body .menu .bk-turn strong { font-family: 'Cinzel', var(--display); font-size: 17px; color: var(--rubric); }
+
+/* ---------- ustawienia na pergaminie ---------- */
+body .menu .help-pane .set-sheet > .help-p { margin-bottom: 4px; }
+body .menu .set-sheet .set-row, body .menu .set-sheet .set-toggle { padding: 14px 4px; border-bottom: 1px solid rgba(138, 100, 50, .32); }
+body .menu .set-sheet .set-name { font: 700 17px/1.3 var(--text, sans-serif); color: var(--ink); text-transform: none; letter-spacing: 0; }
+body .menu .set-sheet .seg { gap: 0; border: 1px solid #7a5a2e; border-radius: 3px; overflow: hidden; background: rgba(255, 248, 228, .55); }
+body .menu .set-sheet .seg-btn { min-height: 40px; font: 700 15px/1.1 var(--text, sans-serif); color: var(--ink); background: none; background-image: none; border: 0; border-right: 1px solid rgba(122, 90, 46, .55); box-shadow: none; text-shadow: none; text-transform: none; letter-spacing: 0; }
+body .menu .set-sheet .seg-btn:last-child { border-right: 0; }
+body .menu .set-sheet .seg-btn:hover { background: rgba(138, 31, 20, .1); }
+body .menu .set-sheet .seg-btn[aria-pressed='true'] { color: #fff6e0; background: linear-gradient(#a8281f, #6e1711); }
+body .menu .set-sheet .seg-btn:focus-visible { outline: 3px solid #2a1b0c; outline-offset: -3px; }
+body .menu .set-sheet .set-val { color: var(--rubric); font-size: 17px; }
+body .menu .set-sheet input[type='range'] { accent-color: #8a1f14; }
+body .menu .set-sheet .dev-knob { width: 50px; height: 28px; background: #b9a07a; border: 1px solid #6e5226; border-radius: 14px; }
+body .menu .set-sheet .dev-knob::after { top: 3px; left: 3px; width: 20px; height: 20px; background: #fff8e6; border-radius: 50%; box-shadow: 0 1px 2px rgba(0, 0, 0, .35); }
+body .menu .set-sheet .set-toggle input:checked + .dev-knob { background: #3f7a36; border-color: #24481f; }
+body .menu .set-sheet .set-toggle input:focus-visible + .dev-knob { outline: 3px solid #2a1b0c; outline-offset: 2px; }
+body .menu .set-sheet .menu-link { color: #fff6e0; }
+
+/* gotowe poziomy grafiki jako karty z paskami mocy; obecny w złotej ramce */
+body .menu .set-presets { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin: 10px 0 6px; }
+body .menu .set-presets .set-preset { display: grid; justify-items: center; align-content: center; gap: 6px; min-height: 104px; padding: 12px 8px; font: inherit; text-transform: none; letter-spacing: 0;
+  color: var(--ink); background: rgba(255, 248, 228, .6); background-image: none; border: 1px solid rgba(122, 90, 46, .65); border-radius: 4px; box-shadow: none; text-shadow: none; cursor: pointer; }
+body .menu .set-presets .set-preset:hover { background: rgba(255, 252, 238, .95); border-color: var(--rubric); }
+body .menu .set-presets .set-preset:focus-visible { outline: 3px solid var(--rubric); outline-offset: 2px; }
+body .menu .set-presets .set-preset[aria-pressed='true'] { color: #fff6e0; background: linear-gradient(#9c2a1c, #5e120b); border: 2px solid #f0cf72; box-shadow: 0 0 0 2px rgba(138, 31, 20, .35); }
+body .menu .set-preset strong { font-family: 'Cinzel', var(--display); font-size: 19px; }
+body .menu .set-preset-d { font-size: 13.5px; color: var(--ink-soft); }
+body .menu .set-preset[aria-pressed='true'] .set-preset-d { color: #f6dfb0; }
+body .menu .set-preset-bars { display: flex; gap: 3px; align-items: flex-end; height: 20px; }
+body .menu .set-preset-bars span { width: 6px; background: rgba(90, 60, 25, .25); border-radius: 1px; }
+body .menu .set-preset-bars span:nth-child(1) { height: 6px; } body .menu .set-preset-bars span:nth-child(2) { height: 10px; }
+body .menu .set-preset-bars span:nth-child(3) { height: 15px; } body .menu .set-preset-bars span:nth-child(4) { height: 20px; }
+body .menu .set-preset-bars span.on { background: #3f7a36; }
+body .menu .set-preset[aria-pressed='true'] .set-preset-bars span { background: rgba(255, 240, 200, .25); }
+body .menu .set-preset[aria-pressed='true'] .set-preset-bars span.on { background: #f0cf72; }
+
+/* „Co nowego” na tym samym pergaminie */
+body .menu .help-pane .changes-list li { color: var(--ink); }
+body .menu .help-pane .changes-list li::before { background: var(--rubric); }
+body .menu .help-pane :is(h3, h4) { color: var(--rubric); }
+body .menu .help-pane :is(p, li, span):not([class*='bk-']):not(.set-val):not(.set-preset-d) { color: inherit; }
+
+@media (max-width: 1100px) { body .menu .set-presets { grid-template-columns: repeat(2, minmax(0, 1fr)); } body .menu .bk-pager { grid-template-columns: 1fr; } }
+@media (prefers-reduced-motion: reduce) { body .menu .bk-turn, body .menu .set-preset { transition: none; } }
