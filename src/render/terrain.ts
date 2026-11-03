@@ -16,6 +16,7 @@ const leafFar = <M extends THREE.Material>(m: M): M => { m.userData.season = 'le
 import { createNoise2D } from 'simplex-noise';
 import { rng } from './craft';
 import { TERRAIN, Terrain } from '../data/terrain';
+import { RELIEF_M, type Biome } from '../data/biomes';
 import type { GameMap } from '../sim/map';
 import { hash2 } from '../sim/rng';
 import { fernTexture } from './foliage';
@@ -34,6 +35,20 @@ import { buildStreams, type Streams } from './streams';
 const HEIGHT_SCALE = 0.03;
 const smoothstep = (a: number, b: number, x: number): number => { const t = Math.max(0, Math.min(1, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
 export const HAZE = 0xcfc9b4;
+/**
+ * Roślinność krainy: `leafy` mnoży udział drzew liściastych (1 = jak dotąd), `lone` — co które pole łąki ma samotne drzewo,
+ * `bush` — co które pole łąki ma krzew, `pebble` — mnożnik odstępu kamyków (mniej = gęściej)
+ */
+const VEG: Record<Biome, { leafy: number; lone: number; bush: number; pebble: number }> = {
+  meadow: { leafy: 1, lone: 211, bush: 23, pebble: 1 },
+  highland: { leafy: 0.8, lone: 160, bush: 15, pebble: 0.45 },
+  steppe: { leafy: 2.2, lone: 95, bush: 8, pebble: 0.6 },
+  north: { leafy: 0.25, lone: 260, bush: 30, pebble: 0.8 },
+};
+/** Barwa podłoża krainy (mnożnik koloru wierzchołków; zdjęcia trawy dają resztę) */
+const BIOME_TINT: Record<Biome, [number, number, number]> = {
+  meadow: [1, 1.02, 0.96], highland: [0.98, 1, 0.9], steppe: [1.16, 1.02, 0.66], north: [0.86, 0.95, 1.0],
+};
 
 /** Wysokość pola w świecie 3D. Woda leży poniżej zera, góry wyrastają stromo. */
 function tileHeight(map: GameMap, x: number, y: number, waterLevel: number, shelf?: Float32Array): number {
@@ -41,7 +56,9 @@ function tileHeight(map: GameMap, x: number, y: number, waterLevel: number, shel
   const cy = Math.min(map.height - 1, Math.max(0, y));
   const e = map.elevation[cy * map.width + cx]!;
   const t = map.tiles[cy * map.width + cx] as Terrain;
-  if (t === Terrain.Mountain) return 1.3 + (e - 170) * 0.15;
+  // rzeźba (generator 8): płaskowyże i skały wewnątrz mapy stoją na zwykłym terenie, wyżej o `relief`
+  const lift = map.relief ? map.relief[cy * map.width + cx]! * RELIEF_M : 0;
+  if (t === Terrain.Mountain && !map.crag?.[cy * map.width + cx]) return 1.3 + (e - 170) * 0.15;
   const h = (e - waterLevel) * HEIGHT_SCALE;
   // dno jeziora: przy brzegu łagodna półka (płycizna, przez którą widać dno), dalej coraz głębiej aż do dna z mapy
   // (jeziora z mapy są płytkie, ok. 60 cm, więc środek pogłębiamy według odległości od brzegu: tam dna już nie widać)
@@ -52,7 +69,9 @@ function tileHeight(map: GameMap, x: number, y: number, waterLevel: number, shel
   if (map.gen >= 2) {
     // generator 2: wzgórza rosną łagodnie (miękkie kolano zamiast stromej ściany), niższe i szersze
     const x = Math.max(0, d - 95);
-    return 0.12 + Math.max(0, d) * 0.004 + ((x * x) / (x + 60)) * 0.014;
+    // skała wewnątrz mapy (urwisko, skałka) wystaje ponad swój taras: ostra krawędź progu, garb kamienia
+    const crag = t === Terrain.Mountain ? 0.45 : 0;
+    return 0.12 + Math.max(0, d) * 0.004 + ((x * x) / (x + 60)) * 0.014 + lift + crag;
   }
   return 0.12 + Math.max(0, d) * 0.004 + Math.max(0, d - 120) * HEIGHT_SCALE;
 }
@@ -178,9 +197,30 @@ function* terrainSteps(map: GameMap, models: ModelFactory, waterLevel: number): 
     for (let o = 0; o < oct; o++) { const n = 1 - Math.abs(nz(x * f, y * f)); v += n * n * a; sum += a; a *= 0.5; f *= 2.03; }
     return v / sum;
   };
+  // generator 8: płaskowyże są wysoko, ale to łąka — poszarpane są tylko góry na krańcach i skała wewnątrz mapy
+  const BIOMED = !!map.crag;
+  /** Narożnik przy polach skały: [ile pól gór na krańcach, ile pól skały wewnątrz mapy] (0..4) */
+  const rockAround = (x: number, y: number): [number, number] => {
+    let r = 0, c = 0;
+    for (const [dx, dy] of [[-1, -1], [0, -1], [-1, 0], [0, 0]] as const) {
+      const cx = Math.min(w - 1, Math.max(0, x + dx)), cy = Math.min(h - 1, Math.max(0, y + dy)), i = cy * w + cx;
+      if (map.tiles[i] !== Terrain.Mountain) continue;
+      if (map.crag?.[i]) c++; else r++;
+    }
+    return [r, c];
+  };
   for (let y = 0; y <= h; y++)
     for (let x = 0; x <= w; x++) {
       const k = y * (w + 1) + x, hh = corners[k]!;
+      if (BIOMED) {
+        const [r, c] = rockAround(x, y);
+        if (c && !r) {
+          // skała wewnątrz mapy: nierówna krawędź progu i garby skałek (ten sam szum grzbietowy co w górach, słabiej)
+          corners[k] = hh + (ridged(x / 3.5, y / 3.5, 4) - 0.4) * 0.9 * (c / 4) + (c === 4 ? 0.35 + ridged(x / 7 + 3, y / 7) * 0.8 : 0);
+          continue;
+        }
+        if (!r) continue;
+      }
       if (hh <= 1.6) continue;
       const lift = hh - 1.6;
       corners[k] = hh + (ridged(x / 11, y / 11, 5) - 0.45) * lift * 0.55 + Math.pow(ridged(x / 26 + 7, y / 26 - 3), 2) * Math.min(lift, 8) * 0.6;
@@ -268,11 +308,34 @@ function* terrainSteps(map: GameMap, models: ModelFactory, waterLevel: number): 
         const sx2 = Math.min(w - 1, Math.max(0, x + dx)), sy2 = Math.min(h - 1, Math.max(0, y + dy));
         sd += sandTile[sy2 * w + sx2]! * 0.25;
       }
+      // kraina (generator 8): barwa trawy, łaty piachu, gołej ziemi i kamieni (docs/teren.md, punkt 4)
+      let dry = 0, peb = 0;
+      const tint = BIOME_TINT[map.biome ?? 'meadow'];
+      if (map.biome && map.biome !== 'meadow') {
+        const n1 = nz(x / 9 + 13, y / 9 - 5), n2 = nz(x / 4.5 - 7, y / 4.5 + 21), n3 = nz(x / 17 + 3, y / 17 + 9);
+        if (map.biome === 'steppe') {
+          // step: wielkie łaty piachu i gołej ziemi między kępami suchej trawy
+          sd = Math.max(sd, smoothstep(0.25, 0.7, n1 * 0.7 + n3 * 0.5) * 0.95);
+          dry = smoothstep(0.2, 0.75, n2 * 0.6 + n3 * 0.4) * 0.55;
+          peb = smoothstep(0.55, 0.85, n2) * 0.35;
+        } else if (map.biome === 'highland') {
+          // wyżyna: żwir i kamienie przebijają przez trawę, najwięcej na płaskowyżach
+          peb = smoothstep(0.35, 0.8, n2 * 0.6 + n1 * 0.5) * (0.35 + Math.min(0.4, (map.relief?.[Math.min(h - 1, y) * w + Math.min(w - 1, x)] ?? 0) / 120));
+          dry = smoothstep(0.55, 0.85, n3) * 0.25;
+        } else {
+          // północ: kamienie z mchem i ciemniejsze plamy
+          peb = smoothstep(0.5, 0.85, n2) * 0.3;
+        }
+      }
       cornerSand[y * (w + 1) + x] = sd;
       const patch = 0.9 + ((hash2(x >> 2, y >> 2, map.seed) & 63) / 63) * 0.12 + ((hash2(x, y, map.seed ^ 0x55) & 15) / 15) * 0.06;
-      tmp.setRGB((r / 4) * patch, (g / 4) * patch, (b / 4) * patch);
+      // płaskowyż: nasłoneczniona, trochę suchsza trawa na górze
+      const up = map.relief ? Math.min(1, (map.relief[Math.min(h - 1, y) * w + Math.min(w - 1, x)] ?? 0) / 60) * 0.06 : 0;
+      tmp.setRGB((r / 4) * patch * tint[0] * (1 + up), (g / 4) * patch * tint[1] * (1 + up * 0.5), (b / 4) * patch * tint[2] * (1 - up));
       const hh = corner(x, y);
-      if (hh > 3) {
+      // generator 8: wysoko leżą też płaskowyże (łąka) — skała i śnieg tylko przy górach na krańcach
+      const rimNear = !BIOMED || rockAround(x, y)[0] > 0;
+      if (hh > 3 && rimNear) {
         // skała: ciemniejsze i jaśniejsze warstwy, powyżej nierównej linii śniegu biało
         const strata = 0.82 + ((hash2(x >> 1, Math.round(hh * 2.2), map.seed ^ 0x99) & 31) / 31) * 0.3;
         if (PHOTO_GROUND) tmp.setRGB(strata, strata * 0.98, strata * 0.95); else tmp.setRGB(0.47 * strata, 0.45 * strata, 0.43 * strata);
@@ -280,7 +343,7 @@ function* terrainSteps(map: GameMap, models: ModelFactory, waterLevel: number): 
         tmp.lerp(snow, Math.max(0, Math.min(1, (hh - line) / 1.6)));
       }
       const si = (y * (w + 1) + x) * 4;
-      cornerSplat[si] = sf; cornerSplat[si + 1] = sp; cornerSplat[si + 2] = Math.max(sr, Math.min(1, (hh - 2.4) / 0.9)); cornerSplat[si + 3] = 0;
+      cornerSplat[si] = sf; cornerSplat[si + 1] = Math.min(1, sp + peb); cornerSplat[si + 2] = Math.max(sr, rimNear ? Math.min(1, (hh - 2.4) / 0.9) : 0); cornerSplat[si + 3] = dry;
       const i = (y * (w + 1) + x) * 3;
       cornerCol[i] = tmp.r; cornerCol[i + 1] = tmp.g; cornerCol[i + 2] = tmp.b;
       nv.set(corner(Math.max(0, x - 1), y) - corner(Math.min(w, x + 1), y), 2, corner(x, Math.max(0, y - 1)) - corner(x, Math.min(h, y + 1))).normalize();
@@ -303,7 +366,7 @@ function* terrainSteps(map: GameMap, models: ModelFactory, waterLevel: number): 
         col[o] = cornerCol[ci]!; col[o + 1] = cornerCol[ci + 1]!; col[o + 2] = cornerCol[ci + 2]!;
         nor[o] = cornerNor[ci]!; nor[o + 1] = cornerNor[ci + 1]!; nor[o + 2] = cornerNor[ci + 2]!;
         const so = (p / 3 + k) * 4, cs4 = (qy * (w + 1) + qx) * 4;
-        spl[so] = cornerSplat[cs4]!; spl[so + 1] = cornerSplat[cs4 + 1]!; spl[so + 2] = cornerSplat[cs4 + 2]!; spl[so + 3] = 0;
+        spl[so] = cornerSplat[cs4]!; spl[so + 1] = cornerSplat[cs4 + 1]!; spl[so + 2] = cornerSplat[cs4 + 2]!; spl[so + 3] = cornerSplat[cs4 + 3]!;
         snd[p / 3 + k] = cornerSand[qy * (w + 1) + qx]!;
         // wzór trawy powtarza się co 5 pól, więc nie widać siatki
         uv[(o / 3) * 2] = qx / 5; uv[(o / 3) * 2 + 1] = qy / 5;
@@ -330,7 +393,7 @@ function* terrainSteps(map: GameMap, models: ModelFactory, waterLevel: number): 
     if (cx < 0 || cy < 0 || cx > w || cy > h) return;
     const ci = cy * (w + 1) + cx;
     const hh = corner(cx, cy);
-    if (hh > 3 || hh < 0.02) return; // skały i brzegi wody zostają
+    if ((hh > 3 && (!BIOMED || rockAround(cx, cy)[0] > 0)) || hh < 0.02) return; // skały i brzegi wody zostają (płaskowyże generatora 8 można wydeptać)
     const nv2 = Math.min(cap, worn[ci]! + amount);
     if (nv2 <= worn[ci]!) return;
     worn[ci] = nv2;
@@ -342,7 +405,7 @@ function* terrainSteps(map: GameMap, models: ModelFactory, waterLevel: number): 
         if (tx < 0 || ty < 0 || tx >= w || ty >= h) continue;
         for (const slot of SLOTS[`${dx},${dy}`]!) {
           const o = ((ty * w + tx) * 6 + slot) * 4 + 3;
-          spl[o] = k2;
+          spl[o] = Math.max(k2, cornerSplat[ci * 4 + 3]!); // goła ziemia krainy (step) zostaje pod wydeptaniem
           splLo = Math.min(splLo, o); splHi = Math.max(splHi, o + 1);
         }
       }
@@ -460,6 +523,7 @@ function* terrainSteps(map: GameMap, models: ModelFactory, waterLevel: number): 
   // Siatka indeksowana: każdy wierzchołek raz, gęsta przy planszy, rzadsza daleko (tam i tak mgła).
   const D = TEST ? 6 : 110;
   const floorCol = PHOTO_GROUND ? new THREE.Color(0.86, 0.88, 0.84) : new THREE.Color(0x46612a);
+  { const tn = BIOME_TINT[map.biome ?? 'meadow']; floorCol.setRGB(floorCol.r * tn[0], floorCol.g * tn[1], floorCol.b * tn[2]); } // za mapą ta sama kraina
   // wielkie masywy: losowo po bokach i w rogach, zawsze poza planszą
   const massifs: { x: number; y: number; r: number; hgt: number }[] = [];
   let seaSide = -1;
@@ -558,7 +622,8 @@ function* terrainSteps(map: GameMap, models: ModelFactory, waterLevel: number): 
         N[k * 3] = nv2.x; N[k * 3 + 1] = nv2.y; N[k * 3 + 2] = nv2.z;
         // pod lasem ściółka; skała, gdzie stromo albo wysoko (śnieg dokłada shader)
         const rockK = Math.max(smoothstep(0.82, 0.6, nv2.y), smoothstep(13, 17, hs[k]!));
-        const sandK = outerSand(X, Y);
+        // step: piach i łaty gołej ziemi także za mapą (inaczej plansza kończyłaby się zieloną ramą)
+        const sandK = map.biome === 'steppe' ? Math.max(outerSand(X, Y), smoothstep(0.3, 0.75, nz(X / 9 + 13, Y / 9 - 5) * 0.7 + nz(X / 17 + 3, Y / 17 + 9) * 0.5) * 0.9) : outerSand(X, Y);
         SD[k] = sandK;
         S[k * 4] = Math.min(0.9, d / 4) * (1 - rockK) * (1 - sandK); S[k * 4 + 2] = rockK * (1 - sandK);
       }
@@ -830,6 +895,10 @@ function* terrainSteps(map: GameMap, models: ModelFactory, waterLevel: number): 
     m.compose(pos, q, scale);
     list.push({ m: m.clone(), shade: 0.8 + (((r >>> 20) & 15) / 15) * 0.4, tile: y * w + x, pos, q: q.clone(), s: scale });
   };
+  // kraina (generator 8): północ to prawie sama tajga, step — liściaste gaje i dużo krzewów, wyżyna pomiędzy
+  const V = VEG[map.biome ?? 'meadow'];
+  /** Drzewo liściaste czy iglaste: `base` = szansa na liściaste na łęgach (np. 4 → co czwarte) */
+  const role = (r: number, base: number): Item[] => (((r >>> 3) % 24) < Math.round((24 / base) * V.leafy) ? leafy : pines);
   for (let y = 0; y < h; y++) {
     for (let x = 0; x < w; x++) {
       const t = map.tiles[y * w + x] as Terrain;
@@ -848,7 +917,7 @@ function* terrainSteps(map: GameMap, models: ModelFactory, waterLevel: number): 
         }
         if (ex || ez) {
           const l = Math.hypot(ex, ez) || 1;
-          put((r >>> 3) % 3 === 0 ? leafy : pines, x, y, 0, age < 8 ? 0.55 : 0.8, 0.3, (ex / l) * 0.32, (ez / l) * 0.32);
+          put(role(r, 3), x, y, 0, age < 8 ? 0.55 : 0.8, 0.3, (ex / l) * 0.32, (ez / l) * 0.32);
           if ((r >>> 17) % 3 === 0) put(bushes, x, y, 4, 0.7, 0.5);
           continue;
         }
@@ -858,7 +927,7 @@ function* terrainSteps(map: GameMap, models: ModelFactory, waterLevel: number): 
         if (depth <= 1) {
           // skraj lasu: młodsze i niższe drzewa (częściej liściaste, które lubią światło), gęsto krzaki — las nie urywa się ścianą
           const edgeSize = age < 3 ? 1 : age < 12 ? 0.75 : 0.5;
-          put((r >>> 3) % 2 === 0 ? leafy : pines, x, y, 0, edgeSize, 0.8);
+          put(role(r, 2), x, y, 0, edgeSize, 0.8);
           if ((r >>> 17) % 3 !== 0) put(bushes, x, y, 4, 0.8 + ((r >>> 21) & 3) * 0.1, 0.95);
           if ((r >>> 23) % 3 === 0) put(ferns, x, y, 6, 0.9, 0.95);
           if ((r >>> 28) % 14 === 0) put(firs, x, y, 10, 0.55, 0.9);
@@ -866,12 +935,18 @@ function* terrainSteps(map: GameMap, models: ModelFactory, waterLevel: number): 
         }
         const size = age === 0 ? 1.55 : age < 3 ? 1.25 : age < 12 ? 1 : age < 17 ? 0.7 : 0.45;
         // w głębi starszy las: drzewa dorastają do pełnej wielkości
-        put((r >>> 3) % 4 === 0 ? leafy : pines, x, y, 0, size * (depth >= 3 ? 1.08 : 0.95), age === 0 ? 0.25 : 0.75);
+        put(role(r, 4), x, y, 0, size * (depth >= 3 ? 1.08 : 0.95), age === 0 ? 0.25 : 0.75);
         if ((r >>> 17) % 4 === 0 || age >= 17) put(bushes, x, y, 4, 0.75 + ((r >>> 21) & 3) * 0.1, 0.95);
         // podszyt: paprocie w cieniu koron, tu i ówdzie opadła gałąź
         if ((r >>> 23) % 5 < 2) put(ferns, x, y, 6, 0.85 + ((r >>> 26) & 3) * 0.12, 0.95);
         if ((r >>> 27) % 9 === 0) put(deadwood, x, y, 8, 0.9 + ((r >>> 5) & 3) * 0.15, 0.9);
         if ((r >>> 28) % 9 === 0) put(firs, x, y, 10, 0.6 + ((r >>> 9) & 3) * 0.06, 0.9);
+      } else if (t === Terrain.Mountain && map.crag?.[y * w + x]) {
+        // skała wewnątrz mapy (generator 8): skałka to garb z kilku zrośniętych głazów, urwisko — bloki wzdłuż progu
+        const c = map.crag[y * w + x]!;
+        const n = c === 2 ? 2 + ((r >>> 9) & 1) : 1 + ((r >>> 9) % 3 === 0 ? 1 : 0);
+        for (let k = 0; k < n; k++) put(rocks, x, y, 60 + k, (c === 2 ? 1.05 : 0.8) + ((r >>> (12 + k * 3)) & 7) / 12, 0.95);
+        if ((r >>> 21) & 1) put(pebbles, x, y, 65, 0.35, 0.95);
       } else if (t === Terrain.Stone) { put(rocks, x, y, 0, 1.1); if ((r >>> 6) & 1) put(pebbles, x, y, 5, 0.5, 0.9); }
       else if (t === Terrain.Iron) put(ores, x, y, 0, 1);
       // brzeg wody: kępy trzcin i pałek po obu stronach linii wody, na płyciźnie liście grzybieni
@@ -911,15 +986,15 @@ function* terrainSteps(map: GameMap, models: ModelFactory, waterLevel: number): 
         // między kamieniami jałowiec i krzaki, trawa zostaje (to łąka pod górą, nie żwirowisko)
         if ((r >>> 24) % 7 === 0) put(bushes, x, y, 56, 0.6 + ((r >>> 27) & 3) * 0.1, 0.95);
       }
-      else if (t === Terrain.Grass && !sandy && !nearW && !map.trails?.[y * w + x] && !besideForest(x, y) && (r >>> 7) % 211 === 0 && farFromKeeps(x, y)) {
+      else if (t === Terrain.Grass && !sandy && !nearW && !map.trails?.[y * w + x] && !besideForest(x, y) && (r >>> 7) % V.lone === 0 && farFromKeeps(x, y)) {
         // samotne drzewo na łące: rozłożysty, stary dąb (czasem świerk), widoczny z daleka
-        put((r >>> 3) % 5 === 0 ? pines : leafy, x, y, 0, 1.35 + ((r >>> 20) & 7) / 25, 0.5);
+        put(role(r, 1.25), x, y, 0, 1.35 + ((r >>> 20) & 7) / 25, 0.5);
         put(bushes, x, y, 4, 0.7, 0.95);
       }
       else if (t === Terrain.Grass && !sandy && besideForest(x, y) && !map.trails?.[y * w + x] && (r >>> 14) % 5 < 3) {
         // łąka przy lesie: zarasta młodymi drzewkami (samosiejki), krzakami i paprociami — przejście łąka–las stopniowe
         const k = (r >>> 18) % 6;
-        if (k < 2) put((r >>> 3) % 3 === 0 ? pines : leafy, x, y, 0, 0.32 + ((r >>> 20) & 7) / 30, 0.9);
+        if (k < 2) put(role(r, 1.5), x, y, 0, 0.32 + ((r >>> 20) & 7) / 30, 0.9);
         else if (k < 5) put(bushes, x, y, 4, 0.7 + ((r >>> 21) & 3) * 0.12, 0.95);
         if ((r >>> 25) % 3 === 0) put(ferns, x, y, 6, 0.75, 0.95);
       }
@@ -931,11 +1006,11 @@ function* terrainSteps(map: GameMap, models: ModelFactory, waterLevel: number): 
         if (TEST && ((r >>> 7) & 3) === 0) put(tufts, x, y, 2, 1, 0.95);
         // kwiaty wyłączone na razie (19.10.2026, prośba Michała) — wrócą z gotowych modeli; włącza się je z powrotem tą flagą
         if (FLOWERS && (r >>> 13) % 15 === 0) { put(flowers, x, y, 7, 1, 0.9); put(flowers, x, y, 8, 0.9, 0.9); if ((r >>> 4) & 1) put(flowers, x, y, 9, 1.1, 0.9); }
-        if ((r >>> 16) % 23 === 0) put(bushes, x, y, 4, 0.9 + ((r >>> 20) & 7) / 14, 0.6);
+        if ((r >>> 16) % V.bush === 0) put(bushes, x, y, 4, 0.9 + ((r >>> 20) & 7) / 14, 0.6);
         // większe głazy na łące liczy teraz symulacja (sim/systems/boulders.ts) — są fizyczne: blokują budowę, mają
         // kolizję w spacerze i można je rozbić; rysowane przed pętlą z tej samej listy
         // drobne kamyki wystające z darni, częściej tam, gdzie łąka rzadsza
-        if ((r >>> 22) % (lush > 0.5 ? 19 : 11) === 0) put(pebbles, x, y, 12, 0.12 + ((r >>> 26) & 7) / 40, 0.95);
+        if ((r >>> 22) % Math.max(3, Math.round((lush > 0.5 ? 19 : 11) * V.pebble)) === 0) put(pebbles, x, y, 12, 0.12 + ((r >>> 26) & 7) / 40, 0.95);
         if ((r >>> 25) % 41 === 0) put(pebbles, x, y, 14, 0.1 + ((r >>> 3) & 7) / 50, 0.95);
       }
     }

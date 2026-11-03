@@ -2,6 +2,7 @@ import { BUILDINGS, footprint } from '../data/buildings';
 import { BANDIT_COLOR, TEAM_COLORS } from '../data/teams';
 import { t, tx } from '../i18n';
 import { TERRAIN, Terrain } from '../data/terrain';
+import { BIOME } from '../data/biomes';
 import { FP, type GameState } from '../sim/state';
 
 /**
@@ -148,6 +149,9 @@ export function createMinimap(host: MinimapHost): { update(g: GameState, me: num
       place();
       if (!visible || now - last < 150) return;
       last = now;
+      // nazwa krainy przy tytule mapy (generator 8)
+      const head = g.map.biome ? `${t('hud.map')} · ${t(BIOME[g.map.biome].name)}` : t('hud.map');
+      if (title.textContent !== head) title.textContent = head;
       state = g;
       const { width: w, height: h } = g.map;
       const key = `${g.map.seed}|${w}|${g.cut.length}`;

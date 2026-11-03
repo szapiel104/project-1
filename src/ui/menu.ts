@@ -7,6 +7,8 @@ import { levelOf, titleOf } from '../data/progress';
 import { createOnline, type OnlineStart } from './online';
 import { avatarSvg } from './avatars';
 import { MAP_PRESETS, type MapPresetId } from '../data/maps';
+import { BIOME, biomeOfSeed } from '../data/biomes';
+import { hash2, seedFromText } from '../sim/rng';
 import { t, tx, lang, setLang, LANGS } from '../i18n';
 import { HELP_CHAPTERS, type HelpBlock } from './helpText';
 import { changesBook } from './changesBook';
@@ -524,7 +526,8 @@ export function createMenu(root: HTMLElement, events: MenuEvents): Menu {
       status.textContent = tx('Generuję mapę…', 'Generating the map…');
       timer = window.setTimeout(() => requestAnimationFrame(() => setTimeout(() => {
         events.onPreviewMap(seed.value.trim() || 'project-1', preset, level, dev, walls);
-        status.textContent = tx(`Mapa „${seed.value.trim() || 'project-1'}” — widok z lotu ptaka. Losuj, aż trafisz na swoją.`, `Map “${seed.value.trim() || 'project-1'}” — bird’s-eye view. Keep rolling until you find the one you like.`);
+        const name = seed.value.trim() || 'project-1', land = t(BIOME[biomeOfSeed(seedFromText(name), hash2)].name);
+        status.textContent = tx(`Mapa „${name}” (kraina: ${land}) — widok z lotu ptaka. Losuj, aż trafisz na swoją.`, `Map “${name}” (land: ${land}) — bird’s-eye view. Keep rolling until you find the one you like.`);
       }, 20)), delay);
     };
     seed.addEventListener('input', () => preview(700));

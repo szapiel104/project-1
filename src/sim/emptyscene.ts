@@ -19,12 +19,12 @@ export function emptyScene(g: GameState): void {
   const tiles = new Uint8Array(g.map.tiles.length);
   const elevation = new Uint8Array(g.map.tiles.length).fill(level);
   for (let i = 0; i < tiles.length; i++) {
-    const rim = g.map.tiles[i] === Terrain.Mountain;
+    const rim = g.map.tiles[i] === Terrain.Mountain && !g.map.crag?.[i]; // skałki i urwiska wewnątrz mapy znikają
     tiles[i] = rim ? Terrain.Mountain : Terrain.Grass;
     if (rim) elevation[i] = g.map.elevation[i]!;
   }
   // nowy obiekt mapy: podręczne tablice przechodniości (trzymane per mapa) liczą się od nowa
-  g.map = { ...g.map, tiles, elevation, trails: new Uint8Array(tiles.length) };
+  g.map = { ...g.map, tiles, elevation, trails: new Uint8Array(tiles.length), ...(g.map.relief ? { relief: new Uint8Array(tiles.length), crag: new Uint8Array(tiles.length) } : {}) };
   const keeps = g.buildings.filter((b) => BUILDINGS[b.type]!.id === 'keep');
   g.buildings = []; g.units = []; g.soldiers = []; g.corpses = []; g.travelers = []; g.wolves = []; g.cut = []; g.saplings = []; g.rubble = []; g.marches = []; g.graves = [];
   for (const a of [g.occupancy, g.gates, g.walls, g.reserved, g.wear, g.roads, g.roadPlan, g.roadOwner]) a.fill(0);

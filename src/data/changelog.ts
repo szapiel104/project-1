@@ -10,6 +10,25 @@ export type { ChangeEntry } from './changelogTypes';
  */
 const NEW: ChangeEntry[] = [
   {
+    v: '0.84.0', date: '2026-11-03',
+    pl: [
+      'Krainy: każda nowa mapa ma swój krajobraz — Łęgi (łąki, lasy, jeziora), Wyżyna (płaskowyże ze skalnymi urwiskami), Step (suche trawy, piach, rzadkie gaje, cieplej i częściej susza) albo Północ (gęsta tajga, chłodno, śnieg leży dłużej). Nazwa krainy jest przy minimapie i przy podglądzie mapy w „Nowej grze”.',
+      'Płaskowyże z urwiskami nie do przejścia i z łagodnymi podjazdami, skałki na łąkach i rumowiska pod skałą. Zamek zawsze stoi na równym, a z każdego zamku da się dojść do każdego.',
+      'Koniec prostego „szwu” przez środek mapy: lasy, jeziora i wzgórza przechodzą płynnie przez połowę mapy.',
+      'Śnieg pada: przy mrozie zamiast deszczu sypią płatki, a zimą przy zachmurzeniu przechodzą drobne śnieżyce.',
+      'Nowy dym: kłęby z poszarpanymi brzegami, które powoli się obracają; nad pożarem gęsty słup podświetlony od dołu łuną ognia, z kominów jasny i miękki.',
+      'Za dnia żywsze, cieplejsze barwy i lżejsza winieta — mniej szaro (noc i deszcz jak dotąd).',
+    ],
+    en: [
+      'Lands: every new map has its own landscape — Lowland meadows (meadows, woods, lakes), Highlands (plateaus with rocky cliffs), Steppe (dry grass, sand, sparse groves, warmer with more droughts) or Northlands (dense taiga, cold, snow lingers). The land’s name sits by the minimap and under the map preview in “New game”.',
+      'Plateaus with impassable cliffs and gentle ramps, rocky outcrops on the meadows and scree below the rock. Your keep always stands on level ground, and every keep can reach every other.',
+      'No more straight “seam” across the middle of the map: woods, lakes and hills flow smoothly across both halves.',
+      'Snow falls: in frost you get flakes instead of rain, and in winter light flurries drift by under cloudy skies.',
+      'New smoke: billows with ragged edges that slowly turn; a fire sends up a thick column lit from below by the blaze, chimneys give off soft pale smoke.',
+      'By day the colours are livelier and warmer with a lighter vignette — far less grey (night and rain as before).',
+    ],
+  },
+  {
     v: '0.83.1', date: '2026-11-03',
     pl: [
       'Koszary: większe kafelki, postać na cały kafelek (włócznik już nie jest malutki), duża tabliczka „×4” z liczbą, ilu możesz wyszkolić.',

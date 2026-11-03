@@ -1,4 +1,5 @@
 import { RULES } from '../data/rules';
+import { BIOME, type Biome } from '../data/biomes';
 import { tx } from '../i18n';
 import { clockAt, dayFraction } from './clock';
 
@@ -46,7 +47,7 @@ const hash = (a: number, b: number): number => {
 };
 
 /** Temperatura w °C (z jedną cyfrą po przecinku). rain = 0..1 (deszcz chłodzi) */
-export function temperatureAt(tick: number, seed: number, rain = 0, shift = 0): number {
+export function temperatureAt(tick: number, seed: number, rain = 0, shift = 0, biome?: Biome): number {
   const pos = yearPos(tick, shift);
   // rok: +24° w połowie lata (0.375), −6° w połowie zimy (0.875)
   const year = 9 + 15 * Math.cos(2 * Math.PI * (pos - 0.375));
@@ -57,11 +58,11 @@ export function temperatureAt(tick: number, seed: number, rain = 0, shift = 0): 
   // pogoda dnia: losowe odchylenie ±3,5°, płynnie z dnia na dzień
   const d0 = Math.floor(days), f = days - d0, s = f * f * (3 - 2 * f);
   const noise = ((hash(seed, d0) * (1 - s) + hash(seed, d0 + 1) * s) - 0.5) * 7;
-  return Math.round((year + daily + noise - rain * 3) * 10) / 10;
+  return Math.round((year + daily + noise - rain * 3 + (biome ? BIOME[biome].temp : 0)) * 10) / 10; // kraina: step cieplejszy, północ zimna
 }
 
 /** Pogoda w grze: pora roku, temperatura (z deszczem) i jak bardzo zimno (0 = ciepło, 1 = ok. 0°C, 1.75 = −6°C) */
-export function weatherOf(g: { tick: number; map: { seed: number }; seasonShift?: number }, rain = 0): { season: Season; temp: number; chill: number } {
-  const temp = temperatureAt(g.tick, g.map.seed, rain, g.seasonShift ?? 0);
+export function weatherOf(g: { tick: number; map: { seed: number; biome?: Biome }; seasonShift?: number }, rain = 0): { season: Season; temp: number; chill: number } {
+  const temp = temperatureAt(g.tick, g.map.seed, rain, g.seasonShift ?? 0, g.map.biome);
   return { season: seasonAt(g.tick, g.seasonShift ?? 0), temp, chill: Math.max(0, Math.min(2, (COLD - temp) / COLD)) };
 }

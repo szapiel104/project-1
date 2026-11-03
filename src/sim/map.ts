@@ -1,6 +1,10 @@
 import { hash2 } from './rng';
 import { Terrain } from '../data/terrain';
 import { LEGACY_PRESETS, MAP_GEN, MAP_PRESETS, type MapPreset } from '../data/maps';
+import { symNoise, valueNoise } from './noise';
+import { BIOME, BIOME_GEN, biomeOfSeed, type Biome } from '../data/biomes';
+import { shapeRelief } from './relief';
+export { valueNoise } from './noise';
 
 export interface StartPosition {
   /** Indeks gracza 0..n-1 */
@@ -28,26 +32,12 @@ export interface GameMap {
   river?: Uint8Array;
   /** Polany pod obozy zbójów w puszczy (generator 5): środek polany (pole); parami — obóz i jego odbicie po stronie wroga */
   dens?: number[];
-}
-
-const FP = 256; // stały przecinek: 8 bitów części ułamkowej
-
-/** Szum wartościowy z interpolacją dwuliniową, w całości na liczbach całkowitych. Wynik 0..255. */
-function valueNoise(x: number, y: number, cell: number, seed: number): number {
-  const gx = Math.floor(x / cell);
-  const gy = Math.floor(y / cell);
-  const fx = Math.floor(((x - gx * cell) * FP) / cell);
-  const fy = Math.floor(((y - gy * cell) * FP) / cell);
-  // wygładzenie 3t^2 - 2t^3 w stałym przecinku
-  const sx = Math.floor((fx * fx * (3 * FP - 2 * fx)) / (FP * FP));
-  const sy = Math.floor((fy * fy * (3 * FP - 2 * fy)) / (FP * FP));
-  const a = hash2(gx, gy, seed) & 255;
-  const b = hash2(gx + 1, gy, seed) & 255;
-  const c = hash2(gx, gy + 1, seed) & 255;
-  const d = hash2(gx + 1, gy + 1, seed) & 255;
-  const top = a * (FP - sx) + b * sx;
-  const bot = c * (FP - sx) + d * sx;
-  return Math.floor((top * (FP - sy) + bot * sy) / (FP * FP));
+  /** Kraina (generator 8, data/biomes.ts); dawne mapy: brak = łęgi */
+  biome?: Biome;
+  /** Rzeźba (generator 8, sim/relief.ts): o ile pole leży wyżej (jednostki RELIEF_M); tylko wygląd i progi */
+  relief?: Uint8Array;
+  /** Skała wewnątrz mapy (generator 8): 1 = urwisko płaskowyżu, 2 = skałka; w `tiles` to `Terrain.Mountain` */
+  crag?: Uint8Array;
 }
 
 function fractal(x: number, y: number, seed: number): number {
@@ -67,6 +57,10 @@ export function generateMap(seed: number, presetId: keyof typeof MAP_PRESETS = '
   const { width, height } = preset;
   const tiles = new Uint8Array(width * height);
   const elevation = new Uint8Array(width * height);
+  const biome: Biome | undefined = gen >= BIOME_GEN ? biomeOfSeed(seed, hash2) : undefined;
+  // kraina: mniej albo więcej wody (przesuwamy wysokość, nie próg — rysowanie liczy brzeg od progu z presetu) i lasu
+  const B = biome ? BIOME[biome] : null;
+  const forestAt = B ? B.forest : 146;
 
   for (let y = 0; y < height; y++) {
     for (let x = 0; x < width; x++) {
@@ -78,27 +72,30 @@ export function generateMap(seed: number, presetId: keyof typeof MAP_PRESETS = '
         elevation[i] = elevation[mi]!;
         continue;
       }
-      const h = fractal(x, y, seed);
-      const forest = fractal(x, y, seed ^ 0x51ed270b);
+      // od generatora 8 szumy są symetryczne same z siebie: bez prostego „szwu” przez środek mapy
+      const S = gen >= BIOME_GEN ? (f: (x: number, y: number) => number): number => symNoise(x, y, width, height, f) : (f: (x: number, y: number) => number): number => f(x, y);
+      const h = S((a, b) => fractal(a, b, seed));
+      const forest = S((a, b) => fractal(a, b, seed ^ 0x51ed270b));
       const ore = valueNoise(x, y, 7, seed ^ 0x2545f491);
       let t: Terrain = Terrain.Grass;
       let e = h;
       // pas gór na krańcach: nierówna krawędź z szumu, im bliżej brzegu, tym wyżej
       const edge = Math.min(x, y, width - 1 - x, height - 1 - y);
-      const rim = preset.rim + Math.floor((valueNoise(x, y, 9, seed ^ 0x3c6ef372) * 5) / 256) - 2;
+      const rim = preset.rim + Math.floor((S((a, b) => valueNoise(a, b, 9, seed ^ 0x3c6ef372)) * 5) / 256) - 2;
       // góry tylko w masywach przy krawędzi, a między nimi teren dochodzi do puszczy za mapą
-      const massif = valueNoise(x, y, 13, seed ^ 0x6a09e667);
+      const massif = S((a, b) => valueNoise(a, b, 13, seed ^ 0x6a09e667));
       if (edge < rim && massif > 150) {
         t = Terrain.Mountain;
         e = Math.min(255, 170 + Math.min(rim - edge, (massif - 150) >> 3) * 9 + (hash2(x, y, seed) & 15));
-      } else if (h < preset.waterLevel) t = Terrain.Water;
+      } else if (B && (e = Math.max(0, Math.min(255, h - B.water))) < preset.waterLevel) t = Terrain.Water;
+      else if (!B && h < preset.waterLevel) t = Terrain.Water;
       // kamień i żelazo tylko u podnóża gór, w niedużych złożach; żelazo rzadsze i bliżej skał
       // (od generatora 4 złóż na powierzchni nie ma wcale — kamień, żelazo i rudę daje kopalnia pod górą)
       else if (gen < 4 && edge < rim + 3 && massif > 120 && ore > 208) t = Terrain.Iron;
       else if (gen < 4 && edge < rim + 5 && massif > 105 && valueNoise(x, y, 6, seed ^ 0x1b873593) > 186) t = Terrain.Stone;
-      else if (forest > 146) {
+      else if (forest > forestAt) {
         // w głębi puszczy tu i ówdzie polana (generator 2), żeby las nie był jednolitą ścianą
-        t = gen >= 2 && forest < 200 && valueNoise(x, y, 5, seed ^ 0x0badf00d) > 226 ? Terrain.Grass : Terrain.Forest;
+        t = gen >= 2 && forest < 200 && S((a, b) => valueNoise(a, b, 5, seed ^ 0x0badf00d)) > 226 ? Terrain.Grass : Terrain.Forest;
       }
       tiles[i] = t;
       elevation[i] = e;
@@ -116,6 +113,8 @@ export function generateMap(seed: number, presetId: keyof typeof MAP_PRESETS = '
 
   const river = new Uint8Array(width * height);
   if (gen >= 2) carveRiver(tiles, elevation, width, height, starts, seed, preset, river);
+  // płaskowyże, urwiska i skałki (generator 8) — przed placami pod zamki (rzeźba i tak schodzi przy nich do zera)
+  const shaped = biome ? shapeRelief(tiles, width, height, starts, seed, biome, preset.startRadius) : null;
 
   // Wokół każdego startu czysta łąka pod zamek, a tuż obok las na start.
   for (const s of starts) {
@@ -140,10 +139,10 @@ export function generateMap(seed: number, presetId: keyof typeof MAP_PRESETS = '
     }
   }
 
-  const dens = gen >= 5 ? carveDens(tiles, elevation, width, height, starts, seed, preset, river, gen) : undefined;
+  const dens = gen >= 5 ? carveDens(tiles, elevation, width, height, starts, seed, preset, river, gen, shaped) : undefined;
   const trails = new Uint8Array(width * height);
-  if (gen >= 2) carveTrails(tiles, elevation, trails, width, height, starts, seed, preset.startRadius, dens);
-  return { seed, width, height, tiles, elevation, starts, gen, trails, river, ...(dens ? { dens } : {}) };
+  if (gen >= 2) carveTrails(tiles, elevation, trails, width, height, starts, seed, preset.startRadius, dens, shaped?.relief);
+  return { seed, width, height, tiles, elevation, starts, gen, trails, river, ...(dens ? { dens } : {}), ...(shaped ? { biome, relief: shaped.relief, crag: shaped.crag } : {}) };
 }
 
 /** Promień polany pod obóz zbójów (pola): od generatora 6 szersza, żeby obóz było widać z góry spod koron drzew */
@@ -158,7 +157,7 @@ export const denClear = (gen: number): number => (gen >= 6 ? 6.6 : 4.3);
  */
 /** Najmniejsza odległość obozu od każdego zamku na mapie od generatora 7 (pola) */
 export const denAway = (w: number, h: number): number => Math.round(Math.min(w, h) / 3);
-function carveDens(tiles: Uint8Array, elev: Uint8Array, w: number, h: number, starts: StartPosition[], seed: number, preset: MapPreset, river: Uint8Array, gen: number): number[] {
+function carveDens(tiles: Uint8Array, elev: Uint8Array, w: number, h: number, starts: StartPosition[], seed: number, preset: MapPreset, river: Uint8Array, gen: number, shaped?: { relief: Uint8Array; crag: Uint8Array } | null): number[] {
   const DEN_CLEAR = denClear(gen), WIN = gen >= 6 ? 7 : 5;
   const size = w * h, out: number[] = [];
   const own = starts.filter((s) => s.team === 0).slice(0, 2);
@@ -208,6 +207,12 @@ function carveDens(tiles: Uint8Array, elev: Uint8Array, w: number, h: number, st
       const k = r <= DEN_CLEAR ? 1 : Math.max(0, (DEN_CLEAR + 2 - r) / 2);
       elev[t] = Math.round(elev[t]! + (flat - elev[t]!) * k);
       tiles[size - 1 - t] = tiles[t]!; elev[size - 1 - t] = elev[t]!;
+      if (shaped) {
+        // polana na płaskowyżu albo przy skałce: równo, bez skały w środku obozu
+        if (r <= DEN_CLEAR) shaped.crag[t] = 0;
+        shaped.relief[t] = Math.round(shaped.relief[t]! + (shaped.relief[best]! - shaped.relief[t]!) * k);
+        shaped.crag[size - 1 - t] = shaped.crag[t]!; shaped.relief[size - 1 - t] = shaped.relief[t]!;
+      }
     }
     out.push(best, size - 1 - best);
   }
@@ -276,7 +281,7 @@ function carveRiver(tiles: Uint8Array, elev: Uint8Array, w: number, h: number, s
  */
 function carveTrails(
   tiles: Uint8Array, elev: Uint8Array, trails: Uint8Array, w: number, h: number,
-  starts: StartPosition[], seed: number, startRadius: number, dens?: number[],
+  starts: StartPosition[], seed: number, startRadius: number, dens?: number[], relief?: Uint8Array,
 ): void {
   const size = w * h, mirror = (t: number): number => size - 1 - t;
   const wiggle = new Uint8Array(size);
@@ -321,6 +326,7 @@ function carveTrails(
         if (sc < 0) continue;
         if (dx && dy) { if (stepCost(y * w + nx) < 0 || stepCost(ny * w + x) < 0) continue; sc = (sc * 14) / 10 | 0; }
         sc += Math.min(12, Math.abs(elev[nt]! - elev[t]!) >> 1); // pod górę ścieżka woli zakos
+        if (relief) sc += Math.abs(relief[nt]! - relief[t]!); // na płaskowyż podjazdem, nie po stromym
         const nc = c + sc;
         if (dist[nt]! >= 0 && dist[nt]! <= nc) continue;
         dist[nt] = nc; prev[nt] = t; push((nc + est(nt)) * K + nt);

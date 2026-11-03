@@ -2439,6 +2439,8 @@ requestAnimationFrame(loop);
   place(id: string, x: number, y: number, rot = 0, player = ME): number | null { const r = placeReady(game, id, x, y, rot, player); refresh(); return r; },
   /** Pora roku: środek wybranej pory (spring, summer, autumn, winter) */
   season(name: Season): void { game.seasonShift = shiftToSeason(game.tick, name); refresh(); },
+  /** Opad do zrzutów: 0..1 (zimą przy mrozie śnieg), −1 = z pogody; snow = śnieg na ziemi 0..1 (−1 = z pogody) */
+  rain(v = 1, snow = -1): void { renderer.rainForce = v; renderer.snowForce = snow; },
   /** Otwiera okno budynku o danym id (jak kliknięcie) */
   open(id: number): void { select(id); },
   /** Godzina na zegarze bieżącego dnia, np. hour(20.5) — wieczór z pochodniami */

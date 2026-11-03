@@ -104,7 +104,7 @@ function spotRock(g: GameState, player: number, type: number): { x: number; y: n
   for (let y = Math.max(0, fy - ROCK_REACH); y <= Math.min(height - 1, fy + ROCK_REACH); y++)
     for (let x = Math.max(0, fx - ROCK_REACH); x <= Math.min(width - 1, fx + ROCK_REACH); x++) {
       const t = y * width + x;
-      if (tiles[t] !== Terrain.Mountain) continue;
+      if (tiles[t] !== Terrain.Mountain || g.map.crag?.[t]) continue; // skałki i urwiska płaskowyży to nie góry pod kopalnię
       // tylko skraj masywu (sąsiad nie jest górą) — w głębi i tak nic nie postawimy
       const edge = (x > 0 && tiles[t - 1] !== Terrain.Mountain) || (x < width - 1 && tiles[t + 1] !== Terrain.Mountain) || (y > 0 && tiles[t - width] !== Terrain.Mountain) || (y < height - 1 && tiles[t + width] !== Terrain.Mountain);
       if (edge) rocks.push({ t, d: (x - fx) ** 2 + (y - fy) ** 2 });

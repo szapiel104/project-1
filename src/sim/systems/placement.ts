@@ -111,7 +111,9 @@ export function rockBehind(g: GameState, x: number, y: number, w: number, h: num
   const span = rot % 2 ? h : w;
   if (back.length < span) return false; // tył wystaje poza mapę
   let rock = 0;
-  for (const t of back) if (g.map.tiles[t] === Terrain.Mountain) rock++;
+  // tylko góry na krańcach mapy: skałki i urwiska płaskowyży (generator 8, map.crag) są za niskie na sztolnię
+  // (docs/teren.md, punkt 12 — kopalnia przy urwiskach dopiero po sprawdzeniu modelu)
+  for (const t of back) if (g.map.tiles[t] === Terrain.Mountain && !g.map.crag?.[t]) rock++;
   return rock * 2 > span;
 }
 

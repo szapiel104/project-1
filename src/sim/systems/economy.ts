@@ -36,7 +36,7 @@ export function winterReadiness(g: GameState, p: PlayerState): { days: number; f
   const start = g.tick + Math.round(days * RULES.dayTicks);
   let chill = 0, n = 0;
   for (let k = 0; k < SEASON_DAYS * 4; k++, n++) {
-    const t = temperatureAt(start + Math.round((k * RULES.dayTicks) / 4), g.map.seed, 0, g.seasonShift ?? 0);
+    const t = temperatureAt(start + Math.round((k * RULES.dayTicks) / 4), g.map.seed, 0, g.seasonShift ?? 0, g.map.biome);
     chill += Math.max(0, Math.min(2, (COLD - t) / COLD)); // jak weatherOf
   }
   chill /= n;

@@ -78,8 +78,9 @@ import { CLIMB_TICKS, fireArrow, high, peasantWeapon } from '../sim/systems/army
 import { firstBlock } from '../sim/systems/sight';
 import { partsGeometry, peasantGear, toolMaterials } from './gear';
 import { clockAt, rainAt } from '../sim/clock';
-import { COLD, weatherOf, yearPos } from '../sim/weather';
+import { COLD, seasonAt, weatherOf, yearPos } from '../sim/weather';
 import { applySeason, SEASON_U, SnowTrails } from './season';
+import { Snowfall } from './snowfall';
 import { Footprints } from './footprints';
 import { maxHp } from '../sim/systems/placement';
 import { StrategyCamera } from './camera';
@@ -476,6 +477,10 @@ export class GameRenderer {
   }
   get weather(): { night: number; rain: number } { return { night: this.night, rain: this.rain }; }
   private rainLines: THREE.LineSegments | null = null;
+  /** Test: wymuszony opad 0..1 (−1 = z zegara pogody); przy mrozie pada śnieg (__test.rain) */
+  rainForce = -1;
+  /** Padający śnieg (tworzony przy pierwszym opadzie przy mrozie) */
+  private snowfall: Snowfall | null = null;
   private sadFaces: THREE.Sprite[] = [];
   /** Znaki zarazy nad chatami z gorączkującymi i nad chorymi leżącymi pod gołym niebem */
   private sickIcons: THREE.Sprite[] = [];
@@ -1080,7 +1085,12 @@ export class GameRenderer {
         void main() {
           vec3 c = texture2D(tDiffuse, vUv).rgb;
           float l = dot(c, vec3(0.299, 0.587, 0.114));
-          c = mix(vec3(l), c, 0.72 - rain * 0.15 + golden * 0.14);       // przygaszone barwy (o złotej godzinie żywsze)
+          // barwy: za dnia żywe i ciepłe jak w słoneczny dzień (Michał 3.11.2026, porównanie z Twierdzą 4 — było szaro),
+          // w deszczu i nocą przygaszone jak dotąd, o złotej godzinie najżywsze
+          float day = (1.0 - night) * (1.0 - rain);
+          c = mix(vec3(l), c, 0.72 + day * 0.26 - rain * 0.15 + golden * 0.1);
+          c = mix(c, c * vec3(1.05, 1.02, 0.94), day * smoothstep(0.25, 0.8, l)); // ciepłe słońce na jasnych miejscach
+          c += day * 0.05 * (1.0 - c) * smoothstep(0.05, 0.45, l);       // za dnia jaśniejsze półcienie (trawa nie tonie w szarości)
           c = mix(c, c * vec3(1.14, 1.0, 0.8), golden * smoothstep(0.15, 0.75, l)); // ciepłe, złote światło o świcie i zmierzchu
           c = mix(c * vec3(1.06, 0.98, 0.86), c, smoothstep(0.0, 0.6, l)); // brązowe cienie
           c = (c - 0.5) * 1.08 + 0.5;                                   // trochę kontrastu
@@ -1089,7 +1099,7 @@ export class GameRenderer {
           // suwak Jasność: podnosi przede wszystkim ciemne miejsca (noc, cienie), jasne prawie zostają; 1 = bez zmian
           c = pow(max(c, 0.0), vec3(1.0 / pow(bright, 1.1))) * mix(1.0, bright, 0.35);
           vec2 d = vUv - 0.5;
-          c *= 1.0 - dot(d, d) * (0.85 + night * 0.6) / bright;         // winieta (jaśniej = słabsza)
+          c *= 1.0 - dot(d, d) * (0.6 + night * 0.85) / bright;         // winieta (jaśniej = słabsza; za dnia lżejsza)
           gl_FragColor = vec4(clamp(c, 0.0, 1.0), 1.0);
         }`,
     });
@@ -1832,7 +1842,7 @@ export class GameRenderer {
     const g = this.state;
     const day = g ? g.tick / RULES.dayTicks : 0;
     // co ~3 dni pada przez około pół dnia (ten sam zegar deszczu co w symulacji: ludzie na słomie mokną naprawdę)
-    const want = g && this.rainOn ? rainAt(g.tick) : 0;
+    const want = this.rainForce >= 0 ? this.rainForce : g && this.rainOn ? rainAt(g.tick) : 0;
     this.rain += (Math.min(1, want * 1.6) - this.rain) * Math.min(1, dt * 0.5);
     // raz zepsuta liczba zostałaby na zawsze (jak śnieg niżej) — wraca do pogody z zegara
     if (!Number.isFinite(this.rain)) { console.warn('[pogoda] deszcz NaN', { dt, tick: g?.tick, want }); this.rain = Number.isFinite(want) ? Math.min(1, want * 1.6) : 0; }
@@ -1863,9 +1873,16 @@ export class GameRenderer {
       this.rainLines.frustumCulled = false;
       this.scene.add(this.rainLines);
     }
+    // przy mrozie opad to śnieg (render/snowfall.ts), a zimą przy zachmurzeniu sypią też drobne śnieżyce
+    const temp = g ? weatherOf(g, this.rain).temp : 10;
+    const freezing = temp < 1;
+    const flurry = g && seasonAt(g.tick, g.seasonShift ?? 0) === 'winter' ? Math.max(0, (this.cover - 0.45) * 0.7) : 0;
+    const snowWant = this.rainOn && (freezing || flurry > 0) ? Math.min(1, (freezing ? this.rain : 0) + (temp < 3 ? flurry : 0)) : 0;
+    if (!this.snowfall && snowWant > 0.01) { this.snowfall = new Snowfall(); this.scene.add(cat(this.snowfall.points, 'śnieg')); }
+    this.snowfall?.update(dt, snowWant, this.focusPoint, this.renderer.domElement.height / (2 * Math.tan((this.cam.camera.fov * Math.PI) / 360)), this.night);
     const mat = this.rainLines.material as THREE.LineBasicMaterial;
-    mat.opacity = this.rain * 0.45;
-    this.rainLines.visible = this.rain > 0.02;
+    mat.opacity = freezing ? 0 : this.rain * 0.45;
+    this.rainLines.visible = !freezing && this.rain > 0.02;
     if (this.rainLines.visible) {
       const f = this.focusPoint;
       const fall = (this.time * 22) % 25;

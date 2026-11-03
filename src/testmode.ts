@@ -1,3 +1,4 @@
+import { forceBiome, type Biome } from './data/biomes';
 /**
  * Tryb testowy (?test=1 w adresie): szybki start w przeglądarce bez karty graficznej.
  * Małe tekstury, bez cieni, bez cieniowania zagłębień, bez miniatur i bez puszczy za mapą.
@@ -12,3 +13,7 @@ export const SANDBOX = !!q?.has('test');
 export const TEST = SANDBOX && !q?.has('hd');
 /** Pusta scena testowa: płaska łąka, tylko twierdze; resztę stawia test (__test.place itd.) */
 export const EMPTY = SANDBOX && !!q?.has('pusta');
+
+/** ?test=1&kraina=wyzyna (łęgi, wyzyna, step, polnoc albo meadow/highland/steppe/north): mapa piaskownicy w wybranej krainie */
+const KRAINY: Record<string, Biome> = { legi: 'meadow', łęgi: 'meadow', meadow: 'meadow', wyzyna: 'highland', wyżyna: 'highland', highland: 'highland', step: 'steppe', steppe: 'steppe', polnoc: 'north', północ: 'north', north: 'north' };
+if (SANDBOX && q?.get('kraina')) forceBiome(KRAINY[q.get('kraina')!.toLowerCase()] ?? null);

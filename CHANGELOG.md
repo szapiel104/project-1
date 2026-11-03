@@ -1,5 +1,13 @@
 # Dziennik zmian
 
+## 0.84.0 — 3.11.2026
+- Teren (plan w `docs/teren.md`): generator mapy 8 (`MAP_GEN`) — krainy `data/biomes.ts` (łęgi, wyżyna, step, północ; z ziarna, w piaskownicy `?kraina=`), rzeźba `sim/relief.ts` (`map.relief`, `map.crag`: płaskowyże z urwiskami jako `Terrain.Mountain`, podjazdy, skałki, sprawdzanie przejść), szum symetryczny `sim/noise.ts` (`symNoise`, bez szwu na środku). Stare zapisy (generator ≤ 7) bez zmian.
+- Rysowanie: `tileHeight` + rzeźba, poszarpane tylko góry na krańcach i skała wewnątrz mapy, barwa/łaty krainy w kolorach wierzchołków i `splat` (bez nowych tekstur — limit 16), roślinność wg krainy (`VEG`), głazy na skałkach i urwiskach.
+- Klimat krainy: `temperatureAt(..., biome)` (step +4 °C, północ −5 °C) — susza, opał, śnieg.
+- `render/snowfall.ts`: padający śnieg (ruch na karcie graficznej), `__test.rain(v, snow)`.
+- `ambience.ts`: atlas kłębów dymu (4 odmiany, obrót), łuna ognia u dołu słupa pożaru. Grading dnia (`scene.ts`): wyższe nasycenie, ciepłe światło, lżejsza winieta.
+- Boty: bez zmian w `bot.ts` — krainy nie dodają budynków ani zasad; miejsca pod budowę bot szuka jak dotąd (skała to `Mountain`).
+
 ## 0.83.1 — 3.11.2026
 - Kafelki koszar v2 i karta po najechaniu v2 (`tiles.css`, `recruitTiles.ts`), kadr pełnej postaci bez włóczni (`thumbnails.ts`), karta bez `zoom` (złe położenie).
 

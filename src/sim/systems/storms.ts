@@ -32,7 +32,7 @@ export function droughtAt(g: GameState): boolean {
   if (seasonAt(g.tick, shift) !== 'summer' || rainAt(g.tick) > 0.05) return false;
   // bez rytmu doby (najcieplej o 15, najzimniej o 3): zostaje rok i pogoda dnia, zmienia się płynnie z dnia na dzień
   const hour = clockAt(g.tick).hour;
-  const t = temperatureAt(g.tick, g.map.seed, 0, shift) - 4 * Math.cos((2 * Math.PI * (hour - 15)) / 24);
+  const t = temperatureAt(g.tick, g.map.seed, 0, shift, g.map.biome) - 4 * Math.cos((2 * Math.PI * (hour - 15)) / 24);
   return t >= RULES.drought.temp;
 }
 
