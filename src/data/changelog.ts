@@ -10,6 +10,11 @@ export type { ChangeEntry } from './changelogTypes';
  */
 const NEW: ChangeEntry[] = [
   {
+    v: '0.94.7', date: '2026-11-03',
+    pl: ['Na nowym silniku obraz z wygładzaniem krawędzi znów ma właściwą jasność — zamek, trawa i woda nie są już ciemne jak o zmierzchu.'],
+    en: ['On the new engine, the anti-aliased picture has its proper brightness again — the castle, grass and water no longer look as dark as at dusk.'],
+  },
+  {
     v: '0.94.6', date: '2026-11-03',
     pl: [
       'Gra nie zostaje już na ekranie wczytywania tuż po wydaniu nowej wersji: gdy przeglądarka trzyma starą stronę, sama wczytuje ją od nowa.',

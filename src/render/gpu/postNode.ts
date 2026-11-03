@@ -17,7 +17,7 @@ export class GpuPost {
   private opts: GpuPostOptions = { ao: 'medium', bloom: false, aa: 'off', sharpen: 0 };
   private built = '';
 
-  constructor(renderer: THREE.WebGLRenderer, private scene: THREE.Scene, private camera: THREE.Camera) {
+  constructor(private renderer: THREE.WebGLRenderer, private scene: THREE.Scene, private camera: THREE.Camera) {
     const { W, TSL } = gpuMods!;
     const T = TSL as any;
     this.pipe = new (W as any).RenderPipeline(renderer);
@@ -89,7 +89,10 @@ export class GpuPost {
     }
     c = clamp(c, 0, 40);
     if (o.bloom) c = c.add(fx.bloom(vec4(c, 1), 0.18, 0.45, 1.6).rgb);
-    c = renderOutput(vec4(c, 1)).rgb;
+    // tone mapping i sRGB jawnie z renderera: bez tego węzeł brał je z kontekstu przejścia, a FXAA/SMAA liczą obraz
+    // w osobnym przejściu bez tego kontekstu — wtedy wychodził obraz liniowy, bez sRGB, czyli dużo ciemniejszy
+    // (Michał 3.11.2026: „zamek ciemny”; bez efektów albo w WebGL było jasno)
+    c = renderOutput(vec4(c, 1), this.renderer.toneMapping, this.renderer.outputColorSpace).rgb;
     c = this.grade(T, c);
     let img: any = vec4(clamp(c, 0, 1), 1);
     if (o.aa === 'fxaa') img = fx.fxaa(img);

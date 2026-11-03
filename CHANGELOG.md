@@ -1,5 +1,8 @@
 # Dziennik zmian
 
+## 0.94.7 — 2026-11-03
+- WebGPU post (`gpu/postNode.ts`): `renderOutput` z jawnym tone mappingiem i przestrzenią barw renderera. FXAA/SMAA liczą podgraf w osobnym przejściu bez kontekstu RenderPipeline, więc obraz wychodził liniowy (bez sRGB) — dużo ciemniejszy niż w WebGL i bez efektów.
+
 ## 0.94.6 — 2026-11-03
 - index.html: skrypt `__fresh()` — błąd pobrania pliku gry (`error` na SCRIPT/LINK, `vite:preloadError`, nieudany `import()` w `showFatal`) → ponowne wczytanie z `?v=` (raz na minutę). Przyczyna: stara strona z pamięci HTTP po wdrożeniu odwoływała się do skasowanych plików i gra stała na ekranie wczytywania.
 - sw.js: strona pobierana z `cache: 'no-cache'`.
