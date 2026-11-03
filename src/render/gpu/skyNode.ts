@@ -40,20 +40,30 @@ export function skyDomeNode(): THREE.Material & { uniforms: U } {
   return m;
 }
 
-export function starsNode(): THREE.Material & { uniforms: U } {
+/**
+ * Gwiazdy: na WebGPU punkty większe niż piksel to czworokąty z instancji (Sprite z `count`), dane gwiazd z atrybutów
+ * geometrii jako bufory instancji; mruganie i wielkość liczy karta.
+ */
+export function starsNode(geo: THREE.BufferGeometry): THREE.Object3D & { material: THREE.Material & { uniforms: U } } {
   const { W, TSL } = gpuMods!;
   const T = TSL as any, Wm = W as any;
-  const { uniform, attribute, float, sin, fract, smoothstep, length, pointUV, vec4 } = T;
+  const { uniform, instancedBufferAttribute, sin, fract, smoothstep, length, uv, vec4 } = T;
   const u = { time: uniform(0), opacity: uniform(0) };
-  const phase = attribute('phase', 'float'), size = attribute('size', 'float'), color = attribute('color', 'vec3');
+  const inst = (name: string, size: number): any => {
+    const a = geo.getAttribute(name) as THREE.BufferAttribute;
+    return instancedBufferAttribute(new Wm.InstancedBufferAttribute(a.array, size));
+  };
+  const phase = inst('phase', 1), size = inst('size', 1), color = inst('color', 3);
   const tw = sin(u.time.mul(fract(phase.mul(7.1)).mul(3).add(1.5)).add(phase)).mul(0.45).add(0.55);
-  const r = length(pointUV.sub(0.5));
-  const a = smoothstep(0.5, 0, r);
+  const a = smoothstep(0.5, 0, length(uv().sub(0.5)));
   const m = new Wm.PointsNodeMaterial({ transparent: true, depthWrite: false, fog: false, sizeAttenuation: false });
+  m.positionNode = inst('position', 3);
   m.sizeNode = size.mul(tw.mul(0.5).add(0.7)).mul(1.3);
-  m.colorNode = vec4(color, a.mul(tw).mul(u.opacity));
+  m.colorNode = vec4(color, 1);
   m.opacityNode = a.mul(tw).mul(u.opacity);
-  void float;
   m.uniforms = u;
-  return m;
+  const sprite = new Wm.Sprite(m);
+  sprite.count = (geo.getAttribute('position') as THREE.BufferAttribute).count;
+  sprite.frustumCulled = false;
+  return sprite;
 }

@@ -123,11 +123,13 @@ export class SkyDome {
       const sunDisc = new THREE.Sprite(new THREE.SpriteMaterial({ map: stex, transparent: true, fog: false, depthWrite: false, blending: THREE.AdditiveBlending }));
       sunDisc.scale.setScalar(160);
       // WebGPU: kopuła i gwiazdy jako materiały węzłowe (gpu/skyNode.ts), te same pokrętła `uniforms`
-      if (gpuMods) { dome.material = skyDomeNode() as unknown as THREE.ShaderMaterial; stars.material = starsNode() as unknown as THREE.ShaderMaterial; }
-      group.add(dome, stars, moon, sunDisc);
-      for (const o of [stars, moon, sunDisc]) o.renderOrder = -10;
+      if (gpuMods) dome.material = skyDomeNode() as unknown as THREE.ShaderMaterial;
+      // gwiazdy na WebGPU: czworokąty z instancji (punkty większe niż piksel nie istnieją w WebGPU)
+      const starsObj = gpuMods ? starsNode(geo) as unknown as THREE.Points : stars;
+      group.add(dome, starsObj, moon, sunDisc);
+      for (const o of [starsObj, moon, sunDisc]) o.renderOrder = -10;
       this.scene.add(group);
-      this.sky = { group, stars, moon, dome, sunDisc };
+      this.sky = { group, stars: starsObj, moon, dome, sunDisc };
     }
     const sk = this.sky;
     const clear = 1 - p.rain;

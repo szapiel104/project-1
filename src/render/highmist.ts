@@ -1,5 +1,7 @@
 import * as THREE from 'three';
 import { cat } from './cat';
+import { gpuMods } from './gpu/webgpu';
+import { mistDrapeNode, mistLayerNode, mistPuffNode } from './gpu/mistNode';
 
 /**
  * Mgła w dolinach i chmury zahaczające o szczyty (klimat Gothica: surowe góry toną w oparach).
@@ -334,7 +336,7 @@ export function buildHighMist(g: HeightGrid, board: { cx: number; cz: number; hw
   const layerMeshes: THREE.Mesh[] = [];
   const boardU = new THREE.Vector4(board.cx, board.cz, board.hw, board.hh);
   LAYERS.forEach((L, i) => {
-    const mat = new THREE.ShaderMaterial({
+    let mat = new THREE.ShaderMaterial({
       uniforms: THREE.UniformsUtils.merge([THREE.UniformsLib.fog, {
         hMap: { value: hMap }, hBox: { value: hBox }, noise: { value: noise }, time: { value: 0 }, opacity: { value: 0 },
         thick: { value: L.thick }, layerY: { value: L.y }, drift: { value: L.drift }, board: { value: boardU }, col: { value: new THREE.Color(0xc8ccc4) },
@@ -344,6 +346,8 @@ export function buildHighMist(g: HeightGrid, board: { cx: number; cz: number; hw
     });
     // UniformsUtils.merge kopiuje wartości: wspólne tekstury i wektory podpinamy z powrotem
     mat.uniforms.hMap!.value = hMap; mat.uniforms.noise!.value = noise; mat.uniforms.hBox!.value = hBox; mat.uniforms.board!.value = boardU;
+    // WebGPU: bliźniak w węzłach (gpu/mistNode.ts) z miękkim przecięciem ze sceną
+    if (gpuMods) mat = mistLayerNode({ hMap, hBox, noise, thick: L.thick, y: L.y, drift: L.drift, board: boardU });
     const m = new THREE.Mesh(frame, mat);
     m.renderOrder = 3 + i;
     m.frustumCulled = false;
@@ -419,11 +423,12 @@ export function buildHighMist(g: HeightGrid, board: { cx: number; cz: number; hw
   drapeGeo.setAttribute('aV', new THREE.Float32BufferAttribute(DV, 1));
   drapeGeo.setIndex(DI);
   drapeGeo.computeBoundingSphere();
-  const drapeMat = new THREE.ShaderMaterial({
+  let drapeMat = new THREE.ShaderMaterial({
     uniforms: THREE.UniformsUtils.merge([THREE.UniformsLib.fog, { noise: { value: noise }, time: { value: 0 }, opacity: { value: 0 }, col: { value: new THREE.Color(0xc8ccc4) } }]),
     vertexShader: DRAPE_VERT, fragmentShader: DRAPE_FRAG, transparent: true, depthWrite: false, side: THREE.DoubleSide, fog: true,
   });
   drapeMat.uniforms.noise!.value = noise;
+  if (gpuMods) drapeMat = mistDrapeNode(noise);
   const drape = new THREE.Mesh(drapeGeo, drapeMat);
   drape.renderOrder = 2;
   drape.frustumCulled = false;
@@ -468,7 +473,7 @@ export function buildHighMist(g: HeightGrid, board: { cx: number; cz: number; hw
   pGeo.setAttribute('aCenter', cA); pGeo.setAttribute('aMove', mA); pGeo.setAttribute('aKind', kA);
   pGeo.instanceCount = count;
   const puffMap = puffTexture();
-  const puffMat = new THREE.ShaderMaterial({
+  let puffMat = new THREE.ShaderMaterial({
     uniforms: THREE.UniformsUtils.merge([THREE.UniformsLib.fog, {
       hMap: { value: hMap }, hBox: { value: hBox }, map: { value: puffMap }, time: { value: 0 }, amount: { value: 0.3 },
       lit: { value: new THREE.Color(0xeeeeea) }, shade: { value: new THREE.Color(0x8c9196) }, spray: { value: new THREE.Color(0xe8eef0) },
@@ -477,6 +482,7 @@ export function buildHighMist(g: HeightGrid, board: { cx: number; cz: number; hw
     transparent: true, depthWrite: false, fog: true,
   });
   puffMat.uniforms.hMap!.value = hMap; puffMat.uniforms.hBox!.value = hBox; puffMat.uniforms.map!.value = puffMap;
+  if (gpuMods) puffMat = mistPuffNode({ hMap, hBox, map: puffMap });
   const puffs = new THREE.Mesh(pGeo, puffMat);
   puffs.frustumCulled = false;
   puffs.renderOrder = 6;

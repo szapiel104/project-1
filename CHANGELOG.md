@@ -1,5 +1,8 @@
 # Dziennik zmian
 
+## 0.92.1 — 2026-11-03
+- WebGPU: mgła (`gpu/mistNode.ts`: warstwy, opar, kłęby) z miękkim przecięciem przez viewportDepthTexture; gwiazdy jako Sprite z `count` + instancedBufferAttribute (gl_PointCoord nie istnieje w WGSL).
+
 ## 0.92.0 — 2026-11-03
 - WebGPU partia 4/5: nowa woda `src/render/gpu/waterNode.ts` (viewportDepthTexture → grubość i droga promienia, viewportSharedTexture → załamanie, `reflector` 0.5 → odbicie, Fresnel, odblask; bez tekstury głębokości z siatki) i niebo `src/render/gpu/skyNode.ts` (kopuła + gwiazdy jako PointsNodeMaterial). Bot: bez zmian (tylko grafika).
 
