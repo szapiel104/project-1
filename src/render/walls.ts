@@ -27,7 +27,7 @@ export class WallLayer {
   private wallTips: THREE.InstancedMesh | null = null;
   /** Pola u stóp drabin na mur kamienny → kierunek do muru (wspinaczka w wyglądzie) */
   readonly ladderFeet = new Map<number, [number, number]>();
-  private stoneKit: { block: THREE.InstancedMesh; edge: THREE.InstancedMesh; ladder: THREE.InstancedMesh } | null = null;
+  private stoneKit: { block: THREE.InstancedMesh; edge: THREE.InstancedMesh; corner: THREE.InstancedMesh; cornerL: THREE.InstancedMesh; ladder: THREE.InstancedMesh } | null = null;
   /** Duchy zleconych odcinków muru kamiennego (siteGhosts.ts robi to samo dla reszty budynków): pełna wysokość,
    *  przezroczyste, póki gracz buduje. `ghostOwner` = gracz, którego budowy pokazać, −1 = schowane */
   ghostOwner = -1;
@@ -75,7 +75,7 @@ export class WallLayer {
       return -1;
     };
     let levels: Map<number, number> | null = null;
-    const SH = new THREE.Matrix4();
+    const SH = new THREE.Matrix4(), LOC = new THREE.Matrix4(), TR = new THREE.Matrix4();
     this.levels = new Map();
     const wallLevel = (x: number, y: number, cx: number, cz: number): number => {
       if (!levels) {
@@ -99,7 +99,7 @@ export class WallLayer {
     }
     const M4 = new THREE.Matrix4(), q = new THREE.Quaternion(), e = new THREE.Euler(), p = new THREE.Vector3(), sc = new THREE.Vector3();
     let n = 0, gl = 0;
-    const sn = { block: 0, edge: 0, ladder: 0 };
+    const sn = { block: 0, edge: 0, corner: 0, cornerL: 0, ladder: 0 };
     this.ladderFeet.clear();
     const stoneAt = (x: number, y: number): boolean => { const o = solid.get(y * width + x); return !!o && BUILDINGS[o.type]!.id === 'stoneWall'; };
     if (!this.stoneKit) {
@@ -109,7 +109,7 @@ export class WallLayer {
         m.castShadow = true; m.receiveShadow = true; m.frustumCulled = false; m.count = 0; this.scene.add(cat(m, 'mury kamienne'));
         return m;
       };
-      this.stoneKit = { block: mk(k.block, k.mat, 8192), edge: mk(k.edge, k.mat, 16384), ladder: mk(k.ladder, k.wood, 2048) };
+      this.stoneKit = { block: mk(k.block, k.mat, 8192), edge: mk(k.edge, k.mat, 16384), corner: mk(k.cornerR, k.mat, 8192), cornerL: mk(k.cornerL, k.mat, 8192), ladder: mk(k.ladder, k.wood, 2048) };
       const gm = (k.mat as THREE.Material).clone();
       gm.transparent = true; gm.opacity = 0.2; gm.depthWrite = false;
       this.ghostBlock = new THREE.InstancedMesh(k.block, gm, 4096);
@@ -276,9 +276,10 @@ export class WallLayer {
         const wxc = cx - width / 2, wzc = cz - height / 2;
         SH.set(1, 0, 0, 0, kx, 1, kz, -kx * wxc - kz * wzc, 0, 0, 1, 0, 0, 0, 0, 1);
         const y0 = mid - 0.06, hk = Math.max(0.08, built);
-        const put = (mesh: THREE.InstancedMesh, rotY: number, cnt: number): number => {
+        const put = (mesh: THREE.InstancedMesh, rotY: number, cnt: number, dy = 0, local?: THREE.Matrix4): number => {
           e.set(0, rotY, 0); q.setFromEuler(e);
-          M4.compose(p.set(cx - width / 2, y0, cz - height / 2), q, sc.set(1, hk, 1));
+          M4.compose(p.set(cx - width / 2, y0 + dy, cz - height / 2), q, sc.set(1, hk, 1));
+          if (local) M4.multiply(local);
           if (kx || kz) M4.premultiply(SH);
           mesh.setMatrixAt(cnt, M4);
           return cnt + 1;
@@ -302,6 +303,7 @@ export class WallLayer {
           this.ladderFeet.set((b.y + dz) * width + b.x + dx, [-dx, -dz]);
           if (sn.ladder < 2048) sn.ladder = put(kit.ladder, rot, sn.ladder);
         }
+        const edges: [number, number, number][] = [];
         for (const [dx, dz, rot] of [[0, 1, 0], [0, -1, Math.PI], [1, 0, Math.PI / 2], [-1, 0, -Math.PI / 2]] as const) {
           // obok kamienna wieża: mur łączy się z nią (korona aż do ściany), a w ścianie wieży ciemne wejście na wysokości korony
           const gap = built >= 1 && !b.ruined ? towerGap(b.x + dx, b.y + dz) : -1;
@@ -335,7 +337,23 @@ export class WallLayer {
           if (stoneAt(b.x + dx, b.y + dz) || sn.edge >= 16384) continue;
           // ruina: przedpiersie i blanki strącone (leżą w gruzie, damage.ts), wracają dopiero pod koniec odbudowy
           if (b.ruined && ruinRebuilt(b.build, buildWork(b.type)) < 0.95) continue;
-          sn.edge = put(kit.edge, rot, sn.edge);
+          edges.push([dx, dz, rot]);
+        }
+        // Narożnik zewnętrzny (Michał 2.11.2026: „mur na krawędziach mruga”): krawędzie północ/południe idą przez całe pole,
+        // a wschód/zachód kończą się na wewnętrznym licu ich przedpiersia (0,39 od środka) — wcześniej obie zachodziły
+        // na siebie w rogu i ich wierzchy i lica leżały w tych samych płaszczyznach. Brakujący kawałek cokołu i gzymsu
+        // dokłada `corner`; całe krawędzie wschód/zachód stoją 6 mm wyżej, żeby styk w rogu nie walczył o piksel.
+        const zSides = edges.filter((x) => x[1] !== 0).map((x) => x[1]);
+        for (const [dx, , rot] of edges) {
+          if (!dx) { sn.edge = put(kit.edge, rot, sn.edge); continue; }
+          // koniec krawędzi w lokalnym +x leży w świecie po stronie z = −dx (obrót o ±90°)
+          const cutP = zSides.includes(-dx), cutN = zSides.includes(dx);
+          if (!cutP && !cutN) { sn.edge = put(kit.edge, rot, sn.edge, 0.006); continue; }
+          const CUT = 0.11, len = 1 - (cutP ? CUT : 0) - (cutN ? CUT : 0), shift = ((cutN ? CUT : 0) - (cutP ? CUT : 0)) / 2;
+          LOC.makeScale(len, 1, 1).premultiply(TR.makeTranslation(shift, 0, 0));
+          sn.edge = put(kit.edge, rot, sn.edge, 0.006, LOC);
+          if (cutP && sn.corner < 8192) sn.corner = put(kit.corner, rot, sn.corner, 0.006);
+          if (cutN && sn.cornerL < 8192) sn.cornerL = put(kit.cornerL, rot, sn.cornerL, 0.006);
         }
         continue;
       }
@@ -422,7 +440,7 @@ export class WallLayer {
       }
     }
     this.wallShafts.count = n; this.wallTips!.count = n;
-    for (const key of ['block', 'edge', 'ladder'] as const) { const m = this.stoneKit[key]; m.count = sn[key]; touch(m); }
+    for (const key of ['block', 'edge', 'corner', 'cornerL', 'ladder'] as const) { const m = this.stoneKit[key]; m.count = sn[key]; touch(m); }
     if (this.ghostBlock) { this.ghostBlock.count = gn; touch(this.ghostBlock); }
     if (this.ghostLogs) { this.ghostLogs.count = gl; touch(this.ghostLogs); }
     for (const d of doors.values()) {

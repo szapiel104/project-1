@@ -1,5 +1,8 @@
 # Dziennik zmian
 
+## 0.87.2 — 3.11.2026
+- `walls.ts`: krawędzie muru wschód/zachód skracane na narożnikach zewnętrznych (macierz lokalna), +6 mm w górę; `stoneWallKit` → `cornerR`/`cornerL` (cokół i gzyms rogu). Boty: bez zmian.
+
 ## 0.87.1 — 3.11.2026
 - `scene.ts`: `DAY` — słońce i niebo mocniej (południe 2,35 / 1,38), noc 0,46 / 0,42; `toneMappingExposure` 1,02 (było 0,9). Boty: bez zmian.
 

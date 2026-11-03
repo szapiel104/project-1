@@ -10,6 +10,11 @@ export type { ChangeEntry } from './changelogTypes';
  */
 const NEW: ChangeEntry[] = [
   {
+    v: '0.87.2', date: '2026-11-03',
+    pl: ['Mur kamienny nie miga na narożnikach: krawędzie z blankami nie zachodzą już na siebie w rogu, a cokół i gzyms domyka osobny kawałek narożnika.'],
+    en: ['The stone wall no longer flickers at its corners: the crenellated edges no longer overlap in the corner, and a separate corner piece closes the plinth and cornice.'],
+  },
+  {
     v: '0.87.1', date: '2026-11-03',
     pl: ['Jaśniej: mocniejsze słońce i światło nieba za dnia, wyższa ekspozycja, noce mniej czarne (świt i zmierzch dalej ciepłe). Suwak Jasność w Ustawieniach działa jak dotąd.'],
     en: ['Brighter: stronger sun and skylight by day, higher exposure, nights less pitch-black (dawn and dusk still warm). The Brightness slider in Settings works as before.'],
