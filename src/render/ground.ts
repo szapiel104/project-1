@@ -131,9 +131,13 @@ const FRAG_ALBEDO = /* glsl */ `
   // druga skała (poszarpane turnie) w wielkich płatach i warstwy jaśniejsze/ciemniejsze wzdłuż wysokości
   vec3 cX = texture2D(tCliff, vWP.zy / 7.5).rgb, cZ = texture2D(tCliff, vWP.xy / 7.5).rgb, cT = texture2D(tCliff, w / 7.5).rgb;
   vec3 cliff = (cX * bw.x + cT * bw.y + cZ * bw.z) * vec3(0.78, 0.76, 0.72);
-  rock = mix(rock, cliff, smoothstep(0.35, 0.65, nM.a));
+  // druga skała tylko w płatach i do połowy: sama wyglądała jak kora (podłużne smugi), Michał 3.11.2026
+  rock = mix(rock, cliff, smoothstep(0.45, 0.75, nM.a) * 0.45);
+  // ta sama skała w dużej skali pod spodem: na wielkich ścianach gór nie widać powtórek wzoru
+  vec3 rBig = texture2D(tRock, vWP.zy / 19.0).rgb * bw.x + texture2D(tRock, w / 19.0 + 0.3).rgb * bw.y + texture2D(tRock, vWP.xy / 19.0).rgb * bw.z;
+  rock = mix(rock, rBig, 0.35);
   float strata = texture2D(tNoise, vec2(vWP.y / 3.2, w.x / 140.0 + w.y / 170.0)).g;
-  rock *= 0.78 + strata * 0.4;
+  rock *= 0.9 + strata * 0.18;
 
   // udziały: łąka w plamach, drobne kamienie i prześwity ziemi rozsiane po trawie
   float wMeadow = smoothstep(0.86, 1.02, nS.g * 0.75 + nD.b * 0.3) * 0.5;

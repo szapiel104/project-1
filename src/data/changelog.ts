@@ -10,6 +10,11 @@ export type { ChangeEntry } from './changelogTypes';
  */
 const NEW: ChangeEntry[] = [
   {
+    v: '0.85.1', date: '2026-11-03',
+    pl: ['Skała gór bez podłużnych smug „jak kora”: spokojniejsza faktura, duży wzór pod spodem, żeby na wielkich ścianach nie było widać powtórek.'],
+    en: ['Mountain rock without the long bark-like streaks: a calmer texture with a large-scale pattern beneath, so big rock faces show no repeats.'],
+  },
+  {
     v: '0.85.0', date: '2026-11-03',
     pl: [
       'Góry rosną od podnóża stopniowo i tworzą zbocza i pasma — koniec samotnych skalnych iglic wysokich na kilkanaście metrów.',

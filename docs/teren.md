@@ -47,6 +47,9 @@ nowy wygląd mapy = nowy numer generatora (`MAP_GEN`), stare zapisy dostają daw
 - [ ] **Góry: pojedyncze, dziwne iglice zamiast pasma.** Masywy przy krańcach łączyć w ciągłe pasma (szum grzbietowy
   w dużej skali, wygładzanie pojedynczych pól gór), bez samotnych szpikulców.
 - [ ] **Morze za mapą „popsute”** (płaska beżowa tafla w oddali, zwłaszcza na stepie) — sprawdzić wodę za mapą i mgłę.
+- [x] 0.85.0: góry rosną od podnóża (bez iglic), skała w gęstej, wyrzeźbionej siatce (`render/rockmesh.ts`); 0.85.1 faktura skały bez smug.
+- [ ] **Rzeka nie zawsze środkiem** (Michał 11:50): odmiany wody na mapie — bez rzeki (same jeziora), dwie rzeki po
+  bokach (odbite symetrycznie, każda bliżej jednej drużyny), rzeka łukiem przez róg, rozlewisko. Razem z pustynią (generator 10).
 - [ ] **Pełna pustynia** (Michał 11:33: „brakuje mi kompletnych pustyń”): piąta kraina — cała mapa w piachu i
   wydmach, kamieniste płaskowyże, oazy z wodą i zielenią przy jeziorkach, prawie bez lasu (drewno z oaz), gorąco i susza.
   Do zrobienia: piasek jako główna warstwa ziemi (bez trawy), wydmy w rzeźbie, roślinność pustynna z paczek (palmy,

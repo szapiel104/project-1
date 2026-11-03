@@ -1,5 +1,8 @@
 # Dziennik zmian
 
+## 0.85.1 — 3.11.2026
+- `ground.ts`: skała — mniej `tCliff` (smugi), próbka `tRock` w skali 19 m pod spodem, słabsze warstwy (`strata`). Boty: bez zmian.
+
 ## 0.85.0 — 3.11.2026
 - `render/rockmesh.ts`: pola gór (i skały generatora 8) w osobnej siatce 4×4 na pole z rzeźbą (`rockDisplacer`, zero na brzegu z polami bez skały i na brzegu mapy), na planszy te pola zwinięte; `heightAt` i `meshH` (strumienie) z tą samą rzeźbą; `level`/`dig` pomijają pola skały.
 - `tileHeight`: wysokość gór ograniczona głębokością w masywie (`mdepth`, ok. 2,4 m na pole) — bez iglic. Boty: bez zmian.
