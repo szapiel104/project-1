@@ -1,5 +1,10 @@
 # Dziennik zmian
 
+## 0.94.5 — 2026-11-03
+- WebGPU: pule instancji zawsze z macierzami w atrybucie (`getUniformBufferLimit = 0` dla InstancedMesh w `_createNodeBuilder`) — wcześniej każda mała pula miała własny kod shadera (374 programy wierzchołków, 104 różniące się tylko nazwą tablicy uniformów).
+- Woda WebGPU: pochłanianie jak w prawdziwej wodzie (czerwień najszybciej), jaśniejsza toń, przejrzysta woda oazy na pustyni (`clear`), mocniejsze minimum Fresnela.
+- Skały: bez wysokich bruzdowanych słupów (furrowed) na skałkach pustyni.
+
 ## 0.94.4 — 2026-11-03
 - WebGPU: mapa otoczenia `gpu/envNode.ts` (PMREM z kopuły w węzłach, bliźniak makeEnvironment), `scene.environment` także na WebGPU.
 

@@ -35,7 +35,11 @@ export interface GpuWater {
   target: THREE.Object3D;
 }
 
-export function waterNodeMaterial(waves: THREE.Texture, waterY: number): GpuWater {
+/**
+ * `clear`: przejrzysta woda oazy (pustynia) — turkusowa, dno widać głęboko; bez niego jezioro w lesie: zielonkawe,
+ * mętniejsze, ale nie czarne (Michał 3.11.2026, zrzuty: woda wyglądała jak szare bagno, bez nieba w tafli).
+ */
+export function waterNodeMaterial(waves: THREE.Texture, waterY: number, clear = false): GpuWater {
   const { W, TSL } = gpuMods!;
   const T = TSL as any;
   const {
@@ -73,7 +77,9 @@ export function waterNodeMaterial(waves: THREE.Texture, waterY: number): GpuWate
   const uvR = select(okR, uvR0, screenUV);
   const below = sceneAt(uvR);
   const path = min(length(below.sub(wp)), 40);                        // droga promienia w wodzie
-  const tr = exp(vec3(2.7, 2.1, 3.1).mul(path).negate());              // co przechodzi przez toń (na kanał)
+  // pochłanianie jak w prawdziwej wodzie: czerwień gaśnie najszybciej, błękit najwolniej (dawniej odwrotnie — toń
+  // wychodziła brunatna i czarna już na metrze głębokości)
+  const tr = exp((clear ? vec3(1.15, 0.38, 0.32) : vec3(1.7, 0.95, 0.9)).mul(path).negate()); // co przechodzi przez toń (na kanał)
   const bottom = viewportSharedTexture(uvR).rgb;
 
   // toń: kolor rozproszony w wodzie, oświetlony jak każda powierzchnia (słońce, cień, niebo) — z `output`
@@ -91,7 +97,7 @@ export function waterNodeMaterial(waves: THREE.Texture, waterY: number): GpuWate
     base.updateBefore = (frame: unknown): unknown => (base.hasOutput && (n++ & 1) ? undefined : upd(frame));
   }
   refl.uvNode = refl.uvNode.add(slope.mul(0.25));
-  const F = float(0.035).add(float(0.965).mul(pow(float(1).sub(clamp(dot(nW, V), 0, 1)), 5)));
+  const F = float(0.06).add(float(0.94).mul(pow(float(1).sub(clamp(dot(nW, V), 0, 1)), 5)));
   const rDir = reflect(V.negate(), nW);
   const glint = pow(max(dot(normalize(rDir), sunDir), 0), 700);
   const spec = sunCol.mul(glint).mul(3);
@@ -100,7 +106,7 @@ export function waterNodeMaterial(waves: THREE.Texture, waterY: number): GpuWate
   col = mix(viewportSharedTexture(screenUV).rgb, col, smoothstep(0, 0.035, depth0));
 
   const m = new Wm.MeshStandardNodeMaterial({ roughness: 0.45, metalness: 0 });
-  m.colorNode = vec3(0.055, 0.07, 0.038);
+  m.colorNode = clear ? vec3(0.035, 0.16, 0.165) : vec3(0.045, 0.1, 0.085); // barwa rozproszona w toni
   m.normalNode = nV;
   m.outputNode = vec4(min(col, vec3(30)), 1);
   // rysowana po całej nieprzezroczystej scenie (obraz spod tafli), ale sama zapisuje głębię jak bryła

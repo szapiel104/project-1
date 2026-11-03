@@ -836,7 +836,7 @@ function* terrainSteps(map: GameMap, models: ModelFactory, waterLevel: number): 
       wetBoxes.push(new THREE.Box3(new THREE.Vector3(x0, WATER_Y - 0.2, z0), new THREE.Vector3(x0 + WC + 4, WATER_Y + 0.2, z0 + WC + 4)));
     }
     // WebGPU: nowa woda (gpu/waterNode.ts) — grubość z bufora głębokości, załamanie, lustro liczone przez kartę
-    const gw = !TEST && gpuMods ? waterNodeMaterial(waveNormals(), WATER_Y) : null;
+    const gw = !TEST && gpuMods ? waterNodeMaterial(waveNormals(), WATER_Y, map.biome === 'desert') : null;
     wm = gw ?? waterMaterial(depthTex, EW, EH, reflection.uniforms);
     const waterMat = wm.mat;
     if (TEST) { waterMat.bumpMap = ripples; waterMat.bumpScale = 0.7; }
@@ -1641,7 +1641,8 @@ function* terrainSteps(map: GameMap, models: ModelFactory, waterLevel: number): 
   const desert = map.biome === 'desert';
   const kindOf = (it: Item): typeof ROCKS => {
     const s = it.s.x, h = hash2(Math.round(it.pos.x * 10) + 31, Math.round(it.pos.z * 10), 0x5eed);
-    if (desert && s >= 0.95 && h % 5 === 0) return byKind('furrowed');
+    // wysokie bruzdowane skały (furrowed) już nie: to stojące słupy 3–4 razy wyższe niż szerokie — na skałce wyglądały
+    // jak ociosany menhir, a nie jak skała (Michał 3.11.2026, „ta skała jest źle pocięta”); pustynia ma głazy z Sahary
     if (s >= 1.1) return h % 3 === 0 ? byKind('boulder') : byKind('large');
     if (s >= 0.6) return h % 3 === 0 ? byKind('boulder') : byKind('medium');
     return h % 2 ? byKind('small') : byKind('medium');

@@ -133,6 +133,11 @@ export async function prepareGpu(canvas: HTMLCanvasElement): Promise<void> {
   const create = nodes._createNodeBuilder.bind(nodes);
   nodes._createNodeBuilder = (ro: unknown, m: unknown) => {
     const b = create(ro, m);
+    // Pule instancji zawsze z macierzami w atrybucie wierzchołków, nigdy w tablicy uniformów: three.js przy małej puli
+    // (do ok. 1000 sztuk) wpisuje macierze w tablicę nazwaną numerem węzła i z jej długością — każda pula dostaje wtedy
+    // własny kod shadera, a każdy kod to osobna kompilacja w karcie (zrzut 3.11.2026: 374 programy wierzchołków,
+    // z czego 104 różniły się tylko nazwą tablicy). Z atrybutem kod jest wspólny dla wszystkich pul tego materiału.
+    if ((ro as { object?: { isInstancedMesh?: boolean } }).object?.isInstancedMesh) (b as unknown as { getUniformBufferLimit(): number }).getUniformBufferLimit = () => 0;
     const build = b.build.bind(b);
     b.build = () => {
       const t = performance.now();

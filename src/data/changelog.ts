@@ -10,6 +10,19 @@ export type { ChangeEntry } from './changelogTypes';
  */
 const NEW: ChangeEntry[] = [
   {
+    v: '0.94.5', date: '2026-11-03',
+    pl: [
+      'Gra na nowym silniku wczytuje się szybciej: drzewa, kamienie i budynki tego samego rodzaju dzielą jeden program karty graficznej zamiast kilkuset osobnych.',
+      'Woda w oazie jest przejrzysta i turkusowa, a jeziora zielonkawe i jaśniejsze — już nie szare bagno; w tafli widać więcej nieba.',
+      'Na skałkach pustyni nie stoją już samotne, ociosane słupy z kamienia — zamiast nich głazy z Sahary.',
+    ],
+    en: [
+      'The game loads faster on the new engine: trees, rocks and buildings of one kind share a single graphics program instead of hundreds of separate ones.',
+      'Oasis water is clear and turquoise, and lakes are greener and brighter rather than a grey bog; more of the sky shows on the surface.',
+      'Desert crags no longer carry lone hewn stone pillars — Saharan boulders sit there instead.',
+    ],
+  },
+  {
     v: '0.94.4', date: '2026-11-03',
     pl: ['Na nowym silniku wraca odbicie nieba w metalu, szybach, kałużach i mokrych kamieniach.'],
     en: ['On the new engine, metal, windows, puddles and wet stone reflect the sky again.'],
