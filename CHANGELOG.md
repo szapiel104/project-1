@@ -1,5 +1,8 @@
 # Dziennik zmian
 
+## 0.80.1 — 3.11.2026
+- Lobby: `.lob-hero` (przycisk `.lob-play` + formularz w jednym wierszu) zamiast trzech kart, ranking przy nagłówku listy, równe wysokości.
+
 ## 0.80.0 — 3.11.2026
 - `online.ts` `showOnline`: nowe lobby (`.lob`): szybkie działania, lista pokojów `.lob-room`, panel znajomych z zaproszeniem/dołączeniem/czatem i wyszukiwarką; CSS w `friends.css`.
 

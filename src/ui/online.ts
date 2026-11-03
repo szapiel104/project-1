@@ -464,27 +464,22 @@ export function createOnline(ui: Ui): { showOnline(): void; showAccount(): void;
       return res;
     };
 
-    // --- szybkie działania ---
-    const quick = el('div', 'lob-quick');
-    const qCard = (titleT: string, sub: string, icon: string, cls: string, body: HTMLElement[]): HTMLElement => {
-      const c = el('section', `lob-card ${cls}`);
-      const h = el('div', 'lob-card-h');
-      const ic = el('span', 'lob-ico'); ic.setAttribute('aria-hidden', 'true'); ic.innerHTML = icon;
-      const t = el('div', 'lob-card-t'); t.append(el('h3', '', titleT), el('p', '', sub));
-      h.append(ic, t); c.append(h, ...body);
-      return c;
-    };
-    const I = (d: string): string => `<svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${d}</svg>`;
-    // 1) szybka gra: pokój 1 na 1 od razu, wolne miejsce zajmie znajomy albo bot
-    const fast = button(tx('Graj teraz', 'Play now'), async () => {
+    // --- pasek startu (Michał 3.11.2026: „krzywo i staro”): jedna równa belka — duże „Graj teraz” i obok własna gra
+    // w jednym wierszu (nazwa, tryb, „Załóż”); ranking jako przycisk przy nagłówku listy
+    const quick = el('section', 'lob-hero');
+    quick.setAttribute('aria-label', tx('Nowa gra przez sieć', 'New online game'));
+    const fastBox = el('div', 'lob-fast');
+    const fast = button('', async () => {
       fast.disabled = true; const r = await makeRoom('1v1'); fast.disabled = false;
       if (r) enterRoom(r);
-    }, 'menu-btn btn-ok lob-btn');
-    quick.append(qCard(tx('Szybka gra', 'Quick game'), tx('Pokój 1 na 1 od ręki — zaproś znajomego albo obsadź miejsce botem.', 'A 1 vs 1 room right away — invite a friend or fill the seat with a bot.'), I('<path d="M13 2L4 14h7l-1 8 9-12h-7z"/>'), 'fast', [fast]));
-    // 2) własna gra: nazwa i tryb
+    }, 'lob-play');
+    fast.innerHTML = '<svg viewBox="0 0 24 24" width="28" height="28" fill="currentColor" aria-hidden="true"><path d="M7 4v16l13-8z"/></svg>';
+    const playT = el('span', 'lob-play-t'); playT.append(el('strong', '', tx('Graj teraz', 'Play now')), el('span', '', tx('pokój 1 na 1 od ręki', 'a 1 vs 1 room right away')));
+    fast.append(playT);
+    fastBox.append(fast);
     const form = el('form', 'lob-form');
     const nid = `lob-name-${seq}`;
-    const nl = el('label', 'sr-only', tx('Nazwa gry', 'Game name')); nl.htmlFor = nid;
+    const nl = el('label', 'lob-form-l', tx('Własna gra', 'Custom game')); nl.htmlFor = nid;
     const name = el('input'); name.id = nid; name.maxLength = 40; name.value = tx(`Gra ${me0.nick}`, `${me0.nick}'s game`);
     name.addEventListener('keydown', (e) => e.stopPropagation());
     let preset: MapPresetId = filter !== 'all' ? filter : '1v1';
@@ -495,18 +490,15 @@ export function createOnline(ui: Ui): { showOnline(): void; showAccount(): void;
       b.setAttribute('role', 'radio'); b.setAttribute('aria-checked', String(id === preset));
       segBtns.push(b); seg.append(b);
     }
-    const mk = el('button', 'menu-btn btn-ok lob-btn', tx('Załóż grę', 'Create game')); mk.type = 'submit';
-    form.append(nl, name, seg, mk);
+    const mk = el('button', 'lob-make', tx('Załóż grę', 'Create game')); mk.type = 'submit';
+    const row = el('div', 'lob-form-row'); row.append(name, seg, mk);
+    form.append(nl, row);
     form.addEventListener('submit', async (e) => {
       e.preventDefault(); mk.disabled = true;
       const r = await makeRoom(preset, name.value); mk.disabled = false;
       if (r) enterRoom(r);
     });
-    quick.append(qCard(tx('Własna gra', 'Custom game'), tx('Nazwa i tryb — mapę i boty ustawisz w pokoju.', 'Name and mode — set the map and bots in the room.'), I('<path d="M12 5v14M5 12h14"/>'), 'own', [form]));
-    // 3) ranking
-    const rk = button(tx('Zobacz ranking', 'See the ranking'), () => void showRanking(), 'menu-btn lob-btn');
-    quick.append(qCard(tx('Ranking', 'Ranking'), tx('Wygrane i porażki w meczach przez sieć.', 'Wins and losses in online matches.'), I('<path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0z M17 6h3v2a3 3 0 0 1-3 3 M7 6H4v2a3 3 0 0 0 3 3"/>'), 'rank', [rk]));
-
+    quick.append(fastBox, form);
     // --- otwarte gry ---
     const head = el('div', 'lob-list-h');
     const tabs = el('div', 'lob-filters'); tabs.setAttribute('role', 'tablist'); tabs.setAttribute('aria-label', tx('Tryb gier', 'Game mode'));
@@ -516,7 +508,9 @@ export function createOnline(ui: Ui): { showOnline(): void; showAccount(): void;
       tabs.append(b);
     }
     const count = el('span', 'lob-count');
-    head.append(el('h3', 'lob-h', tx('Otwarte gry', 'Open games')), count, tabs);
+    const rk = button(tx('Ranking', 'Ranking'), () => void showRanking(), 'lob-chip lob-rank');
+    const ht = el('div', 'lob-list-t'); ht.append(el('h3', 'lob-h', tx('Otwarte gry', 'Open games')), count);
+    head.append(ht, tabs, rk);
     const list = el('div', 'lob-rooms');
     const draw = async (): Promise<void> => {
       const all = await listRooms();

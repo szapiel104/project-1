@@ -375,3 +375,42 @@ body .menu .lob-icon-btn:hover, body .menu .lob-icon-btn:focus-visible { color: 
 body .menu .lob-req { width: 100%; min-height: 38px; padding: 6px 10px; font: 700 14px/1.2 var(--text, sans-serif); color: #2a1d0c; background: #e6c06a; background-image: none; border: 1px solid #ffd76a; box-shadow: none; text-transform: none; letter-spacing: 0; cursor: pointer; }
 @media (max-width: 1100px) { .lob { grid-template-columns: 1fr; } .lob-side { position: static; } }
 @media (max-width: 640px) { .lob-room { grid-template-columns: 60px minmax(0, 1fr); } .lob-room-meta { justify-items: start; } }
+
+/* ===== Lobby, wersja 2 (3.11.2026: „krzywo i staro”): jedna równa belka startu, równe wysokości, wspólne krawędzie ===== */
+.lob { grid-template-columns: minmax(0, 1fr) 320px; gap: 16px; align-items: stretch; }
+.lob-main { gap: 16px; align-content: start; }
+.lob-hero { display: grid; grid-template-columns: minmax(220px, 300px) minmax(0, 1fr); gap: 12px; align-items: stretch; }
+.lob-fast, .lob-form { display: grid; padding: 12px; background: rgba(20, 14, 8, .5); border: 1px solid rgba(154, 122, 42, .45); }
+.lob-fast { padding: 0; border: 0; background: none; }
+body .menu .lob-play { display: flex; align-items: center; gap: 14px; width: 100%; height: 100%; min-height: 92px; padding: 14px 18px; text-align: left; color: #fff; cursor: pointer;
+  background-image: linear-gradient(135deg, #3f9a4b, #23642c); border: 1px solid #0e2a12; border-radius: 3px; box-shadow: inset 0 0 0 1px rgba(184, 240, 190, .55), 0 6px 16px rgba(0, 0, 0, .35); text-shadow: 0 1px 2px rgba(0, 0, 0, .5); transition: filter .15s, transform .15s; }
+body .menu .lob-play:hover { filter: brightness(1.1); transform: translateY(-1px); }
+body .menu .lob-play:focus-visible { outline: 3px solid #ffd76a; outline-offset: 3px; }
+body .menu .lob-play:disabled { filter: saturate(.4); }
+.lob-play svg { flex: 0 0 auto; width: 46px; height: 46px; padding: 9px; box-sizing: border-box; background: rgba(255, 255, 255, .16); border-radius: 50%; }
+.lob-play-t { display: grid; gap: 2px; }
+.lob-play-t strong { font: 800 22px/1.1 var(--text, sans-serif); letter-spacing: .02em; }
+.lob-play-t span { font-size: 14px; color: #e3f7e5; }
+.lob-form { gap: 8px; align-content: center; }
+.lob-form-l { font: 700 13px/1 var(--text, sans-serif); letter-spacing: .06em; text-transform: uppercase; color: #e6c06a; }
+.lob-form-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.lob-form-row input { flex: 1 1 180px; min-width: 0; height: 44px; min-height: 44px; }
+.lob-form-row .lob-seg { flex: 0 0 auto; flex-wrap: nowrap; }
+body .menu .lob-form-row .lob-chip { height: 44px; padding: 0 14px; border-radius: 3px; }
+body .menu .lob-make { height: 44px; padding: 0 20px; font: 700 15px/1 var(--text, sans-serif); color: #fff; background-image: linear-gradient(#3f8f4a, #2c6e35); border: 1px solid #0e2a12; border-radius: 3px; box-shadow: inset 0 0 0 1px rgba(184, 240, 190, .5); cursor: pointer; }
+body .menu .lob-make:hover { filter: brightness(1.1); }
+body .menu .lob-make:focus-visible { outline: 2px solid #ffd76a; outline-offset: 2px; }
+.lob-list-h { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 12px; padding-bottom: 8px; border-bottom: 1px solid rgba(154, 122, 42, .35); }
+.lob-list-t { display: flex; align-items: baseline; gap: 10px; }
+.lob-h { font-size: 20px; }
+.lob-count { font-size: 14px; color: #cdbb96; }
+.lob-list-h .lob-filters { justify-self: center; margin: 0; }
+body .menu .lob-chip.lob-rank { border-radius: 3px; }
+.lob-rooms { min-height: 220px; align-content: start; }
+.lob-empty { min-height: 200px; align-content: center; }
+.lob-side { position: static; align-content: start; }
+.lob-side-h { padding-bottom: 8px; border-bottom: 1px solid rgba(154, 122, 42, .35); }
+.lob-side input[type='search'] { height: 44px; }
+@media (max-width: 1250px) { .lob-hero { grid-template-columns: 1fr; } }
+@media (max-width: 1100px) { .lob { grid-template-columns: 1fr; } }
+@media (max-width: 700px) { .lob-list-h { grid-template-columns: 1fr; } .lob-list-h .lob-filters { justify-self: start; } }
