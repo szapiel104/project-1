@@ -35,12 +35,14 @@ const NEW: ChangeEntry[] = [
       'Karta po najechaniu większa i czytelniejsza: koszt jako tabelka „potrzeba / masz” z nazwami, siła w osobnych polach i dokładnie, czego brakuje.',
       'W koszarach karta szczegółów staje obok okna i nie zasłania innych jednostek.',
       'Karty budowy, kafelki koszar i opisy po najechaniu na pergaminie jak w „Jak grać” — czytelniej i w klimacie.',
+      'Kronika i wiadomości doradców w lewym górnym rogu; liczba żołnierzy do wyszkolenia w lewym dolnym rogu kafelka.',
     ],
     en: [
       'Barracks: larger tiles, the soldier fills the tile (the spearman is no longer tiny), a big “×4” plate with how many you can train.',
       'The hover card is larger and clearer: cost as a “needed / you have” table with names, strength in separate boxes and exactly what is missing.',
       'In the barracks the details card sits beside the window and no longer covers other units.',
       'Build cards, barracks tiles and hover descriptions on parchment like in “How to play” — clearer and in keeping.',
+      'The chronicle and advisers’ messages in the top-left corner; the number of soldiers you can train in the tile’s bottom-left corner.',
     ],
   },
   {
