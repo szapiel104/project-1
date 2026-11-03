@@ -2,6 +2,7 @@
 
 ## 0.88.1 — 3.11.2026
 - `gen_stone.py` ashlar: ton kamieni 0,88–1 (było 0,55–1), słabsze plamy i bryła, jaśniejsza fuga; KTX2. Boty: bez zmian.
+
 ## 0.88.0 — 3.11.2026
 - Generator 10 (`MAP_GEN`): kraina `desert` (`data/biomes.ts`, `sim/desert.ts`: las tylko do 3 pól od wody, drugi gaj przy zamku), `riverOfSeed` → `carveRiver(..., 'mid' | 'twin')` albo bez rzeki; `biomeOfSeed(seed, hash, gen)` — dla generatora 8–9 bez zmian (stare zapisy).
 - Rysowanie pustyni (`terrain.ts`): `greenDist`, wydmy w narożnikach (z dala od zamków i wody), piach/żwir/goła ziemia w warstwach, rzadkie drzewa za mapą, piaskowa równina; `ground.ts` `uDry` (suchy, jasny piach). Boty: bez zmian w `bot.ts` (drewno z gajów przy zamku i oaz).
