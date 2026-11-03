@@ -30,6 +30,8 @@ export interface SaveMeta {
   v: number;
   preset: string;
   seedText: string;
+  /** numer meczu (main.ts matchId): zapisy skończonego meczu nie wracają przez „Kontynuuj” */
+  match?: string;
   day: number;
   hour: number;
   people: number;

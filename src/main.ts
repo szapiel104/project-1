@@ -187,7 +187,7 @@ function saveMetaOf(kind: SaveKind, name: string): Omit<SaveMeta, 'id' | 'create
   const clk = clockAt(game.tick);
   const p = game.players[ME]!;
   return {
-    name, kind, build: typeof __BUILD__ === 'string' ? __BUILD__ : '', v: SAVE_VERSION, preset: currentPreset, seedText: currentSeedText,
+    name, kind, build: typeof __BUILD__ === 'string' ? __BUILD__ : '', v: SAVE_VERSION, preset: currentPreset, seedText: currentSeedText, match: matchId,
     day: clk.day, hour: Math.floor(clk.hour), people: game.units.filter((u) => u.owner === ME).length, soldiers: game.soldiers.filter((x) => x.owner === ME).length,
     buildings: game.buildings.filter((b) => b.owner === ME).length, gold: Math.floor(p.res[resIndex('gold')] ?? 0),
     level: game.players.find((o) => o.id !== ME && o.team !== p.team)?.level, dev: !!p.dev, thumb: thumbShot(),
@@ -205,7 +205,21 @@ async function saveTo(kind: SaveKind, name: string, replace?: string): Promise<S
   return r;
 }
 /** „Kontynuuj” w menu tylko wtedy, gdy jest jakiś zapis tego konta (przeglądarka albo chmura) */
-function refreshContinue(): void { void listSaves().then((l) => menu.setCanContinue(l.length > 0), () => menu.setCanContinue(false)); }
+/**
+ * Skończone mecze (wygrana, porażka, poddanie): ich zapisy zostają na liście „Wczytaj grę”, ale „Kontynuuj” ich nie bierze
+ * (Michał 3.11.2026: „wygrałem grę, jest Kontynuuj i wracam do wygranej”).
+ */
+const ENDED_KEY = 'p1.endedMatches';
+const endedMatches = (): Set<string> => { try { return new Set(JSON.parse(localStorage.getItem(ENDED_KEY) ?? '[]') as string[]); } catch { return new Set(); } };
+const markEnded = (id: string): void => { try { const l = [...endedMatches(), id].slice(-100); localStorage.setItem(ENDED_KEY, JSON.stringify(l)); } catch { /* brak pamięci */ } };
+// starsze zapisy (sprzed 3.11.2026) nie mają numeru meczu: rozpoznajemy je po mapie i trybie, jeśli powstały przed końcem meczu
+const ENDED_MAPS = 'p1.endedMaps';
+const endedMaps = (): Record<string, number> => { try { return JSON.parse(localStorage.getItem(ENDED_MAPS) ?? '{}') as Record<string, number>; } catch { return {}; } };
+const continuable = (l: SaveMeta[]): SaveMeta | undefined => {
+  const ended = endedMatches(), maps = endedMaps();
+  return l.find((s) => (s.match ? !ended.has(s.match) : !(s.created <= (maps[`${s.seedText}|${s.preset}`] ?? 0))));
+};
+function refreshContinue(): void { void listSaves().then((l) => menu.setCanContinue(!!continuable(l)), () => menu.setCanContinue(false)); }
 onAccount(() => refreshContinue());
 /** Wczytanie zapisu: gra z zapisu za ekranem wczytywania, potem kamera, grupy i tempo jak w chwili zapisu */
 async function loadFrom(id: string): Promise<string | null> {
@@ -357,10 +371,11 @@ const menu = createMenu(document.body, {
   onTutorialReset: () => tutorial.reset(),
   // z ekranu tytułowego (zapis wczytany przy starcie) wchodzimy przez ekran wczytywania, a powrót z pauzy jest od razu
   onContinue: () => {
-    if (!titleScreen) { menu.close(); if (!net) setStatus({ where: 'solo' }); return; }
-    // „Kontynuuj” = najnowszy zapis z listy zapisów (Michał 3.11.2026: usunięty zapis nie może dalej wracać z ukrytej kopii)
+    if (!titleScreen && !gameOver) { menu.close(); if (!net) setStatus({ where: 'solo' }); return; }
+    // „Kontynuuj” = najnowszy zapis z listy zapisów (Michał 3.11.2026: usunięty zapis nie może dalej wracać z ukrytej kopii),
+    // ale nie ze skończonego meczu
     void listSaves().then((l) => {
-      const last = l[0];
+      const last = continuable(l);
       if (!last) { menu.setCanContinue(false); return; }
       void loadFrom(last.id).then((e) => { if (e) hud.toast(e); });
     });
@@ -1830,7 +1845,10 @@ function showEnd(win: boolean): void {
   // skończona gra (wygrana, porażka, poddanie) znika z zapisu: w menu nie ma już „Kontynuuj”
   gameOver = true;
   try { localStorage.removeItem(SAVE_KEY); } catch { /* brak dostępu do pamięci */ }
+  if (matchId) markEnded(matchId);
+  try { const m = endedMaps(); m[`${currentSeedText}|${currentPreset}`] = Date.now(); localStorage.setItem(ENDED_MAPS, JSON.stringify(m)); } catch { /* brak pamięci */ }
   menu.setCanContinue(false);
+  refreshContinue();
   const p = game.players[ME]!;
   const st = p.stats;
   const mins = Math.floor(game.tick / TICKS_PER_SECOND / 60);

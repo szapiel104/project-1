@@ -10,6 +10,17 @@ export type { ChangeEntry } from './changelogTypes';
  */
 const NEW: ChangeEntry[] = [
   {
+    v: '0.89.5', date: '2026-11-03',
+    pl: [
+      'Po wygranej albo przegranej „Kontynuuj” nie wraca już do skończonego meczu — bierze najnowszy zapis innej, niedokończonej gry (zapisy skończonego meczu zostają w „Wczytaj grę”).',
+      'Okno budynku: imiona i zajęcia magazynierów i robotników oraz „Pusto” czytelne na pergaminie.',
+    ],
+    en: [
+      'After a win or a defeat “Continue” no longer returns to the finished match — it takes the newest save of another, unfinished game (the finished match’s saves stay in “Load game”).',
+      'Building window: the names and tasks of storekeepers and workers, and “Empty”, are readable on the parchment.',
+    ],
+  },
+  {
     v: '0.89.4', date: '2026-11-03',
     pl: ['Tryb testowy: pustynię można wymusić dopiskiem „kraina=pustynia” w adresie (dla testerów).'],
     en: ['Test mode: the desert can be forced with “kraina=pustynia” in the address (for testers).'],

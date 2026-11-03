@@ -207,3 +207,8 @@ body.build-open .scribe { display: flex; }
 #ui .info .actions { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 8px; }
 #ui .info .actions button, #ui .info > .btn-main, #ui .info .gate-box .btn-main { width: 100%; }
 #ui .info .prod-arrow { color: var(--parch-ink); font-size: 22px; font-weight: 800; opacity: .8; }
+/* lista ludzi w oknie budynku (magazynierzy, robotnicy) i puste półki — czytelne na pergaminie */
+#ui .info .logi-list, #ui .info .logi-list li { color: var(--parch-ink); text-shadow: none; }
+#ui .info .logi-list strong { color: var(--parch-red); }
+#ui .info .logi-alert .logi-head strong { color: #a8281f; }
+#ui .info :is(.stock-empty, .empty, em) { color: var(--parch-soft); }
