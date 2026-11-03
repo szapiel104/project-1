@@ -1,4 +1,6 @@
 import * as THREE from 'three';
+import { gpuMods } from './gpu/webgpu';
+import { impostorNode } from './gpu/impostorNode';
 import { SEASON_U } from './season';
 import { createRenderer } from './glcontext';
 
@@ -58,6 +60,8 @@ export function impostorFrom(tex: THREE.Texture, W: number, H: number, bare?: TH
     const m = new THREE.MeshStandardMaterial({ map: tex, alphaTest: 0.5, roughness: 1, metalness: 0, side: THREE.DoubleSide });
     // kawałek lasu przełączany z bryły na obrazek ma w instancjach barwę korony: tu ją znosimy, zostaje sam odcień drzewa
     if (inverse !== undefined) { const c = new THREE.Color(inverse); m.color.setRGB(1 / Math.max(c.r, 0.02), 1 / Math.max(c.g, 0.02), 1 / Math.max(c.b, 0.02)); }
+    // WebGPU: obracanie do kamery i wybór klatki w węzłach (gpu/impostorNode.ts)
+    if (gpuMods) return impostorNode({ map: tex, bare, frames: FRAMES, color: m.color, bareU: SEASON_U.uBare });
     m.onBeforeCompile = (sh) => {
       // liściaste zimą: ten sam obrazek bez liści (klatki zrobione w Blenderze), przełączany razem z porą roku
       if (bare) {

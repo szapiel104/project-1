@@ -1,5 +1,8 @@
 # Dziennik zmian
 
+## 0.92.5 — 2026-11-03
+- WebGPU: drzewa z daleka `gpu/impostorNode.ts` (macierz instancji z obiektu w Fn(builder), wybór klatki, zima bez liści). Wodospady wyłączone (`WATERFALLS = false` w terrain.ts, Michał: „na razie całkowicie do kosza”); kod streams.ts i testy zostają.
+
 ## 0.92.4 — 2026-11-03
 - WebGPU: `warmGpu()` dobiera porcję do kosztu nowych wariantów (bez stałego kosztu klatki), przerwy przez MessageChannel zamiast rAF; trawa `gpu/grassNode.ts` (ten sam rozkład kęp, wiatr, barwa podłoża, suche źdźbła, ostra alfa).
 

@@ -33,6 +33,8 @@ import { SHADOW_LAYER, shadowProxyMaterial } from './shadowlayer';
 import { createGrassField, type GrassField } from './grass';
 import { buildHighMist, type Atmosphere, type HighMist } from './highmist';
 import { buildStreams, type Streams } from './streams';
+/** Wodospady: wyłączone do odwołania (Michał 3.11.2026) */
+const WATERFALLS = false;
 import { buildRockGeometry, rockDisplacer } from './rockmesh';
 import { rockMaterial, rocks0ad } from './rocks0ad';
 
@@ -900,15 +902,18 @@ function* terrainSteps(map: GameMap, models: ModelFactory, waterLevel: number): 
     }
     mistFx = buildHighMist({ data, nx, ny, x0: x0 + ox, z0: z0 + oz, step: STEP, wet, wood }, { cx: ox + w / 2, cz: oz + h / 2, hw: w / 2, hh: h / 2 }, map.seed);
     group.add(mistFx.group);
-    const tileOf = (x: number, y: number): Terrain => map.tiles[y * w + x] as Terrain;
-    streams = buildStreams({
-      height: meshH,
-      rock: (x, y) => x < 0 || y < 0 || x >= w || y >= h || tileOf(x, y) === Terrain.Mountain,
-      water: (x, y) => tileOf(x, y) === Terrain.Water || tileOf(x, y) === Terrain.Ford,
-      w, h, ox, oz, seed: map.seed,
-    }, mistFx.noise);
-    group.add(streams.group);
-    mistFx.addSpray(streams.sprays);
+    // wodospady na razie wyłączone (Michał 3.11.2026: „wodospady na razie całkowicie do kosza”); kod w streams.ts zostaje
+    if (WATERFALLS) {
+      const tileOf = (x: number, y: number): Terrain => map.tiles[y * w + x] as Terrain;
+      streams = buildStreams({
+        height: meshH,
+        rock: (x, y) => x < 0 || y < 0 || x >= w || y >= h || tileOf(x, y) === Terrain.Mountain,
+        water: (x, y) => tileOf(x, y) === Terrain.Water || tileOf(x, y) === Terrain.Ford,
+        w, h, ox, oz, seed: map.seed,
+      }, mistFx.noise);
+      group.add(streams.group);
+      mistFx.addSpray(streams.sprays);
+    }
   }
 
   yield;

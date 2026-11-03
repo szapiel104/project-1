@@ -10,6 +10,11 @@ export type { ChangeEntry } from './changelogTypes';
  */
 const NEW: ChangeEntry[] = [
   {
+    v: '0.92.5', date: '2026-11-03',
+    pl: ['Wracają drzewa z daleka: dalekie lasy obracają się do patrzącego jak dawniej, liściaste zimą stoją bez liści.', 'Wodospady na razie usunięte z mapy.'],
+    en: ['Distant trees are back: far forests turn to face the viewer as before, and broadleaf trees stand bare in winter.', 'Waterfalls are removed from the map for now.'],
+  },
+  {
     v: '0.92.4', date: '2026-11-03',
     pl: ['Szybsze „Przygotowanie grafiki” na nowym silniku.', 'Wraca trawa: kępy kołyszą się na wietrze, gęstnieją przy wodzie, rzedną na zboczach i żółkną jesienią.'],
     en: ['Faster "Preparing the graphics" on the new engine.', 'Grass is back: tufts sway in the wind, grow thicker by the water, thinner on slopes and turn yellow in autumn.'],
