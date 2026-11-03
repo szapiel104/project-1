@@ -10,6 +10,11 @@ export type { ChangeEntry } from './changelogTypes';
  */
 const NEW: ChangeEntry[] = [
   {
+    v: '0.94.19', date: '2026-11-03',
+    pl: ['Koniec z ciemnymi rombami i prostokątami na ziemi wokół dymu i pożarów: cieniowanie zagłębień liczy się teraz tylko z prawdziwych brył, a przełączenie go w ustawieniach nie przeładowuje już całej grafiki.'],
+    en: ['No more dark diamonds and rectangles on the ground around smoke and fires: ambient occlusion now comes from solid geometry only, and toggling it in the settings no longer reloads all the graphics.'],
+  },
+  {
     v: '0.94.18', date: '2026-11-03',
     pl: ['Na najwyższej jakości (z cieniowaniem zagłębień) krawędzie znów są wygładzone — wcześniej na nowym silniku nie było wtedy żadnego wygładzania.'],
     en: ['At the highest quality (with ambient occlusion) edges are smooth again — previously the new engine applied no anti-aliasing at all in that case.'],

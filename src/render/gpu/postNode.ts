@@ -57,23 +57,21 @@ export class GpuPost {
     this.built = key;
     const { TSL } = gpuMods!;
     const T = TSL as any;
-    const { pass, mrt, output, normalView, packNormalToRGB, unpackRGBToNormal, sample, vec2, vec3, vec4, float, dot, mix,
+    const { pass, vec2, vec3, vec4, float, dot, mix,
       smoothstep, pow, max, min, clamp, sqrt, screenUV, renderOutput, convertToTexture } = T;
     const fx = gpuMods!.FX as any;
     const o = this.opts;
     const msaa = o.ao === 'off' && o.aa.startsWith('msaa') ? 4 : 0;
     const sp = pass(this.scene, this.camera, { samples: msaa });
-    // normalne do AO piszą tylko bryły nieprzezroczyste: płomienie, dym, poświaty i mgła (przezroczyste prostokąty
-    // i pudła) zostawiały w buforze normalnych swoje płaskie normalne i AO rysowało wokół nich prostokąty
-    // (Michał 3.11.2026: „dym robi ten kwadrat”, „ogień i prostokąt”); alfa 0 = przy każdym mieszaniu bufor bez zmian
-    const nrmOut = T.Fn((_: unknown, b: any) => (b.material?.transparent ? vec4(0) : vec4(packNormalToRGB(normalView), 1)))();
-    if (o.ao !== 'off') sp.setMRT(mrt({ output, normal: nrmOut }));
+    // AO z samego bufora głębi (normalne odtwarzane z głębi, bez osobnego bufora normalnych): przezroczyste bryły
+    // (dym, płomienie, poświaty) nie piszą głębi, więc nie psują AO — wcześniej ich płaskie normalne w buforze
+    // normalnych dawały ciemne prostokąty i romby wokół ognia i dymu (Michał 3.11.2026). Przy okazji przełączenie AO
+    // nie zmienia już wyjść materiałów, więc nie składa wszystkiego od nowa.
     const col = sp.getTextureNode('output');
     let c: any = col.rgb;
     if (o.ao !== 'off') {
-      const nrm = sp.getTextureNode('normal'), dep = sp.getTextureNode('depth');
-      const normal = sample((uv: any) => unpackRGBToNormal(nrm.sample(uv)));
-      const aoN = fx.ao(dep, normal, this.camera);
+      const dep = sp.getTextureNode('depth');
+      const aoN = fx.ao(dep, null, this.camera);
       // pół rozdzielczości zawsze (odszumianie i tak wygładza): pełna przy 4K kosztowała kartę więcej niż cała scena
       aoN.resolutionScale = 0.5;
       // siła i zasięg cienia w zagłębieniach (do strojenia: ?aor=promień&aop=wykładnik&aok=siła). Dawne 1,6 / 2,2 / pełna
@@ -85,7 +83,7 @@ export class GpuPost {
       aoN.samples.value = o.ao === 'high' ? 16 : o.ao === 'low' ? 8 : 12;
       const aoT: any = aoN.getTextureNode();
       // odszumianie liczy się w miejscu (węzeł w tym samym przejściu), bez osobnej tekstury
-      const raw = o.ao !== 'low' ? fx.denoise(aoT, dep, normal, this.camera).r : aoT.sample(screenUV).r;
+      const raw = o.ao !== 'low' ? fx.denoise(aoT, dep, null, this.camera).r : aoT.sample(screenUV).r;
       const a = mix(float(1), pow(raw, num('aop', 1.2)), this.u.aoK.mul(num('aok', 1)));
       c = c.mul(mix(vec3(0.0103, 0.0060, 0.0030), vec3(1), a)); // ciepły brąz w zagłębieniach (0x1a120a w liniowym)
     }

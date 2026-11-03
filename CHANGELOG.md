@@ -1,5 +1,8 @@
 # Dziennik zmian
 
+## 0.94.19 — 2026-11-03
+- WebGPU post: GTAO i odszumianie z normalnymi odtwarzanymi z głębi (bez MRT z normalnymi). Przezroczyste bryły (dym) pisały do bufora normalnych mimo alfy 0 (bez mieszania na drugim wyjściu) — ciemne romby wokół dymu. Zmiana AO nie zmienia wyjść materiałów (bez składania od nowa).
+
 ## 0.94.18 — 2026-11-03
 - WebGPU post: przy AO i wybranym MSAA wygładza SMAA (przejście z normalnymi do AO jest bez próbek, więc Ultra było bez wygładzania).
 - WebGPU: wspólne złożone shadery pul instancji (bez `object.uuid` w kluczu, bufory instancji podstawiane w `getAttributes`) — na próbę pod `?pule=1`.
