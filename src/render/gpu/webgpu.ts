@@ -138,7 +138,10 @@ export async function prepareGpu(canvas: HTMLCanvasElement): Promise<void> {
   const imArrays = new WeakSet<object>(), icArrays = new WeakSet<object>();
   // wszystkie pule ze zwykłymi materiałami, także z dopiętym wiatrem i porami roku (sprawdzone 3.11.2026: las, palmy
   // i kamienie na swoich miejscach, 927 pul → 48 shaderów); ?pule=1 — bez materiałów z węzłami, ?pule=0 — wyłączone
-  const POOLS = q?.get('pule') ?? '2';
+  // 4.11.2026: domyślnie WYŁĄCZONE — w grze Michała (dev 1v1, 194 budynki) wspólny shader wiązał jednej puli cudzy, za mały
+  // bufor macierzy („Instance range (count 118) requires a larger buffer (4224)”), karta odrzucała każdą klatkę i ekran
+  // był pusty. Włączenie na próbę: ?pule=2 (albo ?pule=1). Do naprawy przed ponownym włączeniem (docs/webgpu.md).
+  const POOLS = q?.get('pule') ?? '0';
   const sharedPool = (o: any, m: any): boolean => POOLS !== '0' && !!o?.isInstancedMesh && !o.morphTexture && !!m && !m.isNodeMaterial
     && (!m.userData?.gpuKey || POOLS === '2');
   type Sub = { ib: any; at: Map<number, any>; col?: any };

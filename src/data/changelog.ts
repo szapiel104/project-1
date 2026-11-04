@@ -10,6 +10,11 @@ export type { ChangeEntry } from './changelogTypes';
  */
 const NEW: ChangeEntry[] = [
   {
+    v: '0.94.25', date: '2026-11-04',
+    pl: ['Pusty ekran na WebGPU naprawiony inaczej: wyłączone wspólne shadery dla pul obiektów, przez które karta odrzucała klatki. Pierwsze sekundy w nowym miejscu mapy mogą chwilę dłużej doczytywać grafikę.'],
+    en: ['Blank screen on WebGPU fixed another way: shared shaders for object pools, which made the GPU reject frames, are turned off. The first seconds in a new part of the map may take a little longer to load graphics.'],
+  },
+  {
     v: '0.94.24', date: '2026-11-04',
     pl: ['Naprawiony pusty ekran (samo tło) na WebGPU po chwili gry: jedna z pul obiektów rysowała się ze złym buforem i karta odrzucała całą klatkę.'],
     en: ['Fixed a blank screen (background only) on WebGPU after a while in game: one object pool was drawn with the wrong buffer and the GPU rejected the whole frame.'],

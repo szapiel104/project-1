@@ -1,5 +1,9 @@
 # Dziennik zmian
 
+## 0.94.25 — 2026-11-04
+- WebGPU: wspólne shadery pul instancji domyślnie wyłączone (`?pule=2` włącza na próbę). Poprawka z 0.94.24 nie pomogła — u Michała dalej `Instance range (count 118) requires a larger buffer (4224)` i pusty ekran. Szczegóły w `docs/webgpu.md`.
+- Boty: bez zmian.
+
 ## 0.94.24 — 2026-11-04
 - WebGPU, wspólne shadery pul (`gpu/webgpu.ts`): bufor macierzy podstawiany każdej puli także wtedy, gdy obcy bufor nie przeszedł przez `renderObject` (wcześniej tylko z `imArrays`) — dziennik Michała: `Instance range (count 118) requires a larger buffer (4224)` → cała klatka odrzucona, pusty ekran. Do tego przycinanie `count` do pojemności puli z jednym ostrzeżeniem `[WebGPU] pula …` w dzienniku.
 - Cofnięty podpis pul roślinności z id siatki (0.94.23) — wracamy do sprawdzonego zachowania, dopóki nie sprawdzimy LOD drzew na WebGPU.

@@ -73,3 +73,5 @@ kwadratu, większa mapa 1 na 1.
 - Parallax: gpu/pomNode.ts gotowe, ale włączone tylko pod ?pom=1 (0.94.9 wywróciło grę: materialReference przy cieniach).
 - Mapa otoczenia: na WebGPU od 0.94.4 (gpu/envNode.ts).
 - Widok spod wody: tylko WebGPU (gpu/underwaterNode.ts), na WebGL brak.
+
+- 0.94.25 (4.11.2026): wspólne shadery pul (`?pule`) domyślnie wyłączone. U Michała (dev 1v1, 194 budynki, zapis wczytany) każda klatka padała: `DrawIndexed(24, 118)` z buforem macierzy na 66 sztuk (4224 B) — pula dostawała cudzy bufor mimo podstawiania w `getAttributes` (0.94.24 rozszerzyło warunek, nie pomogło; przycięcie `count` się nie odpaliło, więc to nie za duży `count`). Nie odtworzone na SwiftShader (`npm run check:console -- --webgpu`). Przed ponownym włączeniem: znaleźć, która ścieżka rysuje pulę bez podmienionego bufora.
