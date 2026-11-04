@@ -1,5 +1,11 @@
 # Dziennik zmian
 
+## 0.94.24 — 2026-11-04
+- WebGPU, wspólne shadery pul (`gpu/webgpu.ts`): bufor macierzy podstawiany każdej puli także wtedy, gdy obcy bufor nie przeszedł przez `renderObject` (wcześniej tylko z `imArrays`) — dziennik Michała: `Instance range (count 118) requires a larger buffer (4224)` → cała klatka odrzucona, pusty ekran. Do tego przycinanie `count` do pojemności puli z jednym ostrzeżeniem `[WebGPU] pula …` w dzienniku.
+- Cofnięty podpis pul roślinności z id siatki (0.94.23) — wracamy do sprawdzonego zachowania, dopóki nie sprawdzimy LOD drzew na WebGPU.
+- `tools/check/console.mjs --webgpu`: WebGPU na SwiftShader w przeglądarce bez okna (wcześniej sprawdzenie szło tylko po WebGL2 i takich błędów nie widziało).
+- Boty: bez zmian.
+
 ## 0.94.23 — 2026-11-04
 - Przegląd całego kodu (4 równoległe przeglądy + weryfikacja): `save.ts` — zrujnowany mur/brama = wyłom (bez zajętości i bramy), `stoneWallSystem` po wczytaniu, zamknięta brama twierdzy; `placement.ts` — `restore()` odmawia, gdy w obrysie są ludzie/żołnierze/wilki, mury pod budynkiem zerowane (też `emptyscene.ts`).
 - `army.ts` `nearestFoe`: promień kubełków z zasięgu wzroku (było stałe 3×3), granice siatki; `buildingById` zamiast `some`. `step.ts`: `MAX_IDS = 2000` na rozkaz.

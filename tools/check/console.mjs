@@ -6,6 +6,7 @@
  *   npm run check:console -- --url=https://szapiel104.github.io/project-1/   — wdrożona wersja
  *   npm run check:console -- --pages="?test=1&pusta=1,modele.html?id=keep" --wait=15
  *   npm run check:console -- --hd             — dodaje ?test=1&hd=1 (pełna grafika, bez karty graficznej bardzo wolno)
+ *   npm run check:console -- --webgpu         — WebGPU na SwiftShader (domyślnie przeglądarka bez okna ma tylko WebGL2)
  *
  * Kod wyjścia 1, gdy w dzienniku jest choć jeden błąd (ostrzeżenia tylko wypisuje).
  * Przeglądarka: Chromium z Playwright (PLAYWRIGHT_BROWSERS_PATH) albo CHROME=/ścieżka/do/chrome.
@@ -35,7 +36,9 @@ if (!base.endsWith('/')) base += '/';
 
 const browser = await chromium.launch({
   executablePath: process.env.CHROME || undefined,
-  args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'],
+  // --webgpu: WebGPU na SwiftShader (bez karty graficznej; bez tej flagi gra spada na WebGL2 i błędów WebGPU nie widać)
+  args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist',
+    ...(process.argv.includes('--webgpu') ? ['--enable-unsafe-webgpu', '--enable-features=Vulkan', '--use-vulkan=swiftshader', '--use-webgpu-adapter=swiftshader'] : [])],
 });
 let failed = 0;
 for (const p of pages) {

@@ -143,6 +143,8 @@ export async function prepareGpu(canvas: HTMLCanvasElement): Promise<void> {
     && (!m.userData?.gpuKey || POOLS === '2');
   type Sub = { ib: any; at: Map<number, any>; col?: any };
   const subs = new WeakMap<object, Sub>();
+  const overSeen = new WeakSet<object>();
+  const poolName = (o: any): string => { let q = o, c = ''; while (q && !c) { c = q.userData?.cat || q.name || ''; q = q.parent; } return c || o.geometry?.type || 'InstancedMesh'; };
   const subOf = (o: any): Sub => {
     let sb = subs.get(o.instanceMatrix);
     if (!sb) {
@@ -157,6 +159,13 @@ export async function prepareGpu(canvas: HTMLCanvasElement): Promise<void> {
   const renderObj = anyR.renderObject.bind(anyR);
   anyR.renderObject = (object: any, scene: unknown, camera: unknown, geometry: unknown, material: any, ...rest: unknown[]): unknown => {
     if (object?.isInstancedMesh) {
+      // więcej sztuk niż miejsca w buforze: WebGPU odrzuca wtedy całą klatkę (pusty ekran, zrzut Michała 4.11.2026:
+      // „Instance range … requires a larger buffer”). Przycinamy i raz zapisujemy w dzienniku, która to pula.
+      const cap = object.instanceMatrix.count as number;
+      if (object.count > cap) {
+        if (!overSeen.has(object)) { overSeen.add(object); console.warn(`[WebGPU] pula ${poolName(object)}: ${object.count} sztuk, miejsca ${cap} — przycięte`); }
+        object.count = cap;
+      }
       srcMat.set(object, material);
       imArrays.add(object.instanceMatrix.array);
       if (object.instanceColor) icArrays.add(object.instanceColor.array);
@@ -196,7 +205,7 @@ export async function prepareGpu(canvas: HTMLCanvasElement): Promise<void> {
         let changed = false;
         const out = list.map((a: any) => {
           const d = a.isInterleavedBufferAttribute ? a.data : null;
-          if (d && d.stride === 16 && imArrays.has(d.array) && d.array !== o.instanceMatrix.array) {
+          if (d && d.stride === 16 && (imArrays.has(d.array) || d.isInstancedInterleavedBuffer) && d.array !== o.instanceMatrix.array) {
             const sb = subOf(o);
             let na = sb.at.get(a.offset);
             if (!na) { na = new (THREE as any).InterleavedBufferAttribute(sb.ib, a.itemSize, a.offset); sb.at.set(a.offset, na); }

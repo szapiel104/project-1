@@ -1379,7 +1379,7 @@ function* terrainSteps(map: GameMap, models: ModelFactory, waterLevel: number): 
         vegSphere.copy(m.boundingSphere).applyMatrix4(group.matrixWorld);
         if (view.intersectsSphere(vegSphere)) {
           const p = k.pools.get(poolKey(m.geometry, m.material as THREE.Material, 'main'));
-          if (p) { plan.push([p, m, true]); sig.push(ci, 0, m.instanceMatrix.version, m.instanceColor?.version ?? 0, m.geometry.id); } // id siatki: przełączenie blisko/daleko zmienia pulę
+          if (p) { plan.push([p, m, true]); sig.push(ci, 0, m.instanceMatrix.version, m.instanceColor?.version ?? 0); }
         }
         if (!shadow || !shadow.intersectsSphere(vegSphere)) return;
         if (c.proxy) {
@@ -1388,7 +1388,7 @@ function* terrainSteps(map: GameMap, models: ModelFactory, waterLevel: number): 
           if (p) { plan.push([p, m, false]); sig.push(ci, 1, m.instanceMatrix.version); }
         } else if (m.castShadow) {
           const p = k.pools.get(poolKey(m.geometry, m.material as THREE.Material, 'shadow'));
-          if (p) { plan.push([p, m, false]); sig.push(ci, 2, m.instanceMatrix.version, m.geometry.id); }
+          if (p) { plan.push([p, m, false]); sig.push(ci, 2, m.instanceMatrix.version); }
         }
       });
       if (sig.length === k.sig.length && sig.every((v, i) => v === k.sig[i])) continue;

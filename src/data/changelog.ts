@@ -10,6 +10,11 @@ export type { ChangeEntry } from './changelogTypes';
  */
 const NEW: ChangeEntry[] = [
   {
+    v: '0.94.24', date: '2026-11-04',
+    pl: ['Naprawiony pusty ekran (samo tło) na WebGPU po chwili gry: jedna z pul obiektów rysowała się ze złym buforem i karta odrzucała całą klatkę.'],
+    en: ['Fixed a blank screen (background only) on WebGPU after a while in game: one object pool was drawn with the wrong buffer and the GPU rejected the whole frame.'],
+  },
+  {
     v: '0.94.23', date: '2026-11-04',
     pl: [
       'Przegląd kodu i poprawki błędów: wczytany zapis z rozbitym murem albo bramą ma wyłom tam, gdzie był (wcześniej mur „odrastał” po wczytaniu).',
