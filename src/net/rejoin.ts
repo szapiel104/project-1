@@ -3,7 +3,7 @@ import { deserialize, type SaveData } from '../sim/save';
 import type { GameState } from '../sim/state';
 import { tx } from '../i18n';
 import { Lockstep, TURN, type NetSnapshot } from './lockstep';
-import { getRoom, me, restore, roomLink, type NetMsg, type Room, type RoomLink, type Slot } from './supa';
+import { me, restore, roomLink, roomOrError, type NetMsg, type Room, type RoomLink, type Slot } from './supa';
 
 /**
  * Powrót do meczu przez sieć po odświeżeniu strony albo zerwanym połączeniu.
@@ -78,8 +78,10 @@ export async function rejoinMatch(memo: MatchMemo, note: (text: string) => void,
   const seat = memo.slots[memo.me];
   if (!m) return tx('Zaloguj się na to samo konto, żeby wrócić do meczu.', 'Sign in to the same account to return to the match.');
   if (seat?.kind !== 'human' || seat.id !== m.id) return tx('Ten mecz grało inne konto.', 'This match was played on another account.');
-  const room = await getRoom(memo.room.id);
-  if (typeof room === 'string' || room.status !== 'playing') { forgetMatch(); return tx('Ten mecz już się skończył.', 'This match has already ended.'); }
+  const room = await roomOrError(memo.room.id);
+  // chwilowy brak sieci to nie koniec meczu — zapamiętany mecz zostaje, „Wróć do meczu” można kliknąć jeszcze raz
+  if (room === 'error') return tx('Brak połączenia z serwerem — spróbuj wrócić do meczu za chwilę.', 'No connection to the server — try returning to the match in a moment.');
+  if (!room || room.status !== 'playing') { forgetMatch(); return tx('Ten mecz już się skończył.', 'This match has already ended.'); }
   const link = roomLink(room.id, { id: m.id, nick: m.nick, avatar: m.avatar });
   await link.ready;
   if (memo.humans.every((h) => h === memo.me)) {

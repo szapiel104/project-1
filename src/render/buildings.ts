@@ -553,6 +553,9 @@ export function rubbleModel(w: number, h: number, seed: number, ground?: (x: num
 
 /** Pokazuje tyle gruzu, ile jeszcze zostało do wyniesienia. */
 export function setRubble(model: THREE.Object3D, ratio: number): void {
+  // ten sam stan co w poprzedniej klatce — nic do zmiany (wołane co klatkę dla każdego stosu)
+  if (model.userData.ratio === ratio) return;
+  model.userData.ratio = ratio;
   const pieces = model.children.filter((c) => c.name !== 'rubbleBaked');
   const shown = Math.max(1, Math.ceil(pieces.length * ratio));
   model.userData.shown = shown;
@@ -566,11 +569,15 @@ export function setRubble(model: THREE.Object3D, ratio: number): void {
  * osobno; gdy leżą, zlewamy widoczne w 2–4 siatki. Gdy robotnicy zabiorą część stosu (setRubble), zlewamy od nowa.
  */
 export function bakeRubble(model: THREE.Object3D, falling: boolean): void {
+  // nic się nie zmieniło od ostatniego złożenia: wychodzimy od razu, bez przeglądania kilkuset kawałków w każdej klatce
+  // (przegląd 4.11.2026)
+  if (!falling && model.userData.baked && model.userData.bakedN === model.userData.shown) return;
   const pieces = model.children.filter((c) => c.name !== 'rubbleBaked') as THREE.Mesh[];
   const shown = (model.userData.shown as number | undefined) ?? pieces.length;
   const old = model.children.filter((c) => c.name === 'rubbleBaked') as THREE.Mesh[];
   if (falling) {
     if (old.length) { for (const m of old) { model.remove(m); m.geometry.dispose(); } model.userData.bakedN = 0; pieces.forEach((c, i) => { c.visible = i < shown; }); }
+    model.userData.baked = false;
     return;
   }
   if (model.userData.bakedN === shown && old.length) return;
@@ -596,6 +603,7 @@ export function bakeRubble(model: THREE.Object3D, falling: boolean): void {
     model.add(m);
   }
   model.userData.bakedN = shown;
+  model.userData.baked = true;
   pieces.forEach((c) => { c.visible = false; });
 }
 

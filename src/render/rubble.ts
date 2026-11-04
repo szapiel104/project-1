@@ -18,11 +18,17 @@ export class RubbleLayer {
   /** Rozebrany budynek: zapada się w ciągu ok. 1 s i znika z warstwy budynków */
   collapse(mesh: THREE.Group): void { this.dying.push({ mesh, t: 0 }); }
 
+  /** Stos gruzu znika ze sceny i zwalnia swoje siatki (każdy kamień i belka ma własną; materiały są wspólne — zostają) */
+  private drop(pile: THREE.Object3D): void {
+    this.scene.remove(pile);
+    pile.traverse((o) => { const m = o as THREE.Mesh; if (m.isMesh && !o.userData.shared) m.geometry.dispose(); });
+  }
+
   /** Nowa mapa: bez gruzu i zapadających się budynków */
   clear(): void {
     this.fresh = true;
     rubbleFalls.clear();
-    for (const pile of this.piles.values()) this.scene.remove(pile);
+    for (const pile of this.piles.values()) this.drop(pile);
     this.piles.clear();
     for (const d of this.dying) this.buildings.remove(d.mesh);
     this.dying = [];
@@ -57,7 +63,7 @@ export class RubbleLayer {
       setRubble(pile, r.loads.length / r.total);
       bakeRubble(pile, rubbleFalls.falling(pile));
     }
-    for (const [id, pile] of this.piles) if (!alive.has(id)) { this.scene.remove(pile); this.piles.delete(id); }
+    for (const [id, pile] of this.piles) if (!alive.has(id)) { this.drop(pile); this.piles.delete(id); }
     rubbleFalls.step(Math.min(dt, 0.1));
     this.fresh = false;
   }

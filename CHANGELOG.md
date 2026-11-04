@@ -1,5 +1,16 @@
 # Dziennik zmian
 
+## 0.94.23 — 2026-11-04
+- Przegląd całego kodu (4 równoległe przeglądy + weryfikacja): `save.ts` — zrujnowany mur/brama = wyłom (bez zajętości i bramy), `stoneWallSystem` po wczytaniu, zamknięta brama twierdzy; `placement.ts` — `restore()` odmawia, gdy w obrysie są ludzie/żołnierze/wilki, mury pod budynkiem zerowane (też `emptyscene.ts`).
+- `army.ts` `nearestFoe`: promień kubełków z zasięgu wzroku (było stałe 3×3), granice siatki; `buildingById` zamiast `some`. `step.ts`: `MAX_IDS = 2000` na rozkaz.
+- Sieć: `lockstep` — `dropper(p)`, odrzucanie tur ≤ wykonanej; `supa.ts` — try/catch w subskrybentach, `ready` także na błąd/timeout, `syncOnline` po id gracza, `roomOrError`; `rejoin.ts` nie zapomina meczu przy błędzie sieci. Lobby: walidacja `slots`/`preset`.
+- `main.ts`: `endMode` dla XP, `enterSeq` przeciw wyścigowi wczytywania, try/finally w powrocie do meczu, podwójne nasłuchy pagehide usunięte.
+- Zapisy: IDB z limitem 8 s i `onversionchange`, chmura — uszkodzony indeks → null, błędy indeksu rzucane, `cloudPut` → false.
+- UI: Esc nie zamyka menu przy otwartych okienkach, `safeAvatar`, dzwonek oznacza przeczytane tylko przy otwartym panelu, zamykanie wyrzucanych okien rozmów, sprzątanie nasłuchu zaznaczenia, suwak kart nowej gry bez nasłuchów na `window`, minimapa bez wymuszania układu co klatkę, raport bitwy przebudowywany tylko przy zmianie.
+- Render: czyszczenie map po id budynku przy nowej mapie, wspólny stożek płomienia, `rubble.drop` zwalnia geometrię, `bakeRubble`/`setRubble` bez powtórek, `InstancedMesh.dispose` w drogach, przycinanie `cullSeen`, podpis pul roślinności z id siatki (LOD drzew), kubełki dla stojących żołnierzy, `buildingById` w pętlach, `requestPointerLock().catch`, limit puli bloków muru.
+- i18n: `phase.32`, `phase.33` + test wszystkich faz.
+- Boty: bez zmian (poprawki dotyczą wszystkich graczy tak samo, w tym zasięgu łuczników na basztach).
+
 ## 0.94.22 — 2026-11-03
 - WebGPU: wspólne shadery pul domyślnie także dla materiałów z wiatrem i porami roku (`?pule=2` → domyślne; sprawdzone w lesie: drzewa na miejscach, 0 błędów).
 

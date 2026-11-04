@@ -14,4 +14,11 @@ describe('języki', () => {
       expect((en as Record<string, string>)[b.name], b.id).toBeTruthy();
     }
   });
+  it('każde zajęcie chłopa (Phase 0–33 w state.ts) ma opis w obu językach', () => {
+    // przegląd 4.11.2026: brakowało phase.32 i phase.33 — karta chłopa pokazywała „Robi: phase.32”
+    for (let i = 0; i <= 33; i++) {
+      expect((pl as Record<string, string>)[`phase.${i}`], `phase.${i}`).toBeTruthy();
+      expect((en as Record<string, string>)[`phase.${i}`], `phase.${i}`).toBeTruthy();
+    }
+  });
 });

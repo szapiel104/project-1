@@ -1379,7 +1379,7 @@ function* terrainSteps(map: GameMap, models: ModelFactory, waterLevel: number): 
         vegSphere.copy(m.boundingSphere).applyMatrix4(group.matrixWorld);
         if (view.intersectsSphere(vegSphere)) {
           const p = k.pools.get(poolKey(m.geometry, m.material as THREE.Material, 'main'));
-          if (p) { plan.push([p, m, true]); sig.push(ci, 0, m.instanceMatrix.version, m.instanceColor?.version ?? 0); }
+          if (p) { plan.push([p, m, true]); sig.push(ci, 0, m.instanceMatrix.version, m.instanceColor?.version ?? 0, m.geometry.id); } // id siatki: przełączenie blisko/daleko zmienia pulę
         }
         if (!shadow || !shadow.intersectsSphere(vegSphere)) return;
         if (c.proxy) {
@@ -1388,7 +1388,7 @@ function* terrainSteps(map: GameMap, models: ModelFactory, waterLevel: number): 
           if (p) { plan.push([p, m, false]); sig.push(ci, 1, m.instanceMatrix.version); }
         } else if (m.castShadow) {
           const p = k.pools.get(poolKey(m.geometry, m.material as THREE.Material, 'shadow'));
-          if (p) { plan.push([p, m, false]); sig.push(ci, 2, m.instanceMatrix.version); }
+          if (p) { plan.push([p, m, false]); sig.push(ci, 2, m.instanceMatrix.version, m.geometry.id); }
         }
       });
       if (sig.length === k.sig.length && sig.every((v, i) => v === k.sig[i])) continue;
@@ -2012,7 +2012,8 @@ function* terrainSteps(map: GameMap, models: ModelFactory, waterLevel: number): 
   const setRoads = (roads: Uint8Array, materials: THREE.Material[]): void => {
     roadsNow = roads; roadMats = materials;
     if (grass) for (let t = 0; t < w * h; t++) regrass(t);
-    for (const old of roadMeshes) { group.remove(old); old.geometry.dispose(); }
+    // siatki instancji (krawężniki, dyle, barierki, kamyki) zwalniają też swoje bufory macierzy na karcie (przegląd 4.11.2026)
+    for (const old of roadMeshes) { group.remove(old); old.geometry.dispose(); if ((old as THREE.InstancedMesh).isInstancedMesh) (old as THREE.InstancedMesh).dispose(); }
     roadMeshes.length = 0;
     const shade = new THREE.Color();
     for (let kind = 1; kind <= materials.length; kind++) {

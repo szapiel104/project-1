@@ -1113,8 +1113,11 @@ export function armySystem(g: GameState): void {
       let foe: Soldier | undefined, best = Math.max(def.sight + (high(g, s) ? 3 : 0) + (postAt ? Math.max(0, towerBonus(BUILDINGS[postAt.type]!.id)) : 0), range) * FP + 1;
       const t = tileOf(g, s), x = t % W, y = (t - x) / W;
       const cx = Math.floor(x / CELL), cy = Math.floor(y / CELL);
-      for (let gy = cy - 1; gy <= cy + 1; gy++)
-        for (let gx = cx - 1; gx <= cx + 1; gx++) {
+      // tyle kubełków, ile sięga wzrok (przegląd 4.11.2026: zawsze 3×3 kubełki — łucznik na wysokiej baszcie z zasięgiem 17
+      // nie widział wrogów dalej niż ok. 8 pól; poza mapą kubełków nie ma, więc bez zawijania na sąsiedni rząd)
+      const R = Math.max(1, Math.ceil(best / FP / CELL)), ch = Math.ceil(g.map.height / CELL);
+      for (let gy = Math.max(0, cy - R); gy <= Math.min(ch - 1, cy + R); gy++)
+        for (let gx = Math.max(0, cx - R); gx <= Math.min(cw - 1, cx + R); gx++) {
           for (const o of grid.get(gy * cw + gx) ?? []) {
             if (o.hp <= 0 || team(g, o.owner) === team(g, s.owner)) continue;
             // wręcz tylko na tym samym poziomie: z ziemi nie sięgnie na mur ani wieżę, z muru nie bije w dół (Michał 27.10.2026)
@@ -1165,7 +1168,7 @@ export function armySystem(g: GameState): void {
       if (!s.target) resumeSiege(s);
       // oblega budynek (z rozkazu albo sam): wrogi żołnierz w zasięgu wzroku ma pierwszeństwo przed zamkiem.
       // Budynek zapamiętany, po walce wraca do niego. Wroga na murze/wieży, którego wręcz nie dosięgnie, pomija.
-      if (s.target && !byId.has(s.target) && g.buildings.some((b) => b.id === s.target && !b.ruined)) {
+      if (s.target && !byId.has(s.target) && !!buildingById(g, s.target) && !buildingById(g, s.target)!.ruined) {
         const foe = nearestFoe(s, range);
         if (foe) { s.siegeOf = s.target; s.target = foe.id; s.path = []; }
         else if (siege(g, s, def, taken)) continue;

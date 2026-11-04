@@ -128,6 +128,8 @@ const MENU_HOUR = 17.6;
 export interface TileRef { x: number; y: number }
 const FIRE_A = new THREE.MeshBasicMaterial({ color: 0xff8a2a });
 const FIRE_B = new THREE.MeshBasicMaterial({ color: 0xffd25a });
+/** Jeden stożek płomienia dla wszystkich pożarów (wcześniej nowa geometria na każdy płomień każdego budynku) */
+const FIRE_CONE = new THREE.ConeGeometry(0.12, 0.4, 6);
 
 /** door: pole wyjścia (indeks pola mapy) liczone tak jak przy stawianiu (findDoor), -1 albo brak = budowla bez wejścia */
 export interface Ghost { x: number; y: number; w: number; h: number; ok: boolean; id: string; team: number; rot: number; door?: number }
@@ -1276,6 +1278,9 @@ export class GameRenderer {
     this.prevPos.clear();
     this.facing.clear();
     this.strides.clear();
+    // stany liczone po id budynku: na nowej mapie te same id należą do innych budynków (fałszywy pożar, wstrząs, podłoga twierdzy)
+    this.hpSeen.clear(); this.burnUntil.clear(); this.shake.clear();
+    this.keepFloors.clear(); this.walkables.clear(); this.walkInView.clear();
     this.storesTick = -1;
     this.clutter.reset();
     this.clouds.reset();
@@ -1517,7 +1522,7 @@ export class GameRenderer {
       let model = this.ghostModels.get(key);
       if (!model) { model = brazierModel(); model.traverse((o) => { const mesh = o as THREE.Mesh; if (mesh.isMesh) mesh.material = cloneMaterial(mesh.material as THREE.MeshLambertMaterial); }); this.ghostModels.set(key, model); this.scene.add(model); }
       const id = this.state.occupancy[g.y * width + g.x];
-      const host = id ? this.state.buildings.find((b) => b.id === id) : undefined;
+      const host = id ? buildingById(this.state, id) : undefined;
       if (host && brazierHost(BUILDINGS[host.type]!.id)) this.ghostOpen = host.id;
       if (host && brazierHost(BUILDINGS[host.type]!.id)) placeBrazier(model, this.state, this.view, host, this.buildingMeshes.get(host.id));
       else { model.position.set(g.x + 0.5 - width / 2, this.view.heightAt(g.x + 0.5, g.y + 0.5), g.y + 0.5 - height / 2); model.rotation.y = 0; model.scale.setScalar(0.5); }
@@ -2069,7 +2074,7 @@ export class GameRenderer {
     this.inMine = null;
     if (this.mineLevel) this.mineLevel.visible = false;
     const w = this.walk;
-    const b = g && m ? g.buildings.find((x) => x.id === m.id) : undefined;
+    const b = g && m ? buildingById(g, m.id) : undefined;
     if (!w || !g) return;
     if (b && b.door >= 0) {
       const W = g.map.width, th = (b.rot * Math.PI) / 2;
@@ -2104,7 +2109,7 @@ export class GameRenderer {
       return;
     }
     // stan kopalni na powierzchni: kto kopie (echo kilofów), czy wróg stoi u wrót, czy kopalnia jeszcze stoi
-    const g = this.state!, mb = g.buildings.find((x) => x.id === m.id);
+    const g = this.state!, mb = buildingById(g, m.id);
     if (!mb || mb.ruined || mb.owner !== this.me) {
       this.onWalkAlert('mineLost');
       this.leaveMine();
@@ -2221,7 +2226,7 @@ export class GameRenderer {
       this.walk.pitch = Math.max(-1.2, Math.min(1.2, this.walk.pitch - e.movementY * 0.0025));
     };
     const lock = (): void => { if (document.pointerLockElement !== this.canvas) end(); };
-    const click = (): void => { if (this.walk && document.pointerLockElement !== this.canvas) void this.canvas.requestPointerLock(); };
+    const click = (): void => { if (this.walk && document.pointerLockElement !== this.canvas) this.canvas.requestPointerLock()?.catch?.(() => {}); };
     const end = (): void => {
       window.removeEventListener('keydown', down, true); window.removeEventListener('keyup', up, true);
       window.removeEventListener('mousemove', move); document.removeEventListener('pointerlockchange', lock); this.canvas.removeEventListener('click', click);
@@ -2242,9 +2247,9 @@ export class GameRenderer {
     window.addEventListener('keydown', down, true); window.addEventListener('keyup', up, true);
     window.addEventListener('mousemove', move);
     this.canvas.addEventListener('click', click);
-    void this.canvas.requestPointerLock();
+    this.canvas.requestPointerLock()?.catch?.(() => {}); // odmowa (np. zaraz po Esc) nie może sypać błędem do dziennika
     // pointerlockchange przychodzi chwilę po zablokowaniu kursora; dopiero potem słuchamy wyjścia (Esc)
-    setTimeout(() => document.addEventListener('pointerlockchange', lock), 300);
+    setTimeout(() => { if (this.walkEnd === end) document.addEventListener('pointerlockchange', lock); }, 300);
   }
   /** Spacer: siatki budynków w pobliżu (widoczne), z drzewami BVH do szybkich promieni */
   private walkHits: { mesh: THREE.Mesh; box: THREE.Box3; root: THREE.Object3D; low?: boolean }[] = [];
@@ -2475,7 +2480,7 @@ export class GameRenderer {
     const inTap = !!wbk && wbk[4] !== OREMINE_WALK && inside(tap);
     // pod oczepem portalu kopalni: od razu przejście do sztolni (osobna lokacja), bez pół kroku „pustego” korytarza
     if (wbk && wbk[4] === OREMINE_WALK && wbk[2] < 1.32 && Math.abs(wbk[1]) < 0.45) {
-      const mb = g.buildings.find((x) => x.id === wbk[0]);
+      const mb = buildingById(g, wbk[0]);
       if (mb && mb.owner === this.me) { this.enterMine(wbk[0]); return; }
       // cudza kopalnia: wrota zamknięte, spacerowicz odbija się od portalu
       this.foreign();
@@ -2799,7 +2804,7 @@ export class GameRenderer {
         for (const ch of fire.children) ch.visible = false;
         const box = (mesh.userData.burnBox as THREE.Box3 | undefined) ?? (mesh.userData.burnBox = burnBox(mesh));
         const heat = (mesh.userData.fireHeat as number | undefined) ?? 1;
-        const bb = g.buildings.find((x) => x.id === id);
+        const bb = buildingById(g, id);
         this.blaze.add(id, box, heat, this.camPos, bb ? footprint(BUILDINGS[bb.type]!, bb.rot) : undefined);
         box.getCenter(w);
         const span = Math.max(box.max.x - box.min.x, box.max.z - box.min.z);
@@ -2986,7 +2991,18 @@ export class GameRenderer {
     v.cullVegetation(this.vegView, shadow);
   }
 
+  private cullPrune = 0;
   private cullInstances(): void {
+    // co ~5 s zapominamy siatki, których już nie ma na scenie (drogi, krawężniki, stara mapa) — inaczej trzymały je
+    // w pamięci razem z kopią macierzy na zawsze (przegląd 4.11.2026)
+    if (++this.cullPrune >= 300) {
+      this.cullPrune = 0;
+      for (const m of this.cullSeen.keys()) {
+        let o: THREE.Object3D | null = m;
+        while (o.parent) o = o.parent;
+        if (o !== this.scene) this.cullSeen.delete(m);
+      }
+    }
     if (!this.cullOn) {
       for (const [m, st] of this.cullSeen) {
         if (!st.hidden || m.instanceMatrix.version !== st.ver) continue;
@@ -3680,7 +3696,7 @@ export class GameRenderer {
     // krata w bramie zamku: opada szybko, gdy symulacja zamknęła bramę (wróg pod zamkiem), podnosi się powoli
     for (const id of this.keepFloors.keys()) {
       const port = named(this.buildingMeshes.get(id), 'portcullis');
-      const kb = g.buildings.find((x) => x.id === id);
+      const kb = buildingById(g, id);
       if (!port || !kb) continue;
       const want = kb.shut ? 0 : KEEP_PORT_LIFT;
       const was = port.position.y;
@@ -3732,7 +3748,7 @@ export class GameRenderer {
       if ((b.fire ?? 0) > 0 && !fire) {
         fire = new THREE.Group();
         fire.name = 'fire';
-        for (let k = 0; k < 5; k++) { const f = new THREE.Mesh(new THREE.ConeGeometry(0.12, 0.4, 6), k % 2 ? FIRE_A : FIRE_B); f.position.set(Math.sin(k * 2.4) * 0.5, 1.0 + (k % 3) * 0.2, Math.cos(k * 2.4) * 0.5); fire.add(f); }
+        for (let k = 0; k < 5; k++) { const f = new THREE.Mesh(FIRE_CONE, k % 2 ? FIRE_A : FIRE_B); f.position.set(Math.sin(k * 2.4) * 0.5, 1.0 + (k % 3) * 0.2, Math.cos(k * 2.4) * 0.5); fire.add(f); }
         mesh.add(fire);
         remember(mesh, 'fire', fire);
       }
@@ -4050,7 +4066,7 @@ export class GameRenderer {
     for (const x of g.soldiers) if (x.healing && x.hp > 0) healers.set(x.healing, UNITS[x.kind]!.magic ?? 'water');
     let orbs = 0;
     // kliknięta twierdza: pokazujemy, gdzie są jej strażnicy
-    const selB = this.selectedId ? g.buildings.find((b) => b.id === this.selectedId) : undefined;
+    const selB = this.selectedId ? buildingById(g, this.selectedId) : undefined;
     // kliknięta twierdza: pinezki nad strażą miejską; kliknięty barak górników: nad strażnikami tej kopalni
     const guardOwner = selB && selB.type === 0 ? selB.owner : -99;
     const guardCamp = selB && BUILDINGS[selB.type]!.id === 'minecamp' ? selB.id : 0;
@@ -4058,6 +4074,8 @@ export class GameRenderer {
     // stojący oddział zbija się ciaśniej: każdy przysuwa się do środka swojej grupy (tylko wygląd, pola w symulacji bez zmian)
     const pull = new Map<number, [number, number]>();
     const still = g.soldiers.filter((x) => !x.path.length && !x.up && !x.target && x.goal < 0);
+    const stillCells = new Map<number, typeof still>();
+    for (const x of still) { const key = Math.floor(x.px / (3 * FP)) * 65536 + Math.floor(x.py / (3 * FP)); const l = stillCells.get(key); if (l) l.push(x); else stillCells.set(key, [x]); }
     // oddział z jednego rozkazu ściąga się do swojego środka równo, więc linia zostaje linią, a blok blokiem
     const mid = new Map<number, [number, number, number]>();
     for (const a of still) if (a.grp) { const c = mid.get(a.grp) ?? [0, 0, 0]; c[0] += a.px; c[1] += a.py; c[2]++; mid.set(a.grp, c); }
@@ -4080,7 +4098,10 @@ export class GameRenderer {
       const c = a.grp ? mid.get(a.grp) : undefined;
       if (c && c[2] > 1 && near(c, a)) { const k = 0.3; pull.set(a.id, clampPull([(c[0] / c[2] - a.px) / FP * k, (c[1] / c[2] - a.py) / FP * k])); continue; }
       let sx = 0, sy = 0, k = 0;
-      for (const b of still) if (b.owner === a.owner && Math.abs(b.px - a.px) < 3 * FP && Math.abs(b.py - a.py) < 3 * FP) { sx += b.px; sy += b.py; k++; }
+      // sąsiedzi z kubełków 3×3 pola zamiast całej listy (przy setkach stojących żołnierzy to było n² na klatkę)
+      const ax = Math.floor(a.px / (3 * FP)), ay = Math.floor(a.py / (3 * FP));
+      for (let gy = ay - 1; gy <= ay + 1; gy++) for (let gx = ax - 1; gx <= ax + 1; gx++)
+        for (const b of stillCells.get(gx * 65536 + gy) ?? []) if (b.owner === a.owner && Math.abs(b.px - a.px) < 3 * FP && Math.abs(b.py - a.py) < 3 * FP) { sx += b.px; sy += b.py; k++; }
       if (k > 1) pull.set(a.id, clampPull([(sx / k - a.px) / FP * 0.45, (sy / k - a.py) / FP * 0.45]));
     }
     const torchesOn = this.night > 0.15;
@@ -4490,7 +4511,7 @@ export class GameRenderer {
         // wóz jedzie przodem (głowicą) w stronę marszu; belka cofa się, gdy taran szykuje cios, i wybija się do przodu przy uderzeniu
         // pod budynkiem: głowicą prosto w najbliższy kawałek ściany celu (nie bokiem, jak stanął po drodze)
         let rh = heading;
-        const tb = !walking && s.target ? g.buildings.find((b) => b.id === s.target) : undefined;
+        const tb = !walking && s.target ? buildingById(g, s.target) : undefined;
         if (tb) {
           const fp = footprint(BUILDINGS[tb.type]!, tb.rot);
           const nx = Math.max(tb.x, Math.min(tb.x + fp.w, px)), nz = Math.max(tb.y, Math.min(tb.y + fp.h, pz));
@@ -5022,7 +5043,7 @@ export class GameRenderer {
       if (u.home) {
         if (seen.has(u.home)) continue;
         seen.add(u.home);
-        const b = g.buildings.find((x) => x.id === u.home);
+        const b = buildingById(g, u.home);
         if (!b) continue;
         const fp = footprint(BUILDINGS[b.type]!, b.rot), cx = b.x + fp.w / 2, cy = b.y + fp.h / 2;
         put(cx - width / 2, this.standY(view, cx, cy) + 1.55, cy - height / 2, 0.42);
@@ -5718,7 +5739,7 @@ export class GameRenderer {
       }
       if (hammering) {
         // robotnicy rozstawiają się wokół budowy, twarzą do ścian; co drugi pracuje na pomoście rusztowania (na wysokości murów)
-        const site = u.phase === Phase.Repairing ? g.buildings.find((b) => b.id === u.target) : undefined;
+        const site = u.phase === Phase.Repairing ? buildingById(g, u.target) : undefined;
         if (site) {
           const fp = footprint(BUILDINGS[site.type]!, site.rot);
           const a = (u.id * 2.39996) % (Math.PI * 2);
@@ -6190,7 +6211,7 @@ export class GameRenderer {
     while (o && o.parent !== this.buildingLayer) o = o.parent;
     for (const [id, mesh] of this.buildingMeshes) {
       if (mesh !== o) continue;
-      const b = this.state.buildings.find((x) => x.id === id);
+      const b = buildingById(this.state, id);
       return b ? { x: b.x, y: b.y } : null;
     }
     return null;

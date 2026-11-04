@@ -440,10 +440,17 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
   let lastRes: ArrayLike<number> = [];
   let lastStockCap = 0;
   let lastReport: HudView['report'];
+  let reportKey = '';
   const drawReport = (): void => {
-    if (!reportKind || !lastReport) { report.hidden = true; return; }
-    report.hidden = false;
+    if (!reportKind || !lastReport) { report.hidden = true; reportKey = ''; return; }
     const rows = reportKind === 'popularity' ? lastReport.popularity : reportKind === 'army' ? lastReport.army : reportKind === 'food' || reportKind === 'stock' ? [] : lastReport.people;
+    // przebudowa tylko, gdy coś się zmieniło (przegląd 4.11.2026: okienko budowało się od nowa w każdym kroku gry — z odczytem
+    // układu strony, a przycisk × tracił fokus, więc Esc i Enter z klawiatury nie działały)
+    const key = `${reportKind}|${JSON.stringify(rows)}|${reportKind === 'food' ? JSON.stringify(lastReport.food) + (lastReport.foodHint ?? '') : ''}|${reportKind === 'stock' ? `${Array.from(lastRes).join(',')}/${lastStockCap}` : ''}`;
+    if (key === reportKey && !report.hidden) return;
+    reportKey = key;
+    const hadFocus = report.contains(document.activeElement);
+    report.hidden = false;
     const sum = reportKind === 'popularity' ? rows.reduce((n, r) => n + r.value, 0) : 0;
     report.innerHTML = `<button type="button" class="report-x" aria-label="${t('hud.close')}">×</button><p class="report-title">${reportKind === 'popularity' ? tx('Popularność — co miesiąc', 'Popularity — each month') : reportKind === 'army' ? t('cat.military') : reportKind === 'food' ? tx('Spichlerz — jedzenie', 'Granary — food') : reportKind === 'stock' ? tx('Skład — towary', 'Stockpile — goods') : tx('Mieszkańcy', 'Townsfolk')}</p>`;
     const list = el('dl', 'report-list');
@@ -484,6 +491,7 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
     report.style.right = 'auto';
     if (reportKind === 'food' && lastReport.foodHint) report.append(el('p', 'report-hint', lastReport.foodHint));
     if (reportKind === 'popularity') report.append(el('p', 'report-hint', tx('W górę: większe racje, niższe podatki albo rozdawanie rudy. W dół: małe racje, wysokie podatki, za mało miejsc w chatach. Od 50 przychodzą nowi ludzie, poniżej odchodzą.', 'Up: bigger rations, lower taxes or handing out ore. Down: small rations, high taxes, too few places in the cottages. From 50 new folk arrive; below it they leave.')));
+    if (hadFocus) report.querySelector<HTMLButtonElement>('.report-x')?.focus();
   };
   const toggleReport = (k: 'popularity' | 'people' | 'army' | 'food' | 'stock'): void => { reportKind = reportKind === k ? null : k; drawReport(); };
   for (const [box, k] of [[popularBox, 'popularity'], [popBox, 'people'], [armyBox, 'army']] as const) {

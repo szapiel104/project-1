@@ -6,6 +6,8 @@ import { RESOURCES } from '../data/resources';
 import { generateMap } from './map';
 import { Rng } from './rng';
 import { openWalk } from './systems/placement';
+import { stoneWallSystem } from './systems/stonewalls';
+import { KEEP_GATE } from '../data/keep';
 import { applyCut, type Building, type Caravan, type Corpse, type Traveler, type Wolf, type GameState, type March, type Missile, type SiegeLadder, type OrderQueue, type PlayerState, type Pile, type Grave, type Rubble, type Sapling, type Soldier, type Unit } from './state';
 
 /** Zmieniamy przy każdej zmianie kształtu stanu; stary zapis jest wtedy odrzucany zamiast psuć grę. */
@@ -131,11 +133,18 @@ export function deserialize(d: SaveData): GameState | null {
       const def = BUILDINGS[b.type];
       if (!def) return null;
       const fp = footprint(def, b.rot);
-      for (let y = b.y; y < b.y + fp.h; y++) for (let x = b.x; x < b.x + fp.w; x++) g.occupancy[y * map.width + x] = b.id;
+      // zburzony mur i brama zostawiają wyłom (ruin() w placement.ts zdejmuje zajętość) — po wczytaniu też ma być przejście
+      // (przegląd 4.11.2026: po wczytaniu zapisu wszystkie wyłomy znów były pełnym murem)
+      const breach = !!b.ruined && (!!def.wall || !!def.gate);
+      if (!breach) for (let y = b.y; y < b.y + fp.h; y++) for (let x = b.x; x < b.x + fp.w; x++) g.occupancy[y * map.width + x] = b.id;
       if (b.door >= 0) g.reserved[b.door]!++;
-      if (def.gate && !b.shut) g.gates[b.y * map.width + b.x] = b.owner + 1;
+      if (def.gate && !b.shut && !breach) g.gates[b.y * map.width + b.x] = b.owner + 1;
       openWalk(g, b);
+      // opuszczona krata zamku zostaje opuszczona
+      if (b.type === 0 && b.shut) g.gates[(b.y + KEEP_GATE[1]) * map.width + b.x + KEEP_GATE[0]] = 0;
     }
+    // korony murów kamiennych, wieże i drabiny (przechodniość z góry) od razu, a nie dopiero w pierwszym kroku po wczytaniu
+    stoneWallSystem(g);
     return g;
   } catch {
     return null;

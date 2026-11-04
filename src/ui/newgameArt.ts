@@ -72,7 +72,10 @@ export function slider(row: HTMLElement, label: string): HTMLElement {
     wrap.classList.toggle('more-r', !next.hidden);
   };
   row.addEventListener('scroll', sync, { passive: true });
-  new ResizeObserver(sync).observe(row);
+  // obserwator sam się odłącza, gdy rząd zniknie ze strony (każde otwarcie „Nowej gry” tworzy nowe rzędy)
+  let attached = false;
+  const ro = new ResizeObserver(() => { if (row.isConnected) { attached = true; sync(); } else if (attached) ro.disconnect(); });
+  ro.observe(row);
   // kółko myszy: przewija rząd w bok (gdy jest co przewijać)
   row.addEventListener('wheel', (e) => {
     if (row.scrollWidth <= row.clientWidth || Math.abs(e.deltaX) > Math.abs(e.deltaY)) return;
@@ -82,15 +85,21 @@ export function slider(row: HTMLElement, label: string): HTMLElement {
   // przeciąganie myszą; klik bez przesunięcia zostaje zwykłym wyborem karty
   let down = false, sx = 0, sl = 0, moved = false;
   row.addEventListener('pointerdown', (e) => { if (e.pointerType !== 'mouse' || e.button !== 0) return; down = true; moved = false; sx = e.clientX; sl = row.scrollLeft; });
-  window.addEventListener('pointermove', (e) => {
+  // ruch i puszczenie na samym rzędzie (przechwycony wskaźnik) — bez nasłuchów na oknie, które zostawały po zamknięciu
+  row.addEventListener('pointermove', (e) => {
     if (!down) return;
     const dx = e.clientX - sx;
     if (!moved && Math.abs(dx) < 6) return;
+    if (!moved) { try { row.setPointerCapture(e.pointerId); } catch { /* wskaźnik już puszczony */ } }
     moved = true;
     row.classList.add('dragging');
     row.scrollLeft = sl - dx;
   });
-  window.addEventListener('pointerup', () => { if (!down) return; down = false; row.classList.remove('dragging'); });
+  const up = (): void => { if (!down) return; down = false; row.classList.remove('dragging'); };
+  row.addEventListener('pointerup', up);
+  row.addEventListener('pointercancel', up);
+  row.addEventListener('lostpointercapture', up);
+  row.addEventListener('pointerleave', () => { if (!moved) down = false; });
   row.addEventListener('click', (e) => { if (moved) { e.preventDefault(); e.stopPropagation(); moved = false; } }, true);
   wrap.append(prev, row, next);
   requestAnimationFrame(sync);

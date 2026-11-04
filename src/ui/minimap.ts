@@ -65,18 +65,28 @@ export function createMinimap(host: MinimapHost): { update(g: GameState, me: num
   show.append(slot2, showBtn);
   box.append(bar, canvas);
   document.body.append(box, show);
-  /** Prawy dolny róg tuż nad dolną belką (jej wysokość zależy od skali interfejsu i otwartej listy budynków) */
-  const place = (): void => {
+  /**
+   * Prawy dolny róg tuż nad dolną belką (jej wysokość zależy od skali interfejsu i otwartej listy budynków).
+   * Przegląd 4.11.2026: liczone było w każdej klatce na przemian z zapisami stylów (wymuszony układ strony) — teraz
+   * najwyżej co 100 ms, najpierw wszystkie odczyty, a zapis tylko wtedy, gdy wartość się zmieniła.
+   */
+  let dockEl: Element | null = null, bbEl: HTMLElement | null = null, placedAt = 0;
+  const vars = { bottom: '', left: '', top: '' };
+  const place = (now: number): void => {
+    if (now - placedAt < 100) return;
+    placedAt = now;
+    if (!dockEl?.isConnected) dockEl = document.querySelector('.bottom .dock');
+    if (!bbEl?.isConnected) bbEl = document.querySelector('.bottom .buildbar') as HTMLElement | null;
     let top = innerHeight;
-    const dock = document.querySelector('.bottom .dock');
-    if (dock) top = Math.min(top, dock.getBoundingClientRect().top);
-    const bb = document.querySelector('.bottom .buildbar') as HTMLElement | null;
-    if (bb && bb.offsetParent) { const r = bb.getBoundingClientRect(); if (r.height > 0 && r.right > innerWidth - SIZE - 40) top = Math.min(top, r.top); }
-    const bottom = Math.max(8, innerHeight - top + 8);
-    box.style.bottom = show.style.bottom = `${bottom}px`;
-    document.documentElement.style.setProperty('--mini-bottom', `${bottom}px`);
-    document.documentElement.style.setProperty('--mini-left', `${(box.hidden ? show : box).offsetWidth + 22}px`);
-    document.documentElement.style.setProperty('--mini-top', `${innerHeight - bottom - (box.hidden ? show.offsetHeight : box.offsetHeight)}px`);
+    if (dockEl) top = Math.min(top, dockEl.getBoundingClientRect().top);
+    if (bbEl && bbEl.offsetParent) { const r = bbEl.getBoundingClientRect(); if (r.height > 0 && r.right > innerWidth - SIZE - 40) top = Math.min(top, r.top); }
+    const bottomN = Math.max(8, innerHeight - top + 8);
+    const shown = box.hidden ? show : box;
+    const w = shown.offsetWidth, h = shown.offsetHeight;
+    const bottom = `${bottomN}px`, left = `${w + 22}px`, topV = `${innerHeight - bottomN - h}px`;
+    if (bottom !== vars.bottom) { vars.bottom = bottom; box.style.bottom = show.style.bottom = bottom; document.documentElement.style.setProperty('--mini-bottom', bottom); }
+    if (left !== vars.left) { vars.left = left; document.documentElement.style.setProperty('--mini-left', left); }
+    if (topV !== vars.top) { vars.top = topV; document.documentElement.style.setProperty('--mini-top', topV); }
   };
   const ctx = canvas.getContext('2d')!;
 
@@ -146,7 +156,7 @@ export function createMinimap(host: MinimapHost): { update(g: GameState, me: num
       // obcy przycisk (Sojusznicy) jedzie tam, gdzie widać pasek
       const holder = visible ? slot : slot2;
       for (const el of [...slot.children, ...slot2.children]) if (el.parentElement !== holder) holder.append(el);
-      place();
+      place(now);
       if (!visible || now - last < 150) return;
       last = now;
       // nazwa krainy przy tytule mapy (generator 8)

@@ -88,7 +88,11 @@ export type Command =
   | { type: 'dole'; player: number }
   | { type: 'quell'; player: number };
 
-function apply(g: GameState, c: Command): void {
+/** Najwięcej numerów w jednym rozkazie (przegląd 4.11.2026: rozkaz z milionem numerów od jednego gracza zamrażał grę
+ *  wszystkim w meczu — każdy krok szukał każdego numeru w całej armii) */
+const MAX_IDS = 2000;
+function apply(g: GameState, c0: Command): void {
+  const c = 'ids' in c0 && Array.isArray(c0.ids) && c0.ids.length > MAX_IDS ? ({ ...c0, ids: c0.ids.slice(0, MAX_IDS) } as Command) : c0;
   const p = g.players[c.player];
   if (!p) return;
   switch (c.type) {

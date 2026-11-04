@@ -248,6 +248,14 @@ export async function getRoom(id: string): Promise<Room | string> {
   return (data as Room | null) ?? tx('Tego pokoju już nie ma.', 'This room no longer exists.');
 }
 
+/** Pokój do powrotu do meczu: null = nie ma go w bazie, 'error' = nie udało się zapytać (sieć) — wtedy nie zapominamy meczu */
+export async function roomOrError(id: string): Promise<Room | null | 'error'> {
+  try {
+    const { data, error } = await supa.from('rooms').select('*').eq('id', id).maybeSingle();
+    return error ? 'error' : ((data as Room | null) ?? null);
+  } catch { return 'error'; }
+}
+
 /** Gospodarz zmienia opis pokoju: tryb, nazwę albo podsumowanie składu (guest_nick, np. „3/4 · Ola, Kuba”) */
 export async function updateRoom(id: string, patch: Partial<Pick<Room, 'preset' | 'name' | 'guest_nick' | 'status' | 'seed'>>): Promise<void> {
   await supa.from('rooms').update(patch).eq('id', id);
@@ -358,9 +366,18 @@ export function roomLink(roomId: string, self: Member): RoomLink {
   const ch: RealtimeChannel = supa.channel(`game:${roomId}`, { config: { broadcast: { self: false, ack: false }, presence: { key: self.id } } });
   const subs = new Set<(m: NetMsg) => void>();
   const memberSubs = new Set<() => void>();
-  ch.on('broadcast', { event: 'm' }, (p) => { for (const f of subs) f(p.payload as NetMsg); });
+  // błąd jednego odbiorcy (np. dziurawa wiadomość od innego gracza) nie może zatrzymać pozostałych (przegląd 4.11.2026)
+  ch.on('broadcast', { event: 'm' }, (p) => { for (const f of subs) { try { f(p.payload as NetMsg); } catch (e) { console.warn('wiadomość pokoju', e); } } });
   ch.on('presence', { event: 'sync' }, () => { for (const f of memberSubs) f(); });
-  const ready = new Promise<void>((ok) => ch.subscribe(async (st) => { if (st === 'SUBSCRIBED') { await ch.track(self); ok(); } }));
+  // gotowość kończy się zawsze: po podłączeniu, po błędzie kanału albo po 15 s (przegląd 4.11.2026: przy błędzie albo
+  // przekroczonym czasie obietnica wisiała w nieskończoność i „Wróć do meczu” nie dało się już kliknąć)
+  const ready = new Promise<void>((ok) => {
+    const t = setTimeout(ok, 15_000);
+    ch.subscribe(async (st) => {
+      if (st === 'SUBSCRIBED') { try { await ch.track(self); } catch { /* obecność dojdzie przy następnej synchronizacji */ } clearTimeout(t); ok(); }
+      else if (st === 'CHANNEL_ERROR' || st === 'TIMED_OUT' || st === 'CLOSED') { clearTimeout(t); ok(); }
+    });
+  });
   return {
     send: (m) => { void ch.send({ type: 'broadcast', event: 'm', payload: m }); },
     on: (f) => { subs.add(f); return () => subs.delete(f); },
@@ -425,14 +442,24 @@ const inviteSubs = new Set<(i: Invite) => void>();
 export const onPresence = (f: () => void): (() => void) => { presenceSubs.add(f); return () => presenceSubs.delete(f); };
 export const onInvite = (f: (i: Invite) => void): (() => void) => { inviteSubs.add(f); return () => inviteSubs.delete(f); };
 
+let onlineChain: Promise<unknown> = Promise.resolve();
 function syncOnline(): void {
   const m = me();
-  const key = m ? `${m.id}:${m.nick}:${m.avatar}` : '';
-  if (key === onlineFor) return;
+  const key = m ? m.id : '';
+  // ten sam gracz, inny nick albo herb: wystarczy nowy wpis obecności na tym samym kanale (przegląd 4.11.2026:
+  // usuwanie i natychmiastowe tworzenie kanału o tej samej nazwie zwracało kanał „w trakcie zamykania” — znikała
+  // obecność w grze i zaproszenia aż do odświeżenia strony)
+  if (key === onlineFor) { if (m && onlineCh) void onlineCh.track({ id: m.id, nick: m.nick, avatar: m.avatar, ...status }); return; }
   onlineFor = key;
-  if (onlineCh) { void supa.removeChannel(onlineCh); onlineCh = null; }
-  if (inboxCh) { void supa.removeChannel(inboxCh); inboxCh = null; }
-  if (!m) { for (const f of presenceSubs) f(); return; }
+  const oldOnline = onlineCh, oldInbox = inboxCh;
+  onlineCh = null; inboxCh = null;
+  // nowe kanały dopiero po pełnym zamknięciu starych (zmiana konta bez przeładowania)
+  onlineChain = onlineChain.then(() => Promise.all([oldOnline && supa.removeChannel(oldOnline), oldInbox && supa.removeChannel(oldInbox)])).catch(() => undefined).then(() => { if (onlineFor === key) openOnline(); });
+  if (!m) for (const f of presenceSubs) f();
+}
+function openOnline(): void {
+  const m = me();
+  if (!m || onlineCh) return;
   onlineCh = supa.channel('online', { config: { presence: { key: m.id } } });
   onlineCh.on('presence', { event: 'sync' }, () => { for (const f of presenceSubs) f(); });
   onlineCh.subscribe((st) => { if (st === 'SUBSCRIBED') void onlineCh?.track({ id: m.id, nick: m.nick, avatar: m.avatar, ...status }); });

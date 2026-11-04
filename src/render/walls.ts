@@ -235,6 +235,7 @@ export class WallLayer {
           const stone = stoneAt(b.x - 1, ty) || stoneAt(b.x + fp.w, ty) || stoneAt(tx, b.y - 1) || stoneAt(tx, b.y + fp.h);
           const lx0 = tx + 0.5, lz0 = ty + 0.5;
           if (stone && this.stoneKit) {
+            if (sn.block >= 8192) continue; // pula pełna: setMatrixAt poza końcem bufora psuje inne bloki
             // pod wieżą pełny blok muru kamiennego (bez blanek — przykrywa go pomost wieży)
             e.set(0, 0, 0); q.setFromEuler(e);
             M4.compose(p.set(lx0 - width / 2, view.heightAt(lx0, lz0) - 0.06, lz0 - height / 2), q, sc.set(1, 1, 1));

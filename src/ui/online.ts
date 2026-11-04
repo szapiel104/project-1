@@ -675,9 +675,12 @@ export function createOnline(ui: Ui): { showOnline(): void; showAccount(): void;
   // ---------------- ranking ----------------
   async function showRanking(): Promise<void> {
     cleanup();
-    screen(tx('Ranking', 'Ranking'), true, msg(tx('Wczytuję…', 'Loading…')));
+    // po odpowiedzi z bazy rysujemy tylko, jeśli gracz dalej patrzy na ten ekran (napis „Wczytuję…” wciąż jest na stronie)
+    const waiting = msg(tx('Wczytuję…', 'Loading…'));
+    screen(tx('Ranking', 'Ranking'), true, waiting);
     const rows = await ranking();
     await levelsOf(rows.map((x) => x.user_id));
+    if (!waiting.isConnected) return;
     const m = me();
     // Ranking, wersja 2 (Michał 3.11.2026: „ranking o wiele ładniejszy”): podium trzech najlepszych, Twoje miejsce
     // na wierzchu, pod spodem lista z paskiem skuteczności (procent wygranych)
@@ -988,12 +991,12 @@ export function createOnline(ui: Ui): { showOnline(): void; showAccount(): void;
     };
     let hostSeen = host;
     const off = link.on((msgIn: NetMsg) => {
-      if (msgIn.k === 'lobby' && !host) { preset = msgIn.preset as MapPresetId; level = msgIn.level; slots = msgIn.slots; coop = msgIn.coop === true; if (typeof msgIn.seed === 'string' && msgIn.seed) seed = msgIn.seed.slice(0, 40); hostSeen = true; paint(); showMap(); }
+      if (msgIn.k === 'lobby' && !host && Array.isArray(msgIn.slots) && (msgIn.preset as string) in MAP_PRESETS) { preset = msgIn.preset as MapPresetId; level = msgIn.level; slots = msgIn.slots; coop = msgIn.coop === true; if (typeof msgIn.seed === 'string' && msgIn.seed) seed = msgIn.seed.slice(0, 40); hostSeen = true; paint(); showMap(); }
       if (msgIn.k === 'hello' && host) sync();
       if (msgIn.k === 'seat' && host) seat(msgIn.id, msgIn.slot);
       if (msgIn.k === 'chat' && msgIn.who && typeof msgIn.text === 'string') addChat(msgIn.who, cleanChat(msgIn.text));
       if (msgIn.k === 'close' && !host) { cleanup(); void showOnline(); }
-      if (msgIn.k === 'start' && !host) go(msgIn.preset as MapPresetId, msgIn.level, msgIn.seed, msgIn.slots, msgIn.coop === true);
+      if (msgIn.k === 'start' && !host && Array.isArray(msgIn.slots) && (msgIn.preset as string) in MAP_PRESETS) go(msgIn.preset as MapPresetId, msgIn.level, msgIn.seed, msgIn.slots, msgIn.coop === true);
     });
     const offMembers = link.onMembers(() => {
       if (host) { sync(); return; }
@@ -1042,10 +1045,14 @@ export function createOnline(ui: Ui): { showOnline(): void; showAccount(): void;
   /** Wejście z linku zaproszenia (?pokoj=…): logowanie, jeśli trzeba, potem prosto do pokoju */
   async function join(id: string): Promise<void> {
     cleanup();
-    screen(tx('Zaproszenie', 'Invitation'), true, msg(tx('Łączenie z pokojem…', 'Connecting to the room…')));
+    const waiting = msg(tx('Łączenie z pokojem…', 'Connecting to the room…'));
+    screen(tx('Zaproszenie', 'Invitation'), true, waiting);
     await restore();
+    // gracz w międzyczasie wyszedł z tego ekranu (np. zaczął grę solo) — nie wchodzimy do pokoju za jego plecami
+    if (!waiting.isConnected) return;
     if (!me()) { showLogin(false, tx('Zaloguj się, żeby dołączyć do gry znajomego.', "Sign in to join your friend's game."), () => void join(id)); return; }
     const room = await getRoom(id);
+    if (!waiting.isConnected) return;
     if (typeof room === 'string' || room.status !== 'open') {
       screen(tx('Zaproszenie', 'Invitation'), true, msg(typeof room === 'string' ? tx('Tej gry już nie ma — gospodarz ją zamknął.', 'This game is gone — the host closed it.') : tx('Ten mecz już się zaczął.', 'This match has already started.'), true), back(() => void showOnline(), tx('Przejdź do listy gier', 'Go to game list')));
       return;

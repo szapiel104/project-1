@@ -425,6 +425,10 @@ export function createMenu(root: HTMLElement, events: MenuEvents): Menu {
   // Esc w otwartym oknie wraca do paska (a nie zamyka całego menu)
   document.addEventListener('keydown', (e) => {
     if (e.key !== 'Escape' || wrap.hidden || panel.hidden) return;
+    // Esc należy do okienka nad menu (profil gracza, pytanie „na pewno?”, dzwoneczek, rozmowa, menu „⋯” zapisu) — samo się
+    // zamyka; menu nie może wtedy wracać do paska (w pokoju gry wyjście do paska zamykało pokój, przegląd 4.11.2026)
+    const t = e.target as Element | null;
+    if (document.querySelector('.cd-back, .fr-modal') || t?.closest?.('.bell, .mx-dock, .mx-panel, .messenger, .sv-more') || document.querySelector('.sv-menu:not([hidden])')) return;
     e.preventDefault(); e.stopPropagation();
     showMain();
   }, true);
@@ -539,6 +543,8 @@ export function createMenu(root: HTMLElement, events: MenuEvents): Menu {
       clearTimeout(timer);
       status.textContent = tx('Generuję mapę…', 'Generating the map…');
       timer = window.setTimeout(() => requestAnimationFrame(() => setTimeout(() => {
+        // gracz już wyszedł z „Nowej gry” (Wstecz w trakcie odliczania) — nie generujemy mapy za menu głównym
+        if (!form.isConnected) return;
         events.onPreviewMap(seed.value.trim() || 'project-1', preset, level, dev, walls, biome);
         const name = seed.value.trim() || 'project-1', land = t(BIOME[biome ?? biomeOfSeed(seedFromText(name), hash2)].name);
         status.textContent = tx(`Mapa „${name}” (kraina: ${land}) — widok z lotu ptaka. Losuj, aż trafisz na swoją.`, `Map “${name}” (land: ${land}) — bird’s-eye view. Keep rolling until you find the one you like.`);

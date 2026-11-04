@@ -60,16 +60,19 @@ const ownerNow = (): string => me()?.id ?? 'guest';
 const DB = 'project1-saves';
 let dbP: Promise<IDBDatabase> | null = null;
 function db(): Promise<IDBDatabase> {
-  dbP ??= new Promise((ok, bad) => {
+  // przegląd 4.11.2026: stara karta z bazą w starszej wersji blokowała otwarcie na zawsze (zapisy i wczytywanie wisiały),
+  // a raz odrzucona obietnica zostawała w pamięci — teraz: zamknięcie przy zmianie wersji, limit czasu i ponowna próba
+  dbP ??= new Promise<IDBDatabase>((ok, bad) => {
     const r = indexedDB.open(DB, 2);
+    const t = setTimeout(() => bad(new Error('baza zapisów zablokowana')), 8000);
     r.onupgradeneeded = () => {
       const d = r.result;
       if (!d.objectStoreNames.contains('meta')) d.createObjectStore('meta', { keyPath: 'id' });
       if (!d.objectStoreNames.contains('data')) d.createObjectStore('data');
     };
-    r.onsuccess = () => ok(r.result);
-    r.onerror = () => bad(r.error);
-  });
+    r.onsuccess = () => { clearTimeout(t); const d = r.result; d.onversionchange = () => { d.close(); dbP = null; }; ok(d); };
+    r.onerror = () => { clearTimeout(t); bad(r.error); };
+  }).catch((e) => { dbP = null; throw e; });
   return dbP;
 }
 function idb<T>(stores: string[], mode: IDBTransactionMode, run: (t: IDBTransaction) => IDBRequest<T> | void): Promise<T | undefined> {
@@ -113,29 +116,33 @@ async function cloudIndex(uid: string): Promise<SaveMeta[] | null> {
   if (error) {
     // brak spisu = nie ma jeszcze zapisów w chmurze; inny błąd (np. brak kubła) = chmura niedostępna
     const msg = String((error as { message?: string }).message ?? error);
+    // najpierw brak kubła (też zawiera „not found”), potem brak samego spisu
+    if (/Bucket not found/i.test(msg)) { cloudOk = false; return null; }
     if (/not.?found|Object not found|404/i.test(msg)) return [];
-    cloudOk = !/Bucket not found/i.test(msg);
     return null;
   }
-  try { return JSON.parse(await data.text()) as SaveMeta[]; } catch { return []; }
+  // uszkodzony spis: nie nadpisujemy go jednym wpisem (zniknęłyby wszystkie inne zapisy w chmurze)
+  try { const l = JSON.parse(await data.text()) as unknown; return Array.isArray(l) ? (l as SaveMeta[]) : null; } catch { return null; }
 }
 async function cloudSaveIndex(uid: string, list: SaveMeta[]): Promise<void> {
   const body = new Blob([JSON.stringify(list.map(({ where: _w, ...m }) => m))], { type: 'application/json' });
-  await supa.storage.from(BUCKET).upload(path(uid, 'index.json'), body, { upsert: true, contentType: 'application/json', cacheControl: '0' });
+  const { error } = await supa.storage.from(BUCKET).upload(path(uid, 'index.json'), body, { upsert: true, contentType: 'application/json', cacheControl: '0' });
+  if (error) throw new Error(error.message);
 }
 /** Spis w chmurze zmieniamy po kolei (dwa zapisy naraz nie gubią sobie wpisów) */
 let indexQueue: Promise<unknown> = Promise.resolve();
 const editIndex = (uid: string, f: (l: SaveMeta[]) => SaveMeta[]): Promise<void> => {
-  const job = indexQueue.then(async () => { const cur = await cloudIndex(uid); if (cur) await cloudSaveIndex(uid, f(cur)); });
+  const job = indexQueue.then(async () => { const cur = await cloudIndex(uid); if (!cur) throw new Error('spis chmury niedostępny'); await cloudSaveIndex(uid, f(cur)); });
   indexQueue = job.catch(() => undefined);
-  return job.catch(() => undefined) as Promise<void>;
+  return job;
 };
 async function cloudPut(m: SaveMeta, file: Blob): Promise<boolean> {
   const uid = me()?.id;
   if (!uid || m.owner !== uid || !cloudOk) return false;
   const { error } = await supa.storage.from(BUCKET).upload(path(uid, `${m.id}.p1save`), file, { upsert: true, contentType: 'application/octet-stream', cacheControl: '0' });
   if (error) { console.warn('[zapisy] chmura', error); if (/Bucket not found/i.test(error.message)) cloudOk = false; return false; }
-  await editIndex(uid, (l) => [m, ...l.filter((x) => x.id !== m.id)]);
+  // plik jest w chmurze, ale bez wpisu w spisie i tak go nie widać — wtedy zgłaszamy niepowodzenie
+  try { await editIndex(uid, (l) => [m, ...l.filter((x) => x.id !== m.id)]); } catch (e) { console.warn('[zapisy] spis chmury', e); return false; }
   return true;
 }
 async function cloudDel(id: string): Promise<void> {
@@ -199,7 +206,7 @@ export async function readSave(id: string): Promise<SaveFile | string> {
     const { data, error } = await supa.storage.from(BUCKET).download(path(uid, `${id}.p1save`));
     if (error || !data) return tx('Nie udało się pobrać zapisu z chmury — sprawdź internet.', 'Could not download the save from the cloud — check your connection.');
     const f = await unpack<SaveFile>(data);
-    void pack(f.game).then((b) => localPut(f.meta, b));
+    void pack(f.game).then((b) => localPut(f.meta, b)).catch(() => undefined); // kopia w przeglądarce — bez niej też działa
     return f;
   } catch (e) { return (e as Error).message; }
 }

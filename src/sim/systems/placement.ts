@@ -424,7 +424,11 @@ export function restore(g: GameState, b: Building): boolean {
   const def = BUILDINGS[b.type]!;
   if (def.wall || def.gate) {
     const fp = footprint(def, b.rot), w = g.map.width;
-    for (const u of g.units) { const x = u.px >> 8, y = u.py >> 8; if (x >= b.x && x < b.x + fp.w && y >= b.y && y < b.y + fp.h) return false; }
+    // nikt nie może zostać zamurowany: chłopi, żołnierze (także wrodzy w wyłomie) i wilki
+    const inside = (px: number, py: number): boolean => { const x = px >> 8, y = py >> 8; return x >= b.x && x < b.x + fp.w && y >= b.y && y < b.y + fp.h; };
+    for (const u of g.units) if (inside(u.px, u.py)) return false;
+    for (const s of g.soldiers) if (s.hp > 0 && inside(s.px, s.py)) return false;
+    for (const wf of g.wolves) if (inside(wf.px, wf.py)) return false;
     for (let y = b.y; y < b.y + fp.h; y++) for (let x = b.x; x < b.x + fp.w; x++) g.occupancy[y * w + x] = b.id;
     if (def.gate) g.gates[b.y * w + b.x] = b.owner + 1;
   }
@@ -450,7 +454,8 @@ export function placeBuilding(g: GameState, player: number, type: number, x: num
   const fpo = footprint(def, rot);
   for (const o of wallsUnder(g, player, type, x, y, fpo.w, fpo.h) ?? []) {
     const t = o.y * g.map.width + o.x;
-    g.occupancy[t] = 0; g.gates[t] = 0;
+    // także bity korony muru: brama postawiona na murze kamiennym inaczej zostawała nieprzechodnia (przegląd 4.11.2026)
+    g.occupancy[t] = 0; g.gates[t] = 0; g.walls[t] = 0;
     g.buildings.splice(g.buildings.indexOf(o), 1);
     for (const u of g.units) if (u.target === o.id) { u.target = 0; u.path = []; }
   }

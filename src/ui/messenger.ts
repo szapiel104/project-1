@@ -30,7 +30,7 @@ const dayOf = (iso: string): string => new Date(iso).toLocaleDateString(lang() =
 // ---------------- okienka rozmów w prawym dolnym rogu ----------------
 const MAX_WIN = 3;
 let dock: HTMLElement | null = null;
-const wins = new Map<string, { node: HTMLElement; add(m: Message): void; min: boolean; setMin(v: boolean): void }>();
+const wins = new Map<string, { node: HTMLElement; add(m: Message): void; min: boolean; setMin(v: boolean): void; close?: () => void }>();
 const dockEl = (): HTMLElement => {
   if (!dock) { dock = el('div', 'mx-dock'); dock.setAttribute('aria-label', tx('Rozmowy', 'Conversations')); document.body.append(dock); }
   return dock;
@@ -41,7 +41,8 @@ export const chatOpenWith = (id: string): boolean => { const w = wins.get(id); r
 export function openChat(id: string, known?: Player): void {
   const had = wins.get(id);
   if (had) { had.setMin(false); (had.node.querySelector('textarea') as HTMLTextAreaElement | null)?.focus(); return; }
-  if (wins.size >= MAX_WIN) { const first = wins.keys().next().value as string; wins.get(first)?.node.remove(); wins.delete(first); }
+  // najstarsze okno zamykamy całe (z subskrypcją obecności), a nie tylko zdejmujemy ze strony (przegląd 4.11.2026)
+  if (wins.size >= MAX_WIN) { const first = wins.keys().next().value as string; const old = wins.get(first); if (old?.close) old.close(); else { old?.node.remove(); wins.delete(first); } }
   const node = el('section', 'mx-win');
   node.dataset.with = id;
   node.setAttribute('role', 'dialog');
@@ -113,7 +114,7 @@ export function openChat(id: string, known?: Player): void {
     setMin: (v: boolean) => { w.min = v; node.classList.toggle('min', v); minB.textContent = v ? '▴' : '–'; if (!v) { node.classList.remove('unread'); void markRead(id); log.scrollTop = log.scrollHeight; input.focus(); } },
   };
   const close = (): void => { offP(); node.remove(); wins.delete(id); };
-  wins.set(id, w);
+  wins.set(id, Object.assign(w, { close }));
   dockEl().append(node);
   log.append(el('p', 'mx-note', tx('Wczytuję…', 'Loading…')));
   void conversation(id).then((ms) => {

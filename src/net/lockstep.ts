@@ -65,6 +65,8 @@ export class Lockstep {
     // po wyjściu gracza jego spóźnione polecenia nie wchodzą do gry (u jednych by doszły, u innych nie)
     const gone = this.gone.get(m.from);
     if (gone !== undefined && m.turn > gone) return;
+    // tura już rozegrana (powtórzona albo spóźniona wiadomość): nie zakładamy dla niej skrzynki, która by nigdy nie zniknęła
+    if (m.turn <= this.ranTurn) return;
     let t = this.inbox.get(m.turn);
     if (!t) { t = new Map(); this.inbox.set(m.turn, t); }
     // gracz może wydawać polecenia tylko sobie
@@ -118,6 +120,15 @@ export class Lockstep {
    */
   canTakeBack(p: number, turn: number): boolean { return this.isAway(p) && turn + DELAY > this.gone.get(p)! + 1; }
 
+  /**
+   * Kto ogłasza wyjście gracza `p`: najniższy numer spośród pozostałych w meczu (przegląd 4.11.2026). Gdy każdy ogłaszał
+   * sam, przy nierównym doręczaniu jeden komputer brał ostatnie polecenia `p`, a drugi nie — rozjazd gry albo zawieszenie.
+   * Pozostali czekają na jego „bye” dłużej (main.ts), a ogłaszają sami dopiero, gdy i on milczy.
+   */
+  /** Ostatnia rozegrana tura (beginTurn) */
+  private ranTurn = -1;
+  dropper(p: number): number { return this.players.filter((q) => q !== p && !this.gone.has(q)).sort((a, b) => a - b)[0] ?? this.me; }
+
   /** Kto z grających odpowiada wracającym (przesyła im stan gry): gracz o najniższym numerze, który jest w meczu */
   leader(): number { return this.players.filter((p) => !this.gone.has(p)).sort((a, b) => a - b)[0] ?? this.me; }
 
@@ -145,6 +156,7 @@ export class Lockstep {
     this.lastSent = target;
     const now = this.inbox.get(turn);
     this.inbox.delete(turn);
+    this.ranTurn = turn;
     this.myHash.delete(turn - 20);
     const out: Command[] = [];
     for (const p of [...this.players].sort((a, b) => a - b)) {

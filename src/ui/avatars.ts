@@ -72,7 +72,10 @@ const near = (hex: string): number => {
   return best;
 };
 /** Herb jako elementy: złożony wprost z numeru, dawny gotowy — przybliżony barwami herbowymi (start kreatora) */
-export function decodeCrest(n: number): Crest {
+/** Numer herbu z sieci (obecność, czat, profil) może być dziurawy: NaN, ułamek, ujemny — wtedy herb 0, a nie wyjątek */
+const safeAvatar = (n: unknown): number => { const v = Number(n); return Number.isFinite(v) && v >= 0 ? Math.floor(v) : 0; };
+export function decodeCrest(n0: number): Crest {
+  const n = safeAvatar(n0);
   if (n >= CREST_BASE) {
     let v = n - CREST_BASE;
     const charge = v % 16; v = Math.floor(v / 16);
@@ -114,7 +117,8 @@ function crestSvg(c: Crest, size: number): string {
 }
 export const crestPreview = (c: Crest, size = 48): string => crestSvg(c, size);
 
-export function avatarSvg(i: number, size = 48): string {
+export function avatarSvg(i0: number, size = 48): string {
+  const i = safeAvatar(i0);
   if (i >= CREST_BASE) return crestSvg(decodeCrest(i), size);
   const n = ((i % AVATAR_COUNT) + AVATAR_COUNT) % AVATAR_COUNT;
   const [bg, fg] = FIELDS[n % FIELDS.length]!;

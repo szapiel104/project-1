@@ -107,7 +107,8 @@ export function createBell(go: BellActions): HTMLElement {
     open.setAttribute('aria-expanded', String(!panel.hidden));
     fresh = new Set(noticesNow().filter((n) => !n.read).map((n) => n.id));
     paint();
-    if (!panel.hidden) setTimeout(() => void markRead(), 1500);
+    // przeczytane dopiero, gdy okno zostało otwarte przez chwilę (zamknięte od razu — nic nie zmieniamy)
+    if (!panel.hidden) setTimeout(() => { if (!panel.hidden) void markRead(); }, 1500);
   });
   document.addEventListener('click', (e) => { if (!wrap.contains(e.target as Node)) close(); });
   wrap.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !panel.hidden) { e.stopPropagation(); close(); open.focus(); } });

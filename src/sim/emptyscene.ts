@@ -40,7 +40,7 @@ export function placeReady(g: GameState, id: string, x: number, y: number, rot =
   const d = BUILDINGS[type]!, w = rot % 2 ? d.h : d.w, h = rot % 2 ? d.w : d.h;
   // brama, wieża albo mur kamienny na istniejącym murze: przęsła pod spodem znikają (jak w grze)
   for (const o of wallsUnder(g, owner, type, x, y, w, h) ?? []) {
-    g.occupancy[o.y * g.map.width + o.x] = 0; g.gates[o.y * g.map.width + o.x] = 0;
+    g.occupancy[o.y * g.map.width + o.x] = 0; g.gates[o.y * g.map.width + o.x] = 0; g.walls[o.y * g.map.width + o.x] = 0;
     g.buildings.splice(g.buildings.indexOf(o), 1);
   }
   for (let ty = y; ty < y + h; ty++) for (let tx = x; tx < x + w; tx++) {

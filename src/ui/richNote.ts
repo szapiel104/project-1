@@ -191,7 +191,14 @@ export function richEditor(id: string, placeholder: string, max = 4000): RichEdi
   area.addEventListener('input', paint);
   area.addEventListener('keyup', paint);
   area.addEventListener('mouseup', paint);
-  document.addEventListener('selectionchange', () => { if (node.isConnected && area.contains(document.getSelection()?.anchorNode ?? null)) paint(); });
+  // nasłuch zaznaczenia sam się zdejmuje, gdy edytora już nie ma na stronie (inaczej z każdym otwarciem uwag przybywał nowy)
+  const onSel = (): void => {
+    if (!node.isConnected) { if (seen) document.removeEventListener('selectionchange', onSel); return; }
+    seen = true;
+    if (area.contains(document.getSelection()?.anchorNode ?? null)) paint();
+  };
+  let seen = false;
+  document.addEventListener('selectionchange', onSel);
   area.addEventListener('keydown', (e) => {
     e.stopPropagation(); // skróty gry (spacja, litery) nie działają w trakcie pisania
     if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') { e.preventDefault(); submit(); }

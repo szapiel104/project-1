@@ -10,6 +10,29 @@ export type { ChangeEntry } from './changelogTypes';
  */
 const NEW: ChangeEntry[] = [
   {
+    v: '0.94.23', date: '2026-11-04',
+    pl: [
+      'Przegląd kodu i poprawki błędów: wczytany zapis z rozbitym murem albo bramą ma wyłom tam, gdzie był (wcześniej mur „odrastał” po wczytaniu).',
+      'Po wygranej albo przegranej grze online „Kontynuuj” nie wraca już do skończonej bitwy, a doświadczenie liczy się z właściwego trybu gry.',
+      'Łucznicy na wysokich basztach widzą i strzelają na pełny zasięg (wcześniej nie zauważali wrogów dalej niż ok. 8 pól).',
+      'Esc w okienkach (powiadomienia, wiadomości, znajomi) zamyka tylko okienko, a nie całe menu.',
+      'Gra online: po chwilowym zerwaniu sieci powrót do meczu proponuje ponowną próbę zamiast zapominać o meczu; spóźnione albo podwójne paczki ruchów nie psują już tury.',
+      'Zapisy: chmura i zapis w przeglądarce nie zawieszają się przy błędzie sieci albo zablokowanej bazie, a uszkodzony spis zapisów w chmurze nie wywraca listy.',
+      'Grafika: drzewa z daleka przełączają się na lżejszą wersję, mniej pracy przy wielu stojących żołnierzach, gruzowiskach i pożarach, a stare dane nie przechodzą na nową mapę (fałszywe pożary i wstrząsy po wczytaniu).',
+      'Brakujące opisy zajęć chłopów (grzebanie zmarłych, niesienie trumny) w obu językach.',
+    ],
+    en: [
+      'Code review and bug fixes: a loaded save with a broken wall or gate keeps its breach (walls used to "grow back" after loading).',
+      'After winning or losing an online game, "Continue" no longer takes you back to the finished battle, and experience is counted for the right game mode.',
+      'Archers on tall towers now see and shoot at their full range (they used to miss foes further than about 8 tiles away).',
+      'Esc in pop-ups (notifications, messages, friends) closes just the pop-up, not the whole menu.',
+      'Online play: after a brief network drop, rejoining offers a retry instead of forgetting the match; late or duplicate move packets no longer spoil a turn.',
+      'Saves: cloud and browser saves no longer hang on network errors or a blocked database, and a damaged cloud save index no longer breaks the list.',
+      'Graphics: distant trees switch to their lighter version, less work with many idle soldiers, rubble and fires, and stale data no longer carries over to a new map (phantom fires and shakes after loading).',
+      'Missing descriptions of peasant tasks (burying the dead, carrying a coffin) in both languages.',
+    ],
+  },
+  {
     v: '0.94.22', date: '2026-11-03',
     pl: ['Drzewa, palmy i krzaki na wietrze też korzystają ze wspólnych shaderów — mniej doczytywania przy przelocie nad lasem.'],
     en: ['Trees, palms and bushes swaying in the wind share shaders too — less streaming when flying over forests.'],

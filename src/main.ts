@@ -223,7 +223,10 @@ function refreshContinue(): void { void listSaves().then((l) => menu.setCanConti
 onAccount(() => refreshContinue());
 /** Wczytanie zapisu: gra z zapisu za ekranem wczytywania, potem kamera, grupy i tempo jak w chwili zapisu */
 async function loadFrom(id: string): Promise<string | null> {
+  const seq = enterSeq;
   const f: SaveFile | string = await readSave(id);
+  // w trakcie pobierania gracz zaczął inną grę — nie podmieniamy jej (przegląd 4.11.2026)
+  if (seq !== enterSeq) return null;
   if (typeof f === 'string') return f;
   if (f.meta.v !== SAVE_VERSION) return tx('Ten zapis pochodzi ze starszej wersji gry i nie pasuje do obecnej.', 'This save comes from an older version of the game and does not fit the current one.');
   const data = f.game.data as SaveData;
@@ -595,7 +598,11 @@ function waitFor(turn: number, now: number): void {
   const here = new Set(netGame.link.members().map((m) => m.id));
   const nick = (p: number): string => { const x = netGame!.slots[p]; return x?.kind === 'human' ? x.nick : tx(`gracz ${p + 1}`, `player ${p + 1}`); };
   const absent = missing.filter((p) => { const x = netGame!.slots[p]; return x?.kind === 'human' && !here.has(x.id); });
-  for (const p of missing) if ((absent.includes(p) && waited > DROP_ABSENT_MS) || waited > DROP_SILENT_MS) net.drop(p);
+  // wyjście ogłasza jeden gracz (net.dropper), reszta o 10 s później — tylko gdyby i on zamilkł
+  for (const p of missing) {
+    const extra = net.dropper(p) === netGame.me ? 0 : 10_000;
+    if ((absent.includes(p) && waited > DROP_ABSENT_MS + extra) || waited > DROP_SILENT_MS + extra) net.drop(p);
+  }
   netWait.hidden = waited < 400;
   if (!netWait.hidden) {
     const left = Math.ceil(((absent.length ? DROP_ABSENT_MS : DROP_SILENT_MS) - waited) / 1000);
@@ -624,9 +631,17 @@ async function backToMatch(memo: MatchMemo): Promise<void> {
     localUi = s.ui;
     return deserialize(s.data);
   };
-  const r = await rejoinMatch(memo, (text) => { netWait.textContent = text; }, local);
-  netWait.hidden = true;
-  returning = false;
+  let r: Awaited<ReturnType<typeof rejoinMatch>>;
+  try {
+    r = await rejoinMatch(memo, (text) => { netWait.textContent = text; }, local);
+  } catch (e) {
+    // np. uszkodzony zapis w local() — „Wróć do meczu” musi dać się kliknąć ponownie (przegląd 4.11.2026)
+    console.warn('powrót do meczu', e);
+    r = tx('Nie udało się wrócić do meczu.', 'Could not return to the match.');
+  } finally {
+    netWait.hidden = true;
+    returning = false;
+  }
   if (typeof r === 'string') {
     hud.toast(r);
     menu.open(false);
@@ -694,9 +709,12 @@ let entering = false;
 /** Przerwa na jedną klatkę (z zapasowym zegarem, gdy karta jest w tle i klatki stoją) */
 const pauseFrame = (): Promise<void> => new Promise((ok) => { requestAnimationFrame(() => setTimeout(ok, 0)); setTimeout(ok, 60); });
 
+/** Licznik wejść do gry: spóźnione wczytanie zapisu (chmura) nie nadpisuje gry, którą gracz w międzyczasie zaczął */
+let enterSeq = 0;
 function enterGame(label: string, prep?: () => void): void {
   if (entering) return;
   entering = true;
+  enterSeq++;
   document.getElementById('loading')?.remove();
   const cover = document.createElement('div');
   cover.id = 'loading';
@@ -865,6 +883,7 @@ function start(seedText: string, preset: MapPresetId, loaded?: GameState, level 
   ME = online ? online.me : 0;
   caravanSeen = -1; allies.close(); pings.clear();
   // nowy mecz = nowy numer; wczytany dostaje swój z zapisu (applyUi), a zapis bez numeru — stały numer z mapy
+  endMode = null;
   matchId = online ? online.room.id : loaded ? `${seedText}|${preset}|stary-zapis` : newMatchId();
   game = loaded ?? (!online && fresh ? fresh : createGame(seedFromText(seedText), preset, level, dev, online?.humans, instant, walls, online?.coop === true, online ? undefined : biome));
   if (EMPTY && !loaded && !online) emptyScene(game);
@@ -1834,12 +1853,17 @@ function updateAlarm(): void {
 let endShown = false;
 /** Gra się skończyła: nie zapisujemy jej i nie da się do niej wrócić */
 let gameOver = false;
+/** Rodzaj zakończonego meczu przez sieć ('online' / 'coop'), ustalony w showEnd przed endOnline() */
+let endMode: MatchMode | null = null;
 function showEnd(win: boolean): void {
   endShown = true;
   musicEnd(win);
   speed = 0;
   // mecz przez sieć: wynik trafia do historii i rankingu gracza (kooperacja przeciw botom nie liczy się do rankingu)
   if (netGame && !netGame.coop) void saveResult(netGame.preset, win, Math.floor(game.tick / TICKS_PER_SECOND / 60), netGame.room.id);
+  // rodzaj meczu do nagrody PD zapamiętany PRZED zamknięciem sieci (przegląd 4.11.2026: endOnline zeruje netGame i mecz
+  // przez sieć liczył się jak gra z botami — mniej PD, bez wygranych online)
+  endMode = netGame ? (netGame.coop ? 'coop' : 'online') : null;
   // mecz przez sieć się skończył: zamykamy kanał i pokój, żeby nie dało się do niego wrócić
   endOnline();
   // skończona gra (wygrana, porażka, poddanie) znika z zapisu: w menu nie ma już „Kontynuuj”
@@ -1877,7 +1901,7 @@ function showEnd(win: boolean): void {
 function endXp(after: Element, win: boolean, mins: number): void {
   const p = game.players[ME]!;
   const enemy = game.players.find((q) => q.id !== ME && q.bot);
-  const mode: MatchMode = netGame ? (netGame.coop ? 'coop' : 'online') : (`bots${Math.max(0, Math.min(3, enemy?.level ?? 2))}` as MatchMode);
+  const mode: MatchMode = endMode ?? (netGame ? (netGame.coop ? 'coop' : 'online') : (`bots${Math.max(0, Math.min(3, enemy?.level ?? 2))}` as MatchMode));
   const st = p.stats;
   const stats = { won: win, minutes: mins, kills: st.kills, razed: st.razed, built: st.built };
   const host = document.createElement('div');
@@ -2385,8 +2409,7 @@ function fitUi(): void {
 }
 fitUi();
 window.addEventListener('resize', fitUi);
-window.addEventListener('pagehide', save);
-document.addEventListener('visibilitychange', () => { if (document.hidden) save(); });
+// zapis przy zamknięciu karty jest już wyżej (pagehide / visibilitychange) — drugi raz go nie podpinamy (przegląd 4.11.2026)
 requestAnimationFrame(loop);
 
 // podgląd stanu dla testów w przeglądarce
