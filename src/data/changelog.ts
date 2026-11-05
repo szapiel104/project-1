@@ -10,6 +10,11 @@ export type { ChangeEntry } from './changelogTypes';
  */
 const NEW: ChangeEntry[] = [
   {
+    v: '0.94.32', date: '2026-11-05',
+    pl: ['Z powrotem nowy silnik grafiki WebGPU (już bez pustego ekranu i błędów obrazu); stary zostaje pod ?webgl=1.'],
+    en: ['Back to the new WebGPU graphics engine (now without the blank screen and picture errors); the old one stays under ?webgl=1.'],
+  },
+  {
     v: '0.94.31', date: '2026-11-05',
     pl: ['Gra wraca na sprawdzony silnik grafiki (WebGL): koniec z pustym ekranem, znikającymi i nachodzącymi na siebie budynkami. Nowy silnik WebGPU tylko na próbę.', 'Szyby w oknach budynku rysują się razem — mniej pracy przy dużej osadzie; najdalsze wersje budynków nie rzucają już cienia.'],
     en: ['The game is back on the proven graphics engine (WebGL): no more blank screen or buildings vanishing and overlapping. The new WebGPU engine is only for testing.', 'Window panes of a building are drawn together — less work in a large settlement; the most distant versions of buildings no longer cast shadows.'],

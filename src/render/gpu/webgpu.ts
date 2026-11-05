@@ -11,9 +11,8 @@ import * as THREE from 'three';
  * pory roku, wiatr) WebGPU pomija, więc obraz jest uboższy. Cel partii: gra wstaje, da się grać i zmierzyć FPS.
  */
 const q = typeof location !== 'undefined' ? new URLSearchParams(location.search) : null;
-// 5.11.2026: domyślnie znowu WebGL (Michał: „gra nie działa, budynki w budynkach”, 18 FPS przy 25 na WebGL) — WebGPU
-// tylko z ?webgpu=1, dopóki wspólne shadery pul i liczba wywołań rysowania nie są naprawione (docs/webgpu.md)
-export const GPU_MODE = !!q && !q.has('webgl') && q.has('webgpu');
+// WebGPU domyślnie (Michał 5.11.2026: „ma działać WebGPU”); stary WebGL z ?webgl=1
+export const GPU_MODE = !!q && !q.has('webgl');
 const FORCE_GL = q?.get('webgpu') === 'gl';
 
 let ready: THREE.WebGLRenderer | null = null;
