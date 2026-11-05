@@ -10,6 +10,11 @@ export type { ChangeEntry } from './changelogTypes';
  */
 const NEW: ChangeEntry[] = [
   {
+    v: '0.94.26', date: '2026-11-05',
+    pl: ['Mniej czerwonych błędów w konsoli przeglądarki: częściowo pobrane pliki (np. dźwięki) nie trafiają już do pamięci podręcznej gry.'],
+    en: ['Fewer red errors in the browser console: partially downloaded files (such as sounds) no longer go into the game cache.'],
+  },
+  {
     v: '0.94.25', date: '2026-11-04',
     pl: ['Pusty ekran na WebGPU naprawiony inaczej: wyłączone wspólne shadery dla pul obiektów, przez które karta odrzucała klatki. Pierwsze sekundy w nowym miejscu mapy mogą chwilę dłużej doczytywać grafikę.'],
     en: ['Blank screen on WebGPU fixed another way: shared shaders for object pools, which made the GPU reject frames, are turned off. The first seconds in a new part of the map may take a little longer to load graphics.'],

@@ -1,5 +1,9 @@
 # Dziennik zmian
 
+## 0.94.26 — 2026-11-05
+- `sw.js`: odpowiedzi 206 (Range, np. dźwięki) nie idą do `cache.put` (rzucało `Partial response (status code 206) is unsupported`), `put` z `.catch`.
+- Boty: bez zmian.
+
 ## 0.94.25 — 2026-11-04
 - WebGPU: wspólne shadery pul instancji domyślnie wyłączone (`?pule=2` włącza na próbę). Poprawka z 0.94.24 nie pomogła — u Michała dalej `Instance range (count 118) requires a larger buffer (4224)` i pusty ekran. Szczegóły w `docs/webgpu.md`.
 - Boty: bez zmian.

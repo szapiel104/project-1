@@ -39,8 +39,8 @@ async function cacheFirst(req) {
   const hit = await c.match(req);
   if (hit) return hit;
   const res = await fetch(req);
-  if (res.ok) {
-    c.put(req, res.clone());
+  if (res.ok && res.status !== 206) {
+    c.put(req, res.clone()).catch(() => {});
     // stara wersja tego samego pliku (main-AAAA.js → main-BBBB.js, keep-AAAA.bin → keep-BBBB.bin) nie jest już potrzebna
     const name = new URL(req.url).pathname.split('/').pop() ?? '';
     const stem = name.replace(/-[\w-]{6,}\.(js|css|bin|json)$/, '');
@@ -52,6 +52,6 @@ async function cacheFirst(req) {
 async function staleWhileRevalidate(req) {
   const c = await caches.open(CACHE);
   const hit = await c.match(req);
-  const fresh = fetch(req).then((res) => { if (res.ok || res.type === 'opaque') c.put(req, res.clone()); return res; }).catch(() => hit);
+  const fresh = fetch(req).then((res) => { if ((res.ok && res.status !== 206) || res.type === 'opaque') c.put(req, res.clone()).catch(() => {}); return res; }).catch(() => hit);
   return hit ?? fresh;
 }
