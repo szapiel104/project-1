@@ -892,6 +892,8 @@ function basketGeos(model: unknown, spots: BasketSpot[]): [string, THREE.BufferG
   return out;
 }
 
+/** Szyby modelu w jednej siatce (osobno skorupa i korzeń), wspólne dla wszystkich budynków tego modelu */
+const paneCache = new WeakMap<object, { shell: THREE.BufferGeometry | null; root: THREE.BufferGeometry | null }>();
 function blenderModel(g: THREE.Group, model: BlenderBuilding, flag: THREE.Material): void {
   const mats = M as unknown as Record<string, THREE.Material>;
   const meshes = (name: string): THREE.Mesh[] => ((model[name] as { mat: string; pos: string; ao: string }[] | undefined) ?? []).map((m) => {
@@ -944,10 +946,20 @@ function blenderModel(g: THREE.Group, model: BlenderBuilding, flag: THREE.Materi
   addModelBanners(g, (model as unknown as { banners?: Parameters<typeof addModelBanners>[1] }).banners, (flag as THREE.MeshStandardMaterial).color?.getHex() ?? 0xa32a22);
   // znaczniki z modelu: szyby (świecą nocą), komin (dym), ogień w palenisku
   const marks = model as unknown as { windows?: [number, number, number, number, number, number, number, string][]; chimneys?: [number, number, number][]; flames?: [number, number, number][]; lights?: [number, number, number][] };
-  for (const [x, y, z, nx, nz, w, h, grp] of marks.windows ?? []) {
-    const pane = box(grp === 'shell' ? shell : g, M.pane, nx ? 0.012 : w, h, nz ? 0.012 : w, x, y - h / 2, z);
-    pane.name = 'pane';
+  // szyby: wszystkie szyby budynku w jednej siatce (osobno te w skorupie i te w korzeniu), wspólnej dla wszystkich
+  // budynków tego modelu — rysują się razem z resztą (syncBatches). Wcześniej każda szyba była osobną nazwaną siatką,
+  // czyli osobnym rysowaniem w obrazie i w cieniu (zapis Michała 5.11.2026: 260 wywołań na same szyby).
+  let panes = paneCache.get(model);
+  if (!panes) {
+    const parts: Record<'shell' | 'root', THREE.BufferGeometry[]> = { shell: [], root: [] };
+    for (const [x, y, z, nx, nz, w, h, grp] of marks.windows ?? []) {
+      parts[grp === 'shell' ? 'shell' : 'root'].push(new THREE.BoxGeometry(nx ? 0.012 : w, h, nz ? 0.012 : w).translate(x, y, z));
+    }
+    panes = { shell: parts.shell.length ? mergeGeometries(parts.shell)! : null, root: parts.root.length ? mergeGeometries(parts.root)! : null };
+    paneCache.set(model, panes);
   }
+  if (panes.shell) shell.add(new THREE.Mesh(panes.shell, M.pane));
+  if (panes.root) g.add(new THREE.Mesh(panes.root, M.pane));
   for (const [x, y, z] of marks.chimneys ?? []) {
     const c = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.02, 0.1), new THREE.MeshBasicMaterial({ visible: false }));
     c.name = 'chimney';

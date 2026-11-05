@@ -253,7 +253,9 @@ export function attachLod(root: THREE.Object3D, lod: BuildingLod, o: LodOptions 
     obj.add(lid);
     for (const { geo, mat, lid: isLid } of b.geos) {
       const m = new THREE.Mesh(geo, mat);
-      m.castShadow = true;
+      // najdalsze wersje bez cienia: są daleko, cień z nich to kilka pikseli mapy cieni, a w przejściu cienia to setki
+      // osobnych rysowań (zapis Michała 5.11.2026: 354 na samą lod2)
+      m.castShadow = i === 0;
       m.receiveShadow = true;
       m.raycast = () => {}; // klikanie trafia w pełny model (też schowany), nie liczymy dwa razy
       m.userData.lod = true;

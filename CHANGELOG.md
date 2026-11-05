@@ -1,5 +1,10 @@
 # Dziennik zmian
 
+## 0.94.31 — 2026-11-05
+- Domyślnie WebGL; WebGPU tylko z `?webgpu=1` (`GPU_MODE`). Na zapisie Michała WebGPU: pusty ekran (0.94.22–0.94.26), za mały bufor pul przy `?pule=2`, „budynki w budynkach” przy `?pule=1` (podstawiony cudzy bufor macierzy), ok. 18 FPS wobec 25 na WebGL.
+- Szyby (`windows` z modelu) w jednej wspólnej siatce na model (skorupa / korzeń) zamiast osobnej nazwanej siatki na szybę — rysują się razem (`syncBatches`); dalekie wersje budynków od lod2 bez cienia.
+- Boty: bez zmian.
+
 ## 0.94.30 — 2026-11-05
 - `window.__drawStat()` w każdej grze (nie tylko `?test=1`): wywołania rysowania jednej klatki według kategorii, obraz / cienie osobno, WebGPU (`backend.draw`) i WebGL (`renderBufferDirect`). Na zapisie Michała 6–10 tys. wywołań, na mapie testowej 620 — trzeba zobaczyć, co rośnie.
 - Boty: bez zmian.

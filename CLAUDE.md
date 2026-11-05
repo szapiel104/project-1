@@ -116,7 +116,7 @@ Nad grą pracuje kilka czatów naraz, więc:
 - Źródła: paczki od Michała w Pobranych (`ambientcg_1024.sh3t` — 1K, sam kolor; `cc0-texture-pack-main.zip` — 2K kolor + normalne w formacie `.vtex_c`, dekoder: DXT1/BC7 + LZ4). Strony z teksturami (ambientCG, Poly Haven) są z czatu zablokowane. Każdą nową teksturę wpisz do `CREDITS.md`.
 
 ## Przejście na WebGPU (Michał 3.11.2026, dla wszystkich czatów)
-- Plan i postęp: `docs/webgpu.md`. Gra przechodzi z WebGL na `WebGPURenderer` + TSL partiami (`src/render/gpu/`). **Od 0.91.0 WebGPU jest domyślne na produkcji**; stary WebGL tylko z `?webgl=1` (porównania; narzędzia `tools/check` z przeglądarką bez karty mogą potrzebować `&webgl=1`). Testy w Chrome: `?test=1&hd=1` (już na WebGPU).
+- Plan i postęp: `docs/webgpu.md`. Gra przechodzi z WebGL na `WebGPURenderer` + TSL partiami (`src/render/gpu/`). **Od 0.94.31 (5.11.2026) domyślnie znowu WebGL** — WebGPU na produkcji psuło obraz (pusty ekran, budynki w budynkach przez wspólne shadery pul, mniej FPS). WebGPU tylko z `?webgpu=1`; wraca jako domyślne dopiero po naprawie (docs/webgpu.md) i sprawdzeniu na dużym zapisie Michała.
 - **Na czas przejścia:** zmieniasz shader GLSL (`ShaderMaterial`, `onBeforeCompile`, przejście obrazu) — zrób tę samą zmianę w jego bliźniaku TSL, a jeśli go jeszcze nie ma albo nie umiesz — dopisz linijkę w „Rozjazdy” w `docs/webgpu.md`. Nowe efekty pisz od razu w TSL, jeśli się da.
 
 ## Pomysły
