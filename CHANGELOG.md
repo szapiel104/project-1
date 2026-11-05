@@ -1,5 +1,9 @@
 # Dziennik zmian
 
+## 0.94.28 — 2026-11-05
+- WebGPU: straż w `backend.draw` — pula instancji, której bufor instancji (tablica albo bufor w karcie) jest mniejszy niż `count`, jest pomijana w tej klatce, z jednym ostrzeżeniem `[WebGPU] pula …` (nazwa, sztuki, miejsce w tablicy / karcie, bufor własny czy cudzy, wspólny shader). Do znalezienia błędu `?pule=2` (4224 B przy 118 sztukach).
+- Boty: bez zmian.
+
 ## 0.94.27 — 2026-11-05
 - WebGPU, prawdziwa przyczyna pustego ekranu (sprawdzone w Chrome Michała, także na `?test=1&hd=1`): przejścia obrazu (QuadMesh — wyjście na ekran, AO, bloom, SMAA) czekały w kolejce potoków (`MAX_PENDING = 3`) i w budżecie składania za setkami potoków sceny. Płótno zostawało przezroczyste (tło strony), w teście ok. 40 s, w dużym zapisie bez końca, bo nowe potoki ciągle dochodzą. QuadMesh omija teraz kolejkę i budżet.
 - Boty: bez zmian.

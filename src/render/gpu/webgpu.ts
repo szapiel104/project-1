@@ -160,6 +160,35 @@ export async function prepareGpu(canvas: HTMLCanvasElement): Promise<void> {
     }
     return sb;
   };
+  // Straż rysowania pul instancji: bufor instancji (macierze, kolory) musi pomieścić tyle sztuk, ile rysujemy. Za mały
+  // bufor = WebGPU odrzuca CAŁĄ klatkę (pusty ekran, 4.11.2026). Taki obiekt pomijamy w tej klatce i raz zapisujemy
+  // w dzienniku, co to było (nazwa, ile sztuk, ile miejsca w tablicy i w karcie, czy bufor jest własny obiektu).
+  const bk = (r as any).backend;
+  if (bk?.isWebGPUBackend && typeof bk.draw === 'function') {
+    const draw0 = bk.draw.bind(bk);
+    const badSeen = new WeakSet<object>();
+    bk.draw = (ro: any, info: unknown): unknown => {
+      const o = ro.object;
+      if (o?.isInstancedMesh) {
+        const n = Math.max(0, o.count | 0);
+        for (const vb of ro.getVertexBuffers() as any[]) {
+          if (!vb?.isInstancedInterleavedBuffer && !vb?.isInstancedBufferAttribute) continue;
+          const per = vb.isInstancedInterleavedBuffer ? vb.stride : vb.itemSize;
+          const gpuBuf = bk.get(vb)?.buffer as { size?: number } | undefined;
+          const jsCap = Math.floor(vb.array.length / per), gpuCap = gpuBuf?.size ? Math.floor(gpuBuf.size / (per * 4)) : jsCap;
+          if (Math.min(jsCap, gpuCap) < n) {
+            if (!badSeen.has(o)) {
+              badSeen.add(o);
+              const own = vb.array === o.instanceMatrix?.array || vb.array === o.instanceColor?.array;
+              console.warn(`[WebGPU] pula ${poolName(o)} (${o.geometry?.index?.count ?? '?'} ind.): ${n} sztuk, miejsca w tablicy ${jsCap}, w karcie ${gpuCap}, bufor ${own ? 'własny' : 'cudzy'}, wspólny shader ${sharedPool(o, srcMat.get(o) ?? ro.material) ? 'tak' : 'nie'} — pominięta`);
+            }
+            return undefined;
+          }
+        }
+      }
+      return draw0(ro, info);
+    };
+  }
   const anyR = r as any;
   const renderObj = anyR.renderObject.bind(anyR);
   anyR.renderObject = (object: any, scene: unknown, camera: unknown, geometry: unknown, material: any, ...rest: unknown[]): unknown => {

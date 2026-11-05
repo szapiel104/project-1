@@ -10,6 +10,11 @@ export type { ChangeEntry } from './changelogTypes';
  */
 const NEW: ChangeEntry[] = [
   {
+    v: '0.94.28', date: '2026-11-05',
+    pl: ['Zabezpieczenie grafiki WebGPU: grupa obiektów z uszkodzonym buforem znika na chwilę zamiast wyłączać cały obraz, a dziennik błędów zapisuje, która to była.'],
+    en: ['WebGPU graphics safeguard: a group of objects with a broken buffer disappears briefly instead of blanking the whole picture, and the error log records which group it was.'],
+  },
+  {
     v: '0.94.27', date: '2026-11-05',
     pl: ['Naprawiony pusty ekran po wczytaniu gry na WebGPU: obraz pokazuje się od razu, a budynki i drzewa dochodzą w tle, zamiast czekać, aż karta graficzna przygotuje całą grafikę.'],
     en: ['Fixed the blank screen after loading a game on WebGPU: the picture shows up right away and buildings and trees fill in in the background, instead of waiting until the GPU has prepared all the graphics.'],
