@@ -10,6 +10,11 @@ export type { ChangeEntry } from './changelogTypes';
  */
 const NEW: ChangeEntry[] = [
   {
+    v: '0.94.27', date: '2026-11-05',
+    pl: ['Naprawiony pusty ekran po wczytaniu gry na WebGPU: obraz pokazuje się od razu, a budynki i drzewa dochodzą w tle, zamiast czekać, aż karta graficzna przygotuje całą grafikę.'],
+    en: ['Fixed the blank screen after loading a game on WebGPU: the picture shows up right away and buildings and trees fill in in the background, instead of waiting until the GPU has prepared all the graphics.'],
+  },
+  {
     v: '0.94.26', date: '2026-11-05',
     pl: ['Mniej czerwonych błędów w konsoli przeglądarki: częściowo pobrane pliki (np. dźwięki) nie trafiają już do pamięci podręcznej gry.'],
     en: ['Fewer red errors in the browser console: partially downloaded files (such as sounds) no longer go into the game cache.'],

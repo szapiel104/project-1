@@ -1,5 +1,9 @@
 # Dziennik zmian
 
+## 0.94.27 — 2026-11-05
+- WebGPU, prawdziwa przyczyna pustego ekranu (sprawdzone w Chrome Michała, także na `?test=1&hd=1`): przejścia obrazu (QuadMesh — wyjście na ekran, AO, bloom, SMAA) czekały w kolejce potoków (`MAX_PENDING = 3`) i w budżecie składania za setkami potoków sceny. Płótno zostawało przezroczyste (tło strony), w teście ok. 40 s, w dużym zapisie bez końca, bo nowe potoki ciągle dochodzą. QuadMesh omija teraz kolejkę i budżet.
+- Boty: bez zmian.
+
 ## 0.94.26 — 2026-11-05
 - `sw.js`: odpowiedzi 206 (Range, np. dźwięki) nie idą do `cache.put` (rzucało `Partial response (status code 206) is unsupported`), `put` z `.catch`.
 - Boty: bez zmian.

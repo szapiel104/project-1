@@ -118,7 +118,9 @@ export async function prepareGpu(canvas: HTMLCanvasElement): Promise<void> {
   const MAX_PENDING = 3;
   const pd = pipes as unknown as { get(o: unknown): { pipeline?: unknown } };
   pipes.updateForRender = function (ro: unknown): void {
-    if (gpuPendingCount >= MAX_PENDING && pd.get(ro).pipeline === undefined) { gpuDeferredCount++; return; }
+    // przejścia obrazu (QuadMesh: wyjście na ekran, AO, bloom, SMAA) zawsze od razu — czekając w kolejce za setkami potoków
+    // sceny, zostawiały pusty ekran na długie sekundy, a przy ciągle dochodzących nowych potokach na zawsze (Michał 5.11.2026)
+    if (gpuPendingCount >= MAX_PENDING && pd.get(ro).pipeline === undefined && !(ro as { object?: { isQuadMesh?: boolean } }).object?.isQuadMesh) { gpuDeferredCount++; return; }
     this.getForRender(ro, sink);
   };
   // Budżet składania materiałów na klatkę: three.js składa każdy nowy wariant (i każdą pulę instancji) na procesorze,
@@ -235,7 +237,7 @@ export async function prepareGpu(canvas: HTMLCanvasElement): Promise<void> {
   };
   const direct = R._renderObjectDirect;
   R._renderObjectDirect = function (this: typeof R, object: unknown, material: unknown, scene: unknown, camera: unknown, lightsNode: unknown, group: unknown, clipping: unknown, passId: unknown): void {
-    if (buildSpent >= buildBudget) {
+    if (buildSpent >= buildBudget && !(object as { isQuadMesh?: boolean })?.isQuadMesh) {
       const ro = this._objects.get(object, material, scene, camera, lightsNode, this._currentRenderContext, clipping, passId);
       if (this._nodes.get(ro).nodeBuilderState === undefined && !this._nodes.nodeBuilderCache.has(this._nodes.getForRenderCacheKey(ro))) { gpuDeferredCount++; return; }
     }
