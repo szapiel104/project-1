@@ -1,5 +1,9 @@
 # Dziennik zmian
 
+## 0.94.29 — 2026-11-05
+- WebGPU: `?pule=1` domyślnie (wspólne shadery pul ze zwykłymi materiałami; wiatr i pory roku osobno). W Chrome Michała na jego zapisie `?pule=2` dalej psuje cień (477 sztuk przy buforze na 290), `?pule=1` — 0 błędów, składanie prawie zerowe. Szczegóły w `docs/webgpu.md`.
+- Boty: bez zmian.
+
 ## 0.94.28 — 2026-11-05
 - WebGPU: straż w `backend.draw` — pula instancji, której bufor instancji (tablica albo bufor w karcie) jest mniejszy niż `count`, jest pomijana w tej klatce, z jednym ostrzeżeniem `[WebGPU] pula …` (nazwa, sztuki, miejsce w tablicy / karcie, bufor własny czy cudzy, wspólny shader). Do znalezienia błędu `?pule=2` (4224 B przy 118 sztukach).
 - Boty: bez zmian.

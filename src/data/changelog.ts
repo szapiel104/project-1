@@ -10,6 +10,11 @@ export type { ChangeEntry } from './changelogTypes';
  */
 const NEW: ChangeEntry[] = [
   {
+    v: '0.94.29', date: '2026-11-05',
+    pl: ['WebGPU: znowu wspólne shadery dla budynków, kamieni i innych zwykłych obiektów — mniej przycinania i znikania budynków przy przybliżaniu kamery, bez błędu, który psuł obraz (drzewa na wietrze na razie osobno).'],
+    en: ['WebGPU: shared shaders are back for buildings, rocks and other plain objects — less stutter and fewer buildings vanishing while zooming in, without the bug that broke the picture (trees swaying in the wind stay separate for now).'],
+  },
+  {
     v: '0.94.28', date: '2026-11-05',
     pl: ['Zabezpieczenie grafiki WebGPU: grupa obiektów z uszkodzonym buforem znika na chwilę zamiast wyłączać cały obraz, a dziennik błędów zapisuje, która to była.'],
     en: ['WebGPU graphics safeguard: a group of objects with a broken buffer disappears briefly instead of blanking the whole picture, and the error log records which group it was.'],
