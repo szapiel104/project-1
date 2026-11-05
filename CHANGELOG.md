@@ -1,5 +1,9 @@
 # Dziennik zmian
 
+## 0.94.33 — 2026-11-05
+- LOD budynków: lod1 rzuca cień jedną bryłą (`shadowGeo` — wszystkie części poziomu złączone, sama pozycja, materiał `colorWrite/depthWrite: false`), wspólną dla rodzaju (rysowanie razem); części z materiałami bez cienia. Zapis Michała: 690 rysowań cienia na lod1.
+- Boty: bez zmian.
+
 ## 0.94.32 — 2026-11-05
 - WebGPU znowu domyślne (Michał). „Budynki w budynkach” ze zrzutu to nie WebGPU: na WebGL to samo — rynek stoi w środku Sanktuarium Źródła (dwa budynki na tych samych polach w zapisie). Do zbadania osobno.
 - Boty: bez zmian.

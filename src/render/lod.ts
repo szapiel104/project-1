@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { coreReady, simplifyAll, type BucketData, type LevelData } from './lodcore';
 
 /**
@@ -220,6 +221,23 @@ function getWorker(): Worker | null {
  * Dopina policzone wersje do budynku. Gdy dla tego rodzaju jeszcze ich nie ma, zleca liczenie (w tle, gdy się da)
  * i zwraca false — budynek do tego czasu zostaje w pełnej wersji. `sync` = licz od razu (podgląd modeli, testy).
  */
+/** Bryła cienia dalekiej wersji: niewidoczna w obrazie (nic nie pisze), w mapie cieni rzuca kształt całego budynku */
+const SHADOW_ONLY = new THREE.MeshBasicMaterial({ colorWrite: false, depthWrite: false });
+const shadowGeos = new WeakMap<object, THREE.BufferGeometry | null>();
+function shadowGeo(level: { geos: { geo: THREE.BufferGeometry; lid: boolean }[] }): THREE.BufferGeometry | null {
+  if (shadowGeos.has(level)) return shadowGeos.get(level)!;
+  // wieko (dach dalekiej wersji) też rzuca cień — zawsze, nawet gdy w obrazie jest schowane (jak dach pełnego modelu)
+  const parts = level.geos.map(({ geo }) => {
+    const g = new THREE.BufferGeometry();
+    g.setAttribute('position', geo.getAttribute('position'));
+    if (geo.index) g.setIndex(geo.index);
+    return g.index ? g.toNonIndexed() : g;
+  });
+  const out = parts.length ? mergeGeometries(parts) : null;
+  shadowGeos.set(level, out);
+  return out;
+}
+
 export function attachLod(root: THREE.Object3D, lod: BuildingLod, o: LodOptions = {}, sync = false): boolean {
   if (lod.levels.length) return true;
   let baked = cache.get(lod.sig);
@@ -251,11 +269,22 @@ export function attachLod(root: THREE.Object3D, lod: BuildingLod, o: LodOptions 
     const lid = new THREE.Group();
     lid.userData.lod = true;
     obj.add(lid);
+    // cień dalekiej wersji: wszystkie jej części w jednej bryle (bez materiałów — mapa cieni widzi tylko kształt),
+    // wspólnej dla budynków tego rodzaju, więc w przejściu cienia to jedno rysowanie na rodzaj zamiast kilku na budynek
+    // (zapis Michała 5.11.2026: 690 rysowań cienia na lod1). Najdalsze wersje (lod2+) cienia nie rzucają wcale.
+    if (i === 0) {
+      const sg = shadowGeo(b);
+      if (sg) {
+        const sm = new THREE.Mesh(sg, SHADOW_ONLY);
+        sm.castShadow = true; sm.receiveShadow = false;
+        sm.raycast = () => {};
+        sm.userData.lod = true;
+        obj.add(sm);
+      }
+    }
     for (const { geo, mat, lid: isLid } of b.geos) {
       const m = new THREE.Mesh(geo, mat);
-      // najdalsze wersje bez cienia: są daleko, cień z nich to kilka pikseli mapy cieni, a w przejściu cienia to setki
-      // osobnych rysowań (zapis Michała 5.11.2026: 354 na samą lod2)
-      m.castShadow = i === 0;
+      m.castShadow = false;
       m.receiveShadow = true;
       m.raycast = () => {}; // klikanie trafia w pełny model (też schowany), nie liczymy dwa razy
       m.userData.lod = true;

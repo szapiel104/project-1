@@ -10,6 +10,11 @@ export type { ChangeEntry } from './changelogTypes';
  */
 const NEW: ChangeEntry[] = [
   {
+    v: '0.94.33', date: '2026-11-05',
+    pl: ['Szybciej przy dużej osadzie: cienie budynków widocznych z daleka liczą się jedną bryłą na rodzaj budynku zamiast kilku na każdy budynek.'],
+    en: ['Faster in a large settlement: shadows of buildings seen from afar are computed as one shape per building type instead of several per building.'],
+  },
+  {
     v: '0.94.32', date: '2026-11-05',
     pl: ['Z powrotem nowy silnik grafiki WebGPU (już bez pustego ekranu i błędów obrazu); stary zostaje pod ?webgl=1.'],
     en: ['Back to the new WebGPU graphics engine (now without the blank screen and picture errors); the old one stays under ?webgl=1.'],
