@@ -260,6 +260,18 @@ export function collectFx(root: THREE.Object3D, isWindow: (m: THREE.Material) =>
     if (!m.isMesh || Array.isArray(m.material) || !isWindow(m.material)) return;
     // pomijamy okna we wnętrzach (widać je tylko po zdjęciu dachu)
     for (let p = o.parent; p && p !== root; p = p.parent) if (p.name === 'interior') return;
+    // szyby budynku w jednej siatce (buildings.ts): miejsca każdej szyby w userData.panes
+    const spots = m.userData.panes as [number, number, number, boolean][] | undefined;
+    if (spots) {
+      m.getWorldQuaternion(q);
+      for (const [x, y, z, thinX] of spots) {
+        const p = m.localToWorld(new THREE.Vector3(x, y, z));
+        n.set(thinX ? 1 : 0, 0, thinX ? 0 : 1).applyQuaternion(q);
+        if (n.x * p.x + n.z * p.z < 0) n.negate();
+        fx.windows.push(p.addScaledVector(n, 0.12));
+      }
+      return;
+    }
     m.geometry.computeBoundingBox();
     const s = m.geometry.boundingBox!.getSize(v);
     // szyba jest cienka w jednej osi: to kierunek, w który patrzy

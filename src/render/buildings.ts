@@ -958,8 +958,10 @@ function blenderModel(g: THREE.Group, model: BlenderBuilding, flag: THREE.Materi
     panes = { shell: parts.shell.length ? mergeGeometries(parts.shell)! : null, root: parts.root.length ? mergeGeometries(parts.root)! : null };
     paneCache.set(model, panes);
   }
-  if (panes.shell) shell.add(new THREE.Mesh(panes.shell, M.pane));
-  if (panes.root) g.add(new THREE.Mesh(panes.root, M.pane));
+  // miejsca szyb zostają w userData (światło w oknach nocą, collectFx w ambience.ts): [x, y, z, oś cienka x?]
+  const spots = (inShell: boolean): [number, number, number, boolean][] => (marks.windows ?? []).filter((w) => (w[7] === 'shell') === inShell).map(([x, y, z, nx]) => [x, y, z, !!nx]);
+  if (panes.shell) { const m = new THREE.Mesh(panes.shell, M.pane); m.userData.panes = spots(true); shell.add(m); }
+  if (panes.root) { const m = new THREE.Mesh(panes.root, M.pane); m.userData.panes = spots(false); g.add(m); }
   for (const [x, y, z] of marks.chimneys ?? []) {
     const c = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.02, 0.1), new THREE.MeshBasicMaterial({ visible: false }));
     c.name = 'chimney';
