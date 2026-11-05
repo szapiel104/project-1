@@ -1,3 +1,4 @@
+import type { Camera, Object3D, OrthographicCamera } from 'three';
 import { loadInfo } from './ui/loadinfo';
 import { loadingMarkup, setLoadingProgress } from './ui/loadscreen';
 import { counts as errCounts, entries as errEntries, formatText as errText, onReport, setContext as errContext } from './debug/errlog';
@@ -2564,6 +2565,37 @@ if (EMPTY) {
   }
 }
 (window as unknown as { __look: (x: number, y: number, d?: number) => void }).__look = (x, y, d) => renderer.lookAt(x, y, d);
+/**
+ * Spis wywołań rysowania jednej klatki według kategorii (obraz „O”, cienie „C”), także w zwykłej grze — do szukania,
+ * co zjada klatkę na prawdziwym zapisie gracza. W konsoli: `await __drawStat()` (5.11.2026).
+ */
+(window as unknown as { __drawStat: () => Promise<unknown> }).__drawStat = async () => {
+  const R = renderer as unknown as { renderer: { backend?: { draw: (...a: unknown[]) => unknown }; renderBufferDirect?: (...a: unknown[]) => unknown } };
+  const cat = (o: Object3D | null): string => {
+    const names: string[] = [];
+    for (let q = o; q; q = q.parent) { const c = q.userData?.cat as string | undefined; if (c) return c + (names.length ? ' / ' + names.reverse().slice(0, 2).join('/') : ''); if (q.name) names.push(q.name); }
+    return 'inne' + (names.length ? ' / ' + names.reverse().slice(0, 2).join('/') : '');
+  };
+  const by = new Map<string, number>();
+  let on = false;
+  const add = (o: Object3D, cam: Camera | undefined): void => { if (!on) return; const k = ((cam as OrthographicCamera | undefined)?.isOrthographicCamera ? 'C ' : 'O ') + cat(o); by.set(k, (by.get(k) ?? 0) + 1); };
+  const bk = R.renderer.backend, gl = R.renderer;
+  const wrap = bk ? { o: bk, k: 'draw' as const } : { o: gl as unknown as { draw: (...a: unknown[]) => unknown }, k: 'renderBufferDirect' as unknown as 'draw' };
+  const orig = wrap.o[wrap.k]!;
+  wrap.o[wrap.k] = function (this: unknown, ...a: unknown[]): unknown {
+    if (bk) { const ro = a[0] as { object: Object3D; camera?: Camera }; add(ro.object, ro.camera); } else add(a[4] as Object3D, a[0] as Camera);
+    return orig.apply(this, a);
+  };
+  try {
+    await new Promise((ok) => requestAnimationFrame(() => ok(null)));
+    on = true;
+    await new Promise((ok) => requestAnimationFrame(() => ok(null)));
+    on = false;
+  } finally { wrap.o[wrap.k] = orig; }
+  const list = [...by].sort((x, y) => y[1] - x[1]);
+  const sum = (p: string): number => list.filter(([k]) => k.startsWith(p)).reduce((t, [, v]) => t + v, 0);
+  return { obraz: sum('O '), cienie: sum('C '), kategorie: list.slice(0, 40).map(([k, v]) => `${v} ${k}`) };
+};
 // piaskownica testowa: podgląd renderera z konsoli (szukanie błędów w wyglądzie)
 if (SANDBOX) (window as unknown as { __renderer: unknown }).__renderer = renderer;
 

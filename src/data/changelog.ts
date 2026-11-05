@@ -10,6 +10,11 @@ export type { ChangeEntry } from './changelogTypes';
  */
 const NEW: ChangeEntry[] = [
   {
+    v: '0.94.30', date: '2026-11-05',
+    pl: ['Narzędzie do szukania spadków płynności: spis tego, co rysuje się w jednej klatce, dostępny także w zwykłej grze (dla twórców).'],
+    en: ['A tool for hunting frame-rate drops: a breakdown of what gets drawn in one frame, now available in a normal game too (for developers).'],
+  },
+  {
     v: '0.94.29', date: '2026-11-05',
     pl: ['WebGPU: znowu wspólne shadery dla budynków, kamieni i innych zwykłych obiektów — mniej przycinania i znikania budynków przy przybliżaniu kamery, bez błędu, który psuł obraz (drzewa na wietrze na razie osobno).'],
     en: ['WebGPU: shared shaders are back for buildings, rocks and other plain objects — less stutter and fewer buildings vanishing while zooming in, without the bug that broke the picture (trees swaying in the wind stay separate for now).'],

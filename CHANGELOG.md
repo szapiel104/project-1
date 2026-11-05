@@ -1,5 +1,9 @@
 # Dziennik zmian
 
+## 0.94.30 — 2026-11-05
+- `window.__drawStat()` w każdej grze (nie tylko `?test=1`): wywołania rysowania jednej klatki według kategorii, obraz / cienie osobno, WebGPU (`backend.draw`) i WebGL (`renderBufferDirect`). Na zapisie Michała 6–10 tys. wywołań, na mapie testowej 620 — trzeba zobaczyć, co rośnie.
+- Boty: bez zmian.
+
 ## 0.94.29 — 2026-11-05
 - WebGPU: `?pule=1` domyślnie (wspólne shadery pul ze zwykłymi materiałami; wiatr i pory roku osobno). W Chrome Michała na jego zapisie `?pule=2` dalej psuje cień (477 sztuk przy buforze na 290), `?pule=1` — 0 błędów, składanie prawie zerowe. Szczegóły w `docs/webgpu.md`.
 - Boty: bez zmian.
