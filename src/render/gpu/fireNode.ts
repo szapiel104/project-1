@@ -93,8 +93,10 @@ export function flameNode(time: { value: number }, mesh?: THREE.InstancedMesh): 
     seed = ic.x; inten = ic.y;
   }
   const S = vec3(length(M.element(0).xyz), length(M.element(1).xyz), length(M.element(2).xyz));
-  const Tr = M.element(3).xyz;
-  const vCam = varying(cameraPosition.sub(Tr).div(S));
+  // oko w przestrzeni bryły przez pełną odwrotność macierzy (jak inverse(M) w GLSL): pochodnia w ręce obraca się
+  // z kamerą, a samo „przesunięcie i skala” przy obrocie liczyło promień z złego miejsca — przy ruchu myszą płomień
+  // rozpadał się na płaskie kliny (Michał 6.11.2026)
+  const vCam = varying(T.inverse(M).mul(vec4(cameraPosition, 1)).xyz);
   const vScale = varying(S), vSeed = varying(seed), vI = varying(inten);
   const color = Fn(() => {
     const o = vCam, d = normalize(positionGeometry.sub(vCam));

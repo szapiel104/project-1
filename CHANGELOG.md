@@ -1,5 +1,9 @@
 # Dziennik zmian
 
+## 0.94.44 — 2026-11-06
+- `gpu/fireNode.ts` (`flameNode`): oko w przestrzeni bryły przez `inverse(M)` — dotąd tylko przesunięcie i skala, więc obrócona pochodnia w ręce (przypięta do kamery) liczyła promień ze złego miejsca.
+- Boty: bez zmian.
+
 ## 0.94.43 — 2026-11-06
 - Tylko WebGPU: `GPU_MODE` zawsze w przeglądarce, bez `?webgl=1` (Michał 6.11.2026). Bez WebGPU w przeglądarce działa WebGPURenderer w trybie WebGL2. Martwe bliźniaki GLSL do usunięcia partiami (`docs/webgpu.md`); CLAUDE.md zaktualizowane.
 - Boty: bez zmian.

@@ -10,6 +10,11 @@ export type { ChangeEntry } from './changelogTypes';
  */
 const NEW: ChangeEntry[] = [
   {
+    v: '0.94.44', date: '2026-11-06',
+    pl: ['Pochodnia w ręce: płomień nie rozpada się już na płaskie kliny, gdy obracasz się albo ruszasz pochodnią.'],
+    en: ['Torch in hand: the flame no longer breaks into flat wedges when you turn or swing the torch.'],
+  },
+  {
     v: '0.94.43', date: '2026-11-06',
     pl: ['Gra działa już tylko na nowym silniku grafiki WebGPU; stary WebGL usunięty.'],
     en: ['The game now runs only on the new WebGPU graphics engine; the old WebGL renderer has been removed.'],
