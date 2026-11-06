@@ -1,5 +1,10 @@
 # Dziennik zmian
 
+## 0.94.41 — 2026-11-06
+- Ogień (`flames.ts`, `blaze.ts`, `gpu/fireNode.ts`): bryły płomieni i pożarów rysowane tylnymi ścianami (`BackSide`) — z kamerą w środku bryły przednie ściany ucinała bliska płaszczyzna i zostawały płaskie kliny.
+- `?test=1&ziarno=N` (z 0.94.40) do odtwarzania map graczy.
+- Boty: bez zmian.
+
 ## 0.94.40 — 2026-11-06
 - Mur (`ashlar`): Poly Haven `castle_wall_slates` (CC0, 4K → 2K, 35% barwy, AO w fugach), KTX2; `PHOTO_SCALE` 1.2 (kafel ok. 2 pól), POM 0.009, `normalScale` 1.1 tylko dla muru.
 - `terrain.ts`: od strony morza narożniki planszy schodzą do 0,3 w pasie 14 pól; teren za mapą wtapia się w plażę od t = −45 (było −20); wtapianie w narożnik planszy (d < 3) na końcu `outerH`.

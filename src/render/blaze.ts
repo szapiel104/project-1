@@ -142,7 +142,7 @@ export class Blaze {
           time: this.time, heat: { value: 0.1 }, seed: { value: (id * 0.6180339) % 1 }, roof: { value: h }, tall: { value: tall },
           foot: { value: new THREE.Vector2(sx / 2, sz / 2) },
         },
-        vertexShader: VERT, fragmentShader: FRAG, transparent: true, depthWrite: false, fog: false, premultipliedAlpha: true,
+        vertexShader: VERT, fragmentShader: FRAG, side: THREE.BackSide, transparent: true, depthWrite: false, fog: false, premultipliedAlpha: true,
         blending: THREE.CustomBlending, blendSrc: THREE.OneFactor, blendDst: THREE.OneMinusSrcAlphaFactor,
       });
       const mesh = new THREE.Mesh(BOX, mat);

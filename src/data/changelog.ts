@@ -10,6 +10,11 @@ export type { ChangeEntry } from './changelogTypes';
  */
 const NEW: ChangeEntry[] = [
   {
+    v: '0.94.41', date: '2026-11-06',
+    pl: ['Ogień pochodni, ognisk i pożarów z bliska (np. w spacerze) jest pełnym płomieniem zamiast płaskich, ostro uciętych klinów.'],
+    en: ['Torch, campfire and blaze flames seen up close (e.g. on foot) are now full flames instead of flat, sharply clipped wedges.'],
+  },
+  {
     v: '0.94.40', date: '2026-11-06',
     pl: [
       'Nowy kamień murów zamku: zdjęciowa tekstura w wysokiej rozdzielczości, kamienie w prawdziwej wielkości obok ludzi, bez czarnych fug i białych plam.',

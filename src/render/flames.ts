@@ -90,6 +90,10 @@ void main() {
 function flameMaterial(time: { value: number }): THREE.ShaderMaterial {
   return new THREE.ShaderMaterial({
     uniforms: { time }, vertexShader: VERT, fragmentShader: FLAME_FRAG,
+    // tylne ściany bryły: promień liczymy sami od oka, więc płomień rysuje się też wtedy, gdy kamera jest w środku bryły
+    // (spacer tuż przy pochodni) — przednie ściany ucinała wtedy bliska płaszczyzna i zostawały płaskie, ostre kliny
+    // ognia (Michał 6.11.2026: „ogień na pochodni dziwny”)
+    side: THREE.BackSide,
     transparent: true, depthWrite: false, premultipliedAlpha: true, fog: false,
     blending: THREE.CustomBlending, blendSrc: THREE.OneFactor, blendDst: THREE.OneMinusSrcAlphaFactor,
   });

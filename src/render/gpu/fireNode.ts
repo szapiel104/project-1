@@ -131,7 +131,8 @@ export function flameNode(time: { value: number }, mesh?: THREE.InstancedMesh): 
     // przemnożona alfa: ogień świeci, tło za nim tylko lekko przygasa
     return vec4(col.mul(vI).mul(0.65), Af.mul(0.4));
   });
-  const m = new Wm.MeshBasicNodeMaterial({ transparent: true, depthWrite: false, fog: false,
+  // tylne ściany: kamera w środku bryły (spacer przy pochodni) nie ucina płomienia w płaskie kliny (jak w flames.ts)
+  const m = new Wm.MeshBasicNodeMaterial({ side: Wm.BackSide, transparent: true, depthWrite: false, fog: false,
     blending: Wm.CustomBlending, blendSrc: Wm.OneFactor, blendDst: Wm.OneMinusSrcAlphaFactor });
   // outputNode, nie colorNode: three.js mnoży colorNode przez kolor instancji, a tu kolor instancji to ziarno
   // i jasność (r, g, 0) — płomień wychodził zielony (Michał 3.11.2026)
@@ -232,7 +233,7 @@ export function blazeNode(time: { value: number }, init: { heat: number; seed: n
     If(a.lessThan(0.005).and(dot(col, col).lessThan(1e-5)), () => { Discard(); });
     return vec4(col, a);
   });
-  const m = new Wm.MeshBasicNodeMaterial({ transparent: true, depthWrite: false, fog: false,
+  const m = new Wm.MeshBasicNodeMaterial({ side: Wm.BackSide, transparent: true, depthWrite: false, fog: false,
     blending: Wm.CustomBlending, blendSrc: Wm.OneFactor, blendDst: Wm.OneMinusSrcAlphaFactor });
   m.colorNode = color();
   m.uniforms = u;
