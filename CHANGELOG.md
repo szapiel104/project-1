@@ -1,5 +1,10 @@
 # Dziennik zmian
 
+## 0.94.47 — 2026-11-06
+- `lod.ts`: bryła cienia (z lod1) we wszystkich poziomach LOD — lod2+ nie rzucały cienia i budynki na granicy odległości gubiły cień przy przesuwaniu widoku.
+- `aimSun`: obszar cienia dwa stałe rozmiary (46 / 70, histereza 42–50) zamiast skoków co 12 %.
+- Boty: bez zmian.
+
 ## 0.94.46 — 2026-11-06
 - `gpu/webgpu.ts`: `gpuLoading(on)` — przy rozgrzewce 16 potoków naraz (w grze 3); `warmGpu` czeka do końca, najwyżej 10 s (było 2,5 s i gra startowała bez połowy budynków, same cienie).
 - `aimSun`: na WebGPU `sun.shadow.autoUpdate = false` i `needsUpdate` z tej samej reguły co dla WebGL — wcześniej mapa cieni liczyła się w każdej klatce i drugi raz dla kamery odbicia w wodzie.

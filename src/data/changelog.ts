@@ -10,6 +10,17 @@ export type { ChangeEntry } from './changelogTypes';
  */
 const NEW: ChangeEntry[] = [
   {
+    v: '0.94.47', date: '2026-11-06',
+    pl: [
+      'Cienie nie mrugają przy przesuwaniu widoku: dalekie budynki też rzucają cień, a nie gubią go na granicy odległości.',
+      'Cienie nie przeskakują przy przybliżaniu: zamiast kilkunastu stopni dokładności są dwa, blisko i daleko.',
+    ],
+    en: [
+      'Shadows no longer flicker when panning: distant buildings cast shadows too instead of losing them at a distance threshold.',
+      'Shadows no longer jump while zooming: two quality steps, near and far, instead of a dozen.',
+    ],
+  },
+  {
     v: '0.94.46', date: '2026-11-06',
     pl: [
       'Wczytywanie czeka, aż przygotują się wszystkie budynki w kadrze: gra nie startuje już z samymi cieniami zamiast budynków.',

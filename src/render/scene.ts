@@ -3458,8 +3458,10 @@ export class GameRenderer {
     const f = this.focusPoint;
     // obszar cienia rośnie skokami (co ~12%), a nie płynnie: przy płynnym rozmiar piksela cienia zmieniał się
     // w każdej klatce przybliżania i krawędzie cieni pełzały
-    const raw = Math.max(22, Math.min(70, this.cam.distance * 1.15));
-    const half = Math.min(70, 22 * 1.12 ** Math.ceil(Math.log(raw / 22) / Math.log(1.12) - 1e-6));
+    // Dwa stałe rozmiary zamiast skoków co 12 % (Michał 6.11.2026: „cienie mrugają przy przybliżaniu” — każdy skok
+    // zmieniał wielkość piksela cienia i krawędzie przeskakiwały): blisko 46, daleko 70, z histerezą
+    const curHalf = this.sun.shadow.camera.right;
+    const half = this.cam.distance > 50 ? 70 : this.cam.distance < 42 ? 46 : (curHalf === 70 || curHalf === 46 ? curHalf : 46);
     // przyciąganie do pikseli mapy cieni liczone w układzie słońca (jego osie prawo/góra), a nie w osiach świata:
     // słońce świeci pod kątem, więc siatka X/Z nie pokrywała się z pikselami i cienie migały przy przelocie kamery
     const d = this.sunAxisZ.copy(this.sunDir).normalize();

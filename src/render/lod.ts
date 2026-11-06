@@ -271,9 +271,11 @@ export function attachLod(root: THREE.Object3D, lod: BuildingLod, o: LodOptions 
     obj.add(lid);
     // cień dalekiej wersji: wszystkie jej części w jednej bryle (bez materiałów — mapa cieni widzi tylko kształt),
     // wspólnej dla budynków tego rodzaju, więc w przejściu cienia to jedno rysowanie na rodzaj zamiast kilku na budynek
-    // (zapis Michała 5.11.2026: 690 rysowań cienia na lod1). Najdalsze wersje (lod2+) cienia nie rzucają wcale.
-    if (i === 0) {
-      const sg = shadowGeo(b);
+    // (zapis Michała 5.11.2026: 690 rysowań cienia na lod1). Dalsze wersje (lod2+) rzucają ten sam cień co lod1:
+    // wcześniej nie rzucały żadnego i przy przesuwaniu widoku cienie budynków na granicy znikały i wracały
+    // (Michał 6.11.2026: „cienie mrugają”)
+    {
+      const sg = shadowGeo(baked.levels[0]!);
       if (sg) {
         const sm = new THREE.Mesh(sg, SHADOW_ONLY);
         sm.castShadow = true; sm.receiveShadow = false;
