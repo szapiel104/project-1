@@ -21,3 +21,12 @@ body .menu .menu-hint, body .menu:not(.previewing) .menu-hint { display: none; }
   color: #1c1208; background: linear-gradient(#e9cd85, #c9a65c); border-radius: 3px; text-shadow: none; }
 :root:lang(en) #loading .loading-tip:not(:empty)::before { content: 'Tip'; }
 #loading .loading-line { font: 600 13px/1.3 var(--text, sans-serif); letter-spacing: .14em; text-transform: uppercase; color: #cdb88c; text-shadow: none; }
+
+/* tytuł zawsze mieści się w kolumnie obok herbu (Michał 6.11.2026: „menu główne rozjechane, logo” — na szerokim i niskim
+   oknie 3440×1215 tytuł 70 px wychodził za prawą krawędź panelu): rozmiar liczony też z szerokości kolumny
+   (cqi = szerokość .menu-head bez marginesów; „PROJECT-1” w Cinzel Decorative to ok. 6,3 em) */
+body .menu:not(.previewing) .menu-head { container-type: inline-size; }
+body .menu:not(.previewing) .menu-head > .menu-title {
+  font-size: min(clamp(34px, min(5.8vh, 3.1vw), 72px), calc((100cqi - clamp(48px, 6.4vh, 76px) - clamp(12px, 1.2vw, 20px)) / 6.6));
+  white-space: nowrap;
+}

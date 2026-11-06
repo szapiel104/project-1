@@ -1,5 +1,9 @@
 # Dziennik zmian
 
+## 0.94.36 — 2026-11-06
+- `menuhead.css`: rozmiar tytułu menu także z szerokości kolumny (`container-type: inline-size`, `cqi`) — na 3440×1215 tytuł 70 px wychodził za panel; teraz ok. 54 px z marginesem jak po lewej (sprawdzone w Chrome Michała).
+- Boty: bez zmian.
+
 ## 0.94.35 — 2026-11-06
 - Tekstury: `ashlar` (mury) z Poly Haven `rough_block_wall`, `thatch` (strzecha) z `reed_roof_04` — zamiast wygenerowanych (Michał: „wyglądają jak gra z 2000 roku”). Szarość z wyrównaną jasnością (barwę daje materiał), `_n` z paczki, `_h` z jasności; KTX2 przeliczone. Pobrane na komputerze Michała (z czatu Poly Haven zablokowany).
 - Boty: bez zmian.

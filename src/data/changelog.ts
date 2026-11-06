@@ -10,6 +10,11 @@ export type { ChangeEntry } from './changelogTypes';
  */
 const NEW: ChangeEntry[] = [
   {
+    v: '0.94.36', date: '2026-11-06',
+    pl: ['Menu główne: nazwa gry obok herbu zawsze mieści się w lewym panelu, także na szerokich i niskich ekranach.'],
+    en: ['Main menu: the game title next to the crest always fits in the left panel, also on wide and short screens.'],
+  },
+  {
     v: '0.94.35', date: '2026-11-06',
     pl: ['Nowe tekstury ze zdjęć: kamień murów zamku i baszt (nieregularne, ciosane bloki) oraz strzecha dachów z prawdziwej trzciny.'],
     en: ['New photo textures: the stone of castle walls and towers (rough, hand-cut blocks) and thatched roofs made from real reed.'],
