@@ -1,5 +1,9 @@
 # Dziennik zmian
 
+## 0.94.37 — 2026-11-06
+- `textures.ts`: `PHOTO_SCALE` — `ashlar` z `repeat 0.7` (kolor, normalne, wysokość): nowe zdjęcie muru ma drobniejsze ciosy niż dawny rysowany.
+- Boty: bez zmian.
+
 ## 0.94.36 — 2026-11-06
 - `menuhead.css`: rozmiar tytułu menu także z szerokości kolumny (`container-type: inline-size`, `cqi`) — na 3440×1215 tytuł 70 px wychodził za panel; teraz ok. 54 px z marginesem jak po lewej (sprawdzone w Chrome Michała).
 - Boty: bez zmian.

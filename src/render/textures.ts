@@ -135,6 +135,10 @@ const loadPhoto = (url: string): THREE.Texture => {
 /** Obietnica spełniona, gdy wszystkie dotąd zamówione tekstury zdjęciowe są już wczytane */
 export const texturesReady = (): Promise<void> => Promise.all(loading).then(() => undefined);
 const photos = new Map<Kind, THREE.Texture>();
+/** Powiększenie wzoru zdjęcia (repeat < 1 = większe kamienie): mur ze zdjęcia ma drobniejsze ciosy niż dawny rysowany,
+ * z daleka zlewał się w szum (Michał 6.11.2026) — 0.7 daje ok. 10 rzędów na kafel, jak wcześniej */
+const PHOTO_SCALE: Partial<Record<Kind, number>> = { ashlar: 0.7 };
+const scaled = (kind: Kind, t: THREE.Texture): void => { const k = PHOTO_SCALE[kind]; if (k) t.repeat.set(k, k); };
 /** Mapa normalnych dla zdjęciowej tekstury (albo null, gdy wzór jest rysowany w kodzie) */
 export function normal(kind: Kind): THREE.Texture | null {
   const f = PHOTO[kind];
@@ -144,6 +148,7 @@ export function normal(kind: Kind): THREE.Texture | null {
     n = loadPhoto(`${photoBase()}${f}_n.jpg`);
     n.wrapS = n.wrapT = THREE.RepeatWrapping;
     n.anisotropy = 8;
+    scaled(kind, n);
     normals.set(kind, n);
   }
   return n;
@@ -162,6 +167,7 @@ export function heightMap(kind: Kind): THREE.Texture | null {
     h = new THREE.TextureLoader().load(`${photoBase()}${f}_h.jpg`, () => done(), undefined, () => done());
     h.wrapS = h.wrapT = THREE.RepeatWrapping;
     h.colorSpace = THREE.NoColorSpace;
+    scaled(kind, h);
     heights.set(kind, h);
   }
   return h;
@@ -179,6 +185,7 @@ export function pattern(kind: Kind): THREE.Texture | null {
       pt.wrapS = pt.wrapT = THREE.RepeatWrapping;
       pt.colorSpace = THREE.SRGBColorSpace;
       pt.anisotropy = 16;
+      scaled(kind, pt);
       photos.set(kind, pt);
     }
     return pt;

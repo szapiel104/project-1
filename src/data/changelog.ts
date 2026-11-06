@@ -10,6 +10,11 @@ export type { ChangeEntry } from './changelogTypes';
  */
 const NEW: ChangeEntry[] = [
   {
+    v: '0.94.37', date: '2026-11-06',
+    pl: ['Kamienie w murach większe i wyraźniejsze — z daleka nie zlewają się w szum.'],
+    en: ['Stones in the walls are bigger and clearer — they no longer blur into noise from afar.'],
+  },
+  {
     v: '0.94.36', date: '2026-11-06',
     pl: ['Menu główne: nazwa gry obok herbu zawsze mieści się w lewym panelu, także na szerokich i niskich ekranach.'],
     en: ['Main menu: the game title next to the crest always fits in the left panel, also on wide and short screens.'],
