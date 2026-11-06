@@ -10,6 +10,11 @@ export type { ChangeEntry } from './changelogTypes';
  */
 const NEW: ChangeEntry[] = [
   {
+    v: '0.94.43', date: '2026-11-06',
+    pl: ['Gra działa już tylko na nowym silniku grafiki WebGPU; stary WebGL usunięty.'],
+    en: ['The game now runs only on the new WebGPU graphics engine; the old WebGL renderer has been removed.'],
+  },
+  {
     v: '0.94.42', date: '2026-11-06',
     pl: ['Koniec czarnych kresek na górach przy krawędzi mapy: skała na górnym i lewym brzegu mapy ma znów poprawne światło.'],
     en: ['No more black streaks on the mountains along the map edge: rock on the top and left borders is lit properly again.'],

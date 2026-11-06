@@ -200,7 +200,7 @@ const SMOKY = new Set(['armory', 'house', 'tent', 'bakery', 'brewery', 'tavern',
  */
 export class GameRenderer {
   private renderer: THREE.WebGLRenderer;
-  /** Rysuje WebGPURenderer (domyślnie; ?webgl=1 = stary WebGL, docs/webgpu.md) */
+  /** Rysuje WebGPURenderer (zawsze od 0.94.43, docs/webgpu.md) */
   private gpu_ = false;
   private gpuScan = 0;
   /** Efekty obrazu na WebGPU (bliźniak composera, gpu/postNode.ts) */
@@ -864,7 +864,7 @@ export class GameRenderer {
   private pyreAt = new THREE.Vector3();
 
   constructor(private canvas: HTMLCanvasElement, private models: ModelFactory = proceduralModels) {
-    // WebGPU (docs/webgpu.md): renderer przygotowany w boot.ts; z ?webgl=1 (albo gdy nie wstał) zwykły WebGL
+    // WebGPU (docs/webgpu.md): renderer przygotowany w boot.ts; gdy wyjątkowo nie wstał, awaryjnie zwykły WebGL
     this.renderer = takeGpuRenderer() ?? createRenderer({canvas, antialias: true }, 'gra');
     this.gpu_ = !!takeGpuRenderer();
     this.pre = new Precompiler(this.renderer, this.scene, this.gpu_);

@@ -1,5 +1,9 @@
 # Dziennik zmian
 
+## 0.94.43 — 2026-11-06
+- Tylko WebGPU: `GPU_MODE` zawsze w przeglądarce, bez `?webgl=1` (Michał 6.11.2026). Bez WebGPU w przeglądarce działa WebGPURenderer w trybie WebGL2. Martwe bliźniaki GLSL do usunięcia partiami (`docs/webgpu.md`); CLAUDE.md zaktualizowane.
+- Boty: bez zmian.
+
 ## 0.94.42 — 2026-11-06
 - `rockmesh.ts`: `base()` przycina punkt do planszy — normalna skały z różnic przy x = 0 / y = 0 czytała narożnik −1 (NaN), skała przy tych krawędziach rysowała się czarną kreską (znalezione na mapie Michała `?test=1&hd=1&ziarno=372460122`, ciemnych pikseli 421 → 18).
 - Boty: bez zmian.
