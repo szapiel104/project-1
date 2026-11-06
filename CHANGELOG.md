@@ -1,5 +1,12 @@
 # Dziennik zmian
 
+## 0.94.40 — 2026-11-06
+- Mur (`ashlar`): Poly Haven `castle_wall_slates` (CC0, 4K → 2K, 35% barwy, AO w fugach), KTX2; `PHOTO_SCALE` 1.2 (kafel ok. 2 pól), POM 0.009, `normalScale` 1.1 tylko dla muru.
+- `terrain.ts`: od strony morza narożniki planszy schodzą do 0,3 w pasie 14 pól; teren za mapą wtapia się w plażę od t = −45 (było −20); wtapianie w narożnik planszy (d < 3) na końcu `outerH`.
+- Stodoła: stosy składu w skali 0,75 (deska 0,5 przy miejscach co 0,4 wchodziły na siebie).
+- `?test=1&ziarno=N`: piaskownica na mapie o danym ziarnie (np. z zapisu gracza).
+- Boty: bez zmian.
+
 ## 0.94.39 — 2026-11-06
 - `banditcamp.py`: na rożnie prosiak (tułów, łeb, ryj, uszy, nogi, ogonek z elipsoid) zamiast bochenków; materiały `roast`/`roastDark` w `buildings.ts` i w paletach arkusza inspect.
 - Boty: bez zmian.

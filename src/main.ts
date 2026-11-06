@@ -877,6 +877,8 @@ export async function worldReady(onStage?: (stage: number) => void): Promise<voi
   finally { bootProgress = null; bootWorld = null; }
 }
 /** `fresh` = nowa, jeszcze nieruszona gra policzona wcześniej z tymi samymi ustawieniami (mapa z podglądu „Nowej gry”) */
+/** ?test=1&ziarno=372460122: piaskownica na mapie z tym ziarnem (map.seed z zapisu gracza) — do szukania błędów jego mapy bez jego przeglądarki */
+const URL_SEED = Number(new URLSearchParams(location.search).get('ziarno')) || 0;
 function start(seedText: string, preset: MapPresetId, loaded?: GameState, level = 2, dev = false, online?: OnlineStart, instant = true, walls: DevWalls = URL_WALLS, fresh?: GameState, biome?: Biome): void {
   tierSeen = -1;
   endShown = false;
@@ -888,7 +890,7 @@ function start(seedText: string, preset: MapPresetId, loaded?: GameState, level 
   // nowy mecz = nowy numer; wczytany dostaje swój z zapisu (applyUi), a zapis bez numeru — stały numer z mapy
   endMode = null;
   matchId = online ? online.room.id : loaded ? `${seedText}|${preset}|stary-zapis` : newMatchId();
-  game = loaded ?? (!online && fresh ? fresh : createGame(seedFromText(seedText), preset, level, dev, online?.humans, instant, walls, online?.coop === true, online ? undefined : biome));
+  game = loaded ?? (!online && fresh ? fresh : createGame(SANDBOX && URL_SEED ? URL_SEED : seedFromText(seedText), preset, level, dev, online?.humans, instant, walls, online?.coop === true, online ? undefined : biome));
   if (EMPTY && !loaded && !online) emptyScene(game);
   // wątek symulacji: gra z botami, także w trybie dewelopera (akcje panelu dewelopera idą przez resyncSim);
   // bez testów (tam pomocniki __test zmieniają stan bez resyncSim) i bez meczu przez sieć (lockstep w wątku głównym)

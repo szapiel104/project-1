@@ -10,6 +10,19 @@ export type { ChangeEntry } from './changelogTypes';
  */
 const NEW: ChangeEntry[] = [
   {
+    v: '0.94.40', date: '2026-11-06',
+    pl: [
+      'Nowy kamień murów zamku: zdjęciowa tekstura w wysokiej rozdzielczości, kamienie w prawdziwej wielkości obok ludzi, bez czarnych fug i białych plam.',
+      'Od strony morza góry łagodnie schodzą do wydm zamiast urywać się nad plażą.',
+      'Stodoła: stosy desek i kamienia nie wchodzą już jeden w drugi.',
+    ],
+    en: [
+      'New castle wall stone: a high-resolution photo texture, stones at true size next to people, without black joints and white blotches.',
+      'On the seaward side the mountains now slope gently down to the dunes instead of breaking off above the beach.',
+      'Barn: piles of planks and stone no longer sink into one another.',
+    ],
+  },
+  {
     v: '0.94.39', date: '2026-11-06',
     pl: ['Obóz zbójów: nad ogniskiem piecze się prosiak na rożnie zamiast chleba.'],
     en: ['Bandit camp: a piglet now roasts on the spit over the fire instead of bread.'],

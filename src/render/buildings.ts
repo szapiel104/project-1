@@ -124,9 +124,10 @@ const mat = (color: number, tex?: Pattern): THREE.MeshStandardMaterial => {
   m.userData.tile = (tex && TILE[tex]) || 0;
   // kamień murów i łupek: prawdziwa głębia (fugi chowają się za licami) — parallax.ts
   // strzecha, deski (dachy z gontu i desek), bruk i cegła też: mapa wysokości z jasności zdjęcia (gen w CHANGELOG 0.73.0)
-  const POM: Partial<Record<string, number>> = { ashlar: 0.016, slate: 0.012, thatch: 0.014, planks: 0.008, cobble: 0.012, bricks: 0.012 };
+  const POM: Partial<Record<string, number>> = { ashlar: 0.009, slate: 0.012, thatch: 0.014, planks: 0.008, cobble: 0.012, bricks: 0.012 };
   const hm = tex && POM[tex] ? heightMap(tex) : null;
-  if (hm) { applyParallax(m, hm, POM[tex!]!); m.normalScale.set(1.6, 1.6); }
+  // mur ze zdjęcia z prawdziwą mapą normalnych: 1,1 (1,6 dawało czarne fugi i białe lica, Michał 6.11.2026)
+  if (hm) { applyParallax(m, hm, POM[tex!]!); const ns = tex === 'ashlar' ? 1.1 : 1.6; m.normalScale.set(ns, ns); }
   return m;
 };
 
@@ -1307,7 +1308,9 @@ const BUILDERS: Record<string, Builder> = {
     // klepisko na dwie części (Michał 30.10.2026: „stodoła pokazuje worki zboża”): z lewej towary składu, z prawej
     // snopki zboża i worki mąki (rodzaj 'grain', trzyma go tylko stodoła)
     const floorY = (BARN_MODEL as unknown as { floorY: number }).floorY;
-    const goods = fillSlots('fill', -0.5, 0.05, 0.4);
+    // stosy 0,75: deska ma 0,5 m, a miejsca w stodole stoją co 0,4 — w pełnej skali sąsiednie stosy wchodziły
+    // jeden w drugi (Michał 6.11.2026: „obiekt na obiekcie w stodole”)
+    const goods = fillSlots('fill', -0.5, 0.05, 0.4, 3, 3, 0.75);
     goods.position.y = floorY;
     g.add(goods);
     const grain = fillSlots('grainfill', 0.78, 0.05, 0.38, 2, 3, 0.85);

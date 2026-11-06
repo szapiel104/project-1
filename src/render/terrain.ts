@@ -282,6 +282,25 @@ function* terrainSteps(map: GameMap, models: ModelFactory, waterLevel: number): 
       corners[y * (w + 1) + x] = corners[y * (w + 1) + x]! + (n * n * 1.1 + nz(x / 23, y / 23) * 0.35) * k;
     }
   }
+  // Od strony morza (bok planszy, za którym jest plaża — ten sam los co seaSide niżej) góry i progi łagodnie schodzą do
+  // wydm: wcześniej góry stały aż do krawędzi, a teren za mapą ścinał je w kilka pól do piasku i wychodziły ucięte
+  // urwiska nad plażą (Michał 6.11.2026: „przy plaży niech się góry nie generują”). To tylko wygląd: pola dalej są skałą.
+  {
+    let rs0 = (map.seed ^ 0x2b7e1516) >>> 0;
+    const rnd0 = (): number => { rs0 = (rs0 * 1664525 + 1013904223) >>> 0; return rs0 / 4294967296; };
+    const side = TEST ? -1 : rnd0() < 0.6 ? Math.floor(rnd0() * 4) : -1;
+    if (side >= 0) {
+      const SHORE = 0.3, REACH = 14;
+      for (let y = 0; y <= h; y++) for (let x = 0; x <= w; x++) {
+        const d = side === 0 ? x : side === 1 ? w - x : side === 2 ? y : h - y;
+        if (d >= REACH) continue;
+        const k = corners[y * (w + 1) + x]!;
+        if (k <= SHORE) continue;
+        const f = smoothstep(1, REACH, d);
+        corners[y * (w + 1) + x] = SHORE + (k - SHORE) * f * f;
+      }
+    }
+  }
   const corner = (x: number, y: number): number => corners[y * (w + 1) + x]!;
 
   yield;
@@ -684,8 +703,6 @@ function* terrainSteps(map: GameMap, models: ModelFactory, waterLevel: number): 
     // narożnik siatki = średnia czterech pól wokół (jak corner na planszy)
     const ix = Math.round(X), iy = Math.round(Y);
     let hh = (outTileH(ix - 1, iy - 1) + outTileH(ix, iy - 1) + outTileH(ix - 1, iy) + outTileH(ix, iy)) / 4;
-    // tuż przy krawędzi wtapiamy się w narożnik planszy (tam generator dołożył rzekę, place i ścieżki)
-    if (d < 3) hh += (corner(Math.round(cx), Math.round(cy)) - hh) * (1 - d / 3) * (1 - d / 3);
     // daleko, we mgle: dawne pasma z szumu „ridged” — odległość zaszumiona, żeby i tam nie było kwadratu
     const dn = d + nz(X / 23, Y / 23) * 14;
     const rr = ridged(X / 46, Y / 46);
@@ -698,12 +715,18 @@ function* terrainSteps(map: GameMap, models: ModelFactory, waterLevel: number): 
     }
     // od strony morza: szeroka, płaska plaża łagodnie schodząca do wody, dalej coraz głębiej
     const t = seaT(X, Y);
-    if (t > -20) {
+    if (t > -45) {
       // wydmy: lekko pofalowana plaża, przy wodzie płasko, dalej od wody nieco wyżej
       const beachH = t < 0 ? 0.1 + Math.min(-t, 13) * 0.014 + Math.max(0, nz(X / 6, Y / 6)) * 0.12 * smoothstep(-2, -8, t) : -0.02 - t * 0.12;
-      const k = smoothstep(-20, -13, t);
+      // szeroko: góry za mapą od strony morza opadają do wydm przez ok. 30 pól, a nie urwiskiem tuż nad piaskiem
+      const k = smoothstep(-45, -13, t);
       hh = hh * (1 - k) + Math.max(beachH, -3.5) * k;
     }
+    // tuż przy krawędzi wtapiamy się w narożnik planszy (tam generator dołożył rzekę, place i ścieżki). Na samym końcu:
+    // wcześniej szło to przed masywami i plażą, które przy brzegu dokładały do kilku metrów, i między planszą a terenem
+    // za nią w górach zostawała szpara — przez nią prześwitywała ciemna równina pod spodem (czarna kreska na krańcu
+    // mapy, Michał 6.11.2026)
+    if (d < 3) hh += (corner(Math.round(cx), Math.round(cy)) - hh) * (1 - d / 3) * (1 - d / 3);
     return hh;
   };
   /** Udział piasku za mapą (plaża nad morzem i pod płytką wodą) */

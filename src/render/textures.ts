@@ -135,9 +135,10 @@ const loadPhoto = (url: string): THREE.Texture => {
 /** Obietnica spełniona, gdy wszystkie dotąd zamówione tekstury zdjęciowe są już wczytane */
 export const texturesReady = (): Promise<void> => Promise.all(loading).then(() => undefined);
 const photos = new Map<Kind, THREE.Texture>();
-/** Powiększenie wzoru zdjęcia (repeat < 1 = większe kamienie): mur ze zdjęcia ma drobniejsze ciosy niż dawny rysowany,
- * z daleka zlewał się w szum (Michał 6.11.2026) — 0.7 daje ok. 10 rzędów na kafel, jak wcześniej */
-const PHOTO_SCALE: Partial<Record<Kind, number>> = { ashlar: 0.7 };
+/** Skala wzoru zdjęcia (repeat < 1 = większe kamienie). Mur: Poly Haven „castle_wall_slates” (2,5 m, ok. 20 rzędów
+ * na kafel) — 1,2 daje kafel na ok. 2 pola, czyli kamienie w prawdziwej wielkości obok ludzi (Michał 6.11.2026:
+ * „kamień mur tragedia”; dawne ciosy były wielkości pół człowieka) */
+const PHOTO_SCALE: Partial<Record<Kind, number>> = { ashlar: 1.2 };
 const scaled = (kind: Kind, t: THREE.Texture): void => { const k = PHOTO_SCALE[kind]; if (k) t.repeat.set(k, k); };
 /** Mapa normalnych dla zdjęciowej tekstury (albo null, gdy wzór jest rysowany w kodzie) */
 export function normal(kind: Kind): THREE.Texture | null {
