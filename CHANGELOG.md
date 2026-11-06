@@ -1,5 +1,9 @@
 # Dziennik zmian
 
+## 0.94.42 — 2026-11-06
+- `rockmesh.ts`: `base()` przycina punkt do planszy — normalna skały z różnic przy x = 0 / y = 0 czytała narożnik −1 (NaN), skała przy tych krawędziach rysowała się czarną kreską (znalezione na mapie Michała `?test=1&hd=1&ziarno=372460122`, ciemnych pikseli 421 → 18).
+- Boty: bez zmian.
+
 ## 0.94.41 — 2026-11-06
 - Ogień (`flames.ts`, `blaze.ts`, `gpu/fireNode.ts`): bryły płomieni i pożarów rysowane tylnymi ścianami (`BackSide`) — z kamerą w środku bryły przednie ściany ucinała bliska płaszczyzna i zostawały płaskie kliny.
 - `?test=1&ziarno=N` (z 0.94.40) do odtwarzania map graczy.

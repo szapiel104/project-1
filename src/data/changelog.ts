@@ -10,6 +10,11 @@ export type { ChangeEntry } from './changelogTypes';
  */
 const NEW: ChangeEntry[] = [
   {
+    v: '0.94.42', date: '2026-11-06',
+    pl: ['Koniec czarnych kresek na górach przy krawędzi mapy: skała na górnym i lewym brzegu mapy ma znów poprawne światło.'],
+    en: ['No more black streaks on the mountains along the map edge: rock on the top and left borders is lit properly again.'],
+  },
+  {
     v: '0.94.41', date: '2026-11-06',
     pl: ['Ogień pochodni, ognisk i pożarów z bliska (np. w spacerze) jest pełnym płomieniem zamiast płaskich, ostro uciętych klinów.'],
     en: ['Torch, campfire and blaze flames seen up close (e.g. on foot) are now full flames instead of flat, sharply clipped wedges.'],

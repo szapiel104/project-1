@@ -51,7 +51,10 @@ const N = 4;
 export function rockDisplacer(s: RockSource): (fx: number, fy: number) => number {
   const { w, h } = s;
   const isRock = (x: number, y: number): boolean => x >= 0 && y >= 0 && x < w && y < h && s.rock(x, y);
-  const base = (fx: number, fy: number): number => {
+  const base = (fx0: number, fy0: number): number => {
+    // poza planszą (normalna z różnic na brzegu x = 0 albo y = 0) bierzemy brzeg: wcześniej indeks −1 dawał NaN w normalnej
+    // i skała przy krawędzi mapy rysowała się czarną kreską (Michał 6.11.2026: „czarna kreska na krańcu mapy”)
+    const fx = Math.max(0, Math.min(w, fx0)), fy = Math.max(0, Math.min(h, fy0));
     const ix = Math.min(w - 1, Math.floor(fx)), iy = Math.min(h - 1, Math.floor(fy)), tx = fx - ix, ty = fy - iy;
     if (tx + ty <= 1) { const a = s.corner(ix, iy); return a + (s.corner(ix + 1, iy) - a) * tx + (s.corner(ix, iy + 1) - a) * ty; }
     const d = s.corner(ix + 1, iy + 1);
@@ -94,7 +97,10 @@ export function buildRockGeometry(s: RockSource, disp: (fx: number, fy: number) 
   const pos = new Float32Array(tiles.length * V * 3), nor = new Float32Array(tiles.length * V * 3), col = new Float32Array(tiles.length * V * 3);
   const uv = new Float32Array(tiles.length * V * 2), spl = new Float32Array(tiles.length * V * 4), snd = new Float32Array(tiles.length * V);
   const idx = new Uint32Array(tiles.length * N * N * 6);
-  const base = (fx: number, fy: number): number => {
+  const base = (fx0: number, fy0: number): number => {
+    // poza planszą (normalna z różnic na brzegu x = 0 albo y = 0) bierzemy brzeg: wcześniej indeks −1 dawał NaN w normalnej
+    // i skała przy krawędzi mapy rysowała się czarną kreską (Michał 6.11.2026: „czarna kreska na krańcu mapy”)
+    const fx = Math.max(0, Math.min(w, fx0)), fy = Math.max(0, Math.min(h, fy0));
     const ix = Math.min(w - 1, Math.floor(fx)), iy = Math.min(h - 1, Math.floor(fy)), tx = fx - ix, ty = fy - iy;
     if (tx + ty <= 1) { const a = s.corner(ix, iy); return a + (s.corner(ix + 1, iy) - a) * tx + (s.corner(ix, iy + 1) - a) * ty; }
     const d = s.corner(ix + 1, iy + 1);
