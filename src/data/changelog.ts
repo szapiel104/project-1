@@ -10,6 +10,17 @@ export type { ChangeEntry } from './changelogTypes';
  */
 const NEW: ChangeEntry[] = [
   {
+    v: '0.94.46', date: '2026-11-06',
+    pl: [
+      'Wczytywanie czeka, aż przygotują się wszystkie budynki w kadrze: gra nie startuje już z samymi cieniami zamiast budynków.',
+      'Cienie liczą się raz na klatkę zamiast dwa razy przy wodzie w kadrze: płynniejszy ruch kamery.',
+    ],
+    en: [
+      'Loading now waits until every building in view is ready: the game no longer starts with shadows but no buildings.',
+      'Shadows are computed once per frame instead of twice with water in view: smoother camera movement.',
+    ],
+  },
+  {
     v: '0.94.45', date: '2026-11-06',
     pl: [
       'Spacer: prawdziwy skok i spadanie. Wskoczysz na dach, przejdziesz po nim, przeskoczysz na sąsiedni i zeskoczysz; z urwiska czy skały da się zejść albo spaść, pod górę dalej się nie wespniesz.',

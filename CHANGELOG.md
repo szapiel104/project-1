@@ -1,5 +1,10 @@
 # Dziennik zmian
 
+## 0.94.46 — 2026-11-06
+- `gpu/webgpu.ts`: `gpuLoading(on)` — przy rozgrzewce 16 potoków naraz (w grze 3); `warmGpu` czeka do końca, najwyżej 10 s (było 2,5 s i gra startowała bez połowy budynków, same cienie).
+- `aimSun`: na WebGPU `sun.shadow.autoUpdate = false` i `needsUpdate` z tej samej reguły co dla WebGL — wcześniej mapa cieni liczyła się w każdej klatce i drugi raz dla kamery odbicia w wodzie.
+- Boty: bez zmian.
+
 ## 0.94.45 — 2026-11-06
 - Spacer (`walkphysics.ts`, `stepWalk` w `scene.ts`): stopy na prawdziwej wysokości `w.fy`, grawitacja, skok 3,6; podłoże = teren albo najwyższa powierzchnia budynku pod nogami (promień w dół po BVH siatek z `walkHits`). Na dach tylko skokiem (próg 0,16), po dachu kolizja tylko z bryłami; pola gór/urwisk przechodnie, gdy nie pod górę.
 - Zamek (`keep.py`): kosze ogniowe bez stożków `ember` — popiół, węgle (`crystal`), szczapy; znacznik `braziers` → obiekt `brazier` (żywy ogień po zmroku).

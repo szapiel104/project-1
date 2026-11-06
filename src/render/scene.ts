@@ -82,7 +82,7 @@ import { clockAt, rainAt } from '../sim/clock';
 import { COLD, seasonAt, weatherOf, yearPos } from '../sim/weather';
 import { applySeason, SEASON_U, SnowTrails } from './season';
 import { Snowfall } from './snowfall';
-import { gpuBackend, gpuDeferredCount, gpuFrameBudget, gpuPending, hideGlslMaterials, takeGpuRenderer } from './gpu/webgpu';
+import { gpuBackend, gpuDeferredCount, gpuFrameBudget, gpuLoading, gpuPending, hideGlslMaterials, takeGpuRenderer } from './gpu/webgpu';
 import { GpuPost } from './gpu/postNode';
 import { makeGpuEnvironment } from './gpu/envNode';
 import { markReflect, REFLECT_LAYER } from './gpu/waterNode';
@@ -1826,15 +1826,19 @@ export class GameRenderer {
     // kończymy, gdy nic już nie czeka (albo po 12 s — wtedy reszta dochodzi w grze, po kilka ms na klatkę)
     const t0 = performance.now();
     let first = -1;
-    for (;;) {
-      this.present();
-      const left = gpuDeferredCount + gpuPending();
-      if (first < 0) first = Math.max(1, left);
-      onProgress?.(Math.max(0, first - left), first);
-      // najwyżej 2,5 s czekania: resztę gra dokłada już w trakcie (Michał 3.11.2026: „wolno się wszystko wczytuje”)
-      if (left === 0 || performance.now() - t0 > 2500) break;
-      await new Promise<void>((ok) => requestAnimationFrame(() => ok()));
-    }
+    // przy wczytywaniu karta kompiluje więcej programów naraz (gpuLoading), więc czekamy do końca, najwyżej 10 s:
+    // po 2,5 s gra startowała z połową budynków (same cienie bez budynków, Michał 6.11.2026)
+    gpuLoading(true);
+    try {
+      for (;;) {
+        this.present();
+        const left = gpuDeferredCount + gpuPending();
+        if (first < 0) first = Math.max(1, left);
+        onProgress?.(Math.max(0, first - left), first);
+        if (left === 0 || performance.now() - t0 > 10000) break;
+        await new Promise<void>((ok) => requestAnimationFrame(() => ok()));
+      }
+    } finally { gpuLoading(false); }
   }
 
   /**
@@ -3476,7 +3480,11 @@ export class GameRenderer {
     // w których mapa się liczy — inaczej stara mapa była czytana nową macierzą i cienie skakały co klatkę
     const fast = camMove2 > (0.006 * this.cam.distance) ** 2;
     const update = this.calm || !fast || resized || !this.sun.shadow.map || (this.shadowFrame++ & 1) === 0;
-    if (!update) { sm.needsUpdate = false; return; }
+    // WebGPU czyta flagę ze światła, nie z renderera: bez tego mapa cieni liczyła się w każdej klatce i jeszcze raz dla
+    // kamery odbicia w wodzie (podwójny koszt cieni, przycinanie przy ruchu kamery, Michał 6.11.2026)
+    const ls = this.sun.shadow as THREE.LightShadow & { autoUpdate: boolean; needsUpdate: boolean };
+    ls.autoUpdate = false;
+    if (!update) { sm.needsUpdate = false; ls.needsUpdate = false; return; }
     if (moved) {
       this.sunWas.copy(tgt); this.sunDirWas.copy(this.sunDir);
       this.sun.target.position.copy(tgt);
@@ -3485,6 +3493,7 @@ export class GameRenderer {
     }
     // gdy nic się nie rusza, mapa i tak liczy się co drugą klatkę (ludzie chodzą wolno, cień nie odstaje)
     sm.needsUpdate = moved || this.calm || !this.sun.shadow.map || (this.shadowFrame++ & 1) === 0;
+    ls.needsUpdate = sm.needsUpdate;
   }
   private sunAxisX = new THREE.Vector3();
   private sunAxisY = new THREE.Vector3();

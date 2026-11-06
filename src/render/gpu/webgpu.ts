@@ -33,6 +33,10 @@ export function gpuBuildSummary(): string {
 /** Obiekty pominięte w ostatniej klatce, bo ich materiał czeka na złożenie */
 export let gpuDeferredCount = 0;
 /** Początek klatki: budżet składania materiałów w ms (w grze mały, przy wczytywaniu większy) */
+/** Ile programów karty naraz (tło): w grze 3, żeby nie dławić innych kart; przy wczytywaniu więcej — ekran wczytywania
+ * i tak zasłania grę, a po kolei po 3 budynki dochodziły dopiero w grze (Michał 6.11.2026: „obiekty znikają przy wczytywaniu”) */
+let gpuMaxPending = 3;
+export function gpuLoading(on: boolean): void { gpuMaxPending = on ? 16 : 3; }
 export function gpuFrameBudget(ms: number): void { buildBudget = ms; buildSpent = 0; gpuDeferredCount = 0; }
 /** Ile programów karty kompiluje się teraz w tle (rozgrzewka czeka, aż spadnie do zera) */
 export let gpuPendingCount = 0;
@@ -117,12 +121,11 @@ export async function prepareGpu(canvas: HTMLCanvasElement): Promise<void> {
   // shadera (na Windows przez D3D) zajmuje go na dziesiątki ms — przy kilkudziesięciu naraz stawał film w innym oknie
   // (Michał 3.11.2026). Obiekt, dla którego nie starczyło miejsca, czeka klatkę (jak przy budżecie składania niżej).
   // Tylko pierwszy potok obiektu: obiekt z gotowym potokiem zawsze dostaje aktualizację.
-  const MAX_PENDING = 3;
   const pd = pipes as unknown as { get(o: unknown): { pipeline?: unknown } };
   pipes.updateForRender = function (ro: unknown): void {
     // przejścia obrazu (QuadMesh: wyjście na ekran, AO, bloom, SMAA) zawsze od razu — czekając w kolejce za setkami potoków
     // sceny, zostawiały pusty ekran na długie sekundy, a przy ciągle dochodzących nowych potokach na zawsze (Michał 5.11.2026)
-    if (gpuPendingCount >= MAX_PENDING && pd.get(ro).pipeline === undefined && !(ro as { object?: { isQuadMesh?: boolean } }).object?.isQuadMesh) { gpuDeferredCount++; return; }
+    if (gpuPendingCount >= gpuMaxPending && pd.get(ro).pipeline === undefined && !(ro as { object?: { isQuadMesh?: boolean } }).object?.isQuadMesh) { gpuDeferredCount++; return; }
     this.getForRender(ro, sink);
   };
   // Budżet składania materiałów na klatkę: three.js składa każdy nowy wariant (i każdą pulę instancji) na procesorze,
