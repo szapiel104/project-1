@@ -94,7 +94,8 @@ Autorzy grafiki na licencjach CC BY i CC BY-SA są wymienieni w grze: Ustawienia
 Zakony, bóstwa, miejsca i postacie w grze są nasze (np. Zakon Płomienia, Bractwo Źródła, Ojciec Płomienia). Gra nie używa nazw, postaci ani grafiki z innych gier.
 
 ## Własne (generator w repo)
-- `ashlar.jpg` / `ashlar_n.jpg` (mury zamku) i `slate.jpg` / `slate_n.jpg` (łupek dachów) — `tools/textures/gen_stone.py` (2.11.2026, wersja 2: 3.11.2026): ciosy i płytki liczone w Pythonie, faktura lica z `rock.jpg` (Poly Haven / ambientCG, CC0).
+- `ashlar.jpg` / `ashlar_n.jpg` (mury zamku, od 6.11.2026): [Rough Block Wall](https://polyhaven.com/a/rough_block_wall) z Poly Haven (CC0) — kolor w odcieniach szarości (barwę daje materiał), wyrównana jasność, mapa normalnych bez zmian. `slate.jpg` / `slate_n.jpg` (łupek dachów) — `tools/textures/gen_stone.py` (3.11.2026), faktura z `rock.jpg` (CC0).
+- `thatch.jpg` / `thatch_n.jpg` (strzecha, od 6.11.2026): [Reed Roof 04](https://polyhaven.com/a/reed_roof_04) z Poly Haven (CC0) — bez pasa kalenicy, zszyte w pionie, w odcieniach szarości.
 
 Głazy i skały (`stone_granite_la_*`, `stone_granite_me_*`, `stone_granite_sm_*`, `stone_granite_boulder_*`, `stone_furrowed_0*`) z teksturami `stone_temperate_01`, `stone_sahara_01`, `stonequarry_desert` (kolor i mapy normalnych): gra **0 A.D.** © Wildfire Games (https://play0ad.com, https://github.com/0ad/0ad), licencja [CC BY-SA 3.0](http://creativecommons.org/licenses/by-sa/3.0/). Przeniesione bez zmian siatek i rysunku skryptem `tools/models/rocks_0ad.py` (obrót osi, skala do pól) → `src/render/models/rocks0ad.json`, `public/textures/cc0/oad_stone_*.jpg`; nasza wersja jest na tej samej licencji (3.11.2026).
 

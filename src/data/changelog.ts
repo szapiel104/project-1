@@ -10,6 +10,11 @@ export type { ChangeEntry } from './changelogTypes';
  */
 const NEW: ChangeEntry[] = [
   {
+    v: '0.94.35', date: '2026-11-06',
+    pl: ['Nowe tekstury ze zdjęć: kamień murów zamku i baszt (nieregularne, ciosane bloki) oraz strzecha dachów z prawdziwej trzciny.'],
+    en: ['New photo textures: the stone of castle walls and towers (rough, hand-cut blocks) and thatched roofs made from real reed.'],
+  },
+  {
     v: '0.94.34', date: '2026-11-06',
     pl: ['Wczytanie dużego zapisu: ekran wczytywania czeka, aż karta graficzna przygotuje budynki z widoku startowego — koniec z samymi cieniami bez budynków przez pierwsze chwile.'],
     en: ['Loading a large save: the loading screen waits until the GPU has prepared the buildings in the starting view — no more shadows without buildings for the first moments.'],

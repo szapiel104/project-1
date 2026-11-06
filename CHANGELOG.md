@@ -1,5 +1,9 @@
 # Dziennik zmian
 
+## 0.94.35 — 2026-11-06
+- Tekstury: `ashlar` (mury) z Poly Haven `rough_block_wall`, `thatch` (strzecha) z `reed_roof_04` — zamiast wygenerowanych (Michał: „wyglądają jak gra z 2000 roku”). Szarość z wyrównaną jasnością (barwę daje materiał), `_n` z paczki, `_h` z jasności; KTX2 przeliczone. Pobrane na komputerze Michała (z czatu Poly Haven zablokowany).
+- Boty: bez zmian.
+
 ## 0.94.34 — 2026-11-06
 - Zasłona wczytywania (main.ts, „Równe klatki”): klatka liczy się jako równa tylko, gdy WebGPU nie ma odłożonych ani kompilujących się potoków (`renderer.gpuBusy()`); limit 30 s zamiast 12 s, gdy karta wciąż składa. Duży zapis Michała: po zejściu zasłony same cienie bez budynków.
 - Boty: bez zmian.
