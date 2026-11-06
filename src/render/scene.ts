@@ -1809,6 +1809,8 @@ export class GameRenderer {
     this.present();
     lap('pierwsza klatka');
   }
+  /** WebGPU: czy karta jeszcze składa albo odkłada programy obiektów z kadru (wtedy część sceny nie jest narysowana) */
+  gpuBusy(): boolean { return this.gpu_ && gpuDeferredCount + gpuPending() > 0; }
   private prewarmed = false;
 
   /**

@@ -1,5 +1,9 @@
 # Dziennik zmian
 
+## 0.94.34 — 2026-11-06
+- Zasłona wczytywania (main.ts, „Równe klatki”): klatka liczy się jako równa tylko, gdy WebGPU nie ma odłożonych ani kompilujących się potoków (`renderer.gpuBusy()`); limit 30 s zamiast 12 s, gdy karta wciąż składa. Duży zapis Michała: po zejściu zasłony same cienie bez budynków.
+- Boty: bez zmian.
+
 ## 0.94.33 — 2026-11-05
 - LOD budynków: lod1 rzuca cień jedną bryłą (`shadowGeo` — wszystkie części poziomu złączone, sama pozycja, materiał `colorWrite/depthWrite: false`), wspólną dla rodzaju (rysowanie razem); części z materiałami bez cienia. Zapis Michała: 690 rysowań cienia na lod1.
 - Boty: bez zmian.

@@ -804,14 +804,16 @@ function enterGame(label: string, prep?: () => void): void {
             const dt = now - prev; prev = now; frames++;
             recent.push(dt); if (recent.length > 40) recent.shift();
             const typical = [...recent].sort((x, y) => x - y)[Math.floor(recent.length * 0.3)] ?? dt;
-            steady.push(dt < Math.max(20, typical * 1.5)); if (steady.length > 30) steady.shift();
+            // klatka z niedokończonymi programami karty (WebGPU) nie jest „równa”: obiekty bez programu się nie rysują
+            // i po zejściu zasłony widać same cienie bez budynków (Michał 6.11.2026, pierwsze wczytanie)
+            steady.push(dt < Math.max(20, typical * 1.5) && !renderer.gpuBusy()); if (steady.length > 30) steady.shift();
             const calm = steady.filter(Boolean).length;
             // pasek tylko do przodu: z równych klatek albo z upływu czasu (do 12 s), co większe
             shown = Math.max(shown, 80 + 19 * Math.max(calm / 30, (now - t0) / 12000));
             show(shown, undefined);
             info.detail(tx(`równe klatki: ${calm} z ostatnich 30 · ostatnia ${Math.round(dt)} ms, typowa ${Math.round(typical)} ms`, `steady frames: ${calm} of the last 30 · last ${Math.round(dt)} ms, typical ${Math.round(typical)} ms`));
-            // najdłużej 12 s: bardzo słaby komputer i tak wejdzie do gry
-            if ((frames >= 30 && calm >= 27) || now - t0 > 12000) finish();
+            // najdłużej 12 s (na WebGPU 30 s, gdy karta wciąż składa programy): bardzo słaby komputer i tak wejdzie do gry
+            if ((frames >= 30 && calm >= 27) || now - t0 > (renderer.gpuBusy() ? 30000 : 12000)) finish();
             else requestAnimationFrame(watch);
           };
           requestAnimationFrame(watch);
