@@ -10,6 +10,11 @@ export type { ChangeEntry } from './changelogTypes';
  */
 const NEW: ChangeEntry[] = [
   {
+    v: '0.94.39', date: '2026-11-06',
+    pl: ['Obóz zbójów: nad ogniskiem piecze się prosiak na rożnie zamiast chleba.'],
+    en: ['Bandit camp: a piglet now roasts on the spit over the fire instead of bread.'],
+  },
+  {
     v: '0.94.38', date: '2026-11-06',
     pl: ['Obóz zbójów: bochenki są nadziane na rożen nad ogniskiem, zamiast wisieć w powietrzu obok niego.'],
     en: ['Bandit camp: the loaves are skewered on the spit over the fire instead of floating in the air next to it.'],

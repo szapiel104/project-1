@@ -167,7 +167,7 @@ const M = {
   // magiczna ruda jak w Gothicu: skała z niebieskawym połyskiem, lekko świeci w ciemnej sztolni (żyły, hałdy, urobek w koszach)
   magicOre: oreMaterial(),
   // chlew (tools/models/pigsty.py) i mięso w spichlerzu: wędzona szynka, kiełbasy, kość, błoto w zagrodzie
-  meat: mat(0x8a3a2c), meatDark: mat(0x5a2418), bone: mat(0xe6dcc2), mud: mat(0x4e3a26, 'soil'),
+  meat: mat(0x8a3a2c), meatDark: mat(0x5a2418), roast: mat(0xa8622e), roastDark: mat(0x5e3218), bone: mat(0xe6dcc2), mud: mat(0x4e3a26, 'soil'),
     cut: mat(0xe6dfcf, 'dressed'), cutDark: mat(0xc9c1ae, 'dressed'), rope: mat(0xb89a64, 'burlap'), dust: mat(0xd8d3c6, 'soil'),
   wattle: mat(0x9a7a4a, 'straw'),
   // skóry zwierząt na szałasach zbójów (ciemna, wytarta skóra z włosiem; dwa odcienie, żeby płaty się różniły)

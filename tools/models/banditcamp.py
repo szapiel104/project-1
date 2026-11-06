@@ -134,10 +134,29 @@ for s in (-1, 1):      # rożen: dwa rozwidlone kije i drąg z kawałem mięsa
     stick('base', 'woodDark', (FX + s * 0.34, 0.0, FZ), (FX + s * 0.34, 0.44, FZ), 0.016)
     stick('base', 'woodDark', (FX + s * 0.34, 0.38, FZ), (FX + s * 0.4, 0.5, FZ), 0.01)
 stick('base', 'woodDark', (FX - 0.42, 0.42, FZ), (FX + 0.42, 0.42, FZ), 0.011)
-# bochenki nadziane na drąg rożna (drąg przechodzi przez ich środek), nad ogniem — wcześniej wisiały w powietrzu
-# za drągiem (Michał 6.11.2026: „chleb nad ogniskiem” jako błąd)
-for (dx, w, r) in ((0.06, 0.12, 0.2), (-0.13, 0.095, -0.3)):
-    b.bun('base', FX + dx, 0.42 - w * 0.3, FZ, w=w, rot=r)
+# prosiak na rożnie nad ogniem (Michał 6.11.2026: „daj tu świnię”): drąg przechodzi przez tułów wzdłuż, łeb ku +x,
+# nogi wyciągnięte jak przy pieczeniu (przednie do przodu, tylne do tyłu); zrumieniona skóra ('roast')
+def blob(mat, cx, cy, cz, rx, ry, rz, seg=14, rings=8):
+    """Gładka elipsoida z wieloboków (zamknięta), środek (cx, cy, cz), półosie rx, ry, rz"""
+    P = lambda i, k: (cx + rx * math.sin(math.pi * i / rings) * math.cos(2 * math.pi * k / seg),
+                      cy + ry * math.cos(math.pi * i / rings),
+                      cz + rz * math.sin(math.pi * i / rings) * math.sin(2 * math.pi * k / seg))
+    for i in range(rings):
+        for k in range(seg):
+            q = [P(i, k), P(i, k + 1), P(i + 1, k + 1), P(i + 1, k)]
+            if i == 0: q = [q[0], q[2], q[3]]
+            elif i == rings - 1: q = [q[0], q[1], q[2]]
+            b.poly('base', mat, q, away=(cx, cy, cz))
+SY = 0.42                                   # wysokość drąga
+blob('roast', FX - 0.02, SY - 0.005, FZ, 0.17, 0.075, 0.08)            # tułów
+blob('roast', FX + 0.13, SY + 0.005, FZ, 0.065, 0.058, 0.06)           # kark
+blob('roast', FX + 0.2, SY + 0.0, FZ, 0.06, 0.052, 0.052)              # łeb
+blob('roastDark', FX + 0.262, SY - 0.006, FZ, 0.022, 0.026, 0.028, seg=10, rings=6)   # ryj
+for s in (-1, 1):
+    blob('roastDark', FX + 0.19, SY + 0.05, FZ + s * 0.032, 0.022, 0.03, 0.01, seg=8, rings=5)       # uszy
+    stick('base', 'roast', (FX + 0.08, SY - 0.04, FZ + s * 0.04), (FX + 0.2, SY - 0.07, FZ + s * 0.045), 0.016, ends='roastDark')   # przednie nogi
+    stick('base', 'roast', (FX - 0.13, SY - 0.04, FZ + s * 0.04), (FX - 0.26, SY - 0.07, FZ + s * 0.045), 0.018, ends='roastDark')  # tylne nogi
+blob('roastDark', FX - 0.19, SY + 0.01, FZ, 0.02, 0.02, 0.02, seg=8, rings=5)   # ogonek
 # kłody do siedzenia po bokach ogniska
 for (x, z, a) in ((-0.62, 0.86, 1.35), (0.64, 0.84, 1.75)):
     c, s = math.sin(a), math.cos(a)

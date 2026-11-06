@@ -1,5 +1,9 @@
 # Dziennik zmian
 
+## 0.94.39 — 2026-11-06
+- `banditcamp.py`: na rożnie prosiak (tułów, łeb, ryj, uszy, nogi, ogonek z elipsoid) zamiast bochenków; materiały `roast`/`roastDark` w `buildings.ts` i w paletach arkusza inspect.
+- Boty: bez zmian.
+
 ## 0.94.38 — 2026-11-06
 - `banditcamp.py`: bochenki na drągu rożna (z = FZ, drąg przez środek), wcześniej za drągiem w powietrzu.
 - Boty: bez zmian.
