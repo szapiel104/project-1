@@ -1,5 +1,9 @@
 # Dziennik zmian
 
+## 0.94.38 — 2026-11-06
+- `banditcamp.py`: bochenki na drągu rożna (z = FZ, drąg przez środek), wcześniej za drągiem w powietrzu.
+- Boty: bez zmian.
+
 ## 0.94.37 — 2026-11-06
 - `textures.ts`: `PHOTO_SCALE` — `ashlar` z `repeat 0.7` (kolor, normalne, wysokość): nowe zdjęcie muru ma drobniejsze ciosy niż dawny rysowany.
 - Boty: bez zmian.

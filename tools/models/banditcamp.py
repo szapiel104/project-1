@@ -134,8 +134,10 @@ for s in (-1, 1):      # rożen: dwa rozwidlone kije i drąg z kawałem mięsa
     stick('base', 'woodDark', (FX + s * 0.34, 0.0, FZ), (FX + s * 0.34, 0.44, FZ), 0.016)
     stick('base', 'woodDark', (FX + s * 0.34, 0.38, FZ), (FX + s * 0.4, 0.5, FZ), 0.01)
 stick('base', 'woodDark', (FX - 0.42, 0.42, FZ), (FX + 0.42, 0.42, FZ), 0.011)
-b.bun('base', FX + 0.02, 0.33, FZ - 0.045, w=0.13, rot=0.2)    # bochenki ze skanu przy ogniu
-b.bun('base', FX - 0.15, 0.35, FZ - 0.035, w=0.09, rot=-0.3)
+# bochenki nadziane na drąg rożna (drąg przechodzi przez ich środek), nad ogniem — wcześniej wisiały w powietrzu
+# za drągiem (Michał 6.11.2026: „chleb nad ogniskiem” jako błąd)
+for (dx, w, r) in ((0.06, 0.12, 0.2), (-0.13, 0.095, -0.3)):
+    b.bun('base', FX + dx, 0.42 - w * 0.3, FZ, w=w, rot=r)
 # kłody do siedzenia po bokach ogniska
 for (x, z, a) in ((-0.62, 0.86, 1.35), (0.64, 0.84, 1.75)):
     c, s = math.sin(a), math.cos(a)

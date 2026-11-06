@@ -10,6 +10,11 @@ export type { ChangeEntry } from './changelogTypes';
  */
 const NEW: ChangeEntry[] = [
   {
+    v: '0.94.38', date: '2026-11-06',
+    pl: ['Obóz zbójów: bochenki są nadziane na rożen nad ogniskiem, zamiast wisieć w powietrzu obok niego.'],
+    en: ['Bandit camp: the loaves are skewered on the spit over the fire instead of floating in the air next to it.'],
+  },
+  {
     v: '0.94.37', date: '2026-11-06',
     pl: ['Kamienie w murach większe i wyraźniejsze — z daleka nie zlewają się w szum.'],
     en: ['Stones in the walls are bigger and clearer — they no longer blur into noise from afar.'],
