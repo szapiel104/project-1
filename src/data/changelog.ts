@@ -10,6 +10,17 @@ export type { ChangeEntry } from './changelogTypes';
  */
 const NEW: ChangeEntry[] = [
   {
+    v: '0.94.45', date: '2026-11-06',
+    pl: [
+      'Spacer: prawdziwy skok i spadanie. Wskoczysz na dach, przejdziesz po nim, przeskoczysz na sąsiedni i zeskoczysz; z urwiska czy skały da się zejść albo spaść, pod górę dalej się nie wespniesz.',
+      'Kosze ogniowe w zamku: zamiast pomarańczowych stożków żar z węgli i szczap, a po zmroku płonie w nich żywy ogień.',
+    ],
+    en: [
+      'Walking: real jumping and falling. Leap onto a roof, cross it, jump to the next one and drop down; you can step or fall off cliffs and crags, though you still cannot climb up them.',
+      'Castle braziers: glowing coals and kindling instead of orange cones, with live fire after dark.',
+    ],
+  },
+  {
     v: '0.94.44', date: '2026-11-06',
     pl: ['Pochodnia w ręce: płomień nie rozpada się już na płaskie kliny, gdy obracasz się albo ruszasz pochodnią.'],
     en: ['Torch in hand: the flame no longer breaks into flat wedges when you turn or swing the torch.'],

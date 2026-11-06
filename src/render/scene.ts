@@ -11,6 +11,7 @@ import { touch } from './touch';
 import * as THREE from 'three';
 import { initKtx } from './ktx';
 import { MeshBVH } from 'three-mesh-bvh';
+import { roofBelow, WALK_GRAVITY, WALK_JUMP, WALK_STEP_UP } from './walkphysics';
 import { GL_DEBUG, glSection, watchLoading, watchRenderer } from '../debug/errlog';
 import { hash2 } from '../sim/rng';
 import { TOWER_RANGE, UNITS } from '../data/units';
@@ -2005,7 +2006,7 @@ export class GameRenderer {
 
 
   // --- spacer oczami chłopa: kamera na wysokości głowy, WASD i mysz, zderzenia z budynkami i wodą ---
-  private walk: { x: number; z: number; yaw: number; pitch: number; keys: Set<string>; bob: number; jy?: number; vy?: number; gy?: number } | null = null;
+  private walk: { x: number; z: number; yaw: number; pitch: number; keys: Set<string>; bob: number; jy?: number; vy?: number; gy?: number; fy?: number; air?: boolean } | null = null;
   /** Wywoływane, gdy spacer się skończy (Esc) */
   onWalkEnd: () => void = () => {};
   /**
@@ -2083,6 +2084,7 @@ export class GameRenderer {
       w.x = (b.door % W) + 0.5 + Math.sin(th) * 0.4; w.z = Math.floor(b.door / W) + 0.5 + Math.cos(th) * 0.4;
       w.yaw = th + Math.PI; w.gy = undefined;
     }
+    w.fy = undefined; w.air = false; // na powierzchni stopy od nowa na terenie
     playAt('creak', 0.8, 0, 0.6);
   }
   /** Spacer w sztolni: ruch po salach z modelu (prostokąty), przeszkody, kamera nisko pod stropem, latarnia w dłoni */
@@ -2376,14 +2378,21 @@ export class GameRenderer {
     const sx = Math.sin(w.yaw), cz = Math.cos(w.yaw);
     // przód kamery to -z w jej układzie: yaw=0 patrzy w -z świata
     const dx = (-sx * fz + cz * fx) / len * sp, dz = (-cz * fz - sx * fx) / len * sp;
-    // skok spacją: wybicie, łuk w górę i lądowanie (w powietrzu niskie przeszkody, np. ławy, nie zatrzymują)
-    if (k.has('Space') && !w.jy) { w.vy = 2.5; w.jy = 0.0001; }
-    if (w.jy) {
-      w.jy += (w.vy ?? 0) * dt; w.vy = (w.vy ?? 0) - 9.5 * dt;
-      if (w.jy <= 0) { w.jy = 0; w.vy = 0; playAt(this.surface(g, w.x, w.z), 0.9, 0, 0.85); }
-    }
-    // wysokość stóp spacerowicza (na murach i schodach przeszkody z dołu go nie dotyczą)
-    const feet = (this.view ? this.standY(this.view, w.x, w.z) : 0) + (w.jy ?? 0);
+    // Stopy na prawdziwej wysokości (Michał 6.11.2026: „skakać po dachach, zeskoczyć z klifu”): podłożem jest teren
+    // albo najwyższa powierzchnia budynku pod nogami (dach, ganek, beczka) — walkphysics.ts. Skok spacją, spadanie
+    // z grawitacją, krok w górę tylko o próg (wyżej trzeba wskoczyć).
+    const W2g = g.map.width / 2, H2g = g.map.height / 2;
+    const groundAt = (x: number, z: number): number => (this.view ? this.standY(this.view, x, z) : 0);
+    const roofAt = (x: number, z: number, from: number): number => roofBelow(this.walkHits, x - W2g, z - H2g, from);
+    if (w.fy === undefined || !Number.isFinite(w.fy)) { w.fy = groundAt(w.x, w.z); w.vy = 0; w.air = false; }
+    if (k.has('Space') && !w.air) { w.vy = WALK_JUMP; w.air = true; }
+    // wysokość stóp spacerowicza (na murach, dachach i schodach przeszkody z dołu go nie dotyczą)
+    const feet = w.fy;
+    /** Podłoże w punkcie dla stóp na wysokości `at`: teren albo dach, na który da się wejść (najwyżej próg wyżej) */
+    const supportAt = (x: number, z: number, at: number): { y: number; roof: boolean } => {
+      const gy0 = groundAt(x, z), ry = roofAt(x, z, at + WALK_STEP_UP);
+      return ry > gy0 + 0.05 ? { y: ry, roof: true } : { y: gy0, roof: false };
+    };
     const point = (x: number, z: number, ring: readonly (readonly [number, number])[]): boolean => {
       const tx = Math.floor(x), ty = Math.floor(z);
       if (tx < 0 || ty < 0 || tx >= g.map.width || ty >= g.map.height) return false;
@@ -2402,7 +2411,9 @@ export class GameRenderer {
         }
         return true;
       }
-      if (!((g.occupancy[t] === 0 || g.gates[t] !== 0) && g.map.tiles[t] !== Terrain.Water && g.map.tiles[t] !== Terrain.Mountain)) return false;
+      // góry i urwiska: wolno wejść, jeśli to nie wspinaczka (z góry się schodzi i zeskakuje, pod górę nie)
+      if (g.map.tiles[t] === Terrain.Mountain && groundAt(x, z) - feet > WALK_STEP_UP) return false;
+      if (!((g.occupancy[t] === 0 || g.gates[t] !== 0) && g.map.tiles[t] !== Terrain.Water)) return false;
       // ściany między polami (w zamku): ta sama zasada co dla ludzi w symulacji — przez drzwi tak, przez ścianę nie
       const fx0 = Math.floor(w.x), fz0 = Math.floor(w.z);
       if (fx0 !== tx || fz0 !== ty) {
@@ -2427,6 +2438,11 @@ export class GameRenderer {
     if (Math.hypot(w.x - gt.x, w.z - gt.z) > 0.3 || this.time - gt.t > 0.3 || this.time < gt.t) { this.gatherWalkHits(w.x - W2, w.z - H2); gt.x = w.x; gt.z = w.z; gt.t = this.time; }
     const RING = [[0, 0], [BODY, 0], [-BODY, 0], [0, BODY], [0, -BODY], [D, D], [D, -D], [-D, D], [-D, -D]] as const;
     const free = (x: number, z: number): boolean => {
+      // na dachu (albo w locie nad budynkiem): liczą się tylko bryły wokół ciała, nie pola mapy ani ściany między nimi
+      const sup = supportAt(x, z, feet);
+      // na dach tylko skokiem; teren (schody, drabina na mur, korona muru) jak dotąd — stopy wchodzą na jego wysokość
+      if (sup.roof && sup.y - feet > WALK_STEP_UP) return false;
+      if (sup.roof || feet > groundAt(x, z) + 0.6) return !this.walkTouch(x - W2, z - H2, [feet + 0.3, feet + 0.46], BODY, feet + WALK_STEP_UP);
       if (!point(x, z, RING)) return false;
       // poza budynkami z modelem (także przy zamku i w nim): obrys ciała też nie może wejść na zajęte pole ani za ścianę między polami
       if (!this.walkableAt(x, z)) for (const [ox, oz] of RING) if ((ox || oz) && !point(x + ox, z + oz, [[0, 0]])) return false;
@@ -2439,7 +2455,8 @@ export class GameRenderer {
     // małymi krokami: przy niskim FPS jeden duży skok przeskoczyłby cienką ścianę
     const nStep = Math.min(40, Math.ceil(Math.hypot(dx, dz) / 0.04));
     // stoi już za blisko ściany (start spaceru, skok, otwarte wrota): wolno mu odejść, sprawdzamy wtedy tylko środek
-    const ok = free(w.x, w.z) ? free : (x: number, z: number): boolean => point(x, z, [[0, 0]]);
+    // po zeskoczeniu na zajęte pole (np. z dachu tuż przy ścianie) wolno iść w każdą stronę, byle nie pod górę
+    const ok = free(w.x, w.z) ? free : (x: number, z: number): boolean => point(x, z, [[0, 0]]) || (feet > groundAt(x, z) - WALK_STEP_UP && !this.walkTouch(x - W2, z - H2, [feet + 0.3, feet + 0.46], BODY));
     const sx0 = dx / nStep, sz0 = dz / nStep, sl = Math.hypot(sx0, sz0);
     for (let i = 0; i < nStep; i++) {
       const x0 = w.x, z0 = w.z;
@@ -2461,15 +2478,30 @@ export class GameRenderer {
       }
     }
     // tempo kroków jak u człowieka: idąc ok. 1,8 kroku na sekundę, biegiem ok. 2,7 (kołysanie kamery w tym samym rytmie)
-    if ((fx || fz) && !w.jy) w.bob += (run ? 2.7 : 1.8) * Math.PI * dt;
+    // pion: grawitacja w locie, zejście z krawędzi = spadanie, lądowanie na terenie albo dachu
+    {
+      const sup = supportAt(w.x, w.z, w.fy);
+      if (!w.air && sup.y < w.fy - 0.08) { w.air = true; w.vy = 0; }
+      if (w.air) {
+        w.vy = (w.vy ?? 0) - WALK_GRAVITY * dt;
+        const ny = w.fy + w.vy * dt;
+        const land = supportAt(w.x, w.z, Math.max(ny, w.fy)).y;
+        if (ny <= land) {
+          const hard = (w.vy ?? 0) < -4;
+          w.fy = land; w.vy = 0; w.air = false;
+          playAt(this.surface(g, w.x, w.z), hard ? 1 : 0.9, 0, hard ? 1 : 0.85);
+        } else w.fy = ny;
+      } else w.fy = sup.y;
+    }
+    if ((fx || fz) && !w.air) w.bob += (run ? 2.7 : 1.8) * Math.PI * dt;
     // własne kroki w spacerze: na każdy krok dźwięk podłoża, lewa i prawa noga lekko z boku
     const stepK = Math.floor(w.bob / Math.PI);
     if (stepK !== this.walkStep) { this.walkStep = stepK; playAt(this.surface(g, w.x, w.z), 0.9, stepK % 2 ? 0.12 : -0.12, run ? 0.85 : 0.7); }
     const cam = this.cam.camera;
     const { width, height } = g.map;
-    const ground = this.view ? this.standY(this.view, w.x, w.z) : 0;
-    // ślady butów także za tym, kto chodzi spacerem (z pierwszej osoby); w skoku stopy nie dotykają śniegu
-    if ((fx || fz) && !w.jy) this.feet.set(-1, [w.x, w.z, ground]);
+    const ground = w.fy;
+    // ślady butów także za tym, kto chodzi spacerem (z pierwszej osoby); w skoku i na dachu stopy nie dotykają śniegu
+    if ((fx || fz) && !w.air && Math.abs(ground - groundAt(w.x, w.z)) < 0.05) this.feet.set(-1, [w.x, w.z, ground]);
     // w pomieszczeniu (nie na dziedzińcu): dach znika, widać sufit; przy zamku jego wnętrza są zawsze widoczne
     const kp = this.keepAt(w.x, w.z);
     const inRoom = !!kp && Math.abs(kp[1]) < KEEP_HALF && Math.abs(kp[2]) < KEEP_HALF && 'TKCBLQ1234'.includes(keepRoom(Math.floor(kp[1] + KEEP_HALF), Math.floor(kp[2] + KEEP_HALF)));
@@ -2500,9 +2532,10 @@ export class GameRenderer {
       if (dx * dx + dz * dz < WALK_SEE_R * WALK_SEE_R) this.walkInView.add(id);
     }
     // stopy idą po podłożu z lekkim wygładzeniem: próg chaty, skraj sadu czy bruku to krok, a nie skok kamery
-    const gy = Math.max(ground, 0);
-    w.gy = w.gy === undefined || Math.abs(gy - w.gy) > 0.4 ? gy : w.gy + (gy - w.gy) * Math.min(1, dt * 12);
-    cam.position.set(w.x - width / 2, w.gy + 0.46 + (w.jy ?? 0) + (w.jy ? 0 : Math.sin(w.bob) * 0.02), w.z - height / 2);
+    // w locie kamera idzie za stopami od razu, na ziemi z lekkim wygładzeniem progów
+    const gy = Math.max(ground, -0.5);
+    w.gy = w.gy === undefined || w.air || Math.abs(gy - w.gy) > 0.4 ? gy : w.gy + (gy - w.gy) * Math.min(1, dt * 12);
+    cam.position.set(w.x - width / 2, w.gy + 0.46 + (w.air ? 0 : Math.sin(w.bob) * 0.02), w.z - height / 2);
     // izby w basztach (narożne i w połowie boków) też mają ogień
     const tdx = kp ? Math.floor(kp[1] + KEEP_HALF) : -1, tdy = kp ? Math.floor(kp[2] + KEEP_HALF) : -1;
     const inTower = !!kp && keepTile(tdx, tdy) === '=' && (((tdx === 0 || tdx === KEEP_SIZE - 1) && (tdy === 0 || tdy === KEEP_SIZE - 1 || tdy === KEEP_SIZE >> 1))

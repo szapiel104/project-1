@@ -1,5 +1,11 @@
 # Dziennik zmian
 
+## 0.94.45 — 2026-11-06
+- Spacer (`walkphysics.ts`, `stepWalk` w `scene.ts`): stopy na prawdziwej wysokości `w.fy`, grawitacja, skok 3,6; podłoże = teren albo najwyższa powierzchnia budynku pod nogami (promień w dół po BVH siatek z `walkHits`). Na dach tylko skokiem (próg 0,16), po dachu kolizja tylko z bryłami; pola gór/urwisk przechodnie, gdy nie pod górę.
+- Zamek (`keep.py`): kosze ogniowe bez stożków `ember` — popiół, węgle (`crystal`), szczapy; znacznik `braziers` → obiekt `brazier` (żywy ogień po zmroku).
+- CLAUDE.md: zakaz „ulepów” (ogień tylko znacznikiem, kolejność źródeł modeli: Poly Haven CC0 → Sketchfab CC-BY → Blender z fazą, szumem i teksturą).
+- Boty: bez zmian (spacer to tylko widok gracza).
+
 ## 0.94.44 — 2026-11-06
 - `gpu/fireNode.ts` (`flameNode`): oko w przestrzeni bryły przez `inverse(M)` — dotąd tylko przesunięcie i skala, więc obrócona pochodnia w ręce (przypięta do kamery) liczyła promień ze złego miejsca.
 - Boty: bez zmian.

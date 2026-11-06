@@ -37,6 +37,7 @@ cz = lambda dy: dy - H + 0.5
 
 b = Building()
 lights = []         # pochodnie na ścianach: tu gra nocą zapala światło
+braziers = []       # kosze ogniowe: tu gra po zmroku rysuje żywy płomień (system ognia)
 solid = []          # przeszkody spacerowicza: x0, x1, z0, z1, od wysokości y0 do y1
 def torch(group, x, y, z):
     """Pochodnia na ścianie: drewniany trzonek w żelaznym uchwycie, kubek ze smołą i wąski, wysoki płomień"""
@@ -52,9 +53,16 @@ def brazier(group, x, y, z):
     b.prism(group, 'iron', 0.06, 0.06, 0.012, x, y - 0.012, z, seg=10)
     b.poly(group, 'iron', [(x + math.sin(2 * math.pi * k / 10) * 0.06, y - 0.012, z + math.cos(2 * math.pi * k / 10) * 0.06) for k in range(10)], away=(x, y + 1, z))
     b.prism(group, 'iron', 0.06, 0.13, 0.09, x, y, z, seg=10, top=False)
-    b.prism(group, 'woodDark', 0.11, 0.11, 0.06, x, y + 0.01, z, seg=10)
-    for i, (ox, oz, hh) in enumerate(((0.0, 0.0, 0.16), (0.045, 0.02, 0.11), (-0.035, -0.03, 0.12))):
-        b.prism(group, 'ember', 0.04, 0.0, hh, x + ox, y + 0.07, z + oz, seg=6)
+    # żar zamiast stożków ognia (Michał 6.11.2026: pomarańczowe stożki wyglądały jak ulep): kopczyk popiołu, bryłki
+    # rozżarzonego węgla i szczapy, a płomień rysuje gra żywym ogniem w znaczniku 'braziers' (po zmroku)
+    b.prism(group, 'ash', 0.115, 0.1, 0.035, x, y + 0.045, z, seg=12)
+    for k in range(9):
+        a = k * 2.399
+        r = 0.02 + 0.07 * ((k * 0.618) % 1)
+        b.crystal(group, 'ember', x + math.sin(a) * r, y + 0.085, z + math.cos(a) * r, 0.03, seed=k * 1.7 + x, sy=0.7)
+    for k, (a, tilt) in enumerate(((0.4, 0.5), (2.3, -0.45), (4.1, 0.55))):
+        b.box(group, 'woodDark', 0.028, 0.13, 0.028, x + math.sin(a) * 0.045, y + 0.07, z + math.cos(a) * 0.045, rot=a, tilt=tilt)
+    braziers.append([round(x, 3), round(y + 0.12, 3), round(z, 3), group])
 def block(x0, x1, z0, z1, y0=0.0, y1=9.0):
     solid.append([round(min(x0, x1), 3), round(max(x0, x1), 3), round(min(z0, z1), 3), round(max(z0, z1), 3), round(y0, 3), round(y1, 3)])
 def boxs(group, mat, w, h, d, x, y, z, rot=0.0, **kw):
@@ -1155,4 +1163,4 @@ VIEWS = [
     ['donżon od pola', [0, 1.6, -9.0], [0, 2.6, -5.5], OUT, 22],
     ['dach donżonu', [2.5, 6.5, -8.0], [0, 3.9, -5.2], OUT, 20],
 ]
-b.save('keep', maxe=0.45, rays=16, reach=0.5, extra={'lights': lights, 'solid': solid, 'floorY': G, 'wallY': WALK, 'portLift': 0.86, 'views': VIEWS, 'banners': BANNERS, 'fishSpots': FISH_SPOTS})
+b.save('keep', maxe=0.45, rays=16, reach=0.5, extra={'lights': lights, 'braziers': braziers, 'solid': solid, 'floorY': G, 'wallY': WALK, 'portLift': 0.86, 'views': VIEWS, 'banners': BANNERS, 'fishSpots': FISH_SPOTS})

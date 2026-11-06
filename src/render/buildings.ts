@@ -999,6 +999,13 @@ function blenderModel(g: THREE.Group, model: BlenderBuilding, flag: THREE.Materi
     o.position.set(x, y, z);
     g.add(o);
   }
+  // kosze ogniowe zrobione w bryle modelu (zamek): żywy ogień po zmroku rysuje system płomieni (znacznik 'brazier')
+  for (const [x, y, z, grp] of (model as unknown as { braziers?: [number, number, number, string?][] }).braziers ?? []) {
+    const o = new THREE.Object3D();
+    o.name = 'brazier';
+    o.position.set(x, y, z);
+    (grp === 'interior' ? interior : g).add(o);
+  }
   // latarnie, które płoną zawsze (sztolnia, izba baraku): znacznik w swojej grupie, więc widać go tylko, gdy widać tę grupę
   for (const [x, y, z, grp] of (model as unknown as { lamps?: [number, number, number, string?][] }).lamps ?? []) {
     const o = new THREE.Object3D();
