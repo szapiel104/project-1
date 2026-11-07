@@ -179,9 +179,9 @@ const DAY = [
   { h: 0, sun: 0x8095c8, power: 0.46, sky: 0.42, haze: 0x0e1322 },
   { h: 4.5, sun: 0x8095c8, power: 0.46, sky: 0.42, haze: 0x141b30 },
   { h: 6, sun: 0xe8a878, power: 1.15, sky: 0.85, haze: 0xa59a90 },
-  { h: 8, sun: 0xf6e2c0, power: 2.0, sky: 1.25, haze: 0xb4b5ab },
-  { h: 12, sun: 0xfff2e0, power: 2.35, sky: 1.38, haze: 0xbfc3bb },
-  { h: 17, sun: 0xf6e2c0, power: 2.1, sky: 1.25, haze: 0xb5b2a5 },
+  { h: 8, sun: 0xf6e2c0, power: 2.0, sky: 1.42, haze: 0xb4b5ab },
+  { h: 12, sun: 0xfff2e0, power: 2.35, sky: 1.58, haze: 0xbfc3bb }, // mocniejsze światło nieba = jaśniejsze, miękkie cienie (Michał 7.11.2026)
+  { h: 17, sun: 0xf6e2c0, power: 2.1, sky: 1.42, haze: 0xb5b2a5 },
   { h: 19.5, sun: 0xef9060, power: 1.2, sky: 0.85, haze: 0x957060 },
   { h: 21.5, sun: 0x8095c8, power: 0.46, sky: 0.42, haze: 0x141b30 },
   { h: 24, sun: 0x8095c8, power: 0.38, sky: 0.34, haze: 0x0e1322 },
@@ -794,7 +794,7 @@ export class GameRenderer {
   private soldierPos = new Map<number, THREE.Vector3>();
   private facing = new Map<number, number>();
   /** Faza kroku każdego chłopa: rośnie z przebytą drogą, więc nogi chodzą w tempie marszu przy każdej prędkości gry */
-  private strides = new Map<number, { x: number; y: number; phase: number }>();
+  private strides = new Map<number, { x: number; y: number; phase: number; amp?: number }>();
   private camps = new Map<number, GameState['buildings'][number]>();
   private loads: Map<number, THREE.InstancedMesh>;
   /** Ścięte drzewa ciągnięte przez drwali: po parze siatek [pień, korona] na każdą odmianę z lasu */
@@ -896,7 +896,7 @@ export class GameRenderer {
     this.renderer.shadowMap.enabled = true;
     this.renderer.shadowMap.type = THREE.PCFShadowMap;
     if (!this.gpu_) enableShadowLayer(this.renderer); // zastępcze bryły cienia roślinności (terrain.ts); WebGPU: później
-    this.hemi = new THREE.HemisphereLight(0xdfeaff, 0x6a5a3c, 1.5);
+    this.hemi = new THREE.HemisphereLight(0xdfeaff, 0x7f6c4a, 1.5); // od ziemi cieplejsze, jaśniejsze odbicie
     this.scene.add(this.hemi);
     const sun = new THREE.DirectionalLight(0xffe2ad, 3.6);
     sun.castShadow = true;
@@ -1713,7 +1713,7 @@ export class GameRenderer {
       this.shadowTypeSet = true;
       // PCFSoftShadowMap został w three.js usunięty; miękkość daje promień rozmycia PCF
       this.renderer.shadowMap.type = THREE.PCFShadowMap;
-      this.sun.shadow.radius = o.soft ? 3 : 1;
+      this.sun.shadow.radius = o.soft ? 4 : 1.5; // miększe brzegi cieni
     }
     this.shadowSize(o.shadows);
     // „Ostra”: na zwykłym monitorze (gęstość 1×) gra liczy obraz w 1,5× rozdzielczości i zmniejsza go (nadpróbkowanie —
@@ -5490,9 +5490,13 @@ export class GameRenderer {
       st.x = cv.sx; st.y = cv.sy;
       const stride = walking ? st.phase : 0;
       if (walking) this.footstep(g, u.id, cv.sx, cv.sy, stride, 0.45);
-      let swing = walking ? Math.sin(stride) * 0.55 : 0;
+      // ruszanie i zatrzymywanie płynnie (Michał 7.11.2026: „animacje sztywne”): zamach rąk i nóg rośnie i gaśnie w ok. ćwierć
+      // sekundy, zamiast przeskakiwać z bezruchu w pełny krok; przy zatrzymaniu noga dokańcza krok do zera
+      st.amp = (st.amp ?? 0) + ((walking ? 1 : 0) - (st.amp ?? 0)) * (this.calm ? 1 : Math.min(1, this.frameDt * 8));
+      const amp = st.amp;
+      let swing = amp > 0.02 ? Math.sin(st.phase) * 0.55 * amp : 0;
       const footY = this.standY(view, cv.sx, cv.sy, (u.py >> 8) * width + (u.px >> 8));
-      t.position.set(cv.sx - width / 2, footY + (walking ? Math.abs(Math.cos(stride)) * 0.025 : 0), cv.sy - height / 2);
+      t.position.set(cv.sx - width / 2, footY + (walking ? Math.abs(Math.cos(stride)) * 0.025 * amp : 0), cv.sy - height / 2);
       if (walking) this.feet.set(u.id, [cv.sx, cv.sy, footY]); // ślady butów: miejsce i wysokość stóp z ekranu
       // krew: chłop raniony przez wilka albo wroga pryska krwią, ciężko ranny gubi krople (render/bloodfx.ts)
       if ((u.hp ?? PEASANT_HP) < PEASANT_HP || this.bloodFx.knows(u.id)) this.bloodFx.track(u.id, u.hp ?? PEASANT_HP, PEASANT_HP, cv.sx, footY, cv.sy, heading, walking, this.time, this.bloodGround, 0.24, true);
@@ -5940,6 +5944,8 @@ export class GameRenderer {
       const roll = ia ? ia.roll : walking ? Math.sin(stride) * 0.03 : 0;
       if (walking && !lean && !this.calm) lean = fleeing ? 0.16 : 0.05;
       if (lean || roll) { t.rotation.reorder('YXZ'); t.rotation.x = lean; t.rotation.z = roll; }
+      // biodra skręcają za krokiem (ledwo, ±3°), ciało nie idzie jak deska
+      if (walking && !ia && !this.calm) { t.rotation.reorder('YXZ'); t.rotation.y += Math.sin(stride) * 0.05 * (st.amp ?? 1); }
       t.updateMatrix();
       if (fishing) {
         // wędka w prawej dłoni wyciągniętej w przód (FISH_ARM), obracana w barku razem z ręką

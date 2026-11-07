@@ -152,17 +152,18 @@ export class GpuPost {
     const ss = (a: number, b: number, x: any) => smoothstep(a, b, x);
     const l = dot(c0, vec3(0.299, 0.587, 0.114));
     const day = float(1).sub(night).mul(float(1).sub(rain));
-    let c: any = mix(vec3(l), c0, day.mul(0.26).add(0.72).sub(rain.mul(0.15)).add(golden.mul(0.1)));
+    let c: any = mix(vec3(l), c0, day.mul(0.3).add(0.74).sub(rain.mul(0.15)).add(golden.mul(0.1))); // w dzień trochę żywsze barwy (Michał 7.11.2026: „ciemna, twarda”)
     c = mix(c, c.mul(vec3(1.05, 1.02, 0.94)), day.mul(ss(0.25, 0.8, l)));
     c = c.add(day.mul(0.05).mul(vec3(1).sub(c)).mul(ss(0.05, 0.45, l)));
     c = mix(c, c.mul(vec3(1.14, 1.0, 0.8)), golden.mul(ss(0.15, 0.75, l)));
     c = mix(c.mul(vec3(1.06, 0.98, 0.86)), c, ss(0.0, 0.6, l));
-    c = c.sub(0.5).mul(1.08).add(0.5);
+    c = c.sub(0.5).mul(1.03).add(0.5); // łagodniejszy kontrast (dawniej 1,08)
+    c = c.add(day.mul(0.035).mul(float(1).sub(ss(0.0, 0.4, l)))); // cienie nie toną w czerni
     c = mix(c, c.mul(vec3(0.72, 0.8, 1.05)), night.mul(0.35));
     c = c.mul(float(1).sub(rain.mul(0.12)));
     c = pow(max(c, 0), vec3(float(1).div(pow(bright, 1.1)))).mul(mix(float(1), bright, 0.35));
     const d = screenUV.sub(0.5);
-    c = c.mul(float(1).sub(dot(d, d).mul(night.mul(0.85).add(0.6)).div(bright)));
+    c = c.mul(float(1).sub(dot(d, d).mul(night.mul(1.13).add(0.32)).div(bright))); // w dzień słabsza winieta, w nocy jak dawniej
     return c;
   }
 }

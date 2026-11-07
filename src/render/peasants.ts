@@ -220,6 +220,8 @@ export class Figures {
   private local = new THREE.Matrix4();
   private out = new THREE.Matrix4();
   private scaled = new THREE.Matrix4();
+  /** oddech na stojąco (tylko wygląd) */
+  private gait = new THREE.Matrix4();
   private q = new THREE.Quaternion();
   private subM = new THREE.Matrix4();
   private e = new THREE.Euler();
@@ -570,6 +572,12 @@ export class Figures {
     const ice = !burnt && this.charrable && Figures.frozen(id);
     this.scaled.copy(base).scale(this.one.setScalar(look.size));
     this.one.setScalar(1);
+    // na stojąco ledwo widoczny oddech, każdy w swoim rytmie (Michał 7.11.2026: „animacje sztywne”; marsz kołysze scena)
+    const striding = !pose && sitLegs === undefined && !armsUp && (work === undefined || walkLegs) && swing !== 0;
+    if (!striding && !pose && sitLegs === undefined) {
+      const br = Math.sin(performance.now() * 0.0016 + id * 2.3);
+      this.scaled.multiply(this.gait.makeScale(1, 1 + br * 0.006, 1));
+    }
     for (const p of this.parts) {
       if (p.lod !== lod) continue;
       if (!p.shown(look) || (p.orb && !armsUp)) { p.mesh.setMatrixAt(i, this.none); continue; }
