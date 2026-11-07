@@ -859,7 +859,9 @@ function applySettings(st: Settings): void {
   renderer.rainOn = st.rain ?? true;
   renderer.fogOn = st.fog ?? true;
   // automat: cienie, cieniowanie zagłębień, rozdzielczość i zasięg trawy z poziomu dobranego do komputera
-  if (st.auto) { const q = TIERS[autoQ.tier]!; renderer.setGraphics({ ...st, ...q, label: `${tx('automat', 'auto')} ${autoQ.tier + 1}/${TIERS.length}` }); }
+  // Automat liczy obraz w rozdzielczości ekranu bez skalowania Windows (125 %, 150 % na laptopach): na zintegrowanej karcie
+  // AMD 1,25× kosztowało 13 ms z ~45 ms na klatkę (Michał 7.11.2026: „gra zjada laptopy”). Ostrzej — ręcznie w Ustawieniach.
+  if (st.auto) { const q = TIERS[autoQ.tier]!; renderer.setGraphics({ ...st, ...q, scale: Math.min(q.scale, 1 / Math.max(1, window.devicePixelRatio || 1)), label: `${tx('automat', 'auto')} ${autoQ.tier + 1}/${TIERS.length}` }); }
   else renderer.setGraphics({ ...st, grass: st.grass ?? 1 });
   setBusVolume('sfx', st.sfx);
   setBusVolume('ui', st.ui);
