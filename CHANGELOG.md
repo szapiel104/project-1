@@ -1,5 +1,11 @@
 # Dziennik zmian
 
+## 0.94.81 — 2026-11-07
+- Las: `CROWN_NEAR = 24` (korony z kart i pnie do 24 pól × detail, dalej obrazki; w spacerze do mgły jak dawniej, `walkHide`). Pomiar na laptopie: korony z kart do 60 pól = 13 FPS na Radeonie 680M.
+- `autoquality.ts`: LOW_FPS 30, dwa słabe okna z rzędu, `MIN_AUTO = 2`; automat liczy obraz bez skalowania Windows (`main.ts`); dynamiczna rozdzielczość min. 80 %. `touchAt` nie zawęża pełnego wysłania bufora.
+- `gpuHint.ts`: wskazówka o karcie wbudowanej (nazwa z WebGL) + test. Na laptopie Michała Chrome liczył na Radeonie 680M zamiast RTX 3050 (Windows: Wysoka wydajność + `chrome://flags/#force-high-performance-gpu`).
+- `waterNode.ts`: pnie, krzewy, podszyt, trzcina bez odbicia; ryby tylko w promieniu ~28 pól od środka widoku. Pasek: ikony Tempo/Podatki/Racje; „Gra wstrzymana” równo z przyciskami. Boty: bez zmian (tylko grafika i interfejs).
+
 ## 0.94.80 — 2026-11-07
 - `weather.ts`: `climateOf(biome)`; `yearPos`/`seasonAt`/`shiftToSeason` biorą krainę — Północ stale 0,875 (środek zimy), Step i Pustynia `raw × 0,75` (bez zimy). Wywołania w `workers`, `economy`, `storms`, `forestry`, `scene.ts`, `main.ts` przekazują `g.map.biome`.
 - `forestry.ts`: na Północy sadzonki rosną i leśnicy sadzą mimo zimy. `groundNode.ts`: brak śniegu na szczytach przy `uDry` (Step, Pustynia).
