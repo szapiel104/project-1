@@ -9,6 +9,7 @@ export type { ChangeEntry } from './changelogTypes';
  * — tak jak CHANGELOG.md dla nas. `tests/changelog.test.ts` pilnuje, że najnowszy wpis ma wersję z package.json.
  */
 const NEW: ChangeEntry[] = [
+  { v: '0.94.61', date: '2026-11-07', pl: ['Wczytywanie: na dużej osadzie gra nie startuje już z samymi cieniami budynków. Ekran wczytywania czeka, aż karta graficzna przygotuje wszystkie budynki.'], en: ['Loading: a large settlement no longer starts with only the shadows of its buildings. The loading screen waits until your graphics card has every building ready.'] },
   { v: '0.94.60', date: '2026-11-07', pl: ['Grafika: zniknęło ustawienie „Skala”. Obraz liczy się teraz w naturalnej rozdzielczości ekranu, bez ciężkiego nadpróbkowania 1,25×, więc jest wyraźnie więcej klatek na sekundę.'], en: ['Graphics: the “Scale” setting is gone. The picture now renders at your screen’s natural resolution, without the heavy 1.25× supersampling, so you get noticeably more frames per second.'] },
   { v: '0.94.59', date: '2026-11-07', pl: ['Tester wydajności: w spacerze postać naprawdę idzie i skacze, a budowa idzie w zwykłym tempie gry.'], en: ['Performance tester: on the walk your character now truly strides and leaps, and building runs at the usual pace of the game.'] },
   {

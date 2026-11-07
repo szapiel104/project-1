@@ -1830,7 +1830,7 @@ export class GameRenderer {
     // klatki z budżetem składania (present → gpuFrameBudget): każda składa ok. 45 ms nowych wariantów, resztę odkłada;
     // kończymy, gdy nic już nie czeka (albo po 12 s — wtedy reszta dochodzi w grze, po kilka ms na klatkę)
     const t0 = performance.now();
-    let first = -1;
+    let first = -1, lastLeft = Infinity, lastMove = t0;
     // przy wczytywaniu karta kompiluje więcej programów naraz (gpuLoading), więc czekamy do końca, najwyżej 10 s:
     // po 2,5 s gra startowała z połową budynków (same cienie bez budynków, Michał 6.11.2026)
     gpuLoading(true);
@@ -1840,7 +1840,11 @@ export class GameRenderer {
         const left = gpuDeferredCount + gpuPending();
         if (first < 0) first = Math.max(1, left);
         onProgress?.(Math.max(0, first - left), first);
-        if (left === 0 || performance.now() - t0 > 10000) break;
+        // Michał 7.11.2026: na dużym zapisie 10 s nie starczało (start z samymi cieniami budynków) — czekamy, dopóki
+        // karta robi postęp (lista się skraca), najwyżej 40 s; stoi 4 s bez postępu → start, reszta dochodzi w grze
+        const now = performance.now();
+        if (left < lastLeft) { lastLeft = left; lastMove = now; }
+        if (left === 0 || now - t0 > 40000 || now - lastMove > 4000) break;
         await new Promise<void>((ok) => requestAnimationFrame(() => ok()));
       }
     } finally { gpuLoading(false); }
