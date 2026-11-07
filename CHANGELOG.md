@@ -1,5 +1,8 @@
 # Dziennik zmian
 
+## 0.94.82 — 2026-11-07
+- Wydajność WebGPU: usunięte `DynamicDrawUsage` (three.js `renderers/common/Attributes.js` wysyła taki bufor przy każdym rysowaniu w każdym przejściu — pule roślinności 15×/klatkę po ~280 KB, ok. 17 ms procesora). Lustra buforów w `webgpu.ts` (`followVersion`) biorą wersję z oryginału. Pomiar na laptopie Michała (RTX 3050): wysyłanie 17 → 3 ms na klatkę, 36–47 → 86 FPS. Uwaga: „karta graficzna ms” w F3 na WebGPU to czas procesora na złożenie klatki, nie praca karty. Boty: bez zmian.
+
 ## 0.94.81 — 2026-11-07
 - Las: `CROWN_NEAR = 24` (korony z kart i pnie do 24 pól × detail, dalej obrazki; w spacerze do mgły jak dawniej, `walkHide`). Pomiar na laptopie: korony z kart do 60 pól = 13 FPS na Radeonie 680M.
 - `autoquality.ts`: LOW_FPS 30, dwa słabe okna z rzędu, `MIN_AUTO = 2`; automat liczy obraz bez skalowania Windows (`main.ts`); dynamiczna rozdzielczość min. 80 %. `touchAt` nie zawęża pełnego wysłania bufora.
