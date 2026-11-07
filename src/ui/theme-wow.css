@@ -510,3 +510,5 @@ body .menu:not(.previewing) .menu-head::after { margin-left: var(--lx); }
 body .menu:not(.previewing) .menu-fine { padding: 0 0 8px var(--lx); }
 body .menu:not(.previewing) .menu-fine { font-family: var(--text); font-weight: 500; font-size: 13px; letter-spacing: .02em; color: #bda878; text-shadow: 0 1px 2px #000; }
 body .menu:not(.previewing) > .menu-account { margin-left: var(--lx); }
+body .menu:not(.previewing) .menu-head > .menu-title.has-logo svg.logo { height: auto !important; }
+body .menu:not(.previewing) .menu-head::after { margin-left: 0; width: min(calc(100% - var(--lx) - 24px), 440px); }
