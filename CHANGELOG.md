@@ -1,5 +1,8 @@
 # Dziennik zmian
 
+## 0.94.73 — 2026-11-07
+- Ekran wczytywania: rada zmienia się co 5 s, strzałki ‹ › i klawisze ← → (`loadscreen.ts`, `tips.ts` ze wspólnym numerem rady). Cofnięte 40-sekundowe „stała rada” z 0.94.72. Boty: bez zmian.
+
 ## 0.94.72 — 2026-11-07
 - `main.ts` `continuable`: najnowszy zapis, bez wykluczania map solo po przegranej (pomijany tylko skończony mecz online).
 - `tips.ts`: ta sama rada przez 40 s (ekran wczytywania powstaje kilka razy). Boty: bez zmian.

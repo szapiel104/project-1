@@ -12,6 +12,7 @@
  */
 import { vistaScene } from './vista';
 import { t, tx } from '../i18n';
+import { stepTip } from '../data/tips';
 
 const CREST = '<svg viewBox="0 0 120 120" aria-hidden="true"><path d="M18 34 L102 86 M102 34 L18 86" stroke="#5a3a1c" stroke-width="5" stroke-linecap="round"/><path d="M14 30 l8 2 -2 8z M106 30 l-8 2 2 8z" fill="#b9b2a2"/><path d="M60 12 L96 22 V56 C96 82 78 98 60 108 C42 98 24 82 24 56 V22 Z" fill="#8c1f18" stroke="#e9c145" stroke-width="4"/><path d="M60 18 L90 26 V56 C90 78 75 92 60 101 Z" fill="#6e1711"/><path d="M46 84 V52 h4 v-6 h5 v6 h10 v-6 h5 v6 h4 V84 Z" fill="#e9c145"/><path d="M56 84 v-12 a4 4 0 0 1 8 0 v12z" fill="#6e1711"/></svg>';
 
@@ -37,7 +38,9 @@ export function loadingMarkup(label: string, tip: string): string {
   <div class="loading-head"><div class="loading-crest">${CREST}</div><p class="loading-title">Project‑1</p><p class="loading-sub">${t('menu.subtitle')}</p>${gameTagline()}</div>
   <div class="loading-card">
     <div class="ld-top">
+      <button type="button" class="tip-arrow" data-dir="-1" aria-label="${tx('Poprzednia rada', 'Previous tip')}">‹</button>
       <p class="loading-tip" id="loading-tip">${tip}</p>
+      <button type="button" class="tip-arrow" data-dir="1" aria-label="${tx('Następna rada', 'Next tip')}">›</button>
       <p class="ld-pct" id="loading-pct" aria-hidden="true">0%</p>
     </div>
     <div class="loading-bar" role="progressbar" aria-label="${tx('Postęp wczytywania', 'Loading progress')}" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span id="loading-fill"></span></div>
@@ -55,4 +58,27 @@ export function setLoadingProgress(root: ParentNode, pct: number): void {
   bar?.setAttribute('data-pct', `${p}%`); // procent w pasku (Michał 7.11.2026)
   const big = root.querySelector('.ld-pct');
   if (big) big.textContent = `${p}%`;
+}
+
+// Rady na ekranie wczytywania zmieniają się same co kilka sekund, a strzałkami (przyciski albo ← →) przewija się je jak
+// w suwaku (Michał 7.11.2026). Jeden zegar i jeden nasłuch na całą stronę: ekran wczytywania powstaje kilka razy.
+let tipTimer = 0;
+const TIP_EVERY = 5000;
+function showTip(d: number): void {
+  const p = document.querySelector<HTMLElement>('#loading .loading-tip');
+  if (!p) return;
+  p.textContent = stepTip(d);
+  clearInterval(tipTimer);
+  tipTimer = window.setInterval(() => showTip(1), TIP_EVERY);
+}
+if (typeof document !== 'undefined') {
+  tipTimer = window.setInterval(() => showTip(1), TIP_EVERY);
+  document.addEventListener('click', (e) => {
+    const b = (e.target as HTMLElement | null)?.closest?.('#loading .tip-arrow') as HTMLElement | null;
+    if (b) showTip(Number(b.dataset.dir) || 1);
+  });
+  document.addEventListener('keydown', (e) => {
+    if ((e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') || !document.querySelector('#loading .loading-tip')) return;
+    showTip(e.key === 'ArrowLeft' ? -1 : 1);
+  });
 }
