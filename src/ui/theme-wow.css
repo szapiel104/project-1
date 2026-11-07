@@ -639,26 +639,26 @@ body .menu.previewing .menu-panel.wide.ng-dock {
   background: linear-gradient(#211710, #120c08) !important; background-image: linear-gradient(#211710, #120c08) !important;
   scrollbar-width: thin; scrollbar-color: #6e5226 transparent; }
 body .menu.previewing .menu-panel.ng-dock .menu-heading { display: block; font-size: 24px; letter-spacing: .06em; margin: 0 0 12px; color: #e9c766 !important; }
-body .menu .ng-dock .newgame { display: flex; flex-direction: column; gap: 14px; }
-body .menu .ng-dock .ng-col, body .menu .ng-dock .ng-c { display: grid; gap: 10px; padding: 0; border: 0; grid-template-rows: none; align-content: start; }
-body .menu .ng-dock .pick-group { padding: 10px 10px 12px; border: 1px solid rgba(233, 199, 102, .22); border-radius: 8px; background: rgba(0, 0, 0, .18); }
-body .menu .ng-dock .pick-group legend { font-size: 14px; padding: 0 6px; letter-spacing: .1em; color: #e9c766 !important; width: auto; }
-body .menu .ng-dock .ng-slider .pick-row { display: grid; grid-template-columns: 1fr; gap: 6px; padding: 4px 0 0; }
-body .menu .ng-dock .ng-slider .pick-row.lands { grid-template-columns: 1fr 1fr; }
-body .menu .ng-dock .ng-slider .pick, body .menu .ng-dock .ng-slider .pick-row.lands .pick {
+body .menu.previewing .menu-panel.ng-dock .newgame { display: flex; flex-direction: column; gap: 14px; }
+body .menu.previewing .menu-panel.ng-dock .ng-col, body .menu.previewing .menu-panel.ng-dock .ng-c { display: grid; gap: 10px; padding: 0; border: 0; grid-template-rows: none; align-content: start; }
+body .menu.previewing .menu-panel.ng-dock .pick-group { padding: 10px 10px 12px; border: 1px solid rgba(233, 199, 102, .22); border-radius: 8px; background: rgba(0, 0, 0, .18); }
+body .menu.previewing .menu-panel.ng-dock .pick-group legend { font-size: 14px; padding: 0 6px; letter-spacing: .1em; color: #e9c766 !important; width: auto; }
+body .menu.previewing .menu-panel.ng-dock .ng-slider .pick-row { display: grid; grid-template-columns: 1fr; gap: 6px; padding: 4px 0 0; }
+body .menu.previewing .menu-panel.ng-dock .ng-slider .pick-row.lands { grid-template-columns: 1fr 1fr; }
+body .menu.previewing .menu-panel.ng-dock .ng-slider .pick, body .menu.previewing .menu-panel.ng-dock .ng-slider .pick-row.lands .pick {
   max-width: none; grid-template-columns: 58px 1fr; column-gap: 10px; padding: 6px 10px 6px 6px; min-height: 48px; }
-body .menu .ng-dock .pick .pick-art { width: 58px; height: 40px !important; }
-body .menu .ng-dock .ng-slider .pick-big { font-size: 15.5px; }
-body .menu .ng-dock .ng-slider .pick-small { font-size: 13px; line-height: 1.25; white-space: normal; overflow: visible; }
-body .menu .ng-dock .ng-slider .pick-row.lands .pick { grid-template-columns: 1fr; grid-template-rows: auto auto auto; }
-body .menu .ng-dock .ng-slider .pick-row.lands .pick .pick-art { grid-row: auto; width: 100%; height: 44px !important; margin-bottom: 4px; }
-body .menu .ng-dock .ng-slider .pick-row.lands .pick-big, body .menu .ng-dock .ng-slider .pick-row.lands .pick-small { grid-column: 1; }
-body .menu .ng-dock .ng-slider .pick-row.lands .pick-small { font-size: 12.5px; }
-body .menu .ng-dock .field > span, body .menu .ng-dock .field label { font-size: 13px; }
-body .menu .ng-dock .preview-status, body .menu .ng-dock .hint { font-size: 13px; }
-body .menu .ng-dock .dev-switch { padding: 8px 10px; }
-body .menu .ng-dock .newgame-foot { position: sticky; bottom: 0; z-index: 3; margin: 0 -18px 0 -20px; padding: 12px 18px 16px 20px;
+body .menu.previewing .menu-panel.ng-dock .pick .pick-art { width: 58px; height: 40px !important; }
+body .menu.previewing .menu-panel.ng-dock .ng-slider .pick-big { font-size: 15.5px; }
+body .menu.previewing .menu-panel.ng-dock .ng-slider .pick-small { font-size: 13px; line-height: 1.25; white-space: normal; overflow: visible; }
+body .menu.previewing .menu-panel.ng-dock .ng-slider .pick-row.lands .pick { grid-template-columns: 1fr; grid-template-rows: auto auto auto; }
+body .menu.previewing .menu-panel.ng-dock .ng-slider .pick-row.lands .pick .pick-art { grid-row: auto; width: 100%; height: 44px !important; margin-bottom: 4px; }
+body .menu.previewing .menu-panel.ng-dock .ng-slider .pick-row.lands .pick-big, body .menu.previewing .menu-panel.ng-dock .ng-slider .pick-row.lands .pick-small { grid-column: 1; }
+body .menu.previewing .menu-panel.ng-dock .ng-slider .pick-row.lands .pick-small { font-size: 12.5px; }
+body .menu.previewing .menu-panel.ng-dock .field > span, body .menu.previewing .menu-panel.ng-dock .field label { font-size: 13px; }
+body .menu.previewing .menu-panel.ng-dock .preview-status, body .menu.previewing .menu-panel.ng-dock .hint { font-size: 13px; }
+body .menu.previewing .menu-panel.ng-dock .dev-switch { padding: 8px 10px; }
+body .menu.previewing .menu-panel.ng-dock .newgame-foot { position: sticky; bottom: 0; z-index: 3; margin: 0 -18px 0 -20px; padding: 12px 18px 16px 20px;
   background: linear-gradient(rgba(18, 12, 8, 0), #120c08 28%); grid-template-columns: auto 1fr; }
-body .menu .ng-dock .newgame-foot .menu-btn { min-height: 46px; }
+body .menu.previewing .menu-panel.ng-dock .newgame-foot .menu-btn { min-height: 46px; }
 body .menu.previewing:has(.ng-dock) { background: none; }
 body:has(.menu.previewing .ng-dock) .preview-cover { padding: 0 0 0 clamp(400px, 27vw, 500px); background: radial-gradient(ellipse at 50% 45%, #24180d, #0b0704 75%); }
