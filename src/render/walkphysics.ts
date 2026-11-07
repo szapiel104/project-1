@@ -35,3 +35,29 @@ export const WALK_STEP_UP = 0.16;
 /** Prędkość wybicia w skoku: szczyt ok. 0,7 pola — z muru albo beczki na dach, z dachu na dach */
 export const WALK_JUMP = 3.6;
 export const WALK_GRAVITY = 9.5;
+
+const fwd = new THREE.Vector3(), hitP = new THREE.Vector3();
+/**
+ * Odległość od `origin` do najbliższej ściany budynku wzdłuż `dir` (świat), nie dalej niż `max`; `max`, gdy nic nie stoi
+ * na drodze. Pochodnia w ręce cofa się o tyle, żeby nie wchodzić w mur (Michał 7.11.2026: „jak mam pochodnię, wchodzi nią w budynek”).
+ */
+export function wallAhead(hits: readonly WalkHit[], origin: THREE.Vector3, dir: THREE.Vector3, max: number): number {
+  let best = max;
+  fwd.copy(dir).normalize();
+  for (const { mesh, box } of hits) {
+    // szybkie odrzucenie: ramka siatki dalej niż max od punktu
+    if (box.distanceToPoint(origin) > max) continue;
+    const tree = (mesh.geometry as THREE.BufferGeometry & { boundsTree?: MeshBVH }).boundsTree;
+    if (!tree) continue;
+    inv.copy(mesh.matrixWorld).invert();
+    ray.origin.copy(origin);
+    ray.direction.copy(fwd);
+    ray.applyMatrix4(inv);
+    const hit = tree.raycastFirst(ray, THREE.DoubleSide);
+    if (!hit) continue;
+    hitP.copy(hit.point).applyMatrix4(mesh.matrixWorld);
+    const d = hitP.distanceTo(origin);
+    if (d < best) best = d;
+  }
+  return best;
+}

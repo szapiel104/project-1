@@ -12,7 +12,7 @@ import * as THREE from 'three';
 import { initKtx } from './ktx';
 import { MeshBVH } from 'three-mesh-bvh';
 import { SmallShadows } from './shadowcull';
-import { roofBelow, WALK_GRAVITY, WALK_JUMP, WALK_STEP_UP } from './walkphysics';
+import { roofBelow, wallAhead, WALK_GRAVITY, WALK_JUMP, WALK_STEP_UP } from './walkphysics';
 import { GL_DEBUG, glSection, watchLoading, watchRenderer } from '../debug/errlog';
 import { hash2 } from '../sim/rng';
 import { TOWER_RANGE, UNITS } from '../data/units';
@@ -2567,10 +2567,19 @@ export class GameRenderer {
     // zamiast obracać się razem z widokiem i wchodzić w ziemię (Michał 30.10.2026)
     if (this.handTorch) {
       const down = Math.max(0, -w.pitch);
-      this.handTorch.position.set(0.22, -0.24 + down * 0.2, -0.42 + down * 0.1);
-      this.handTorch.rotation.x = -0.35 + down * 0.85;
+      // przy ścianie tuż przed twarzą pochodnia cofa się i opada, zamiast przechodzić przez mur (promień z kamery w przód)
+      let reach = 0.42;
+      if (this.torchOn && this.walkHits.length) {
+        cam.getWorldDirection(this.torchDir);
+        const d = wallAhead(this.walkHits, cam.position, this.torchDir, 0.7);
+        reach = Math.max(0.08, Math.min(0.42, d - 0.16));
+      }
+      const pull = 0.42 - reach;
+      this.handTorch.position.set(0.22 - pull * 0.35, -0.24 + down * 0.2 - pull * 0.5, -reach + down * 0.1);
+      this.handTorch.rotation.x = -0.35 + down * 0.85 - pull * 1.2;
     }
   }
+  private torchDir = new THREE.Vector3();
 
   /** `paused` = pauza: kamera dalej się rusza, ale ludzie, zwierzęta, ogień i woda stoją w miejscu */
   frame(realDt: number, alpha: number, paused = false): void {

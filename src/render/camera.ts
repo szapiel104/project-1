@@ -18,8 +18,8 @@ export class StrategyCamera {
   private goal = { x: 0, z: 0, yaw: Math.PI / 4, dist: 38, pitch: (52 * Math.PI) / 180 };
   private static readonly MIN_PITCH = (6 * Math.PI) / 180;
   private static readonly MAX_PITCH = (89 * Math.PI) / 180;
-  /** Najbliżej, jak da się podjechać kamerą (dawniej 12): z tej odległości widać twarze, hełmy i lotki strzał */
-  private static readonly MIN_DIST = 4;
+  /** Najbliżej, jak da się podjechać kamerą (dawniej 12, potem 4): Michał 7.11.2026: „niech aż tak bardzo nie przybliża” */
+  private static readonly MIN_DIST = 9;
   private static readonly MAX_DIST = 58;
   /** Wysokość terenu w punkcie świata; kamera nigdy nie zejdzie pod ziemię */
   ground: (x: number, z: number) => number = () => 0;

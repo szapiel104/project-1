@@ -1,5 +1,9 @@
 # Dziennik zmian
 
+## 0.94.74 — 2026-11-07
+- `camera.ts`: MIN_DIST 4 → 9.
+- `walkphysics.ts` `wallAhead` + `scene.ts`: pochodnia w ręce cofa się i opada, gdy ściana jest tuż przed kamerą (promień BVH). Boty: bez zmian.
+
 ## 0.94.73 — 2026-11-07
 - Ekran wczytywania: rada zmienia się co 5 s, strzałki ‹ › i klawisze ← → (`loadscreen.ts`, `tips.ts` ze wspólnym numerem rady). Cofnięte 40-sekundowe „stała rada” z 0.94.72. Boty: bez zmian.
 
