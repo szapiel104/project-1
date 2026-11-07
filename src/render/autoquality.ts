@@ -37,8 +37,14 @@ export const TIERS: readonly QualityTier[] = [
 /** Automat nie wchodzi na Ultra (miękkie cienie przebudowują shadery — przy przełączaniu ekran czerniał); Ultra tylko ręcznie */
 export const TOP_TIER = TIERS.length - 2;
 
-/** Poniżej tylu klatek na sekundę obniżamy jakość */
-const LOW_FPS = 45;
+/**
+ * Poniżej tylu klatek na sekundę obniżamy jakość. Michał 7.11.2026 na laptopie: „co chwilę obiekty się przeładowują,
+ * z każdą sekundą coraz słabsza grafika” — przy 45 automat schodził co kilka sekund aż do najniższego poziomu.
+ * Teraz dopiero przy wyraźnym przycinaniu, dwa okna pomiaru z rzędu, i nie niżej niż MIN_AUTO.
+ */
+const LOW_FPS = 30;
+/** Automat nie schodzi poniżej tego poziomu (cienie i pełny zasięg drzew zostają); niżej tylko ręcznie w Ustawieniach */
+export const MIN_AUTO = 2;
 /** Tyle klatek na sekundę przez całe okno = jest zapas, można spróbować wyżej */
 const SMOOTH_FPS = 57;
 /** Po starcie i po każdej zmianie czekamy, aż się ułoży (wczytanie, kompilacja shaderów) */
@@ -52,9 +58,10 @@ export class AutoQuality {
   private smoothWindows = 0;
   private triedUp = false;
   private droppedAfterUp = false;
+  private lowWindows = 0;
 
   constructor(public tier: number) {
-    this.tier = Math.max(0, Math.min(TOP_TIER, Math.round(tier)));
+    this.tier = Math.max(MIN_AUTO, Math.min(TOP_TIER, Math.round(tier))); // zapisany niski poziom z dawnego automatu podnosimy
   }
 
   /**
@@ -70,11 +77,15 @@ export class AutoQuality {
     const fps = (this.frames * 1000) / this.time;
     this.time = 0;
     this.frames = 0;
-    if (fps < LOW_FPS && this.tier > 0) {
-      if (this.triedUp) this.droppedAfterUp = true;
+    if (fps < LOW_FPS && this.tier > MIN_AUTO) {
       this.smoothWindows = 0;
+      // jedno słabe okno (wczytanie, zapis, dużo budowy naraz) jeszcze nie zmienia jakości
+      if (++this.lowWindows < 2) return null;
+      this.lowWindows = 0;
+      if (this.triedUp) this.droppedAfterUp = true;
       return this.change(this.tier - 1);
     }
+    this.lowWindows = 0;
     this.smoothWindows = fps >= SMOOTH_FPS ? this.smoothWindows + 1 : 0;
     // ok. 15 s płynnie: jedna próba wyżej na sesję
     if (this.smoothWindows >= 5 && !this.triedUp && !this.droppedAfterUp && this.tier < TOP_TIER) {
@@ -86,7 +97,7 @@ export class AutoQuality {
   }
 
   /** Nowy start pomiaru (wejście do gry z menu albo z ekranu wczytywania): pierwsze sekundy się nie liczą */
-  reset(): void { this.settle = SETTLE_MS; this.time = 0; this.frames = 0; this.smoothWindows = 0; }
+  reset(): void { this.settle = SETTLE_MS; this.time = 0; this.frames = 0; this.smoothWindows = 0; this.lowWindows = 0; }
 
   private change(t: number): number {
     this.tier = t;

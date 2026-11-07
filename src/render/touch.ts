@@ -1,5 +1,5 @@
 /** Bufor instancji (macierze albo kolory) — tyle, ile z niego używamy */
-interface Attr { count: number; itemSize?: number; needsUpdate: boolean; clearUpdateRanges?(): void; addUpdateRange?(start: number, count: number): void }
+interface Attr { count: number; itemSize?: number; needsUpdate: boolean; version?: number; fullVer?: number; clearUpdateRanges?(): void; addUpdateRange?(start: number, count: number): void }
 /** Siatka instancji albo coś, co się tak zachowuje (pule narzędzi, roślinność) */
 interface Inst { count: number; instanceMatrix: Attr; instanceColor?: Attr | null }
 
@@ -20,6 +20,8 @@ export function touch(m: Inst): void {
     a.clearUpdateRanges();
     if (n < a.count) a.addUpdateRange(0, n * per);
     a.needsUpdate = true;
+    // cały bufor czeka na wysłanie: touchAt nie może go potem zawęzić do jednej sztuki
+    a.fullVer = n < a.count ? undefined : a.version;
   };
   if (n <= 0 && m.instanceMatrix.clearUpdateRanges) return;
   mark(m.instanceMatrix, 16);
@@ -33,7 +35,9 @@ export function touch(m: Inst): void {
  */
 export function touchAt(m: Inst, index: number): void {
   const a = m.instanceMatrix;
-  if (!a.addUpdateRange) { a.needsUpdate = true; return; }
+  // brak zakresów albo w tej klatce już zlecono wysłanie całości (touch) — dopisanie jednej sztuki wysłałoby tylko ją,
+  // a reszta zmian by przepadła (obiekty znikały i wracały); wtedy po prostu cały bufor
+  if (!a.addUpdateRange || (a.fullVer !== undefined && a.fullVer === a.version)) { a.needsUpdate = true; return; }
   a.addUpdateRange(index * 16, 16);
   a.needsUpdate = true;
 }

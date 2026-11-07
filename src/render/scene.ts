@@ -3477,7 +3477,7 @@ export class GameRenderer {
     const now = performance.now();
     if (now - this.ratioChanged < 15000) return;
     const before = this.ratioDyn;
-    if (this.gpuBad >= 3) this.ratioDyn = Math.max(0.55, this.ratioDyn - (avg > 32 ? 0.2 : 0.1));
+    if (this.gpuBad >= 3) this.ratioDyn = Math.max(0.8, this.ratioDyn - 0.1); // najwyżej do 80 % (Michał 7.11.2026: „coraz słabsza grafika”)
     else if (this.gpuGood >= 10) this.ratioDyn = Math.min(1, this.ratioDyn + 0.1);
     if (this.ratioDyn !== before) { this.gpuBad = this.gpuGood = 0; this.ratioChanged = now; this.applyRatio(); }
   }
