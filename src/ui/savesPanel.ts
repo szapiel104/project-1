@@ -57,7 +57,7 @@ export function savesPanel(mode: 'save' | 'load', go: SavesActions): HTMLElement
       e.preventDefault();
       if (!go.canSave()) { say(tx('Teraz nie można zapisać — zapisuje się tylko gra z botami w trakcie.', 'You cannot save now — only a game against bots in progress can be saved.'), true); return; }
       const def = name.value.trim() || tx(`Zapis ${new Date().toLocaleDateString('pl-PL')}`, `Save ${new Date().toLocaleDateString('en-GB')}`);
-      void confirmDialog({ title: tx('Zapisać grę?', 'Save the game?'), text: tx('Powstanie nowy zapis z miniaturą obecnego widoku.', 'A new save with a thumbnail of the current view will be created.'), ok: tx('Zapisz', 'Save'), input: { label: tx('Nazwa zapisu', 'Save name'), value: def } }).then((nm) => {
+      void confirmDialog({ title: tx('Zapisać grę?', 'Save the game?'), text: tx('Powstanie nowy zapis z miniaturą Twojej osady.', 'A new save with a thumbnail of your settlement.'), ok: tx('Zapisz', 'Save'), input: { label: tx('Nazwa zapisu', 'Save name'), value: def } }).then((nm) => {
       if (nm === null) return;
       ok.disabled = true; say(tx('Zapisuję…', 'Saving…'));
       void go.save(nm).then((r) => {

@@ -536,3 +536,9 @@ body .menu:not(.previewing) .menu-bar .bar-item:hover::after, body .menu:not(.pr
 .menu-scene.has-shot .menu-shot { opacity: 1; }
 .ld-scene.sv-dawn { filter: hue-rotate(-14deg) saturate(1.15) brightness(1.08); }
 .ld-scene.sv-night { filter: hue-rotate(195deg) saturate(.85) brightness(.5); }
+/* pauza w grze: lista dłuższa, więc karta konta kompaktowa i nie zachodzi na ostatni przycisk */
+body .menu.in-game:not(.previewing) .menu-list { gap: clamp(3px, .7vh, 8px); }
+body .menu.in-game:not(.previewing) .menu-bar .bar-item { min-height: clamp(34px, 5vh, 46px); }
+body .menu.in-game > .menu-account .acc-seal-guest, body .menu.in-game > .menu-account .acc-guest .acc-level { display: none; }
+body .menu.in-game > .menu-account .acc-guest { grid-template-columns: 1fr; padding: 8px 12px; gap: 6px; }
+body .menu.in-game > .menu-account .acc-guest-row .acc-btn { min-height: 32px; }
