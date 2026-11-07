@@ -558,3 +558,33 @@ body .menu:not(.previewing) .menu-fine { font-size: 14px; }
 body .menu .menu-account .acc-level { font-size: 14px; }
 body .menu .help-toc-group { font-size: 15px; }
 body .menu .bk-kicker { font-size: 14px; }
+
+/* ===== Górny pasek: Tempo / Podatki / Racje nie wychodzą poza ekran (Michał 7.11.2026: „nie mieści się”) ===== */
+body .toolbar { grid-template-columns: auto minmax(0, 1fr) minmax(0, auto); }
+body .toolbar .tools-right { flex-wrap: wrap; justify-content: flex-end; min-width: 0; max-width: 100%; }
+body .toolbar .controls { flex-wrap: wrap; justify-content: flex-end; min-width: 0; }
+body .toolbar .stepper { flex: 0 1 auto; min-width: 0; }
+body .toolbar .stepper .step { min-width: 30px; min-height: 30px; }
+
+/* ===== „Nowa gra”: ciemny, płaski panel, bez starych cieni; wszystkie wybory widoczne (zawijane, bez suwaka) ===== */
+body .menu.previewing .menu-panel.wide.ng-dock {
+  --ink: #f3e4c2; --ink-soft: #cdb98f; --rubric: #e9c766;
+  background: linear-gradient(#241a12, #140e09); color: #f3e4c2; border-top: 1px solid #e9c766;
+  box-shadow: none; max-height: min(58vh, calc(100vh / var(--ui, 1) - 120px)); }
+body .menu .ng-dock, body .menu .ng-dock * { text-shadow: none !important; }
+body .menu .ng-dock .menu-heading, body .menu .ng-dock .pick-group legend { color: #e9c766; }
+body .menu .ng-dock .newgame { grid-template-columns: minmax(0, 1.25fr) minmax(0, 1.25fr) minmax(0, 1fr) minmax(260px, .8fr); }
+body .menu .ng-dock .ng-c { border-left: 1px solid rgba(233, 199, 102, .25); }
+body .menu .ng-dock .ng-slider .pick-row, body .menu .ng-dock .ng-slider .pick-row.lands {
+  display: flex; flex-wrap: wrap; overflow: visible; cursor: default; padding: 2px 0 4px; scroll-snap-type: none;
+  -webkit-mask-image: none !important; mask-image: none !important; }
+body .menu .ng-dock .ng-slider .pick, body .menu .ng-dock .ng-slider .pick-row.lands .pick {
+  flex: 1 1 118px; max-width: 170px; background: rgba(255, 240, 210, .06); border: 1px solid rgba(233, 199, 102, .3); border-radius: 6px;
+  color: #f3e4c2; box-shadow: none; }
+body .menu .ng-dock .ng-slider .pick:hover { transform: none; background: rgba(255, 240, 210, .12); border-color: #e9c766; box-shadow: none; }
+body .menu .ng-dock .ng-slider .pick:has(input:checked) { transform: none; background: linear-gradient(#9c2a1c, #5e120b); border-color: #f0cf72; box-shadow: none; }
+body .menu .ng-dock .pick-art { background: rgba(0, 0, 0, .25); box-shadow: none; border-radius: 4px; height: 52px; }
+body .menu .ng-dock .ng-slider .pick:has(input:checked) .pick-art { box-shadow: inset 0 0 0 1px #f0cf72; }
+body .menu .ng-dock .pick-small, body .menu .ng-dock .hint, body .menu .ng-dock .preview-status { color: #cdb98f; }
+body .menu .ng-dock .pick-big { color: #f3e4c2; }
+body .menu .ng-dock .ng-arrow { display: none !important; }
