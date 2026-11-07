@@ -1,5 +1,8 @@
 # Dziennik zmian
 
+## 0.94.60 — 2026-11-07
+- Usunięte ustawienie „Skala” i nadpróbkowanie 1,25× (menu, autoquality, `scene.ts` ratioMax = gęstość ekranu × min(1, scale)); zapisane 1,25 → 1. U Michała 1,56× → 1,25× pikseli. Boty: bez zmian.
+
 ## 0.94.59 — 2026-11-07
 - `tour.ts`: spacer z naciśniętym W i skokiem (wcześniej kamera stała), wyjście Esc; odcinek „budowa” bez dodatkowych ticków (zaniżały FPS). Boty: bez zmian.
 

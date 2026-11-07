@@ -1714,7 +1714,8 @@ export class GameRenderer {
     const dpr = window.devicePixelRatio || 1;
     // „Ostrzejsza” (1,25): pośredni stopień nadpróbkowania — złoty środek na szerokie monitory (ultrapanorama, 4K na 1×)
     // najwyżej 1,25× (1,5× zdjęte 30.10.2026 — na szerokim monitorze za ciężkie nawet dla mocnej karty)
-    this.ratioMax = o.scale > 1 ? Math.min(2, dpr * Math.min(1.25, o.scale)) : Math.min(dpr, o.scale);
+    // Michał 7.11.2026: nadpróbkowanie (1,25×) usunięte — „niech będzie naturalnie”; obraz w gęstości ekranu (najwyżej 2×)
+    this.ratioMax = Math.min(2, dpr * Math.min(1, o.scale));
     this.ratioDyn = 1;
     this.dynRes = !!o.dynRes;
     this.applyRatio();

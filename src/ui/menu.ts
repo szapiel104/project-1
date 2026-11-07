@@ -130,7 +130,8 @@ export function loadSettings(): Settings {
     // starsze zapisy trzymały cieniowanie jako tak/nie
     if (typeof raw.ao === 'boolean') raw.ao = raw.ao ? 'medium' : 'off';
     // rozdzielczość 1,5× zdjęta z ustawień (30.10.2026): zapisane „Ostra” i dawne 1,5 → „Ostrzejsza” (1,25×)
-    if (typeof raw.scale === 'number' && raw.scale > 1.25) raw.scale = 1.25;
+    // Michał 7.11.2026: bez nadpróbkowania („niech będzie naturalnie”) — obraz w rozdzielczości ekranu, stare 1,25 → 1
+    if (typeof raw.scale === 'number' && raw.scale > 1) raw.scale = 1;
     return { ...DEFAULT_SETTINGS, ...(raw as Partial<Settings>) };
   } catch { return { ...DEFAULT_SETTINGS }; }
 }
@@ -782,7 +783,6 @@ export function createMenu(root: HTMLElement, events: MenuEvents): Menu {
       }],
       [tx('Ostrość i krawędzie', 'Sharpness and edges'), () => [
         intro(tx('Tu jest największa różnica w wyglądzie modeli: ostre krawędzie, gładkie liście i wyraźne tekstury.', 'This is where models gain the most: crisp edges, smooth leaves and clear textures.')),
-        choice(t('set.scale'), settings.scale, [[0.75, t('set.scaleLow')], [1, t('set.scaleNormal')], [1.25, tx('Ostrzejsza (1,25×)', 'Sharper (1.25×)')]], (v) => { settings.scale = v; manual(); }),
         choice(tx('Wygładzanie krawędzi', 'Anti-aliasing'), settings.aa ?? 'msaa4', [['off', t('set.off')], ['fxaa', 'FXAA'], ['smaa', 'SMAA'], ['msaa2', 'MSAA 2×'], ['msaa4', 'MSAA 4×'], ['msaa8', 'MSAA 8×']], (v) => { settings.aa = v; manual(); }),
         choice(tx('Filtrowanie tekstur', 'Texture filtering'), settings.aniso ?? 16, [[1, tx('Zwykłe', 'Basic')], [4, '4×'], [8, '8×'], [16, '16×']], (v) => { settings.aniso = v; manual(); }),
         choice(tx('Wyostrzenie obrazu', 'Image sharpening'), settings.sharpen ?? 0, [[0, t('set.off')], [0.3, tx('Lekkie', 'Light')], [0.6, tx('Mocne', 'Strong')]], (v) => { settings.sharpen = v; manual(); }),
