@@ -47,7 +47,7 @@
   }
   window.__fresh = fresh;
   addEventListener('error', function (e) { var t = e.target; if (t && (t.tagName === 'SCRIPT' || (t.tagName === 'LINK' && /stylesheet|modulepreload/.test(t.rel)))) fresh(); }, true);
-  addEventListener('vite:preloadError', function (e) { e.preventDefault(); fresh(); });
+  addEventListener('vite:preloadError', function (e) { console.error('[preloadError]', e.payload && (e.payload.stack || e.payload.message || e.payload)); e.preventDefault(); fresh(); });
 })();
 </script>
 <script type="module" src="./src/boot.ts"></script>

@@ -1,5 +1,9 @@
 # Dziennik zmian
 
+## 0.94.52 — 2026-11-07
+- Przyczyna 0.94.50: `Figures` z materiałem węzłowym trafiały też do podglądu jednostek/galerii rysowanych zwykłym WebGLRenderer (`acquireProgram` → `replace` z undefined), a błąd modułu połykał `vite:preloadError` (teraz `index.html` wypisuje przyczynę). Łączenie tylko w scenie głównego renderera (`Figures.batchScenes`), na razie po `?pb=1`; `noCull` dla grup.
+- Boty: bez zmian.
+
 ## 0.94.51 — 2026-11-07
 - `peasants.ts`: `PART_BATCH = false` — w 0.94.50 start gry padał („worldReady” z undefined). Boty: bez zmian.
 

@@ -1,8 +1,6 @@
 import { touch } from './touch';
 import { gpuMods } from './gpu/webgpu';
 import { PartGroup, type PartSpec } from './gpu/partBatch';
-/** 0.94.51: wyłączone — w 0.94.50 gra nie wstawała (worldReady undefined); do poprawy */
-const PART_BATCH = false;
 import * as THREE from 'three';
 import { cloudShade } from './ground';
 import { cat } from './cat';
@@ -275,8 +273,13 @@ export class Figures {
 
   /** WebGPU: części o tym samym materiale (i wersji z bliska/z daleka) rysowane razem — gpu/partBatch.ts */
   private groups: PartGroup[] = [];
+  /** Sceny głównego renderera WebGPU: tylko tam części łączymy (podgląd jednostek i galeria rysują zwykłym WebGL,
+   * który nie zna materiałów węzłowych — 0.94.50 przez to nie startowało) */
+  static batchScenes = new WeakSet<THREE.Object3D>();
+  private batch = false;
   private pending = new Map<string, { src: THREE.MeshStandardMaterial; specs: PartSpec[]; parts: Part[] }>();
   constructor(max: number, scene: THREE.Scene, kind: FigureKind = 'peasant') {
+    this.batch = Figures.batchScenes.has(scene);
     this.setup(max, scene, kind);
     const label = `postacie: ${FIG_LABEL[kind]}`;
     for (const { src, specs, parts } of this.pending.values()) {
@@ -303,7 +306,7 @@ export class Figures {
         color: 0xffffff, vertexColors: true, roughness: m.roughness, metalness: m.metalness, side: m.side ?? THREE.FrontSide,
         map: tex?.map ?? null, normalMap: tex?.normalMap ?? null, normalScale: new THREE.Vector2(ns, ns),
       });
-      if (PART_BATCH && gpuMods && mat !== 'glow') {
+      if (this.batch && gpuMods && mat !== 'glow') {
         const key = `${lod}:${mat}`;
         let grp = this.pending.get(key);
         if (!grp) { grp = { src: mat0, specs: [], parts: [] }; this.pending.set(key, grp); }

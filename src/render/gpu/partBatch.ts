@@ -66,6 +66,8 @@ export class PartGroup {
     this.mesh = new THREE.InstancedMesh(geo, m, max);
     this.mesh.count = 0;
     this.mesh.frustumCulled = false;
+    // macierze instancji są jednostkowe (prawdziwe są w teksturze): cięcie do kadru po instancjach chowałoby wszystkich
+    this.mesh.userData.noCull = true;
     specs.forEach((s, k) => this.slots.push(new PartSlot(this, k, s.base, max)));
   }
 

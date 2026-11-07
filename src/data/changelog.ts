@@ -10,6 +10,11 @@ export type { ChangeEntry } from './changelogTypes';
  */
 const NEW: ChangeEntry[] = [
   {
+    v: '0.94.52', date: '2026-11-07',
+    pl: ['Szybsze rysowanie postaci do wypróbowania (dopisek ?pb=1 w adresie gry); domyślnie po staremu, dopóki nie sprawdzimy wyglądu.'],
+    en: ['Faster character drawing available to try (add ?pb=1 to the game address); off by default until the look is confirmed.'],
+  },
+  {
     v: '0.94.51', date: '2026-11-07',
     pl: ['Naprawione wczytywanie gry: cofnięte łączenie części postaci z 0.94.50, przez które gra nie startowała.'],
     en: ['Fixed game loading: rolled back the character part merging from 0.94.50 that stopped the game from starting.'],
