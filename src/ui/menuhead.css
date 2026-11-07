@@ -30,3 +30,13 @@ body .menu:not(.previewing) .menu-head > .menu-title {
   font-size: min(clamp(34px, min(5.8vh, 3.1vw), 72px), calc((100cqi - clamp(48px, 6.4vh, 76px) - clamp(12px, 1.2vw, 20px)) / 6.6));
   white-space: nowrap;
 }
+
+/* Michał 7.11.2026: rada na całą szerokość (równo z paskiem), znaczek „Rada” na środku wysokości; procent w pasku, nie obok */
+#loading .loading-card .ld-top { display: block; }
+#loading .loading-card .ld-pct { display: none; }
+#loading .loading-tip { max-width: none; width: 100%; box-sizing: border-box; align-items: center; }
+#loading .loading-tip:not(:empty)::before { grid-row: auto; align-self: center; margin-top: 0; }
+#loading .loading-bar { height: 22px; }
+#loading .loading-bar::after { content: attr(data-pct); position: absolute; inset: 0; z-index: 2; display: grid; place-items: center;
+  font: 700 13px/1 var(--text, sans-serif); letter-spacing: .06em; font-variant-numeric: tabular-nums; color: #fff6e0;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, .9), 0 0 6px rgba(0, 0, 0, .7); pointer-events: none; }

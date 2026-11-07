@@ -1,5 +1,9 @@
 # Dziennik zmian
 
+## 0.94.64 — 2026-11-07
+- Ekran wczytywania: rada 100% szerokości, „Rada” wyśrodkowana, procent w pasku (`data-pct`), duży procent ukryty.
+- Menu: odstęp 68 px pod paskiem Znajomi/dzwonek, gdy jest widoczny. Boty: bez zmian.
+
 ## 0.94.63 — 2026-11-07
 - `saves/store.ts`: usunięte id w localStorage (`p1.savesGone`) — `listSaves` je pomija, `editIndex` wycina je przy każdej zmianie spisu w chmurze (stary spis z pamięci podręcznej / autozapis przywracał wpis); błąd `remove` w konsoli. Boty: bez zmian.
 

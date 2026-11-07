@@ -533,3 +533,6 @@ body .menu .rk-step:focus-visible { outline: 2px solid #f0c75a; outline-offset: 
 .rk-table tr.me td { background: rgba(79, 191, 95, .14); }
 .rk-table tr.me td.who .fr-name { color: #c8f5cd; }
 @media (max-width: 760px) { .rk-podium { grid-auto-columns: minmax(0, 1fr); } .rk-table td.rate { width: auto; } .rk-bar { display: none; } }
+/* Michał 7.11.2026: wysokie okna menu (Wczytaj grę) nachodziły górną ramką na pasek Znajomi / dzwonek — miejsce na pasek */
+.menu:has(> .menu-topbar:not([hidden])) { padding-top: 68px; }
+.menu:has(> .menu-topbar:not([hidden])) .menu-panel { max-height: calc(100vh - 84px); }

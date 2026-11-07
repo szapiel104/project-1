@@ -50,7 +50,9 @@ export function setLoadingProgress(root: ParentNode, pct: number): void {
   const p = Math.max(0, Math.min(100, Math.round(pct)));
   const fill = root.querySelector<HTMLElement>('.loading-bar span');
   if (fill) fill.style.width = `${p}%`;
-  root.querySelector('.loading-bar')?.setAttribute('aria-valuenow', String(p));
+  const bar = root.querySelector('.loading-bar');
+  bar?.setAttribute('aria-valuenow', String(p));
+  bar?.setAttribute('data-pct', `${p}%`); // procent w pasku (Michał 7.11.2026)
   const big = root.querySelector('.ld-pct');
   if (big) big.textContent = `${p}%`;
 }
