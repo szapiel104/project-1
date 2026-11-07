@@ -47,8 +47,12 @@ export class GpuPost {
     this.u.sharpen.value = this.opts.sharpen;
   }
 
+  /** Klucz układu efektów: gdy się zmienia, scena.ts robi nowy GpuPost zamiast przebudowywać ten w miejscu */
+  static keyOf(o: GpuPostOptions): string { return `${o.ao}|${o.bloom}|${o.aa}|${o.sharpen > 0}`; }
+  dispose(): void { try { this.pipe?.dispose?.(); } catch { /* stary łańcuch i tak idzie do kosza */ } }
+
   render(): void {
-    const key = `${this.opts.ao}|${this.opts.bloom}|${this.opts.aa}|${this.opts.sharpen > 0}`;
+    const key = GpuPost.keyOf(this.opts);
     if (key !== this.built) this.build(key);
     this.pipe.render();
   }

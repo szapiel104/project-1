@@ -210,6 +210,7 @@ export class GameRenderer {
   private gpuPost?: GpuPost;
   private gpuPostFailed = new URLSearchParams(location.search).has('bezefektow');
   private gpuPostFailedAt = 0;
+  private gpuPostKey = '';
   private gpuPostRetries = new URLSearchParams(location.search).has('bezefektow') ? 3 : 0;
   private aaMode: string = 'off';
   private gpuStart = 0;
@@ -241,6 +242,12 @@ export class GameRenderer {
       else { this.renderer.render(this.scene, this.cam.camera); return; }
     }
     try {
+      // zmiana AO / wygładzania / poświaty w trakcie gry: nowy łańcuch od zera zamiast przebudowy w miejscu — przebudowa
+      // zostawiała stary bufor głębi i rzucała „Cannot read properties of null (reading 'depthTexture')” (Michał 7.11.2026)
+      const want = GpuPost.keyOf({ ao: this.ao.enabled ? (this.aoMode as 'low' | 'medium' | 'high') : 'off', bloom: this.bloom.enabled,
+        aa: this.aaMode, sharpen: this.sharpen.enabled ? (this.sharpen.uniforms.amount!.value as number) : 0 });
+      if (this.gpuPost && this.gpuPostKey && this.gpuPostKey !== want) { this.gpuPost.dispose(); this.gpuPost = undefined; }
+      this.gpuPostKey = want;
       if (!this.gpuPost) this.gpuPost = new GpuPost(this.renderer, this.scene, this.cam.camera);
       const r = this.renderer.getPixelRatio();
       this.gpuPost.sync(this.grade.uniforms, this.canvas.clientWidth * r, this.canvas.clientHeight * r);
