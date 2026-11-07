@@ -1,5 +1,8 @@
 # Dziennik zmian
 
+## 0.94.54 — 2026-11-07
+- `shadowcull.ts`: kamyki, krzewy, podszyt, kępy trawy, kwiaty, trzcina na liście drobiazgów (cień tylko z bliska). Boty: bez zmian.
+
 ## 0.94.53 — 2026-11-07
 - Łączenie części postaci (`partBatch`) domyślnie włączone, `?nopb=1` wyłącza. Boty: bez zmian.
 

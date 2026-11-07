@@ -10,6 +10,11 @@ export type { ChangeEntry } from './changelogTypes';
  */
 const NEW: ChangeEntry[] = [
   {
+    v: '0.94.54', date: '2026-11-07',
+    pl: ['Płynniej z daleka: kamyki, krzewy, podszyt, kępy trawy, kwiaty i trzcina rzucają cień tylko przy bliższej kamerze.'],
+    en: ['Smoother from afar: pebbles, shrubs, undergrowth, grass tufts, flowers and reeds cast shadows only when the camera is closer.'],
+  },
+  {
     v: '0.94.53', date: '2026-11-07',
     pl: ['Szybsze rysowanie postaci włączone dla wszystkich (po staremu: ?nopb=1 w adresie).'],
     en: ['Faster character drawing is now on for everyone (the old way: add ?nopb=1 to the address).'],

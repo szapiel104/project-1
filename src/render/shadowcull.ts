@@ -7,7 +7,9 @@ import type * as THREE from 'three';
  * rzucają cień zawsze.
  */
 const SMALL = ['postacie', 'zwierzęta i wieś', 'rodziny i podwórka', 'graty przy domach', 'niesione', 'wilki', 'kruki',
-  'groby w lesie', 'wozy z surowcami', 'ryby', 'ślady', 'tarany', 'koksowniki'];
+  'groby w lesie', 'wozy z surowcami', 'ryby', 'ślady', 'tarany', 'koksowniki',
+  // drobna roślinność i kamyki (0.94.54): z daleka cień na kilka pikseli, a każdy rodzaj to osobne rysowanie w mapie cieni
+  'kamyki', 'krzewy', 'podszyt', 'kępy trawy', 'kwiaty', 'trzcina'];
 
 const isSmall = (o: THREE.Object3D): boolean => {
   for (let q: THREE.Object3D | null = o; q; q = q.parent) {
