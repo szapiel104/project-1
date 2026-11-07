@@ -1837,22 +1837,43 @@ export class GameRenderer {
     // klatki z budżetem składania (present → gpuFrameBudget): każda składa ok. 45 ms nowych wariantów, resztę odkłada;
     // kończymy, gdy nic już nie czeka (albo po 12 s — wtedy reszta dochodzi w grze, po kilka ms na klatkę)
     const t0 = performance.now();
-    let first = -1, lastLeft = Infinity, lastMove = t0;
+    let first = -1;
     // przy wczytywaniu karta kompiluje więcej programów naraz (gpuLoading), więc czekamy do końca, najwyżej 10 s:
     // po 2,5 s gra startowała z połową budynków (same cienie bez budynków, Michał 6.11.2026)
     gpuLoading(true);
-    try {
+    const drain = async (maxMs: number, report: boolean): Promise<void> => {
+      const s0 = performance.now();
+      let prevLeft = Infinity, moved = s0;
       for (;;) {
         this.present();
         const left = gpuDeferredCount + gpuPending();
-        if (first < 0) first = Math.max(1, left);
-        onProgress?.(Math.max(0, first - left), first);
+        if (report) {
+          if (first < 0) first = Math.max(1, left);
+          onProgress?.(Math.max(0, first - left), first);
+        }
         // Michał 7.11.2026: na dużym zapisie 10 s nie starczało (start z samymi cieniami budynków) — czekamy, dopóki
         // karta robi postęp (lista się skraca), najwyżej 40 s; stoi 4 s bez postępu → start, reszta dochodzi w grze
         const now = performance.now();
-        if (left < lastLeft) { lastLeft = left; lastMove = now; }
-        if (left === 0 || now - t0 > 40000 || now - lastMove > 4000) break;
+        if (left < prevLeft) { prevLeft = left; moved = now; }
+        if (left === 0 || now - s0 > maxMs || now - moved > 4000) break;
         await new Promise<void>((ok) => requestAnimationFrame(() => ok()));
+      }
+    };
+    try {
+      await drain(40000, true);
+      // Michał 7.11.2026: przy pierwszym okrążeniu kamery klatki stały 0,5–1,4 s, bo shadery tego, co było poza kadrem
+      // albo w innej wersji z odległości, kompilowały się dopiero wtedy. Dokładamy po jednej klatce z innych stron i
+      // odległości (cztery obroty, blisko i z daleka), zanim gracz zobaczy grę; potem kamera wraca na swoje miejsce.
+      if (this.state) {
+        const v0 = this.cam.view;
+        const views: [number, number][] = [[Math.PI / 2, v0.dist], [Math.PI, v0.dist], [-Math.PI / 2, v0.dist], [0, 14], [0, 60]];
+        try {
+          for (const [dy, dist] of views) {
+            if (performance.now() - t0 > 45000) break;
+            this.cam.setView({ x: v0.x, z: v0.z, dist, yaw: v0.yaw + dy });
+            await drain(5000, false);
+          }
+        } finally { this.cam.setView(v0); this.present(); }
       }
     } finally { gpuLoading(false); }
   }
