@@ -662,3 +662,14 @@ html body .menu.previewing .menu-panel.ng-dock .newgame-foot { position: sticky;
 html body .menu.previewing .menu-panel.ng-dock .newgame-foot .menu-btn { min-height: 46px; }
 html body .menu.previewing:has(.ng-dock) { background: none; }
 html body:has(.menu.previewing .ng-dock) .preview-cover { padding: 0 0 0 clamp(400px, 27vw, 500px); background: radial-gradient(ellipse at 50% 45%, #24180d, #0b0704 75%); }
+
+/* Menu główne: przyciski na całą szerokość kolumny, równo z kartą gościa (Michał 7.11.2026: „nie na równo lewo-prawo”) */
+html body .menu:not(.previewing) .menu-bar, html body .menu:not(.previewing) .menu-list, html body .menu:not(.previewing) .menu-list > li { width: 100%; max-width: none; }
+html body .menu:not(.previewing) .menu-bar .bar-item, html body .menu:not(.previewing) .menu-bar .bar-item.bar-main { width: 100%; max-width: none; box-sizing: border-box; }
+
+/* Nowa gra: sekcje równej szerokości, pole nazwy mapy nie wystaje, jasne pole pod obrazkami kart */
+html body .menu.previewing .menu-panel.ng-dock .pick-group { width: 100%; min-width: 0; box-sizing: border-box; margin: 0; }
+html body .menu.previewing .menu-panel.ng-dock .ng-col, html body .menu.previewing .menu-panel.ng-dock .ng-c, html body .menu.previewing .menu-panel.ng-dock .newgame { width: 100%; min-width: 0; }
+html body .menu.previewing .menu-panel.ng-dock .field .menu-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; }
+html body .menu.previewing .menu-panel.ng-dock .field .menu-row input { width: 100%; min-width: 0; box-sizing: border-box; color: #2a1b0c; }
+html body .menu.previewing .menu-panel.ng-dock .pick-art { background: radial-gradient(ellipse at 50% 40%, #fbf3df, #ead6aa) !important; }
