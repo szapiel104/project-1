@@ -597,14 +597,17 @@ function* terrainSteps(map: GameMap, models: ModelFactory, waterLevel: number): 
   // ryba z paczki (tools/models/props_import.py, wersja z daleka sprawdzona obok oryginału), długość ok. 0,42 pola
   const fishGeo = propGeometry('fish', true).clone().scale(0.42, 0.42, 0.42);
   const fishMesh = fishCount ? new THREE.InstancedMesh(fishGeo, propMaterial('fish'), fishCount) : null;
-  const fish: { x: number; z: number; r: number; speed: number; phase: number }[] = [];
+  const fish: { x: number; z: number; r: number; speed: number; phase: number; col: number }[] = [];
+  /** środek widoku (z lod()): rysujemy tylko ryby w jego pobliżu — z daleka 3 tys. trójkątów pod wodą nic nie dają */
+  const fishFocus = { x: 0, z: 0, r: 1e9 };
   if (fishMesh) {
     const fc = new THREE.Color();
     for (let i = 0; i < fishCount; i++) {
       const rr = hash2(i * 31, i * 17 + 5, map.seed ^ 0x1f123bb5);
       const tile = waterTiles[rr % waterTiles.length]!;
-      fish.push({ x: (tile % w) + 0.5 + ox, z: Math.floor(tile / w) + 0.5 + oz, r: 0.25 + ((rr >>> 8) & 15) / 40, speed: 0.6 + ((rr >>> 12) & 15) / 20, phase: ((rr >>> 16) & 255) / 40 });
-      fishMesh.setColorAt(i, fc.setHex([0xffffff, 0xeef0e6, 0xdfe3d6, 0xf4efe2][(rr >>> 24) % 4]!)); // lekkie różnice odcienia, barwa z tekstury
+      const col = [0xffffff, 0xeef0e6, 0xdfe3d6, 0xf4efe2][(rr >>> 24) % 4]!; // lekkie różnice odcienia, barwa z tekstury
+      fish.push({ x: (tile % w) + 0.5 + ox, z: Math.floor(tile / w) + 0.5 + oz, r: 0.25 + ((rr >>> 8) & 15) / 40, speed: 0.6 + ((rr >>> 12) & 15) / 20, phase: ((rr >>> 16) & 255) / 40, col });
+      fishMesh.setColorAt(i, fc.setHex(col));
     }
     group.add(cat(fishMesh, 'ryby'));
   }
@@ -613,6 +616,7 @@ function* terrainSteps(map: GameMap, models: ModelFactory, waterLevel: number): 
   const fe = new THREE.Euler();
   const fp = new THREE.Vector3();
   const fs = new THREE.Vector3(1, 1, 1);
+  const fcol = new THREE.Color();
   const animate = (time: number): void => {
     fxTime = time;
     streams?.animate(time);
@@ -620,7 +624,11 @@ function* terrainSteps(map: GameMap, models: ModelFactory, waterLevel: number): 
     windTime.value = time;
     wm.time.value = time;
     if (!fishMesh) return;
-    fish.forEach((f, i) => {
+    // tylko ryby blisko środka widoku (Michał 7.11.2026: wydajność na laptopie), upakowane od zera
+    let n = 0;
+    fish.forEach((f) => {
+      if (Math.abs(f.x - fishFocus.x) > fishFocus.r || Math.abs(f.z - fishFocus.z) > fishFocus.r) return;
+      const i = n++;
       const a = time * f.speed + f.phase;
       // skok: przez krótki ułamek cyklu ryba wyskakuje łukiem nad wodę
       const cycle = (time * 0.11 + f.phase) % 1;
@@ -628,7 +636,9 @@ function* terrainSteps(map: GameMap, models: ModelFactory, waterLevel: number): 
       fp.set(f.x + Math.cos(a) * f.r, -0.16 + jump * 0.42, f.z + Math.sin(a) * f.r);
       fq.setFromEuler(fe.set(jump ? Math.cos((cycle / 0.06) * Math.PI) * -0.9 : 0, -a, 0, 'YXZ'));
       fishMesh.setMatrixAt(i, fm.compose(fp, fq, fs));
+      fishMesh.setColorAt(i, fcol.setHex(f.col));
     });
+    fishMesh.count = n;
     touch(fishMesh);
   };
 
@@ -2495,6 +2505,7 @@ function* terrainSteps(map: GameMap, models: ModelFactory, waterLevel: number): 
     cullVegetation(view: THREE.Frustum, shadow: THREE.Frustum | null) { cullVeg(view, shadow); },
     lod(x: number, z: number, reach: number, detail = 1, walk = false) {
       groundDetail?.update(x - ox, z - oz, performance.now());
+      fishFocus.x = x; fishFocus.z = z; fishFocus.r = (walk ? 30 : 28) + reach;
       mistFx?.detail(detail);
       for (const c of lodChunks) {
         const d = Math.hypot(c.x - x, c.z - z) - c.r; // od krawędzi kawałka, nie od środka
