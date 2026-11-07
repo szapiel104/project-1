@@ -545,5 +545,3 @@ body .menu.in-game > .menu-account .acc-guest-row .acc-btn { min-height: 32px; }
 /* lista przycisków dostaje całą wolną wysokość i przewija się sama, gdy się nie mieści — nie wchodzi pod kartę konta (zrzut Michała 7.11.2026) */
 body .menu:not(.previewing) { grid-template-rows: auto minmax(0, 1fr) 0 auto auto; }
 body .menu:not(.previewing) .menu-bar { min-height: 0; overflow-y: auto; overflow-x: hidden; padding-bottom: 10px; scrollbar-width: thin; scrollbar-color: #7a5a26 transparent; }
-/* zoom interfejsu (--ui) powiększa pasek ponad jego pole w siatce: wysokość dzielona przez zoom, żeby pasek kończył się w swoim polu */
-body .menu:not(.previewing) .menu-bar { align-self: start; height: calc(100% / var(--ui, 1)); }
