@@ -58,9 +58,21 @@ export async function tour(opts: { buildings?: number } = {}): Promise<Record<st
   // 3. przesuwanie po mapie (jak strzałkami)
   await seg('przesuw', 4000, (k) => T.cam(h.x - 30 + 60 * k, h.y + 3 + 15 * Math.sin(k * 6), 32, 0.4, 45));
   // 4. budowa w biegu: symulacja idzie, kamera stoi nad osadą
-  await seg('budowa', 4000, () => { T.run(2); T.cam(h.x, h.y + 3, 22, 0.8, 42); });
+  // (gra sama liczy 10 ticków/s; dawniej test dokładał 2 ticki na klatkę, czyli 12× szybciej niż w grze, i zaniżał FPS)
+  await seg('budowa', 4000, () => T.cam(h.x, h.y + 3, 22, 0.8, 42));
   // 5. spacer z ziemi
-  if (w.__walk) { w.__walk(h.x, h.y + 4, Math.PI, 0.1); await seg('spacer', 3000, () => undefined); }
+  // 5. spacer z ziemi: postać naprawdę idzie (W), skręca i skacze (spacja), na koniec wyjście ze spaceru
+  if (w.__walk) {
+    const key = (code: string, type: string): boolean => window.dispatchEvent(new KeyboardEvent(type, { code, key: code }));
+    w.__walk(h.x, h.y + 6, Math.PI, 0.1);
+    key('KeyW', 'keydown');
+    let jumped = false;
+    await seg('spacer', 4000, (k) => {
+      if (k > 0.5 && !jumped) { jumped = true; key('Space', 'keydown'); setTimeout(() => key('Space', 'keyup'), 150); }
+    });
+    key('KeyW', 'keyup');
+    key('Escape', 'keydown');
+  }
   const s = [...all].sort((a, b) => a - b);
   report['RAZEM'] = { fps: Math.round(1000 / (all.reduce((a, b) => a + b, 0) / all.length)), najgorsza: Math.round(s[s.length - 1] ?? 0), p95: Math.round(s[Math.floor(s.length * 0.95)] ?? 0), klatek: all.length };
   // rysowania przy trzech przybliżeniach

@@ -1,5 +1,8 @@
 # Dziennik zmian
 
+## 0.94.59 — 2026-11-07
+- `tour.ts`: spacer z naciśniętym W i skokiem (wcześniej kamera stała), wyjście Esc; odcinek „budowa” bez dodatkowych ticków (zaniżały FPS). Boty: bez zmian.
+
 ## 0.94.58 — 2026-11-07
 - `src/debug/tour.ts`: `await __tour()` w trybie testowym — dzień, ok. 24 budynki, 30 chłopów, przeloty kamery (12/30/55), zoom, przesuw, budowa w biegu, spacer; raport FPS, najgorsza klatka, p95, rysowania, błędy. Boty: bez zmian.
 

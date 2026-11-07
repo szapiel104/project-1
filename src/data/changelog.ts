@@ -9,6 +9,7 @@ export type { ChangeEntry } from './changelogTypes';
  * — tak jak CHANGELOG.md dla nas. `tests/changelog.test.ts` pilnuje, że najnowszy wpis ma wersję z package.json.
  */
 const NEW: ChangeEntry[] = [
+  { v: '0.94.59', date: '2026-11-07', pl: ['Tester wydajności: w spacerze postać naprawdę idzie i skacze, a budowa idzie w zwykłym tempie gry.'], en: ['Performance tester: on the walk your character now truly strides and leaps, and building runs at the usual pace of the game.'] },
   {
     v: '0.94.58', date: '2026-11-07',
     pl: ['Dla twórców: automatyczny test gry (budowa osady w dzień, przeloty kamery, przybliżanie, spacer) z raportem płynności.'],
