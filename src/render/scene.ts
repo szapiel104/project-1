@@ -116,6 +116,7 @@ import { MaterialQuality, makeEnvironment, msaaSamples, sharpenPass, type AaMode
 import { spearThrust, bowShot, deathKind, swordCombo, axeChop } from './combatanim';
 import { sadMaterial, sickMaterial, noWorkerMaterial } from './marks';
 import { MERGE_IN, BATCH_LAYER, mergeStatic } from './merge';
+import { MaterialBatches } from './buildingBatch';
 /** Nazwane grupy budynku rysowane razem z innymi budynkami tego samego rodzaju (syncBatches): pochodnia, dalekie wersje */
 // fill (zapasy w składach) i life (życie podwórka) też razem: same siatki z wspólnymi geometriami, w zapisie Michała ok. 46 osobnych rysowań (7.11.2026)
 const BATCH_ALSO = /^(torch|lod\d+|fill|grainfill|crop|life)$/;
@@ -1282,6 +1283,7 @@ export class GameRenderer {
     this.buildingMeshes.clear();
     for (const b of this.batches.values()) { this.buildingLayer.remove(b.mesh); b.mesh.dispose(); }
     this.batches.clear();
+    this.matBatches?.dispose();
     this.lods.clear();
     this.rubble.clear();
     this.graves.clear();
@@ -3016,7 +3018,29 @@ export class GameRenderer {
     return list;
   }
   private batchGroups = new Map<string, THREE.Mesh[]>();
+  /** Budynki razem po materiale (buildingBatch.ts); ?batch=0 — dawne łączenie po parze bryła+materiał */
+  private matBatchOn = !/[?&]batch=0/.test(location.search);
+  private matBatches?: MaterialBatches;
+  private syncMatBatches(roots: Iterable<[number, THREE.Object3D]>, keepOff: boolean): void {
+    const mb = (this.matBatches ??= new MaterialBatches(this.buildingLayer));
+    mb.begin();
+    this.buildingLayer.updateMatrixWorld();
+    for (const [id, root] of roots) {
+      const parts = this.staticParts(root);
+      const own = this.sites.sites.has(id) || !root.visible;
+      for (const m of parts) {
+        if (own) { m.layers.set(0); continue; }
+        let vis = m.visible;
+        for (let q: THREE.Object3D | null = m.parent; vis && q; q = q.parent) { if (!q.visible) vis = false; if (q === root) break; }
+        if (!vis) { m.layers.set(0); continue; }
+        m.layers.set(BATCH_LAYER);
+        mb.add(m.geometry, m.material as THREE.Material, m.matrixWorld, m.castShadow, m.receiveShadow);
+      }
+    }
+    if (!keepOff) mb.end();
+  }
   private syncBatches(roots: Iterable<[number, THREE.Object3D]> = this.buildingMeshes, keepOff = false): void {
+    if (this.batchOn && this.matBatchOn) { this.syncMatBatches(roots, keepOff); return; }
     for (const b of this.batches.values()) b.n = 0;
     const on = this.batchOn, groups = this.batchGroups;
     for (const l of groups.values()) l.length = 0;
