@@ -446,3 +446,27 @@ body .menu:not(.previewing) .menu-hint { font-style: normal; font-size: clamp(14
 .menu .bell-item:not(.new) .bell-when { color: #9d8c6c; }
 .menu .bell-item:not(.new) .net-shield { opacity: .7; filter: saturate(.6); }
 .menu .bell-empty { margin: 10px 2px; }
+
+/* pozycje menu głównego jako prawdziwe przyciski (Michał 7.11.2026): oprawna płytka z ikoną w ramce, złota krawędź,
+   wciskanie przy kliknięciu; wysokość i odstępy skalują się z wysokością okna, więc lista nie schodzi pod dół ekranu */
+body .menu:not(.previewing) .menu-list { gap: clamp(4px, 1vh, 10px); }
+body .menu:not(.previewing) .menu-list .mi-gap { display: none; }
+body .menu:not(.previewing) .menu-bar .bar-item {
+  width: min(380px, 100%); min-height: clamp(38px, 5.6vh, 52px); padding: 6px 16px 6px 8px; gap: 12px; border-radius: 3px;
+  background: linear-gradient(180deg, rgba(88, 62, 36, .92), rgba(46, 30, 17, .96) 55%, rgba(34, 22, 12, .98));
+  border: 1px solid #7a5a26; box-shadow: inset 0 1px 0 rgba(233, 199, 102, .28), inset 0 -2px 0 rgba(0, 0, 0, .45), 0 2px 5px rgba(0, 0, 0, .55);
+  font-size: clamp(15px, 2.1vh, 20px); letter-spacing: .03em; }
+body .menu:not(.previewing) .menu-bar .mi-icon { width: clamp(28px, 4vh, 38px); height: clamp(28px, 4vh, 38px); display: grid; place-items: center; transform: none; opacity: 1;
+  border: 1px solid #8a6a2c; border-radius: 2px; background: radial-gradient(circle at 50% 35%, rgba(233, 199, 102, .22), rgba(0, 0, 0, .35)); color: #e9c766; }
+body .menu:not(.previewing) .menu-bar .mi-icon svg, body .menu:not(.previewing) .menu-bar .bar-main .mi-icon svg { width: 68%; height: 68%; }
+body .menu:not(.previewing) .menu-bar .bar-item:hover, body .menu:not(.previewing) .menu-bar .bar-item:focus-visible, body .menu:not(.previewing) .menu-bar .bar-item[aria-current='page'] {
+  padding-left: 8px; color: #fff0c8; border-color: #e9c766;
+  background: linear-gradient(180deg, rgba(150, 52, 34, .95), rgba(98, 26, 16, .97) 55%, rgba(70, 16, 10, .98));
+  box-shadow: inset 0 1px 0 rgba(255, 241, 194, .45), inset 0 -2px 0 rgba(0, 0, 0, .4), 0 0 14px rgba(255, 140, 40, .35), 0 2px 5px rgba(0, 0, 0, .55); }
+body .menu:not(.previewing) .menu-bar .bar-item:hover .mi-icon, body .menu:not(.previewing) .menu-bar .bar-item:focus-visible .mi-icon, body .menu:not(.previewing) .menu-bar .bar-item[aria-current='page'] .mi-icon {
+  transform: none; border-color: #fff1c2; background: radial-gradient(circle at 50% 35%, rgba(255, 224, 140, .4), rgba(0, 0, 0, .3)); color: #fff3c4; }
+body .menu:not(.previewing) .menu-bar .bar-item:active { transform: translateY(1px); box-shadow: inset 0 2px 4px rgba(0, 0, 0, .6), 0 1px 2px rgba(0, 0, 0, .5); }
+body .menu:not(.previewing) .menu-bar .bar-item.bar-main { width: min(380px, 100%); min-height: clamp(46px, 7vh, 62px); font-size: clamp(19px, 2.7vh, 25px); padding-left: 8px;
+  background: linear-gradient(180deg, #b32a1e, #7c160e 55%, #5a0f09); border-color: #e9c766;
+  box-shadow: inset 0 1px 0 rgba(255, 241, 194, .55), inset 0 -2px 0 rgba(0, 0, 0, .4), 0 0 16px rgba(255, 110, 30, .3), 0 2px 5px rgba(0, 0, 0, .55); }
+body .menu:not(.previewing) .menu-bar .bar-main:hover, body .menu:not(.previewing) .menu-bar .bar-main:focus-visible { padding-left: 8px; background: linear-gradient(180deg, #d63a2b, #9a1d12 55%, #6e130b); }
