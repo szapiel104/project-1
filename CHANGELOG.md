@@ -1,5 +1,8 @@
 # Dziennik zmian
 
+## 0.94.51 — 2026-11-07
+- `peasants.ts`: `PART_BATCH = false` — w 0.94.50 start gry padał („worldReady” z undefined). Boty: bez zmian.
+
 ## 0.94.50 — 2026-11-07
 - `gpu/partBatch.ts` (nowy), `peasants.ts`: na WebGPU części postaci o tym samym materiale i wersji (bliska/daleka) w jednej siatce z `aPart`; macierze i kolory części w teksturach (wiersz = osoba), ruch w `positionNode`. `Figures` pisze przez `PartSlot` (to samo API co pula). Części `glow` po staremu. Etap 1 planu w docs/webgpu.md.
 - Boty: bez zmian.

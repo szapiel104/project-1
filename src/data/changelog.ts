@@ -10,6 +10,11 @@ export type { ChangeEntry } from './changelogTypes';
  */
 const NEW: ChangeEntry[] = [
   {
+    v: '0.94.51', date: '2026-11-07',
+    pl: ['Naprawione wczytywanie gry: cofnięte łączenie części postaci z 0.94.50, przez które gra nie startowała.'],
+    en: ['Fixed game loading: rolled back the character part merging from 0.94.50 that stopped the game from starting.'],
+  },
+  {
     v: '0.94.50', date: '2026-11-07',
     pl: ['Szybciej: postacie rysują się w kilku kawałkach zamiast kilkunastu (części ubrania tego samego rodzaju razem), z tym samym wyglądem i ruchem.'],
     en: ['Faster: characters are drawn in a few pieces instead of a dozen or more (matching clothing parts together), with the same look and movement.'],
