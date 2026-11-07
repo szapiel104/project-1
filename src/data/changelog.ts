@@ -10,6 +10,11 @@ export type { ChangeEntry } from './changelogTypes';
  */
 const NEW: ChangeEntry[] = [
   {
+    v: '0.94.50', date: '2026-11-07',
+    pl: ['Szybciej: postacie rysują się w kilku kawałkach zamiast kilkunastu (części ubrania tego samego rodzaju razem), z tym samym wyglądem i ruchem.'],
+    en: ['Faster: characters are drawn in a few pieces instead of a dozen or more (matching clothing parts together), with the same look and movement.'],
+  },
+  {
     v: '0.94.49', date: '2026-11-07',
     pl: [
       'Naprawiony zastygły obraz po kilku minutach gry (kamera się ruszała, a obraz stał): po zniknięciu wozu albo znacznika gra niszczyła dane, z których dalej korzystali ludzie i budynki.',

@@ -1,4 +1,6 @@
 import { touch } from './touch';
+import { gpuMods } from './gpu/webgpu';
+import { PartGroup, type PartSpec } from './gpu/partBatch';
 import * as THREE from 'three';
 import { cloudShade } from './ground';
 import { cat } from './cat';
@@ -45,6 +47,7 @@ export function modelGeo(m: ModelMesh): THREE.BufferGeometry {
 }
 
 interface Part {
+  /** Pula instancji albo (WebGPU) miejsce części w grupie PartGroup — to samo API: setMatrixAt, setColorAt, count, visible */
   mesh: THREE.InstancedMesh;
   pos: THREE.Vector3;
   /** Obrót wokół osi X: wymach nogi lub ręki */
@@ -209,9 +212,11 @@ const CHAR = new THREE.Color(0x231c17);
 /** Barwa zamrożonego ciała: szron i lód (jaśniejsza, chłodna) */
 const ICE = new THREE.Color(0xc6e6f7);
 
+const FIG_LABEL: Record<FigureKind, string> = { peasant: 'chłopi', spearman: 'włócznicy', archer: 'łucznicy', guard: 'strażnicy', manatarms: 'zbrojni', sapper: 'saperzy', bandit: 'zbóje', mageFire: 'magowie ognia', mageWater: 'magowie wody', preacher: 'kaznodzieje', woman: 'gospodynie', child: 'dzieci', king: 'pan zamku' };
+
 export class Figures {
   private parts: Part[] = [];
-  private muted: boolean;
+  private muted = false;
   private local = new THREE.Matrix4();
   private out = new THREE.Matrix4();
   private scaled = new THREE.Matrix4();
@@ -266,7 +271,23 @@ export class Figures {
   /** Bark względem stóp (x, y, z) — tam zaczepia się narzędzie w dłoni */
   shoulder: [number, number, number] = [0.135, 0.45, 0];
 
+  /** WebGPU: części o tym samym materiale (i wersji z bliska/z daleka) rysowane razem — gpu/partBatch.ts */
+  private groups: PartGroup[] = [];
+  private pending = new Map<string, { src: THREE.MeshStandardMaterial; specs: PartSpec[]; parts: Part[] }>();
   constructor(max: number, scene: THREE.Scene, kind: FigureKind = 'peasant') {
+    this.setup(max, scene, kind);
+    const label = `postacie: ${FIG_LABEL[kind]}`;
+    for (const { src, specs, parts } of this.pending.values()) {
+      const g = new PartGroup(specs, src, max);
+      g.mesh.castShadow = parts[0]!.lod === 0;
+      g.mesh.receiveShadow = true;
+      scene.add(cat(g.mesh, label));
+      parts.forEach((p, k) => { p.mesh = g.slots[k] as unknown as THREE.InstancedMesh; });
+      this.groups.push(g);
+    }
+    this.pending.clear();
+  }
+  private setup(max: number, scene: THREE.Scene, kind: FigureKind): void {
     this.muted = kind === 'peasant' || kind === 'woman' || kind === 'child';
     const always = (): boolean => true;
     const mk = (geo: THREE.BufferGeometry, color: number | Part['color'], pos: THREE.Vector3, rot: Part['rot'], shown: Part['shown'], mat: Mat, sub?: Part['sub'], lod: 0 | 1 = 0, elbow = false): void => {
@@ -276,6 +297,21 @@ export class Figures {
       const g0 = geo.attributes.color ? geo : prep(geo);
       if (tex?.map) boxUv(g0, tex.scale);
       const ns = tex?.ns ?? 0.45;
+      const mat0 = new THREE.MeshStandardMaterial({
+        color: 0xffffff, vertexColors: true, roughness: m.roughness, metalness: m.metalness, side: m.side ?? THREE.FrontSide,
+        map: tex?.map ?? null, normalMap: tex?.normalMap ?? null, normalScale: new THREE.Vector2(ns, ns),
+      });
+      if (gpuMods && mat !== 'glow') {
+        const key = `${lod}:${mat}`;
+        let grp = this.pending.get(key);
+        if (!grp) { grp = { src: mat0, specs: [], parts: [] }; this.pending.set(key, grp); }
+        const part: Part = { mesh: null as unknown as THREE.InstancedMesh, pos, rot, color: fixed ? null : color, shown, sub, lod, elbow, orb: false };
+        grp.specs.push({ geo: g0, base: new THREE.Color(fixed ? color : 0xffffff) });
+        grp.parts.push(part);
+        this.parts.push(part);
+        if (lod) this.hasFar = true;
+        return;
+      }
       const mesh = new THREE.InstancedMesh(g0, new THREE.MeshStandardMaterial({
         color: fixed ? color : 0xffffff, vertexColors: true, roughness: m.roughness, metalness: m.metalness, side: m.side ?? THREE.FrontSide,
         map: tex?.map ?? null, normalMap: tex?.normalMap ?? null, normalScale: new THREE.Vector2(ns, ns),
@@ -286,7 +322,7 @@ export class Figures {
       // a każda część to osobne rysowanie do mapy cieni
       mesh.castShadow = lod === 0;
       cloudShade(mesh.material as THREE.Material); // ludzie też wchodzą w cień chmury
-      scene.add(cat(mesh, `postacie: ${{ peasant: 'chłopi', spearman: 'włócznicy', archer: 'łucznicy', guard: 'strażnicy', manatarms: 'zbrojni', sapper: 'saperzy', bandit: 'zbóje', mageFire: 'magowie ognia', mageWater: 'magowie wody', preacher: 'kaznodzieje', woman: 'gospodynie', child: 'dzieci', king: 'pan zamku' }[kind]}`));
+      scene.add(cat(mesh, `postacie: ${FIG_LABEL[kind]}`));
       if (mat === 'glow') { const mm = mesh.material as THREE.MeshStandardMaterial; mm.emissive.setHex(fixed ? color : 0xffffff); mm.emissiveIntensity = 2.2; mesh.castShadow = false; }
       this.parts.push({ mesh, pos, rot, color: fixed ? null : color, shown, sub, lod, elbow, orb: mat === 'glow' });
       if (lod) this.hasFar = true;
@@ -578,6 +614,7 @@ export class Figures {
       touch(p.mesh);
       if (p.mesh.instanceColor) touch(p.mesh);
     }
+    for (const g of this.groups) g.finish();
     this.nearN = 0; this.farN = 0;
   }
 }

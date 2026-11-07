@@ -1,5 +1,9 @@
 # Dziennik zmian
 
+## 0.94.50 — 2026-11-07
+- `gpu/partBatch.ts` (nowy), `peasants.ts`: na WebGPU części postaci o tym samym materiale i wersji (bliska/daleka) w jednej siatce z `aPart`; macierze i kolory części w teksturach (wiersz = osoba), ruch w `positionNode`. `Figures` pisze przez `PartSlot` (to samo API co pula). Części `glow` po staremu. Etap 1 planu w docs/webgpu.md.
+- Boty: bez zmian.
+
 ## 0.94.49 — 2026-11-07
 - `gpu/webgpu.ts`: `Attributes.delete` nie niszczy buforów instancji (`InstancedBufferAttribute`, `InstancedInterleavedBuffer`). `dispose` wspólnej geometrii kasował w three.js „atrybuty węzłowe” pierwszego obiektu, który ją rysował (np. macierze puli) — dziennik Michała: 14 tys. „used in submit while destroyed” na bufor od 125 s, zastygły obraz.
 - `main.ts`: autozapis co 5 min (było 3).
