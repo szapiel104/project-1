@@ -1,5 +1,8 @@
 # Dziennik zmian
 
+## 0.94.69 — 2026-11-07
+- `hud.ts`: pasek zapasów tylko ruda/drewno/kamień/jedzenie + „…”, które otwiera okno `.stock-modal` ze wszystkimi surowcami (ilość, zmiana/min, odświeżane na żywo); Esc / ✕ / klik w tło zamyka. Koniec nachodzenia kafelków. Boty: bez zmian.
+
 ## 0.94.68 — 2026-11-07
 - `hud.ts`: `fitRes` przelicza się też, gdy zapasy się przepełnią (rosnące liczby poszerzały kafelki, a układ liczył się tylko po zmianie okna) oraz co 3 s. Boty: bez zmian.
 

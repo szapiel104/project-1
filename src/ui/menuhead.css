@@ -50,3 +50,22 @@ body .menu:not(.previewing) .menu-head > .menu-title {
   box-shadow: 0 0 0 2px #0e0906, 0 0 0 3px #7a5c24, 0 4px 14px rgba(0, 0, 0, .55), inset 0 1px 0 rgba(255, 233, 168, .25); border-radius: 3px; }
 #loading .loading-ver { font-size: 19px; padding: 8px 16px; top: 18px; right: 22px; }
 .menu .tb-ver { font-size: 15px; padding: 7px 13px; }
+
+/* okno ze wszystkimi zapasami (Michał 7.11.2026): na środku ekranu, siatka kafelków z nazwą, ilością i zmianą na minutę */
+.stock-modal { position: fixed; inset: 0; z-index: 60; display: grid; place-items: center; background: rgba(6, 4, 2, .55); backdrop-filter: blur(2px); }
+.stock-modal[hidden] { display: none; }
+.stock-card { width: min(760px, calc(100vw - 32px)); max-height: calc(100vh - 64px); overflow-y: auto; padding: 18px 22px 22px; box-sizing: border-box;
+  background: linear-gradient(#2a1f15, #160f09); border: 2px solid #c9a65c; box-shadow: 0 0 0 3px #0e0906, 0 18px 50px rgba(0, 0, 0, .7); border-radius: 4px; color: #efe3c8; }
+.stock-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+.stock-head h2 { margin: 0; font-family: 'Cinzel', var(--display, serif); font-size: 26px; color: #ffe9a8; letter-spacing: .06em; }
+.stock-x { min-width: 44px; min-height: 44px; }
+.stock-grid { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 8px; }
+.stock-grid li { display: grid; grid-template-columns: 36px minmax(0, 1fr) auto auto; align-items: center; column-gap: 10px; padding: 8px 12px; min-height: 52px;
+  background: linear-gradient(#2a1f15, #160f09); border: 1px solid #6e5420; box-shadow: inset 0 1px 0 rgba(255, 220, 160, .1); border-radius: 3px; }
+.stock-grid li.food { border-color: #5d7a34; }
+.stock-grid .ico svg { width: 32px; height: 32px; }
+.stock-grid .stock-name { font-size: 15px; color: #d8c8a4; overflow-wrap: anywhere; }
+.stock-grid strong { font-size: 20px; font-variant-numeric: tabular-nums; color: #fff3cf; text-align: right; }
+.stock-grid .trend { font-size: 13px; min-width: 3ch; text-align: right; color: #b8a880; }
+.stock-grid .trend[data-sign='pos'] { color: #9fd47a; }
+.stock-grid .trend[data-sign='neg'] { color: #ff9a8a; }

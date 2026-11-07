@@ -355,18 +355,18 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
   const foodSumTrend = el('span', 'trend');
   foodSum.append(icon('food'), foodSumVal, foodSumTrend);
   let resOpen = false;
-  try { resOpen = localStorage.getItem('project1.resOpen') === '1'; } catch { /* nic */ }
+  // (dawna wysuwana listwa nad paskiem zastąpiona oknem na środku — zapisany stan nie ma już znaczenia)
   const resToggle = el('button', 'res-toggle');
   resToggle.type = 'button';
   const paintRes = (): void => {
     resList.classList.toggle('open', resOpen);
     extra.hidden = !resOpen;
-    resToggle.setAttribute('aria-expanded', String(resOpen));
-    resToggle.textContent = resOpen ? '‹' : '…';
-    resToggle.title = resOpen ? tx('Zwiń: tylko najważniejsze zapasy', 'Collapse: key supplies only') : tx('Pokaż wszystkie zapasy', 'Show all supplies');
+    resToggle.setAttribute('aria-haspopup', 'dialog');
+    resToggle.textContent = '…';
+    resToggle.title = tx('Wszystkie zapasy', 'All supplies');
     resToggle.setAttribute('aria-label', resToggle.title);
   };
-  resToggle.addEventListener('click', () => { resOpen = !resOpen; try { localStorage.setItem('project1.resOpen', resOpen ? '1' : '0'); } catch { /* nic */ } paintRes(); });
+  resToggle.addEventListener('click', () => openStock());
   for (const id of RESOURCES) {
     const li = el('li');
     const val = el('strong', '', '0');
@@ -393,22 +393,44 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
   resList.append(toggleLi);
   /** Zapasy dokładane do paska w tej kolejności, póki jest miejsce (broń i piwo, potem składniki jedzenia) */
   const SECOND: readonly ResourceId[] = ['iron', 'ale', 'spear', 'bow', 'sword', 'armor', 'ladder', 'bread', 'apples', 'wheat', 'flour', 'fish', 'meat'];
+  // Michał 7.11.2026: w pasku tylko najważniejsze zapasy (ruda, drewno, kamień, jedzenie razem), a pełny spis wszystkich
+  // surowców w oknie na środku (przycisk „…”) — wcześniej kafelki dokładały się do pasku i nachodziły na siebie
   const fitRes = (): void => {
-    for (const id of SECOND) resList.insertBefore(resItems[RESOURCES.indexOf(id)]!, toggleLi);
-    const over = (): boolean => {
-      if (resList.scrollWidth > resList.clientWidth + 1 || bar.scrollWidth > bar.clientWidth + 1) return true;
-      // ostatni kafelek nie może dochodzić do liczników osady po prawej (odstęp jak między kafelkami)
-      const last = (toggleLi.hidden ? toggleLi.previousElementSibling : toggleLi) as HTMLElement | null;
-      return !!last && people.isConnected && last.getBoundingClientRect().right + 10 > people.getBoundingClientRect().left;
-    };
-    toggleLi.hidden = true; // najpierw próba bez „…”: może zmieści się wszystko
-    if (over()) toggleLi.hidden = false;
-    let shown = SECOND.length;
-    while (shown > 0 && !toggleLi.hidden && over()) shown--, extra.prepend(resItems[RESOURCES.indexOf(SECOND[shown]!)]!);
-    // listwa w kolejności pierwszeństwa (to, co nie zmieściło się w pasku)
-    toggleLi.hidden = shown === SECOND.length;
-    if (toggleLi.hidden && resOpen) { resOpen = false; paintRes(); }
+    for (const id of SECOND) extra.append(resItems[RESOURCES.indexOf(id)]!);
+    toggleLi.hidden = false;
   };
+
+  // ---- okno ze wszystkimi zapasami (Michał 7.11.2026) ----
+  const stockVals: HTMLElement[] = [], stockTrends: HTMLElement[] = [], stockIdx: number[] = [];
+  const stock = el('div', 'stock-modal');
+  stock.hidden = true;
+  stock.setAttribute('role', 'dialog');
+  stock.setAttribute('aria-modal', 'true');
+  stock.setAttribute('aria-label', tx('Wszystkie zapasy', 'All supplies'));
+  const stockCard = el('div', 'stock-card');
+  const stockHead = el('div', 'stock-head');
+  const stockClose = el('button', 'menu-btn stock-x', '✕');
+  stockClose.type = 'button';
+  stockClose.setAttribute('aria-label', tx('Zamknij', 'Close'));
+  stockHead.append(el('h2', '', tx('Zapasy', 'Supplies')), stockClose);
+  const stockGrid = el('ul', 'stock-grid');
+  RESOURCES.forEach((id, i) => {
+    if (id === 'ore') return;
+    const li = el('li', RESOURCE_DEFS[id].food ? 'food' : '');
+    const val = el('strong', '', '0');
+    const tr = el('span', 'trend');
+    li.append(icon(id), el('span', 'stock-name', id === 'gold' ? tx('Ruda', 'Ore') : t(RESOURCE_DEFS[id].name)), val, tr);
+    stockGrid.append(li);
+    stockVals.push(val); stockTrends.push(tr); stockIdx.push(i);
+  });
+  stockCard.append(stockHead, stockGrid);
+  stock.append(stockCard);
+  const closeStock = (): void => { stock.hidden = true; resToggle.focus?.(); };
+  function openStock(): void { stock.hidden = false; stockClose.focus(); }
+  stockClose.addEventListener('click', closeStock);
+  stock.addEventListener('click', (e) => { if (e.target === stock) closeStock(); });
+  stock.addEventListener('keydown', (e) => { if (e.key === 'Escape') { e.stopPropagation(); closeStock(); } });
+  root.append(stock);
   paintRes();
   const people = el('div', 'people');
   const popVal = el('strong');
@@ -725,17 +747,6 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
   let resW = 0;
   const refit = (): void => { const w = bar.clientWidth + Math.round(parseFloat(getComputedStyle(bar).zoom || '1') * 1000); if (w !== resW && bar.isConnected) { resW = w; fitRes(); } };
   setInterval(refit, 500);
-  // Michał 7.11.2026: „wszystkie surowce nachodzą na siebie” — kafelki rosną, gdy liczby zapasów rosną (120 → 12 000 → „50 mln”),
-  // a układ liczył się tylko po zmianie szerokości okna. Teraz: przy wykrytym przepełnieniu od razu, a co 3 s tak czy tak
-  // (też w drugą stronę — gdy liczby maleją, wracają kolejne kafelki)
-  let fitTick = 0;
-  setInterval(() => {
-    if (!bar.isConnected) return;
-    const last = (toggleLi.hidden ? toggleLi.previousElementSibling : toggleLi) as HTMLElement | null;
-    const crowded = resList.scrollWidth > resList.clientWidth + 1 || bar.scrollWidth > bar.clientWidth + 1
-      || (!!last && people.isConnected && last.getBoundingClientRect().right + 10 > people.getBoundingClientRect().left);
-    if (crowded || ++fitTick % 6 === 0) fitRes();
-  }, 500);
   window.addEventListener('resize', refit);
   void document.fonts?.ready.then(() => { resW = 0; refit(); });
   info.hidden = true;
@@ -1278,6 +1289,12 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
       setText(armyVal, String(v.soldiers ?? 0));
       if (v.jumps) paintJumps(v.jumps);
       resVals.forEach((node, i) => setText(node, short(v.res[i] ?? 0)));
+      if (!stock.hidden) stockIdx.forEach((ri, k) => {
+        setText(stockVals[k]!, short(v.res[ri] ?? 0));
+        const d = v.trend[ri] ?? 0;
+        setText(stockTrends[k]!, d ? `${d > 0 ? '+' : '−'}${short(Math.abs(d))}` : '');
+        stockTrends[k]!.dataset.sign = d > 0 ? 'pos' : d < 0 ? 'neg' : '';
+      });
       const fs = FOOD_RES.reduce((a, id) => a + (v.res[RESOURCES.indexOf(id)] ?? 0), 0);
       setText(foodSumVal, short(fs));
       foodSum.dataset.tip = `${tx('Jedzenie razem', 'Total food')}: ${fs} (${FOOD_RES.map((id) => `${t(RESOURCE_DEFS[id].name)} ${v.res[RESOURCES.indexOf(id)] ?? 0}`).join(', ')})`;

@@ -9,6 +9,7 @@ export type { ChangeEntry } from './changelogTypes';
  * — tak jak CHANGELOG.md dla nas. `tests/changelog.test.ts` pilnuje, że najnowszy wpis ma wersję z package.json.
  */
 const NEW: ChangeEntry[] = [
+  { v: '0.94.69', date: '2026-11-07', pl: ['Dolny pasek pokazuje tylko najważniejsze zapasy: rudę, drewno, kamień i jedzenie razem. Przycisk „…” otwiera na środku okno ze spisem wszystkich surowców, ich ilością i zmianą na minutę.'], en: ['The bottom bar now shows only the key supplies: ore, wood, stone and total food. The “…” button opens a window in the middle of the screen listing every resource with its amount and change per minute.'] },
   { v: '0.94.68', date: '2026-11-07', pl: ['Dolny pasek: zapasy nie nachodzą już na siebie. Pasek sam przelicza, ile kafelków się mieści, gdy liczby rosną, a reszta chowa się pod przyciskiem „…”.'], en: ['Bottom bar: supplies no longer overlap. The bar re-fits itself as the numbers grow, and whatever does not fit tucks away under the “…” button.'] },
   { v: '0.94.67', date: '2026-11-07', pl: ['Ekran wczytywania: większy procent na pasku.'], en: ['Loading screen: a bigger percentage on the bar.'] },
   { v: '0.94.66', date: '2026-11-07', pl: ['Grafika: zmiana AO, wygładzania albo poświaty w trakcie gry nie wywala już błędu „efekty obrazu wyłączone”; efekty przebudowują się od razu.'], en: ['Graphics: changing AO, anti-aliasing or bloom while playing no longer throws the “image effects disabled” error; the effects rebuild straight away.'] },
