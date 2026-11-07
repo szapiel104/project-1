@@ -3,6 +3,8 @@
  * kartach trybu, poziomu i krainy (proste rysunki w barwach pergaminu i atramentu) oraz rzędy kart przewijane
  * przeciąganiem, kółkiem myszy i strzałkami po bokach, z dociąganiem do karty.
  */
+import { BIOME_ART } from './biomeArt';
+
 const INK = '#3a2410', RED = '#8a1f14', GOLD = '#c9963a', BLUE = '#1f4f7a';
 
 const shield = (x: number, y: number, s: number, fill: string): string =>
@@ -45,7 +47,7 @@ const ART: Record<string, string> = {
 };
 
 /** Ilustracja do karty (po klasie kafelka, np. `mode-2v2`, `lvl-3`, `biome-north`) albo pusty napis */
-export const pickArt = (key: string): string => ART[key.trim()] ?? '';
+export const pickArt = (key: string): string => BIOME_ART[key.trim()] ?? ART[key.trim()] ?? '';
 
 /**
  * Rząd kart przewijany w poziomie: przeciąganie myszą (z bezwładnością dociągania przez CSS scroll-snap), kółko myszy

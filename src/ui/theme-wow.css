@@ -686,3 +686,16 @@ html body .menu.previewing .menu-panel.ng-dock .dev-switch .dev-knob { backgroun
 html body .menu.previewing .menu-panel.ng-dock .dev-switch input:checked + .dev-knob { background: #8c1f18 !important; border-color: #e9c766; }
 html body .menu.previewing .menu-panel.ng-dock .dev-switch.dev-walls { grid-template-columns: auto 1fr; }
 html body .menu.previewing .menu-panel.ng-dock .dev-walls select { background: #0f0a06; color: #f3e4c2; border: 1px solid #8a6a32; }
+
+/* Nowa gra: krainy jako duże malowane pejzaże 16:9, nazwa pod obrazkiem (Michał 7.11.2026: „większe zdjęcia, o wiele ładniejsze”) */
+html body .menu.previewing .menu-panel.ng-dock .ng-slider .pick-row.lands { grid-template-columns: 1fr 1fr; gap: 8px; }
+html body .menu.previewing .menu-panel.ng-dock .ng-slider .pick-row.lands .pick { padding: 0 0 8px !important; overflow: hidden; gap: 0; }
+html body .menu.previewing .menu-panel.ng-dock .ng-slider .pick-row.lands .pick .pick-art {
+  width: 100%; height: auto !important; aspect-ratio: 16 / 9; margin: 0 0 6px; border-radius: 5px 5px 0 0; background: #1a120c !important; box-shadow: none !important; }
+html body .menu.previewing .menu-panel.ng-dock .ng-slider .pick-row.lands .pick .pick-art svg { width: 100%; height: 100%; transition: transform .35s cubic-bezier(.2, .8, .2, 1); }
+html body .menu.previewing .menu-panel.ng-dock .ng-slider .pick-row.lands .pick:hover .pick-art svg { transform: scale(1.06); }
+html body .menu.previewing .menu-panel.ng-dock .ng-slider .pick-row.lands .pick-big { padding: 0 9px; font-size: 15.5px; }
+html body .menu.previewing .menu-panel.ng-dock .ng-slider .pick-row.lands .pick-small { padding: 0 9px; font-size: 12.5px; }
+html body .menu.previewing .menu-panel.ng-dock .ng-slider .pick-row.lands .pick:has(input:checked) { box-shadow: 0 0 0 1px #f0cf72 !important; }
+html body .menu.previewing .menu-panel.ng-dock .ng-slider .pick-row.lands .pick:has(input:checked) .pick-art { box-shadow: none !important; }
+@media (prefers-reduced-motion: reduce) { html body .menu.previewing .menu-panel.ng-dock .ng-slider .pick-row.lands .pick .pick-art svg { transition: none; } }
