@@ -78,6 +78,7 @@ export async function prepareGpu(canvas: HTMLCanvasElement): Promise<void> {
   const r = new W.WebGPURenderer({ canvas, antialias: true, forceWebGL: FORCE_GL, powerPreference: 'high-performance', requiredLimits } as ConstructorParameters<typeof W.WebGPURenderer>[0]);
   await r.init();
   const backend = (r as unknown as { backend: { isWebGPUBackend?: boolean } }).backend;
+  onceperVersion(backend);
   gpuBackend = backend.isWebGPUBackend ? 'WebGPU' : 'WebGL2 (WebGPURenderer)';
   // Światła punktowe (pochodnie, ogniska, okna): oświetlenie klastrowe Forward+ liczone przez compute — kod materiału
   // nie zależy od liczby świateł (wcześniej 13 pochodni = 13 kopii kodu światła w każdym materiale i ponowne składanie
@@ -369,6 +370,25 @@ const ibCache = new WeakMap<object, any>();
  * Atrybut wierzchołka typu mat4 nie istnieje w WebGPU — 0.92.2–0.92.7 czytały tak macierz i ognisko rozciągało się
  * w długi pas (Michał 3.11.2026).
  */
+/**
+ * Jeden bufor w jednej wersji idzie na kartę raz. Macierz instancji w WebGPU to cztery atrybuty-widoki jednego bufora
+ * (kolumny mat4), a three.js wysyła przy każdym widoku CAŁY wspólny bufor — paczka lasu szła 4–5 razy na klatkę
+ * (pomiar 7.11.2026). Widoki dzielą jeden bufor karty, więc pierwsza wysyłka wystarcza.
+ */
+function onceperVersion(backend: unknown): void {
+  const be = backend as { updateAttribute?: (a: unknown) => void };
+  const orig = be.updateAttribute?.bind(be);
+  if (!orig) return;
+  const sent = new WeakMap<object, number>();
+  be.updateAttribute = (a: unknown): void => {
+    const at = a as { isInterleavedBufferAttribute?: boolean; data?: { version: number }; version: number };
+    const buf = (at.isInterleavedBufferAttribute ? at.data : at) as { version: number };
+    if (sent.get(buf) === buf.version) return;
+    sent.set(buf, buf.version);
+    orig(a);
+  };
+}
+
 /**
  * Lustro bufora (ta sama tablica, inny obiekt dla WebGPU) wysyła się na kartę tylko wtedy, gdy zmienił się oryginał.
  * Dawniej lustra miały DynamicDrawUsage, a three.js (renderers/common/Attributes.js) wysyła taki bufor przy KAŻDYM
