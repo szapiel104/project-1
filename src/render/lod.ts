@@ -171,11 +171,33 @@ function gather(root: THREE.Object3D, lod: BuildingLod, o: LodOptions): Gathered
   return out;
 }
 
+/** Najdalsze wersje (lod2+): jedna bryła na budynek (i jedna na wieko) w jednym wspólnym materiale z barwą w wierzchołkach —
+ * z daleka tekstury i tak nie widać, a każdy materiał to osobne rysowanie (Michał 7.11.2026: 60 rysowań na lod2) */
+const FAR_MAT = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.92, metalness: 0 });
+function farMerge(geos: { geo: THREE.BufferGeometry; mat: THREE.Material; lid: boolean }[]): { geo: THREE.BufferGeometry; mat: THREE.Material; lid: boolean }[] {
+  const out: { geo: THREE.BufferGeometry; mat: THREE.Material; lid: boolean }[] = [];
+  for (const lid of [false, true]) {
+    const parts = geos.filter((x) => x.lid === lid).map(({ geo, mat }) => {
+      const m = mat as THREE.MeshStandardMaterial;
+      const c = (m.color ?? new THREE.Color(1, 1, 1)).clone().multiplyScalar(m.map ? 0.45 : 1);
+      const g = geo.index ? geo.toNonIndexed() : geo.clone();
+      const col = g.getAttribute('color') as THREE.BufferAttribute;
+      for (let i = 0; i < col.count; i++) col.setXYZ(i, col.getX(i) * c.r, col.getY(i) * c.g, col.getZ(i) * c.b);
+      return g;
+    });
+    if (!parts.length) continue;
+    const merged = mergeGeometries(parts);
+    if (!merged) return geos;
+    merged.computeBoundingSphere();
+    out.push({ geo: merged, mat: FAR_MAT, lid });
+  }
+  return out;
+}
 function toBaked(g: Gathered, levels: LevelData[]): Baked {
   return {
-    levels: levels.map((l) => ({
+    levels: levels.map((l, li) => ({
       tris: l.tris, error: l.error,
-      geos: l.geos.flatMap((d, i) => {
+      geos: (li >= 1 ? farMerge : <T>(x: T): T => x)(l.geos.flatMap((d, i) => {
         if (!d) return [];
         const geo = new THREE.BufferGeometry();
         geo.setAttribute('position', new THREE.BufferAttribute(d.P, 3));
@@ -184,7 +206,7 @@ function toBaked(g: Gathered, levels: LevelData[]): Baked {
         geo.setAttribute('uv', new THREE.BufferAttribute(d.UV, 2));
         geo.computeBoundingSphere();
         return [{ geo, mat: g.mats[i]!, lid: g.lids[i]! }];
-      }),
+      })),
     })),
   };
 }

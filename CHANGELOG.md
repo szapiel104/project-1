@@ -1,5 +1,9 @@
 # Dziennik zmian
 
+## 0.94.57 — 2026-11-07
+- `lod.ts`: lod2+ scalone w jedną siatkę (i jedną na wieko) ze wspólnym `FAR_MAT` (barwa materiału × 0,45 przy teksturze w kolorach wierzchołków) — w teście 60 → 7 rysowań.
+- `scene.ts`: `BATCH_ALSO` + `grainfill`, `crop`. Boty: bez zmian.
+
 ## 0.94.56 — 2026-11-07
 - `scene.ts`: `BATCH_ALSO` obejmuje grupy `fill` i `life` (wspólne rysowanie w `syncBatches`). Boty: bez zmian.
 

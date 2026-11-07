@@ -118,7 +118,7 @@ import { sadMaterial, sickMaterial, noWorkerMaterial } from './marks';
 import { MERGE_IN, BATCH_LAYER, mergeStatic } from './merge';
 /** Nazwane grupy budynku rysowane razem z innymi budynkami tego samego rodzaju (syncBatches): pochodnia, dalekie wersje */
 // fill (zapasy w składach) i life (życie podwórka) też razem: same siatki z wspólnymi geometriami, w zapisie Michała ok. 46 osobnych rysowań (7.11.2026)
-const BATCH_ALSO = /^(torch|lod\d+|fill|life)$/;
+const BATCH_ALSO = /^(torch|lod\d+|fill|grainfill|crop|life)$/;
 import { Precompiler } from './precompile';
 import { KEEP_MODEL, RAM_MODEL, SHRINE_SPOTS, CAMP_SEATS, KEEP_SOLID, KEEP_FLOOR, KEEP_WALL, KEEP_HALF, type WalkModel, WALK_MODELS, MINE_SPOTS, OREMINE_T, OREMINE_WALK, MINE_LEVEL, MINE_LEVEL_SPOTS, mineRoute, OREMINE_PROD, inRect, MINE_AT, TAVERN_SEATS, walkFoot, TAVERN_FLOOR } from './walkmodels';
 import { createRenderer } from './glcontext';

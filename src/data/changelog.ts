@@ -10,6 +10,11 @@ export type { ChangeEntry } from './changelogTypes';
  */
 const NEW: ChangeEntry[] = [
   {
+    v: '0.94.57', date: '2026-11-07',
+    pl: ['Płynniej z daleka: najdalsze wersje budynków rysują się jedną bryłą zamiast kilku, a zboże w spichlerzach i uprawy na polach razem dla wszystkich budynków.'],
+    en: ['Smoother from afar: the most distant building versions are drawn as a single mesh instead of several, and granary grain and field crops are drawn together for all buildings.'],
+  },
+  {
     v: '0.94.56', date: '2026-11-07',
     pl: ['Płynniej w dużej osadzie: zapasy w składach i drobiazgi na podwórkach rysują się razem dla wszystkich budynków, a nie osobno.'],
     en: ['Smoother in a big settlement: stock piles and yard clutter are drawn together for all buildings instead of one by one.'],
