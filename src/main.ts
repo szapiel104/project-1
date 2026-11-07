@@ -229,7 +229,7 @@ const continuable = (l: SaveMeta[]): SaveMeta | undefined => {
   const ended = endedMatches();
   return l.find((s) => !(s.match && ended.has(s.match)));
 };
-function refreshContinue(): void { void listSaves().then((l) => menu.setCanContinue(!!continuable(l)), () => menu.setCanContinue(false)); }
+function refreshContinue(): void { void listSaves().then((l) => menu.setCanContinue(!!continuable(l), continuable(l)?.thumb), () => menu.setCanContinue(false)); }
 onAccount(() => refreshContinue());
 /** Wczytanie zapisu: gra z zapisu za ekranem wczytywania, potem kamera, grupy i tempo jak w chwili zapisu */
 async function loadFrom(id: string): Promise<string | null> {

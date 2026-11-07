@@ -526,3 +526,10 @@ body .menu:not(.previewing) .menu-bar .bar-item::after { content: '›'; display
 body .menu:not(.previewing) .menu-bar .bar-item:hover::after, body .menu:not(.previewing) .menu-bar .bar-item:focus-visible::after { opacity: 1; transform: translate(3px, -1px); }
 body .menu:not(.previewing) .menu-bar .bar-item::after { position: static; inset: auto; width: auto; height: auto; align-self: center; margin-right: 2px; background: none; border: 0; clip-path: none; transform: translateY(-2px); }
 body .menu:not(.previewing) .menu-bar .bar-item:hover::after, body .menu:not(.previewing) .menu-bar .bar-item:focus-visible::after { transform: translate(3px, -2px); }
+
+/* tło menu: ostatnia osada albo świt / zmierzch / noc (Michał 7.11.2026) */
+.menu-scene .menu-shot { position: absolute; inset: -4%; background: center / cover no-repeat; filter: blur(5px) brightness(.85) saturate(1.1); opacity: 0; transition: opacity .6s; }
+.menu-scene.has-shot .menu-shot { opacity: 1; }
+.menu-scene.has-shot .ld-scene { opacity: 0; }
+.menu-scene.sv-dawn .ld-scene { filter: hue-rotate(-14deg) saturate(1.15) brightness(1.08); }
+.menu-scene.sv-night .ld-scene { filter: hue-rotate(195deg) saturate(.85) brightness(.5); }

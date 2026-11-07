@@ -117,7 +117,8 @@ export interface Menu {
   isOpen(): boolean;
   setVolume(v: number): void;
   setMuted(m: boolean): void;
-  setCanContinue(on: boolean): void;
+  /** `thumb` — miniatura ostatniego zapisu: staje się tłem menu (bez niej tło losuje się z kilku pejzaży) */
+  setCanContinue(on: boolean, thumb?: string): void;
 }
 
 declare const __BUILD__: string;
@@ -221,6 +222,16 @@ export function createMenu(root: HTMLElement, events: MenuEvents): Menu {
   const scene = el('div', 'menu-scene');
   scene.setAttribute('aria-hidden', 'true');
   scene.innerHTML = loadingScene();
+  // tło menu (Michał 7.11.2026): ostatnia osada z zapisu (miniatura, rozmyta, jedna statyczna warstwa) albo jeden z trzech
+  // pejzaży wylosowany przy wejściu na stronę (świt / zmierzch / noc — sam filtr barwy na tym samym obrazie, bez kosztu FPS)
+  const shot = el('div', 'menu-shot'); shot.setAttribute('aria-hidden', 'true');
+  scene.append(shot);
+  const sceneVariant = ['dusk', 'dawn', 'night'][Math.floor(Math.random() * 3)]!;
+  scene.classList.add(`sv-${sceneVariant}`);
+  function backdrop(thumb?: string): void {
+    shot.style.backgroundImage = thumb ? `url("${thumb}")` : '';
+    scene.classList.toggle('has-shot', !!thumb);
+  }
   wrap.append(scene, embers, head, panel, bar, foot);
   root.append(wrap);
 
@@ -969,6 +980,6 @@ export function createMenu(root: HTMLElement, events: MenuEvents): Menu {
     isOpen: () => !wrap.hidden,
     setVolume(v) { volume = v; },
     setMuted(m) { muted = m; },
-    setCanContinue(on) { canContinue = on; if (!wrap.hidden && panel.hidden) paintBar(); },
+    setCanContinue(on, thumb) { canContinue = on; backdrop(on ? thumb : undefined); if (!wrap.hidden && panel.hidden) paintBar(); },
   };
 }
