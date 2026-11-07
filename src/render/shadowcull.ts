@@ -11,7 +11,17 @@ const SMALL = ['postacie', 'zwierzęta i wieś', 'rodziny i podwórka', 'graty p
   // drobna roślinność i kamyki (0.94.54): z daleka cień na kilka pikseli, a każdy rodzaj to osobne rysowanie w mapie cieni
   'kamyki', 'krzewy', 'podszyt', 'kępy trawy', 'kwiaty', 'trzcina'];
 
+/**
+ * Drobiazgi w budynkach (Michał 7.11.2026, pomiar w Chrome: z oddalenia 475 z ok. 500 rysowań w mapie cieni to „budynki”):
+ * wnętrza, zapasy, pochodnie, kłody na podwórku, sufity i życie obejścia. Z daleka cień takiej rzeczy ma kilka pikseli
+ * i leży wewnątrz cienia murów, więc rzucają go tylko z bliska. Mury, dachy i kominy (`shell`, `roof`, `chimney`) rzucają zawsze.
+ */
+const INNER = new Set(['interior', 'foodfill', 'fill', 'grainfill', 'yardlog', 'ceiling', 'life', 'torch', 'flagcloth', 'crop']);
+
 const isSmall = (o: THREE.Object3D): boolean => {
+  for (let q: THREE.Object3D | null = o; q; q = q.parent) {
+    if (q.name && INNER.has(q.name)) return true;
+  }
   for (let q: THREE.Object3D | null = o; q; q = q.parent) {
     const c = q.userData.cat as string | undefined;
     if (c) return SMALL.some((p) => c.startsWith(p));

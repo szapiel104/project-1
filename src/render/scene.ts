@@ -1724,7 +1724,7 @@ export class GameRenderer {
     // Michał 7.11.2026: nadpróbkowanie (1,25×) usunięte — „niech będzie naturalnie”; obraz w gęstości ekranu (najwyżej 2×)
     this.ratioMax = Math.min(2, dpr * Math.min(1, o.scale));
     this.ratioDyn = 1;
-    this.dynRes = !!o.dynRes;
+    this.dynRes = o.dynRes ?? true; // Michał 7.11.2026: domyślnie włączona — przy ruchu kamery i ciężkiej scenie obraz chwilowo mniejszy, potem wraca do pełnego
     this.applyRatio();
     this.imageQuality(o.aa ?? 'msaa4', o.aniso ?? 16, o.reflections ?? true, o.sharpen ?? 0);
     this.alwaysDay = !o.dayNight;

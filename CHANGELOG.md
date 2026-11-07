@@ -1,5 +1,9 @@
 # Dziennik zmian
 
+## 0.94.75 — 2026-11-07
+- `shadowcull.ts`: wnętrza i drobiazgi w budynkach (`interior`, `foodfill`, `fill`, `grainfill`, `yardlog`, `ceiling`, `life`, `torch`, `flagcloth`, `crop`) rzucają cień tylko z bliska (pomiar: 475 z ok. 500 rysowań cienia z oddalenia).
+- `scene.ts` / `menu.ts`: dynamiczna rozdzielczość domyślnie włączona. Boty: bez zmian.
+
 ## 0.94.74 — 2026-11-07
 - `camera.ts`: MIN_DIST 4 → 9.
 - `walkphysics.ts` `wallAhead` + `scene.ts`: pochodnia w ręce cofa się i opada, gdy ściana jest tuż przed kamerą (promień BVH). Boty: bez zmian.
