@@ -546,3 +546,7 @@ body .menu.in-game > .menu-account .acc-guest-row .acc-btn { min-height: 32px; }
 body .menu:not(.previewing) { grid-template-rows: auto minmax(0, 1fr) 0 auto auto; }
 body .menu:not(.previewing) .menu-bar { min-height: 0; overflow-y: auto; overflow-x: hidden; padding-bottom: 10px; scrollbar-width: thin; scrollbar-color: #7a5a26 transparent; }
 body .menu:not(.previewing) .menu-bar { align-self: stretch; height: 100%; }
+body .menu.in-game:not(.previewing) .menu-bar .bar-item { min-height: clamp(30px, 4.3vh, 42px); font-size: clamp(14px, 1.9vh, 18px); }
+body .menu.in-game:not(.previewing) .menu-bar .bar-item.bar-main { min-height: clamp(36px, 5.4vh, 50px); }
+body .menu.in-game:not(.previewing) .menu-list { gap: clamp(2px, .55vh, 6px); }
+body .menu.in-game:not(.previewing) .menu-bar { padding-top: clamp(6px, 1.5vh, 16px); }
