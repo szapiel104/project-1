@@ -1,6 +1,6 @@
 import { cloneMaterial } from './matclone';
 import { boulderTiles } from '../sim/systems/boulders';
-import { touch } from './touch';
+import { touch, touchAt } from './touch';
 import * as THREE from 'three';
 import { propGeometry, propMaterial } from './props';
 import { TEST } from '../testmode';
@@ -1835,7 +1835,7 @@ function* terrainSteps(map: GameMap, models: ModelFactory, waterLevel: number): 
     for (const t of trees.get(tile) ?? []) {
       tilt.copy(t.item.q).multiply(q.setFromAxisAngle(xAxis, Math.min(1, k) * 1.45));
       m.compose(t.item.pos, tilt, t.item.s);
-      for (const mesh of t.meshes) { mesh.setMatrixAt(t.index, m); touch(mesh); }
+      for (const mesh of t.meshes) { mesh.setMatrixAt(t.index, m); touchAt(mesh, t.index); }
     }
   };
   const treeKindAt = (tile: number): TreeKind | null => {

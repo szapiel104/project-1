@@ -25,3 +25,15 @@ export function touch(m: Inst): void {
   mark(m.instanceMatrix, 16);
   if (m.instanceColor) mark(m.instanceColor, m.instanceColor.itemSize ?? 3);
 }
+
+/**
+ * Oznacza do wysłania na kartę tylko jedną sztukę (instancję) siatki — np. ścinane drzewo w lesie z tysiącami drzew
+ * (Michał 7.11.2026: „drzewo leci jak w 2 FPS-ach”: `touch` wysyłał co klatkę macierze całego lasu). Zakresy dopisują się
+ * do tych z tej klatki; karta czyści je po wysłaniu.
+ */
+export function touchAt(m: Inst, index: number): void {
+  const a = m.instanceMatrix;
+  if (!a.addUpdateRange) { a.needsUpdate = true; return; }
+  a.addUpdateRange(index * 16, 16);
+  a.needsUpdate = true;
+}
