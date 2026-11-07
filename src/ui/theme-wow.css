@@ -550,3 +550,11 @@ body .menu.in-game:not(.previewing) .menu-bar .bar-item { min-height: clamp(30px
 body .menu.in-game:not(.previewing) .menu-bar .bar-item.bar-main { min-height: clamp(36px, 5.4vh, 50px); }
 body .menu.in-game:not(.previewing) .menu-list { gap: clamp(2px, .55vh, 6px); }
 body .menu.in-game:not(.previewing) .menu-bar { padding-top: clamp(6px, 1.5vh, 16px); }
+
+/* nic poniżej 14 px po zmianie czcionki na Inter (Michał 7.11.2026) */
+body .menu .set-preset-d { font-size: 14.5px; }
+body .menu:not(.previewing) .game-tagline-dev { font-size: 14px; }
+body .menu:not(.previewing) .menu-fine { font-size: 14px; }
+body .menu .menu-account .acc-level { font-size: 14px; }
+body .menu .help-toc-group { font-size: 15px; }
+body .menu .bk-kicker { font-size: 14px; }
