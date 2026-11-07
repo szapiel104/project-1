@@ -195,7 +195,9 @@ export function createMenu(root: HTMLElement, events: MenuEvents): Menu {
   paused.setAttribute('role', 'status');
   const tagline = el('div');
   tagline.innerHTML = gameTagline();
-  head.append(crest, title, sub, ...tagline.childNodes, paused);
+  // w menu tylko logo (Michał 7.11.2026); podtytuł i opis gry są w Ustawienia → Interfejs
+  void crest; void sub; void tagline;
+  head.append(title, paused);
   // iskry z ognisk unoszące się z dołu ekranu (sama ozdoba)
   const embers = el('div', 'menu-embers');
   embers.setAttribute('aria-hidden', 'true');
@@ -307,10 +309,13 @@ export function createMenu(root: HTMLElement, events: MenuEvents): Menu {
       account.append(who);
     } else {
       const box = el('div', 'acc-guest');
-      box.append(el('strong', 'acc-nick', tx('Gość', 'Guest')), el('span', 'acc-level', tx('Zaloguj się, by zbierać poziomy i tytuły', 'Sign in to earn levels and ranks')));
+      const gseal = el('span', 'acc-seal acc-seal-guest'); gseal.setAttribute('aria-hidden', 'true');
+      gseal.innerHTML = '<svg viewBox="0 0 48 54"><path d="M24 2 L44 8 V26 C44 39 35 48 24 52 C13 48 4 39 4 26 V8 Z" fill="#3a1a12" stroke="#e9c766" stroke-width="2.5"/><path d="M24 9 L38 13 V26 C38 35 32 41 24 45 Z" fill="#561f15"/><path d="M24 17 a5 5 0 1 1 0 10 a5 5 0 0 1 0 -10 M14 38 c1.5 -7 6 -9 10 -9 s8.5 2 10 9" fill="none" stroke="#e9c766" stroke-width="2.4" stroke-linecap="round"/></svg>';
+      const gtxt = el('span', 'acc-text');
+      gtxt.append(el('strong', 'acc-nick', tx('Gość', 'Guest')), el('span', 'acc-level', tx('Zaloguj się, by zbierać poziomy i tytuły', 'Sign in to earn levels and ranks')));
       const row = el('span', 'acc-guest-row');
-      row.append(button(tx('Zaloguj się', 'Sign in'), () => online.showLogin(false), 'link-btn acc-link'), el('span', 'acc-sep', '·'), button(tx('Załóż konto', 'Create account'), () => online.showLogin(true), 'link-btn acc-link'));
-      box.append(row);
+      row.append(button(tx('Zaloguj się', 'Sign in'), () => online.showLogin(false), 'acc-btn acc-btn-main'), button(tx('Załóż konto', 'Create account'), () => online.showLogin(true), 'acc-btn'));
+      box.append(gseal, gtxt, row);
       account.append(box);
     }
   };
@@ -685,6 +690,7 @@ export function createMenu(root: HTMLElement, events: MenuEvents): Menu {
       }],
       [tx('Interfejs', 'Interface'), () => [
         // etykieta w obu językach, żeby każdy znalazł przełącznik, nawet gdy nie zna obecnego języka
+        (() => { const a = el('div', 'set-about'); a.append(el('strong', '', t('menu.subtitle')), el('span', '', t('menu.tagline')), el('span', 'set-about-dev', t('menu.taglineDev'))); return a; })(),
         choice('Język / Language', lang(), LANGS, (v) => setLang(v)),
         choice(tx('Wielkość interfejsu', 'Interface size'), settings.uiSize ?? 1, [[0.5, '50%'], [0.75, '75%'], [0.85, '85%'], [1, '100%'], [1.15, '115%'], [1.3, '130%'], [1.5, '150%']], (v) => { settings.uiSize = v; save(); }),
         choice(tx('Paski zdrowia', 'Health bars'), settings.hpBars ?? 'combat', [['always', tx('Zawsze', 'Always')], ['combat', tx('W walce', 'In combat')], ['selected', tx('Zaznaczeni', 'Selected')], ['never', tx('Nigdy', 'Never')]], (v) => { settings.hpBars = v; save(); }),

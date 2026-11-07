@@ -470,3 +470,30 @@ body .menu:not(.previewing) .menu-bar .bar-item.bar-main { width: min(380px, 100
   background: linear-gradient(180deg, #b32a1e, #7c160e 55%, #5a0f09); border-color: #e9c766;
   box-shadow: inset 0 1px 0 rgba(255, 241, 194, .55), inset 0 -2px 0 rgba(0, 0, 0, .4), 0 0 16px rgba(255, 110, 30, .3), 0 2px 5px rgba(0, 0, 0, .55); }
 body .menu:not(.previewing) .menu-bar .bar-main:hover, body .menu:not(.previewing) .menu-bar .bar-main:focus-visible { padding-left: 8px; background: linear-gradient(180deg, #d63a2b, #9a1d12 55%, #6e130b); }
+
+/* Menu główne: samo logo u góry, mocniejsza karta gościa (Michał 7.11.2026) */
+body .menu:not(.previewing) .menu-head { gap: 0; padding-top: 4px; }
+body .menu:not(.previewing) .menu-head > .menu-title.has-logo { font-size: clamp(56px, min(12vh, 6vw), 130px); max-width: 100%; margin: 0 0 clamp(8px, 2vh, 22px);
+  filter: drop-shadow(0 0 22px rgba(255, 170, 60, .35)) drop-shadow(0 4px 6px rgba(0, 0, 0, .75)) !important; }
+body .menu:not(.previewing) .menu-head > .menu-title.has-logo svg.logo { width: min(100%, 440px); height: auto; margin: 0; }
+body .menu:not(.previewing) .menu-head::after { content: ''; display: block; height: 2px; width: min(100%, 420px); margin-top: 2px;
+  background: linear-gradient(90deg, #e9c766, rgba(233, 199, 102, .35) 55%, transparent); }
+.set-about { display: grid; gap: 4px; padding: 10px 14px; margin-bottom: 8px; border-left: 3px solid #e9c766; background: rgba(60, 38, 18, .18); }
+.set-about strong { font-size: 17px; font-weight: 600; }
+.set-about span { font-size: 15px; line-height: 1.45; }
+.set-about .set-about-dev { font-weight: 600; color: #8a5a10; }
+
+body .menu > .menu-account .acc-guest { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 8px 14px; width: min(400px, calc(100% - 24px)); padding: 14px 16px; align-items: center;
+  background: linear-gradient(180deg, rgba(70, 42, 22, .94), rgba(28, 18, 10, .97)); border: 1px solid #b08a34; border-left: 1px solid #b08a34; border-radius: 3px;
+  box-shadow: inset 0 1px 0 rgba(255, 224, 140, .3), inset 0 0 0 3px rgba(0, 0, 0, .35), 0 0 0 1px #0b0704, 0 12px 30px rgba(0, 0, 0, .65); }
+body .menu > .menu-account .acc-seal-guest { width: 46px; height: 52px; }
+body .menu > .menu-account .acc-seal-guest svg { width: 100%; height: 100%; filter: drop-shadow(0 2px 3px rgba(0, 0, 0, .8)); }
+body .menu > .menu-account .acc-guest .acc-nick { font-size: clamp(19px, 2.6vh, 24px); color: #fff0c8; letter-spacing: .02em; }
+body .menu > .menu-account .acc-guest .acc-level { font-size: clamp(13px, 1.7vh, 15px); line-height: 1.3; color: #dcc9a0; text-transform: none; letter-spacing: 0; }
+body .menu > .menu-account .acc-guest-row { grid-column: 1 / -1; display: grid; grid-template-columns: 1.25fr 1fr; gap: 10px; }
+body .menu > .menu-account .acc-btn { min-height: 38px; padding: 6px 12px; font-family: var(--text); font-weight: 600; font-size: 15px; color: #f3e4c2; cursor: pointer; border-radius: 3px;
+  background: linear-gradient(180deg, rgba(88, 62, 36, .95), rgba(46, 30, 17, .98)); border: 1px solid #7a5a26; text-decoration: none; text-shadow: 0 1px 2px #000;
+  box-shadow: inset 0 1px 0 rgba(233, 199, 102, .25), 0 2px 4px rgba(0, 0, 0, .5); transition: border-color .15s, background .15s; }
+body .menu > .menu-account .acc-btn-main { color: #fff4d8; border-color: #e9c766; background: linear-gradient(180deg, #b32a1e, #6e130b); box-shadow: inset 0 1px 0 rgba(255, 241, 194, .5), 0 0 12px rgba(255, 110, 30, .3); }
+body .menu > .menu-account .acc-btn:hover, body .menu > .menu-account .acc-btn:focus-visible { border-color: #fff1c2; filter: brightness(1.18); }
+body .menu > .menu-account .acc-btn:focus-visible { outline: 2px solid #fff3c4; outline-offset: 2px; }
