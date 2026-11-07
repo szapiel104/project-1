@@ -81,7 +81,7 @@ kwadratu, większa mapa 1 na 1.
 
 ## Plan wydajności (Michał 7.11.2026: „inni robią w WebGPU gry 100 razy ładniejsze i mają 120 FPS”)
 Hamuje procesor: tysiące osobnych obiektów, każdy przez ogólną ścieżkę three.js (dziesiątki µs na rysowanie). Etapy, po każdym gra działa, Michał mierzy:
-1. [ ] Postacie: jeden rodzaj = jedno rysowanie na materiał — części postaci sklejone w jedną siatkę z numerem części w wierzchołku, macierze części wszystkich ludzi w teksturze, ruch w shaderze TSL (wzór: `gpu/skinNode.ts`).
-2. [ ] Świat statyczny w dużych kawałkach: budynki z daleka, kamyki, płoty, graty sklejone po fragmentach mapy, tekstury w tablicy.
+1. [x] (0.94.53, 7.11.2026) Postacie: jeden rodzaj = jedno rysowanie na materiał — części postaci sklejone w jedną siatkę z numerem części w wierzchołku, macierze części wszystkich ludzi w teksturze, ruch w shaderze TSL (wzór: `gpu/skinNode.ts`).
+2. [~] (0.94.55–57: kamyki 8 kształtów, fill/grainfill/crop/life wspólnie, lod2+ jedną bryłą) Świat statyczny w dużych kawałkach: budynki z daleka, kamyki, płoty, graty sklejone po fragmentach mapy, tekstury w tablicy.
 3. [ ] Cienie: nieruchome rzeczy w mapie cieni liczonej tylko po ruchu kamery/słońca; ruchome postacie osobno.
 4. [ ] Las i krzaki wybierane na karcie (indirect draw), bez list na procesorze.
