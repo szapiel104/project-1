@@ -16,7 +16,6 @@
 import { footprintNode } from './gpu/groundFxNode';
 import * as THREE from 'three';
 import { cat } from './cat';
-import { touch } from './touch';
 
 /** Pierścień odcisków: przy kilkudziesięciu idących 4096 starczało na kilka sekund i stare znikały od razu, zanim zbladły */
 const MAX = 24576;
@@ -99,6 +98,9 @@ class TrackLayer {
   private next = 0;
   used = 0;
   dirty = false;
+  /** zakres zmienionych sztuk od ostatniego wysłania (na kartę idzie tylko on, nie cały pierścień 24 tys. śladów) */
+  private lo = Infinity;
+  private hi = -1;
   private m = new THREE.Matrix4();
   private q = new THREE.Quaternion();
   private v = new THREE.Vector3();
@@ -141,9 +143,17 @@ class TrackLayer {
     this.mesh.setMatrixAt(i, this.m);
     this.born.setX(i, clock);
     this.dirty = true;
+    if (i < this.lo) this.lo = i;
+    if (i > this.hi) this.hi = i;
   }
   finish(snow: number): void {
-    if (this.dirty) { this.mesh.instanceMatrix.needsUpdate = true; this.born.needsUpdate = true; touch(this.mesh); this.dirty = false; }
+    if (this.dirty) {
+      // tylko nowe ślady (Michał 7.11.2026: cały pierścień 1,5 MB szedł na kartę przy każdym kroku, ok. 1,7 ms na klatkę)
+      const n = this.hi - this.lo + 1, im = this.mesh.instanceMatrix;
+      im.clearUpdateRanges(); im.addUpdateRange(this.lo * 16, n * 16); im.needsUpdate = true;
+      this.born.clearUpdateRanges(); this.born.addUpdateRange(this.lo, n); this.born.needsUpdate = true;
+      this.dirty = false; this.lo = Infinity; this.hi = -1;
+    }
     this.mesh.count = this.used;
     this.mesh.visible = this.used > 0 && snow > 0.45;
   }
