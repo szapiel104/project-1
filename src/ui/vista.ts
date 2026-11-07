@@ -104,6 +104,8 @@ function castle(): string {
  *  i niebo, góry i dolina wychodziły czarne (Michał 2.11.2026: „zbugowane”). */
 let instance = 0;
 
+/** Pora dnia pejzażu losuje się przy każdym wczytaniu (Michał 7.11.2026); różnią się tylko filtrem barw w CSS */
+const VARIANTS = ['dusk', 'dawn', 'night'];
 export function vistaScene(): string {
   return paint().replace(/v-([a-z0-9]+)/g, `v${++instance}-$1`);
 }
@@ -154,7 +156,7 @@ function paint(): string {
     const x = 640 + r() * 380, y = 170 + r() * 120, s = 5 + r() * 6;
     birds += `M${f1(x - s)} ${f1(y)} Q${f1(x - s / 2)} ${f1(y - s * 0.6)} ${f1(x)} ${f1(y)} Q${f1(x + s / 2)} ${f1(y - s * 0.6)} ${f1(x + s)} ${f1(y)}`;
   }
-  return `<svg class="ld-scene" viewBox="0 0 1600 900" preserveAspectRatio="xMidYMax slice" aria-hidden="true" focusable="false">
+  return `<svg class="ld-scene sv-${VARIANTS[Math.floor(Math.random() * VARIANTS.length)]}" viewBox="0 0 1600 900" preserveAspectRatio="xMidYMax slice" aria-hidden="true" focusable="false">
   <defs>
     <linearGradient id="v-sky" x1="0" y1="0" x2="0" y2="1">
       <stop offset="0" stop-color="#14284e"/><stop offset=".26" stop-color="#3e6698"/><stop offset=".5" stop-color="#9fb4c4"/><stop offset=".64" stop-color="#f0c88e"/><stop offset=".74" stop-color="#ffb96a"/><stop offset="1" stop-color="#e39a5a"/>

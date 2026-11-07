@@ -534,5 +534,5 @@ body .menu:not(.previewing) .menu-bar .bar-item:hover::after, body .menu:not(.pr
 .menu-scene .menu-shot::after { content: attr(data-cap); position: absolute; left: -2px; right: -2px; bottom: -2px; padding: 6px 10px; font: 600 14px var(--text); letter-spacing: .04em; color: #fff0c8;
   background: linear-gradient(0deg, rgba(10, 6, 4, .92), rgba(10, 6, 4, .55)); text-shadow: 0 1px 2px #000; }
 .menu-scene.has-shot .menu-shot { opacity: 1; }
-.menu-scene.sv-dawn .ld-scene { filter: hue-rotate(-14deg) saturate(1.15) brightness(1.08); }
-.menu-scene.sv-night .ld-scene { filter: hue-rotate(195deg) saturate(.85) brightness(.5); }
+.ld-scene.sv-dawn { filter: hue-rotate(-14deg) saturate(1.15) brightness(1.08); }
+.ld-scene.sv-night { filter: hue-rotate(195deg) saturate(.85) brightness(.5); }
