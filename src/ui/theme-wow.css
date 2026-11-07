@@ -516,3 +516,5 @@ body .menu:not(.previewing) .menu-head > .menu-title.has-logo { width: min(100%,
 body .menu:not(.previewing) .menu-head::after { width: min(100%, 420px); }
 body .menu:not(.previewing) .menu-head::after { display: none; }
 body .menu > .menu-account .acc-guest-row { grid-template-columns: 1fr 1fr; }
+body .menu:not(.previewing) .menu-head { display: block !important; }
+body .menu:not(.previewing) .menu-head > .menu-title.has-logo { grid-column: 1 / -1 !important; margin: 0 0 clamp(8px, 2vh, 22px) 0 !important; }
