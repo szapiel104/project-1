@@ -14,8 +14,19 @@ const TIPS: [string, string][] = [
   ['F3 pokazuje okno wydajności. Gra sama dobiera jakość grafiki do komputera.', 'F3 shows the performance window. The game picks graphics quality to suit your computer.'],
 ];
 
-/** Losowa porada w bieżącym języku (losowanie to tylko ozdoba ekranu, nie symulacja) */
+let last = { at: 0, i: -1 };
+/**
+ * Losowa porada w bieżącym języku (losowanie to tylko ozdoba ekranu, nie symulacja). Michał 7.11.2026: „rady się zmieniają
+ * podczas wczytywania” — ekran wczytywania powstaje kilka razy (start strony, potem wejście do gry), a każdy losował nową
+ * poradę. Teraz przez 40 s od ostatniego losowania wszystkie ekrany pokazują tę samą.
+ */
 export function randomTip(): string {
-  const [p, e] = TIPS[Math.floor(Math.random() * TIPS.length)]!;
+  const now = Date.now();
+  if (last.i < 0 || now - last.at > 40000) {
+    let i = Math.floor(Math.random() * TIPS.length);
+    if (i === last.i && TIPS.length > 1) i = (i + 1) % TIPS.length; // nie ta sama, co przy poprzednim wczytywaniu
+    last = { at: now, i };
+  }
+  const [p, e] = TIPS[last.i]!;
   return tx(p, e);
 }

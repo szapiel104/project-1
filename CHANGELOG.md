@@ -1,5 +1,9 @@
 # Dziennik zmian
 
+## 0.94.72 — 2026-11-07
+- `main.ts` `continuable`: najnowszy zapis, bez wykluczania map solo po przegranej (pomijany tylko skończony mecz online).
+- `tips.ts`: ta sama rada przez 40 s (ekran wczytywania powstaje kilka razy). Boty: bez zmian.
+
 ## 0.94.71 — 2026-11-07
 - Miniatury budynków: klucz pamięci to odcisk (`__THUMBS__` w `vite.config.ts`: modele, `thumbnails.ts`, dane budynków, tekstury), a nie numer wersji — nie rysują się od nowa po każdym wdrożeniu. Boty: bez zmian.
 

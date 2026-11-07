@@ -222,9 +222,12 @@ const markEnded = (id: string): void => { try { const l = [...endedMatches(), id
 // starsze zapisy (sprzed 3.11.2026) nie mają numeru meczu: rozpoznajemy je po mapie i trybie, jeśli powstały przed końcem meczu
 const ENDED_MAPS = 'p1.endedMaps';
 const endedMaps = (): Record<string, number> => { try { return JSON.parse(localStorage.getItem(ENDED_MAPS) ?? '{}') as Record<string, number>; } catch { return {}; } };
+// Michał 7.11.2026: „Kontynuuj niech kieruje do najnowszego save” — bierzemy po prostu najnowszy zapis z listy; pomijamy
+// tylko zapisy ze skończonego meczu online (tam nie ma do czego wracać). Dawne wykluczenie map solo „po przegranej”
+// przeskakiwało najnowsze zapisy i wczytywało starszy.
 const continuable = (l: SaveMeta[]): SaveMeta | undefined => {
-  const ended = endedMatches(), maps = endedMaps();
-  return l.find((s) => (s.match ? !ended.has(s.match) : !(s.created <= (maps[`${s.seedText}|${s.preset}`] ?? 0))));
+  const ended = endedMatches();
+  return l.find((s) => !(s.match && ended.has(s.match)));
 };
 function refreshContinue(): void { void listSaves().then((l) => menu.setCanContinue(!!continuable(l)), () => menu.setCanContinue(false)); }
 onAccount(() => refreshContinue());
