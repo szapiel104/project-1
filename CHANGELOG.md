@@ -1,5 +1,8 @@
 # Dziennik zmian
 
+## 0.94.77 — 2026-11-07
+- Menu główne: `theme-wow.css` (przyciski z ikonami, wspólna lewa krawędź `--lx`, logo na szerokość kolumny, karta gościa, lista przewijana w swoim polu siatki), `menu.ts` (bez podtytułu w nagłówku, opis gry w Ustawienia → Interfejs, `setCanContinue(on, thumb)`, pocztówka `.menu-shot`), `vista.ts` (losowa pora dnia `sv-dusk/dawn/night`), `main.ts` (miniatura zapisu z góry na całą osadę). Boty: bez zmian.
+
 ## 0.94.76 — 2026-11-07
 - Logo: `src/ui/logo.ts` (Uncial Antiqua, SIL OFL, jako ścieżki SVG, bez ładowania czcionki) w `loadscreen.ts`, `menu.ts`, `index.html`; style `.has-logo` w `menuhead.css`. Boty: bez zmian.
 
