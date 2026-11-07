@@ -514,3 +514,5 @@ body .menu:not(.previewing) .menu-head > .menu-title.has-logo svg.logo { height:
 body .menu:not(.previewing) .menu-head::after { margin-left: 0; width: min(calc(100% - var(--lx) - 24px), 440px); }
 body .menu:not(.previewing) .menu-head > .menu-title.has-logo { width: min(100%, 440px) !important; }
 body .menu:not(.previewing) .menu-head::after { width: min(100%, 420px); }
+body .menu:not(.previewing) .menu-head::after { display: none; }
+body .menu > .menu-account .acc-guest-row { grid-template-columns: 1fr 1fr; }
