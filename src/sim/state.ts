@@ -734,7 +734,6 @@ export function createGame(seed: number, preset: keyof typeof MAP_PRESETS = '1v1
       ...(boost ? { boost } : {}),
     });
     addBuilding(g, keep, s.player, s.x - (KEEP_SIZE >> 1), s.y - (KEEP_SIZE >> 1));
-    paveForecourt(g, g.buildings[g.buildings.length - 1]!);
     // przed bramą zostaje wolny plac (stodoła trzyma tylko towary, jedzenie idzie do spichlerza)
     const L = s.x - FORECOURT.half - 2, R = s.x + FORECOURT.half + 2, Y = s.y + (KEEP_SIZE >> 1) + 2;
     const BARN = buildingIndex('barn'), GRAN = buildingIndex('granary');
@@ -963,14 +962,8 @@ export function idleCount(g: GameState, player: number): number {
 
 /** Plac przed bramą zamku: tyle pól w głąb i w każdą stronę od osi bramy. Nie wolno tu budować (drogi tak). */
 export const FORECOURT = { depth: 3, half: 3 };
-/** Plac przed bramą wyłożony kamienną kostką (zwykła droga brukowana: szybciej się po nim chodzi) */
-export function paveForecourt(g: GameState, k: { x: number; y: number; owner: number }): void {
-  const { width, height } = g.map, gx = k.x + KEEP_GATE[0], y0 = k.y + KEEP_SIZE;
-  for (let d = 0; d < FORECOURT.depth; d++) for (let o = -FORECOURT.half; o <= FORECOURT.half; o++) {
-    const x = gx + o, y = y0 + d, t = y * width + x;
-    if (x >= 0 && y >= 0 && x < width && y < height && TERRAIN[g.map.tiles[t] as Terrain].walkable) { g.roads[t] = 2; g.roadOwner[t] = k.owner + 1; }
-  }
-}
+// Plac przed bramą nie jest już brukowany (Michał 7.11.2026: „drogę przed zamkiem wywal kamienną”) — zostaje wolnym
+// placem bez zabudowy, wydeptanym przez życie osady.
 /** Czy pole leży na placu przed bramą któregoś zamku */
 export function inForecourt(g: GameState, x: number, y: number): boolean {
   for (const k of g.buildings) {

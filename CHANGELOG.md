@@ -1,5 +1,10 @@
 # Dziennik zmian
 
+## 0.94.84 — 2026-11-07
+- `buildingBatch.ts`: budynki razem po materiale (`THREE.BatchedMesh`), ?batch=0 — dawne pule bryła+materiał. Pełna osada (70 budynków, 90 żołnierzy, 40 chłopów, RTX 3050): obiekty w obrazie 305 → 195, procesor 20,5 → 17,9 ms, najgorsza klatka 51 → 34 ms.
+- `scene.ts` `warmBuildingModels`: po jednym modelu każdego rodzaju budynku w rozgrzewce (materiały i pule) — przy stawianiu nowych rodzajów brak klatek > 200 ms (było do 0,9 s); wczytywanie ok. +5 s.
+- `state.ts`: usunięte `paveForecourt` — plac przed bramą bez bruku (Michał). Stare zapisy mają bruk do rozbiórki. Boty: bez zmian.
+
 ## 0.94.83 — 2026-11-07
 - `webgpu.ts` `onceperVersion`: backend wysyła bufor w danej wersji raz (cztery widoki kolumn mat4 wysyłały wspólny bufor 4–5×). `footprints.ts`: zakres nowych śladów zamiast całego pierścienia 24 576 sztuk. Grupy wojska `.army-groups` w lewym dolnym rogu. Boty: bez zmian.
 

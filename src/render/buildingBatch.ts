@@ -86,7 +86,9 @@ export class MaterialBatches {
     const maxInst = 64, maxVerts = Math.max(4096, vertsOf(geo) * 4), maxIndex = geo.index ? Math.max(8192, indexOf(geo) * 4) : 0;
     const mesh = new THREE.BatchedMesh(maxInst, maxVerts, maxIndex, mat);
     mesh.castShadow = cast; mesh.receiveShadow = recv;
-    mesh.perObjectFrustumCulled = true;
+    // bez cięcia do kadru po sztuce: w jednej klatce rysujemy kilka przejść (obraz, cienie, odbicie) z różnych kamer, a lista
+    // widocznych sztuk idzie na kartę teksturą raz — przy cięciu części budynków migały (Michał 7.11.2026: „mrugają”)
+    mesh.perObjectFrustumCulled = false;
     mesh.sortObjects = false;
     mesh.userData.noCull = true;
     mesh.frustumCulled = false; // całość obejmuje całą osadę; cięcie do kadru robi każda sztuka osobno
