@@ -11,6 +11,7 @@ import { touch } from './touch';
 import * as THREE from 'three';
 import { initKtx } from './ktx';
 import { MeshBVH } from 'three-mesh-bvh';
+import { SmallShadows } from './shadowcull';
 import { roofBelow, WALK_GRAVITY, WALK_JUMP, WALK_STEP_UP } from './walkphysics';
 import { GL_DEBUG, glSection, watchLoading, watchRenderer } from '../debug/errlog';
 import { hash2 } from '../sim/rng';
@@ -2595,6 +2596,8 @@ export class GameRenderer {
     this.bolts.update(dt);
     if (this.flash > 0) { this.flash = Math.max(0, this.flash - dt * 4); this.hemi.intensity += this.flash * 3 * (Math.random() < 0.7 ? 1 : 0.3); }
     this.aimSun();
+    // drobiazgi (ludzie, zwierzęta, graty) rzucają cień tylko z bliska — mniej rysowań w mapie cieni (shadowcull.ts)
+    this.smallShadows.update(this.scene, this.walk ? 0 : this.cam.distance);
     this.updateSeason(dt);
     // cienie chmur: przy pogodzie z chmurami wyraźniejsze, nocą, w deszczu (pełne zachmurzenie) i we mgle znikają
     setCloudShadows(this.calm ? 0 : this.time, Math.min(1, 0.75 + this.cover * 0.5) * (1 - this.night) * (1 - this.rain * 0.8) * (1 - this.dayMist * 0.6));
@@ -3497,6 +3500,7 @@ export class GameRenderer {
     sm.needsUpdate = moved || this.calm || !this.sun.shadow.map || (this.shadowFrame++ & 1) === 0;
     ls.needsUpdate = sm.needsUpdate;
   }
+  private smallShadows = new SmallShadows();
   private sunAxisX = new THREE.Vector3();
   private sunAxisY = new THREE.Vector3();
   private sunAxisZ = new THREE.Vector3();

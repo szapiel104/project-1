@@ -1,5 +1,10 @@
 # Dziennik zmian
 
+## 0.94.48 — 2026-11-07
+- `main.ts`: zapis do `localStorage` co 60 s przez `requestIdleCallback` (było co 15 s w środku klatki; serialize dużej gry 4v4 ok. 20 ms).
+- `shadowcull.ts` (nowy): kategorie drobiazgów (postacie, zwierzęta, podwórka, graty, niesione ładunki, wilki, kruki, wozy…) bez cienia przy kamerze dalej niż 34 (z powrotem poniżej 30); w spacerze zawsze z cieniem.
+- Boty: bez zmian.
+
 ## 0.94.47 — 2026-11-06
 - `lod.ts`: bryła cienia (z lod1) we wszystkich poziomach LOD — lod2+ nie rzucały cienia i budynki na granicy odległości gubiły cień przy przesuwaniu widoku.
 - `aimSun`: obszar cienia dwa stałe rozmiary (46 / 70, histereza 42–50) zamiast skoków co 12 %.

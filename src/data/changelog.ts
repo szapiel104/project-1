@@ -10,6 +10,17 @@ export type { ChangeEntry } from './changelogTypes';
  */
 const NEW: ChangeEntry[] = [
   {
+    v: '0.94.48', date: '2026-11-07',
+    pl: [
+      'Płynniej: szybki zapis co minutę i w wolnej chwili przeglądarki zamiast co 15 sekund w środku gry.',
+      'Płynniej z daleka: ludzie, zwierzęta i drobiazgi na podwórkach rzucają cień tylko przy bliższej kamerze. Budynki, drzewa i mury rzucają go zawsze.',
+    ],
+    en: [
+      'Smoother: the quick save runs once a minute when the browser is idle, instead of every 15 seconds mid-game.',
+      'Smoother from afar: people, animals and yard clutter cast shadows only when the camera is closer. Buildings, trees and walls always cast them.',
+    ],
+  },
+  {
     v: '0.94.47', date: '2026-11-06',
     pl: [
       'Cienie nie mrugają przy przesuwaniu widoku: dalekie budynki też rzucają cień, a nie gubią go na granicy odległości.',

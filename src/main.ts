@@ -165,7 +165,13 @@ function applyUi(ui: UiSave | undefined): void {
 // zapis przy zamknięciu, odświeżeniu i przełączeniu karty: nic nie ginie, nawet przy zatrzymanej grze
 window.addEventListener('pagehide', () => { if (game) save(); });
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden' && game) save(); });
-setInterval(() => { if (game) save(); }, 15000);
+// co minutę, w wolnej chwili przeglądarki (zapis całego świata to kilkanaście–kilkadziesiąt ms; co 15 s w środku klatki
+// dawał regularne przycięcie, Michał 7.11.2026). Przy zamknięciu i schowaniu karty zapis i tak idzie od razu (wyżej).
+setInterval(() => {
+  if (!game) return;
+  const ric = (window as unknown as { requestIdleCallback?: (f: () => void, o: { timeout: number }) => void }).requestIdleCallback;
+  if (ric) ric(() => { if (game) save(); }, { timeout: 5000 }); else save();
+}, 60000);
 
 // ---------------- zapisy gry (src/saves/store.ts): ręczne, autozapisy, szybki zapis, wczytywanie ----------------
 /** Zapisywać można tylko grę z botami w trakcie (nie mecz przez sieć, nie skończoną, nie tryb testowy) */
