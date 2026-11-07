@@ -14,9 +14,9 @@
 .rt-pic { position: absolute; inset: 0 0 26px; display: grid; place-items: center; }
 .rt-pic.full img { width: 100%; height: 100%; object-fit: contain; object-position: center bottom; display: block; filter: drop-shadow(0 4px 6px rgba(0, 0, 0, .6)); }
 .rt-pic svg { width: 80px; height: 80px; }
-.rt-name { position: absolute; left: 0; right: 0; bottom: 0; min-height: 26px; display: grid; place-items: center; padding: 3px 4px; font: 700 13px/1.1 var(--text, sans-serif); color: #f6e8c8; text-align: center; text-shadow: 0 1px 2px #000;
+.rt-name { position: absolute; left: 0; right: 0; bottom: 0; min-height: 26px; display: grid; place-items: center; padding: 3px 4px; font: 600 13px/1.1 var(--text, sans-serif); color: #f6e8c8; text-align: center; text-shadow: 0 1px 2px #000;
   background: linear-gradient(rgba(10, 6, 3, .55), rgba(10, 6, 3, .95)); border-top: 1px solid rgba(154, 122, 42, .6); }
-.rt-max { position: absolute; top: 5px; right: 5px; min-width: 24px; height: 24px; padding: 0 5px; box-sizing: border-box; font: 800 13px/22px var(--text, sans-serif); text-align: center; color: #1c2a14; background: #9fd889; border: 1px solid #e3ffd6; border-radius: 12px; box-shadow: 0 1px 3px #000; }
+.rt-max { position: absolute; top: 5px; right: 5px; min-width: 24px; height: 24px; padding: 0 5px; box-sizing: border-box; font: 600 13px/22px var(--text, sans-serif); text-align: center; color: #1c2a14; background: #9fd889; border: 1px solid #e3ffd6; border-radius: 12px; box-shadow: 0 1px 3px #000; }
 .rt-tile.cant .rt-max { color: #fff; background: #7a2a1f; border-color: #e9a598; }
 .rt-tile.cant .rt-pic { filter: grayscale(.85) brightness(.6); }
 .rt-tile.cant .rt-name { color: #c9b68f; }
@@ -33,7 +33,7 @@
 .hover-card .hc-head { display: flex; align-items: center; gap: 10px; }
 .hover-card .hc-pic { width: 40px; height: 40px; flex: none; overflow: hidden; border: 1px solid #9a7a2a; background: #120b06; }
 .hover-card .hc-pic img, .hover-card .hc-pic svg { width: 100%; height: 100%; object-fit: cover; display: block; }
-.hover-card .hc-name { font: 800 18px/1.15 var(--text, sans-serif); color: #ffd76a; }
+.hover-card .hc-name { font: 600 18px/1.15 var(--text, sans-serif); color: #ffd76a; }
 .hover-card p { margin: 0; }
 .hover-card .hc-desc { color: #e6d6b4; }
 .hover-card .hc-cost { display: flex; flex-wrap: wrap; gap: 4px 14px; padding: 6px 0; border-top: 1px solid rgba(154, 122, 42, .35); border-bottom: 1px solid rgba(154, 122, 42, .35); }
@@ -42,7 +42,7 @@
 .hover-card .rt-need em { font-style: normal; font-size: 13px; color: #c9b68f; }
 .hover-card .rt-need.short strong, .hover-card .rt-need.short em, .hover-card span.rt-need.short { color: #ff8a78; }
 .hover-card .hc-stats { font-size: 13.5px; color: #d8c6a0; }
-.hover-card .hc-can { font-weight: 700; color: #b8f0a6; }
+.hover-card .hc-can { font-weight: 600; color: #b8f0a6; }
 .hover-card .hc-can.no { color: #ff9c8a; }
 .hover-card .hc-flag { color: #ffd76a; font-size: 13.5px; }
 .hover-card .hc-keys { font-size: 12.5px; color: #b9a682; }
@@ -54,7 +54,7 @@
 #ui .card .build-cost { display: none; }
 #ui .card .build-name { font-size: 15.5px; line-height: 1.15; }
 #ui .card.locked .build-need { font-size: 0; gap: 0; padding: 5px 7px; }
-.hover-card .build-cost { display: flex; flex-wrap: wrap; gap: 6px; justify-content: flex-start; margin: 0; font-size: 15px; font-weight: 700; color: #fff4dc; }
+.hover-card .build-cost { display: flex; flex-wrap: wrap; gap: 6px; justify-content: flex-start; margin: 0; font-size: 15px; font-weight: 600; color: #fff4dc; }
 .hover-card .build-cost .cost-chip { display: inline-flex; align-items: center; gap: 5px; padding: 2px 8px 2px 2px; background: #0d0a07; border: 1px solid #5a4630; text-shadow: 1px 1px 0 #000; }
 .hover-card .build-cost .cost-chip .ico svg { width: 22px; height: 22px; display: block; }
 
@@ -63,9 +63,9 @@
 .rt-tile { width: 118px; height: 184px; background: radial-gradient(ellipse at 50% 40%, #4a3520, #1a110a 70%, #0d0805); }
 .rt-pic { inset: 0 0 34px; }
 .rt-pic svg { width: 100px; height: 100px; }
-.rt-name { min-height: 34px; font-size: 15.5px; font-weight: 800; letter-spacing: .01em; color: #ffe7a6; }
+.rt-name { min-height: 34px; font-size: 15.5px; font-weight: 600; letter-spacing: .01em; color: #ffe7a6; }
 /* ile możesz wyszkolić: duża tabliczka na dole obrazka, czytelna z daleka */
-.rt-max { top: auto; right: 6px; bottom: 40px; min-width: 34px; height: 30px; padding: 0 8px; font: 800 19px/28px var(--text, sans-serif); color: #fff6de;
+.rt-max { top: auto; right: 6px; bottom: 40px; min-width: 34px; height: 30px; padding: 0 8px; font: 600 19px/28px var(--text, sans-serif); color: #fff6de;
   background: linear-gradient(#3f7a36, #24481f); border: 1px solid #b8f0a6; border-radius: 3px; box-shadow: 0 2px 4px rgba(0, 0, 0, .8); text-shadow: 0 1px 1px #000; }
 .rt-max::before { content: '×'; margin-right: 1px; font-size: 15px; opacity: .85; }
 .rt-tile.cant .rt-max { color: #ffd9d0; background: linear-gradient(#7a2a1f, #4a140d); border-color: #e9a598; }
@@ -77,15 +77,15 @@
 .hover-card .hc-head { gap: 12px; }
 .hover-card .hc-head-t { display: grid; gap: 2px; }
 .hover-card .hc-name { font-size: 22px; }
-.hover-card .hc-sub { font-size: 15px; font-weight: 700; color: #b8f0a6; }
+.hover-card .hc-sub { font-size: 15px; font-weight: 600; color: #b8f0a6; }
 .hover-card .hc-sub.no { color: #ff9c8a; }
 .hover-card .hc-desc { font-size: 16px; color: #efe2c4; }
 .hover-card .hc-table { width: 100%; border-collapse: collapse; font-size: 16px; }
-.hover-card .hc-table th { padding: 4px 6px; text-align: right; font: 700 12px/1 var(--text, sans-serif); letter-spacing: .08em; text-transform: uppercase; color: #c9b383; border-bottom: 1px solid rgba(154, 122, 42, .5); }
+.hover-card .hc-table th { padding: 4px 6px; text-align: right; font: 600 12px/1 var(--text, sans-serif); letter-spacing: .08em; text-transform: uppercase; color: #c9b383; border-bottom: 1px solid rgba(154, 122, 42, .5); }
 .hover-card .hc-table th:first-child { text-align: left; }
 .hover-card .hc-table td { padding: 5px 6px; border-bottom: 1px solid rgba(154, 122, 42, .18); }
-.hover-card .hc-table td.num { text-align: right; font-weight: 800; font-variant-numeric: tabular-nums; color: #fff4dc; }
-.hover-card .hc-table td.have { color: #cdbb96; font-weight: 700; }
+.hover-card .hc-table td.num { text-align: right; font-weight: 600; font-variant-numeric: tabular-nums; color: #fff4dc; }
+.hover-card .hc-table td.have { color: #cdbb96; font-weight: 600; }
 .hover-card .hc-res { display: flex; align-items: center; gap: 8px; color: #efe2c4; }
 .hover-card .hc-table tr.short td, .hover-card .hc-table tr.short td.have { color: #ff8a78; }
 .hover-card .hc-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(70px, 1fr)); gap: 6px; }
@@ -95,7 +95,7 @@
 .hover-card .hc-can { font-size: 16px; }
 .hover-card .hc-flag { font-size: 15px; }
 .hover-card .hc-keys { display: flex; flex-wrap: wrap; gap: 6px 12px; padding-top: 8px; border-top: 1px solid rgba(154, 122, 42, .35); font-size: 14px; color: #d8c6a0; }
-.hover-card kbd { padding: 1px 6px; font: 700 12.5px/1.4 var(--text, sans-serif); color: #fff4dc; background: #0d0a07; border: 1px solid #6e5420; border-bottom-width: 2px; border-radius: 3px; }
+.hover-card kbd { padding: 1px 6px; font: 600 12.5px/1.4 var(--text, sans-serif); color: #fff4dc; background: #0d0a07; border: 1px solid #6e5420; border-bottom-width: 2px; border-radius: 3px; }
 .hover-card .build-cost { font-size: 17px; }
 .hover-card .build-cost .cost-chip .ico svg { width: 26px; height: 26px; }
 
@@ -107,7 +107,7 @@
 #ui .card, #ui .card:hover, #ui .card[aria-pressed='true'], #ui .card.poor, #ui .card.locked, #ui .card.poor:hover, #ui .card.locked:hover {
   background-color: var(--parch-bg); background-image: var(--parch-img); background-size: 100% 100%, auto, 360px auto; background-blend-mode: normal, normal, multiply;
   border: 1px solid #120c08; border-radius: 2px; box-shadow: 0 0 0 2px #6e5226, inset 0 0 22px rgba(120, 78, 28, .35); }
-#ui .card .build-name { color: var(--parch-red); font-weight: 800; text-shadow: none; }
+#ui .card .build-name { color: var(--parch-red); font-weight: 600; text-shadow: none; }
 #ui .card img { background: none; filter: drop-shadow(0 3px 3px rgba(60, 35, 10, .45)); }
 #ui .card:hover { box-shadow: 0 0 0 2px #e2b75a, 0 0 12px rgba(255, 200, 90, .45), inset 0 0 22px rgba(120, 78, 28, .25); }
 #ui .card[aria-pressed='true'] { box-shadow: 0 0 0 3px #f0cf72, 0 0 16px rgba(255, 190, 70, .6), inset 0 0 0 2px var(--parch-red); }
@@ -131,7 +131,7 @@
 /* karta z opisem po najechaniu: strona z księgi */
 .hover-card { color: var(--parch-ink); background-color: var(--parch-bg); background-image: var(--parch-img); background-size: 100% 100%, auto, 420px auto; background-blend-mode: normal, normal, multiply;
   border: 1px solid #120c08; box-shadow: 0 0 0 2px #6e5226, 0 0 0 3px #0b0704, inset 0 0 30px rgba(120, 78, 28, .35), 0 14px 30px rgba(0, 0, 0, .6); }
-.hover-card .hc-name { font-family: 'Cinzel', var(--display); font-weight: 800; color: var(--parch-red); }
+.hover-card .hc-name { font-family: 'Inter', 'Segoe UI', system-ui, sans-serif; font-weight: 600; color: var(--parch-red); }
 .hover-card .hc-pic { border-color: #6e5226; background: #2a1d10; }
 .hover-card .hc-sub, .hover-card .hc-can { color: #2f6a28; }
 .hover-card .hc-sub.no, .hover-card .hc-can.no { color: #a8281f; }
@@ -142,7 +142,7 @@
 .hover-card .hc-table td.have { color: var(--parch-soft); }
 .hover-card .hc-res { color: var(--parch-ink); }
 .hover-card .hc-res svg { filter: drop-shadow(0 0 1px rgba(0, 0, 0, .6)); }
-.hover-card .hc-table tr.short td, .hover-card .hc-table tr.short td.have { color: #a8281f; font-weight: 800; }
+.hover-card .hc-table tr.short td, .hover-card .hc-table tr.short td.have { color: #a8281f; font-weight: 600; }
 .hover-card .hc-stat { background: rgba(255, 248, 228, .6); border-color: var(--parch-line); }
 .hover-card .hc-stat span { color: var(--parch-soft); }
 .hover-card .hc-stat strong { color: var(--parch-red); }
@@ -172,14 +172,14 @@ body.build-open .scribe { display: flex; }
 /* ===== Okno budynku na pergaminie (Michał 3.11.2026: „info o budynkach wszystkie też na pergaminie”) ===== */
 #ui .info { color: var(--parch-ink); background-color: var(--parch-bg); background-image: var(--parch-img); background-size: 100% 100%, auto, 420px auto; background-blend-mode: normal, normal, multiply;
   box-shadow: 0 0 0 2px #6e5226, 0 0 0 3px #0b0704, inset 0 0 40px rgba(120, 78, 28, .35), 0 12px 28px rgba(0, 0, 0, .55); }
-#ui .info .info-name { font-family: 'Cinzel', var(--display); font-weight: 800; color: var(--parch-red); text-shadow: none; }
+#ui .info .info-name { font-family: 'Inter', 'Segoe UI', system-ui, sans-serif; font-weight: 600; color: var(--parch-red); text-shadow: none; }
 #ui .info .info-owner { color: var(--parch-ink); background: rgba(255, 248, 228, .55); }
-#ui .info .hp-line { color: var(--parch-ink); font-weight: 700; }
+#ui .info .hp-line { color: var(--parch-ink); font-weight: 600; }
 #ui .info p, #ui .info .hint, #ui .info .logi-note { color: var(--parch-ink); text-shadow: none; }
 #ui .info :is(.power-row-box, .info-stock, .info-logi, .info-prod, .info-site, .gate-box, .army-box, .recruit, .roster) {
   color: var(--parch-ink); background: rgba(255, 248, 228, .5); border: 1px solid var(--parch-line); box-shadow: none; }
-#ui .info :is(.stock-head, .logi-head, .prod-head, .stock-head2) { font-family: 'Cinzel', var(--display); color: var(--parch-red); text-shadow: none; }
-#ui .info :is(.stock-head, .logi-head, .prod-head, .stock-head2) :is(span, small):last-child { color: var(--parch-soft); font-weight: 700; }
+#ui .info :is(.stock-head, .logi-head, .prod-head, .stock-head2) { font-family: 'Inter', 'Segoe UI', system-ui, sans-serif; color: var(--parch-red); text-shadow: none; }
+#ui .info :is(.stock-head, .logi-head, .prod-head, .stock-head2) :is(span, small):last-child { color: var(--parch-soft); font-weight: 600; }
 #ui .info .stock-item { color: var(--parch-ink); background: rgba(255, 252, 240, .75); border: 1px solid var(--parch-line); }
 #ui .info .stock-item strong { color: var(--parch-ink); text-shadow: none; }
 #ui .info .stock-item :is(span, small, em) { color: var(--parch-soft); text-shadow: none; }
@@ -193,20 +193,20 @@ body.build-open .scribe { display: flex; }
 #ui .info .info-owner-name { color: var(--parch-ink); }
 #ui .info .info-owner-rel { color: var(--parch-red); }
 #ui .info .power-badge { color: #2f6a28; text-shadow: none; }
-#ui .info :is(.stock-title, .logi-head, .prod-head, .stock-head, .stock-head2, .site-head) strong { color: var(--parch-red); text-shadow: none; font-family: 'Cinzel', var(--display); }
+#ui .info :is(.stock-title, .logi-head, .prod-head, .stock-head, .stock-head2, .site-head) strong { color: var(--parch-red); text-shadow: none; font-family: 'Inter', 'Segoe UI', system-ui, sans-serif; }
 #ui .info .stock-total strong, #ui .info strong.bad, #ui .info .bad strong { color: #a8281f; }
 /* zabezpieczenie: każdy jasny napis w oknie (poza przyciskami i paskiem tytułu) dostaje atrament, żeby nie znikał na pergaminie */
 #ui .info :is(p, li, span, strong, em, small, label, h3, h4):not(button *):not(.info-head *):not(.rt-tile *):not([class*='badge']):not([class*='bad']):not([class*='warn']) { text-shadow: none; }
 
 /* okno budynku: czyje to — mocno widoczne; przyciski równej szerokości; strzałka przepisu widoczna (Michał 3.11.2026) */
 #ui .info .info-owner { display: flex; align-items: center; gap: 10px; padding: 6px 8px; border-left: 4px solid var(--team, #8a6d3b); }
-#ui .info .info-owner-rel { padding: 4px 12px; font: 800 13px/1.2 var(--text, sans-serif); letter-spacing: .1em; text-transform: uppercase; border-radius: 3px; border: 0; color: #fff; background: #2f6a28; box-shadow: 0 1px 2px rgba(0, 0, 0, .35); }
+#ui .info .info-owner-rel { padding: 4px 12px; font: 600 13px/1.2 var(--text, sans-serif); letter-spacing: .1em; text-transform: uppercase; border-radius: 3px; border: 0; color: #fff; background: #2f6a28; box-shadow: 0 1px 2px rgba(0, 0, 0, .35); }
 #ui .info .info-owner[data-rel='enemy'] .info-owner-rel { background: #a8281f; }
 #ui .info .info-owner[data-rel='ally'] .info-owner-rel { background: #1f5a8a; }
-#ui .info .info-owner-name { font-size: 15px; font-weight: 700; }
+#ui .info .info-owner-name { font-size: 15px; font-weight: 600; }
 #ui .info .actions { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 8px; }
 #ui .info .actions button, #ui .info > .btn-main, #ui .info .gate-box .btn-main { width: 100%; }
-#ui .info .prod-arrow { color: var(--parch-ink); font-size: 22px; font-weight: 800; opacity: .8; }
+#ui .info .prod-arrow { color: var(--parch-ink); font-size: 22px; font-weight: 600; opacity: .8; }
 /* lista ludzi w oknie budynku (magazynierzy, robotnicy) i puste półki — czytelne na pergaminie */
 #ui .info .logi-list, #ui .info .logi-list li { color: var(--parch-ink); text-shadow: none; }
 #ui .info .logi-list strong { color: var(--parch-red); }

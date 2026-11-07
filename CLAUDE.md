@@ -3,6 +3,9 @@
 - Rozmowa i teksty po polsku. Michał wdraża i ocenia wygląd sam; pracujemy małymi partiami, push na main = wdrożenie (GitHub Pages).
 - Gra tylko na komputery (telefony zablokowane w src/boot.ts).
 
+## Czcionka (Michał 7.11.2026, dla wszystkich czatów)
+- W całej grze jest **jedna czcionka: Inter**, lekka (400–600), bez Cinzel i Alegreya. Zmienne `--text`, `--display`, `--label` w `src/ui/style.css` wskazują na nią; nowych krojów i grubszych niż 600 nie dodajemy (nieczytelne).
+
 ## Git — obowiązkowo dla każdego czatu (Michał, 23.10.2026)
 Nad grą pracuje kilka czatów naraz, więc:
 1. **Przed rozpoczęciem każdej roboty** (także kolejnej w tym samym czacie): `git pull --rebase origin main` — praca zawsze na najnowszym stanie.

@@ -36,7 +36,7 @@ export class SpawnFx {
       // „+1” nad drzwiami, unosi się i gaśnie
       const c = document.createElement('canvas'); c.width = 96; c.height = 64;
       const ctx = c.getContext('2d')!;
-      ctx.font = 'bold 44px Cinzel, Georgia, serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.font = "600 44px Inter, 'Segoe UI', sans-serif"; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
       ctx.lineWidth = 6; ctx.strokeStyle = '#2a1406'; ctx.strokeText('+1', 48, 34);
       ctx.fillStyle = '#ffe08a'; ctx.fillText('+1', 48, 34);
       const tex = new THREE.CanvasTexture(c); tex.colorSpace = THREE.SRGBColorSpace;

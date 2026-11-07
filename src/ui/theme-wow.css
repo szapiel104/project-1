@@ -31,7 +31,7 @@ body { font-size: 15px; }
     0 0 0 2px #3d3426, 0 0 0 3px var(--wow-frame), 0 0 0 4px #0b0a08, 0 10px 26px rgba(0, 0, 0, .5);
 }
 .info-name, .report-title, .unit-name, .confirm-title, .market-title, .market-group-title {
-  color: var(--wow-gold); font-family: var(--label); font-weight: 700; letter-spacing: .04em; text-shadow: 1px 1px 0 #000;
+  color: var(--wow-gold); font-family: var(--label); font-weight: 600; letter-spacing: .04em; text-shadow: 1px 1px 0 #000;
 }
 .info-name { font-size: 19px; border-bottom-color: rgba(179, 154, 102, .5); }
 .info, .info p { font-size: 15px; }
@@ -146,12 +146,12 @@ button:disabled { color: #a08a70; text-shadow: none; filter: saturate(.4); }
 .card.poor, .card.locked { background-image: url('/textures/cc0/plaster.jpg'), linear-gradient(#5e3226, #331812); box-shadow: inset 0 0 0 1px #8a4535, inset 0 0 12px rgba(0, 0, 0, .45); }
 
 /* czytelne napisy jak w WoW: złote, pełne litery (nie drobne kapitaliki), ostry cień 1 px zamiast rozmytej poświaty */
-.card .build-name { font-family: var(--text); font-weight: 700; font-size: 16px; letter-spacing: .01em; text-transform: none; font-variant: normal;
+.card .build-name { font-family: var(--text); font-weight: 600; font-size: 16px; letter-spacing: .01em; text-transform: none; font-variant: normal;
   color: var(--wow-gold); text-shadow: 1px 1px 0 #000, 0 0 2px #000; }
 .card.poor .build-name, .card.locked .build-name { color: #e8c8b8; }
 .card .build-cost .cost-chip, .card .build-cost { font-size: 15px; text-shadow: 1px 1px 0 #000; }
-.card-group-name { font-family: var(--text); font-weight: 700; font-size: 14px; letter-spacing: .03em; color: var(--wow-gold); text-shadow: 1px 1px 0 #000; }
-.cat { font-family: var(--text); font-weight: 700; font-size: 16px; letter-spacing: .01em; text-transform: none; color: var(--wow-gold); text-shadow: 1px 1px 0 #000, 0 0 2px #000; }
+.card-group-name { font-family: var(--text); font-weight: 600; font-size: 14px; letter-spacing: .03em; color: var(--wow-gold); text-shadow: 1px 1px 0 #000; }
+.cat { font-family: var(--text); font-weight: 600; font-size: 16px; letter-spacing: .01em; text-transform: none; color: var(--wow-gold); text-shadow: 1px 1px 0 #000, 0 0 2px #000; }
 
 /* ===== Układ (Michał 2.11.2026): okna budynków i wojska w prawym górnym rogu, kronika w lewym dolnym nad belką ===== */
 .floaters .info, .floaters .info.army-mode { position: fixed; top: 16px; left: 16px; right: auto; bottom: auto; margin: 0; pointer-events: auto; overflow-y: auto; }
@@ -166,7 +166,7 @@ body.build-open .scribe, body.build-open .scribe-log { display: none; }
 /* ===== Przyciski jak na wzorze od Michała (2.11.2026): ciemna, brązowa oprawa i świecąca płytka w środku =====
    pomarańczowy — główne działanie (.btn-main), zielony — „na plus” (sprzedaż na rynku), przygaszony — zwykłe (.btn-plain) */
 .btn-main, .btn-plain, .btn-danger, .market-line .market-btn {
-  font-family: var(--label); font-weight: 700; letter-spacing: .06em; border: 1px solid #120c08; border-radius: 2px; transition: background .12s, box-shadow .12s, color .12s;
+  font-family: var(--label); font-weight: 600; letter-spacing: .06em; border: 1px solid #120c08; border-radius: 2px; transition: background .12s, box-shadow .12s, color .12s;
 }
 .btn-main {
   color: #ffe9c2; text-shadow: 0 1px 1px #3a0e00, 0 0 6px rgba(255, 160, 80, .45);
@@ -222,7 +222,7 @@ body.info-open .scribe-toasts { display: none; }
   background: linear-gradient(#3a2a1a, #21170e); border-bottom: 1px solid #8a6d3b; box-shadow: inset 0 -1px 0 #000, 0 2px 6px rgba(0, 0, 0, .35); }
 .info-head .info-name { flex: 1; min-width: 0; margin: 0; padding: 0; background: none; border: 0; cursor: move; font-size: 19px; line-height: 1.15; }
 .floaters .info .info-name::after { content: none; }
-.info-ibtn { flex: none; width: 28px; height: 28px; min-height: 0; padding: 0; display: grid; place-items: center; font: 700 15px/1 var(--text); cursor: pointer; }
+.info-ibtn { flex: none; width: 28px; height: 28px; min-height: 0; padding: 0; display: grid; place-items: center; font: 600 15px/1 var(--text); cursor: pointer; }
 .info-desc-btn { font-family: Georgia, serif; font-style: italic; }
 .info.is-person .info-desc-btn { display: none; }
 .info:not(.desc-open):not(.is-person) .info-desc { display: none; }
@@ -234,7 +234,7 @@ body.info-open .scribe-toasts { display: none; }
 .info :is(.power-row-box, .info-stock, .info-logi, .info-prod, .info-site, .gate-box, .army-box, .recruit, .roster) {
   padding: 8px 10px 10px; background: rgba(8, 6, 4, .45); border: 1px solid #4e3d25; border-bottom: 1px solid #4e3d25; border-radius: 2px;
   box-shadow: inset 0 1px 0 rgba(255, 230, 180, .05); }
-.info :is(.stock-head, .logi-head, .prod-head, .stock-head2) { font-family: var(--label); font-weight: 700; font-size: 15px; letter-spacing: .04em; color: #ffd100; text-shadow: 1px 1px 0 #000; margin: 0 0 6px; }
+.info :is(.stock-head, .logi-head, .prod-head, .stock-head2) { font-family: var(--label); font-weight: 600; font-size: 15px; letter-spacing: .04em; color: #ffd100; text-shadow: 1px 1px 0 #000; margin: 0 0 6px; }
 .info :is(.stock-head, .logi-head, .prod-head, .stock-head2) :is(span, small):last-child { font-family: var(--text); font-size: 13px; letter-spacing: 0; color: #c9bba0; text-shadow: none; }
 .info .stock-item { background: #0f0b08; border-color: #5a4630; }
 .info .stock-item strong { font-size: 20px; color: #fff3d6; }
@@ -259,7 +259,7 @@ body .menu .menu-panel, body .menu .menu-panel.wide, body .menu.book-open .menu-
   background-size: 380px auto, 100% 100%; background-blend-mode: multiply, normal; }
 body .menu .menu-panel :is(input, select) { background: #241a11; border: 1px solid #9a7838; color: #fff4dc; box-shadow: inset 0 2px 4px rgba(0, 0, 0, .45); }
 /* przyciski okien menu w tym samym stylu co w grze: główny pomarańczowa płytka, reszta przygaszona */
-body .menu .menu-panel .menu-btn { font-family: var(--label); font-weight: 700; letter-spacing: .08em; color: #f3e2bc; text-shadow: 0 1px 1px #000; border: 1px solid #120c08; border-radius: 2px;
+body .menu .menu-panel .menu-btn { font-family: var(--label); font-weight: 600; letter-spacing: .08em; color: #f3e2bc; text-shadow: 0 1px 1px #000; border: 1px solid #120c08; border-radius: 2px;
   background-image: radial-gradient(ellipse at 50% 0%, rgba(255, 190, 120, .16), transparent 70%), linear-gradient(#5e2c14, #42200e 55%, #331709);
   box-shadow: 0 0 0 1px #5a4630, 0 0 0 2px #0e0906, inset 0 0 0 1px #9a5a30, inset 0 1px 0 rgba(255, 210, 160, .22); }
 body .menu .menu-panel .menu-btn:not(.menu-back):not(.menu-link) { color: #ffe9c2; text-shadow: 0 1px 1px #3a0e00, 0 0 6px rgba(255, 160, 80, .45);
@@ -313,7 +313,7 @@ button.link-btn:focus-visible { outline: 2px solid #ffd76a; outline-offset: 3px;
   box-shadow: inset 0 0 0 1px #ffd76a, inset 0 0 0 2px #5a4020, inset 0 0 24px rgba(0, 0, 0, .35), 0 0 0 1px #000, 0 0 0 3px #d9b062, 0 0 0 4px #000, 0 0 18px rgba(255, 190, 80, .25); }
 .menu-account .acc-seal { width: 64px; height: 64px; border-radius: 50%; background: radial-gradient(circle at 50% 40%, #4a3420, #1c130b 70%); box-shadow: 0 0 0 2px #000, 0 0 0 4px #c9a25a, 0 0 0 5px #000, inset 0 2px 6px rgba(0, 0, 0, .7); }
 .menu-account .acc-seal .net-shield { transform: scale(.82); }
-.menu-account .acc-lvl { right: -8px; bottom: -6px; min-width: 26px; height: 26px; border-radius: 50%; border: 1px solid #000; color: #2a1606; font-weight: 800;
+.menu-account .acc-lvl { right: -8px; bottom: -6px; min-width: 26px; height: 26px; border-radius: 50%; border: 1px solid #000; color: #2a1606; font-weight: 600;
   background: radial-gradient(circle at 35% 30%, #fff3c2, #e3b44a 55%, #8a5e18); box-shadow: 0 0 0 2px #3a2a14, 0 2px 4px rgba(0, 0, 0, .6); }
 .menu-account .acc-nick { font-size: 20px; color: #ffd100; text-shadow: 1px 1px 0 #000, 0 0 8px rgba(255, 180, 60, .3); }
 .menu-account .acc-level { color: #f0dcb4; font-size: 13px; letter-spacing: .08em; }
@@ -381,7 +381,7 @@ body .menu .menu-panel .menu-btn:hover, body .menu .menu-panel .menu-btn:focus-v
 .menu .bell { position: relative; flex: 0 0 auto; align-self: center; margin-left: 8px; }
 .menu .bell-btn { position: relative; width: 48px; height: 48px; display: grid; place-items: center; padding: 0; color: #f3e2bc; background-image: var(--tone-n); border: 1px solid #120c08; border-radius: 2px; box-shadow: 0 0 0 2px #4d3b28, 0 0 0 3px #0e0906, inset 0 0 0 1px #a8916a; cursor: pointer; }
 .menu .bell-btn:hover, .menu .bell-btn[aria-expanded='true'] { color: #fff6e0; background-image: var(--tone-n-hi); }
-.menu .bell-badge { position: absolute; top: -6px; right: -6px; min-width: 20px; height: 20px; padding: 0 5px; box-sizing: border-box; font: 700 12px/20px var(--label, sans-serif); color: #fff; text-align: center; background: #b8261a; border: 1px solid #ffb8a4; border-radius: 10px; }
+.menu .bell-badge { position: absolute; top: -6px; right: -6px; min-width: 20px; height: 20px; padding: 0 5px; box-sizing: border-box; font: 600 12px/20px var(--label, sans-serif); color: #fff; text-align: center; background: #b8261a; border: 1px solid #ffb8a4; border-radius: 10px; }
 .menu .bell-badge[hidden] { display: none; }
 .menu .bell-panel { position: absolute; z-index: 30; top: calc(100% + 10px); right: 0; width: min(420px, calc(100vw - 32px)); max-height: min(70vh, 560px); overflow: auto; padding: 12px; color: #f3e7cf;
   background-color: #2a1e14; background-image: url('/textures/cc0/plaster.jpg'), linear-gradient(#4a3826, #2a1e14); background-size: 380px auto, 100% 100%; background-blend-mode: multiply, normal;
@@ -406,16 +406,16 @@ body .menu .menu-panel .menu-btn:hover, body .menu .menu-panel .menu-btn:focus-v
    zakładki okien zwykłą czcionką tekstu zamiast wersalików Cinzel, a nagłówek menu spokojniej: tytuł, podtytuł,
    opis w równych wierszach i mała plakietka „w ciągłym rozwoju” zamiast trzeciego krzyczącego wiersza */
 body .menu .menu-panel .menu-tab { font-family: var(--text); font-variant: normal; text-transform: none; letter-spacing: .01em; font-size: 16px; font-weight: 600; }
-body .menu .menu-panel .menu-tab[aria-selected='true'] { font-weight: 700; }
+body .menu .menu-panel .menu-tab[aria-selected='true'] { font-weight: 600; }
 .menu:not(.previewing) .menu-sub { margin-top: 8px; font-size: clamp(16px, 2vh, 19px); color: #ecd9ae; }
 .menu:not(.previewing) .game-tagline { gap: 10px; margin-top: 10px; max-width: 440px; }
 .menu:not(.previewing) .game-tagline-what { font-size: 15px; line-height: 1.45; letter-spacing: 0; color: #dcc9a0; text-wrap: balance; }
-.menu:not(.previewing) .game-tagline-dev { justify-self: start; padding: 3px 10px; font-family: var(--text); font-weight: 700; font-size: 13px; letter-spacing: .02em; text-transform: none;
+.menu:not(.previewing) .game-tagline-dev { justify-self: start; padding: 3px 10px; font-family: var(--text); font-weight: 600; font-size: 13px; letter-spacing: .02em; text-transform: none;
   color: #2a1d0c; background: #e6c06a; border: 1px solid #ffd76a; text-shadow: none; }
 
 /* Menu po lewej — czytelniej (Michał 3.11.2026): zwykła, wyraźna czcionka bez kapitalików, ikona przy każdej pozycji,
    większe pola do kliknięcia i opis pod listą bez kursywy */
-body .menu:not(.previewing) .menu-bar .bar-item { font-family: var(--text); font-variant: normal; text-transform: none; letter-spacing: .01em; font-weight: 700;
+body .menu:not(.previewing) .menu-bar .bar-item { font-family: var(--text); font-variant: normal; text-transform: none; letter-spacing: .01em; font-weight: 600;
   font-size: clamp(17px, 2.2vh, 21px); min-height: clamp(42px, 5.2vh, 50px); gap: 14px; padding: 6px 18px 6px 14px; color: #f3e4c2; text-shadow: 0 1px 2px #000, 0 0 6px rgba(0, 0, 0, .7); border-radius: 3px; }
 body .menu:not(.previewing) .menu-bar .mi-icon { width: 26px; height: 26px; display: grid; place-items: center; border: 0; background: none; transform: none; opacity: .85; color: #e2c27a; }
 body .menu:not(.previewing) .menu-bar .bar-item:hover .mi-icon, body .menu:not(.previewing) .menu-bar .bar-item:focus-visible .mi-icon,
@@ -432,14 +432,14 @@ body .menu:not(.previewing) .menu-hint { font-style: normal; font-size: clamp(14
 .menu .bell-panel { display: flex; flex-direction: column; overflow: hidden; padding: 0; width: min(440px, calc(100vw - 32px)); }
 .menu .bell-head { margin: 0; padding: 12px 14px; border-bottom: 1px solid rgba(154, 122, 42, .45); }
 .menu .bell-head strong { display: inline-flex; align-items: center; gap: 8px; }
-.menu .bell-count { min-width: 22px; height: 22px; padding: 0 6px; box-sizing: border-box; font: 700 12px/22px var(--text); color: #fff; text-align: center; background: #b8261a; border-radius: 11px; }
+.menu .bell-count { min-width: 22px; height: 22px; padding: 0 6px; box-sizing: border-box; font: 600 12px/22px var(--text); color: #fff; text-align: center; background: #b8261a; border-radius: 11px; }
 .menu .bell-scroll { overflow: auto; padding: 4px 12px 12px; }
-.menu .bell-sec { margin: 10px 2px 6px; font: 700 12px/1.2 var(--text); letter-spacing: .08em; text-transform: uppercase; color: #c9b383; }
+.menu .bell-sec { margin: 10px 2px 6px; font: 600 12px/1.2 var(--text); letter-spacing: .08em; text-transform: uppercase; color: #c9b383; }
 .menu .bell-top { display: flex; align-items: flex-start; gap: 8px; }
 .menu .bell-dot { flex: none; width: 9px; height: 9px; margin-top: 6px; border-radius: 50%; background: #ffcf4a; box-shadow: 0 0 8px rgba(255, 200, 70, .8); }
 .menu .bell-item { border-radius: 4px; }
 .menu .bell-item.new { border-color: rgba(255, 207, 74, .75); background: linear-gradient(90deg, rgba(120, 82, 24, .55), rgba(70, 48, 18, .4)); box-shadow: inset 3px 0 0 #ffcf4a; }
-.menu .bell-item.new .bell-text { font-weight: 700; color: #fff4d8; }
+.menu .bell-item.new .bell-text { font-weight: 600; color: #fff4d8; }
 .menu .bell-item.new .bell-when { color: #ffd76a; }
 .menu .bell-item:not(.new) { border-color: rgba(154, 122, 42, .22); background: rgba(10, 7, 4, .35); }
 .menu .bell-item:not(.new) .bell-text { color: #cdbb98; }

@@ -15,10 +15,10 @@ body .menu .menu-panel.parch, body .menu.previewing .menu-panel.wide.parch {
   scrollbar-color: #8b6a38 transparent;
 }
 body .menu .menu-panel.parch::before, body .menu .menu-panel.parch::after { border-color: var(--parch-edge); }
-body .menu .menu-panel.parch .menu-heading { color: var(--rubric); text-shadow: none; font-family: 'Cinzel', var(--display); font-weight: 800; letter-spacing: .04em; }
+body .menu .menu-panel.parch .menu-heading { color: var(--rubric); text-shadow: none; font-family: 'Inter', 'Segoe UI', system-ui, sans-serif; font-weight: 600; letter-spacing: .04em; }
 
 /* sekcje: czerwone nagłówki z ornamentem i linią jak w księdze */
-body .menu .menu-panel.parch .pick-group legend { display: flex; align-items: center; gap: 10px; width: 100%; color: var(--rubric); font-family: 'Cinzel', var(--display); font-size: 15px; font-weight: 800; letter-spacing: .1em; }
+body .menu .menu-panel.parch .pick-group legend { display: flex; align-items: center; gap: 10px; width: 100%; color: var(--rubric); font-family: 'Inter', 'Segoe UI', system-ui, sans-serif; font-size: 15px; font-weight: 600; letter-spacing: .1em; }
 body .menu .menu-panel.parch .pick-group legend::before { content: '❧'; font-size: 17px; letter-spacing: 0; }
 body .menu .menu-panel.parch .pick-group legend::after { background: linear-gradient(90deg, var(--parch-edge), transparent); }
 
@@ -26,7 +26,7 @@ body .menu .menu-panel.parch .pick-group legend::after { background: linear-grad
 body .menu .menu-panel.parch .pick { background: rgba(255, 248, 228, .66); border: 1px solid rgba(138, 100, 50, .55); border-radius: 2px; box-shadow: inset 0 0 18px rgba(160, 110, 40, .12); }
 body .menu .menu-panel.parch .pick:hover { background: rgba(255, 252, 238, .92); border-color: var(--rubric); transform: translateY(-2px); }
 body .menu .menu-panel.parch .pick:has(input:focus-visible) { outline: 3px solid var(--rubric); outline-offset: 2px; }
-body .menu .menu-panel.parch .pick-big { color: var(--ink); font-family: 'Cinzel', var(--display); }
+body .menu .menu-panel.parch .pick-big { color: var(--ink); font-family: 'Inter', 'Segoe UI', system-ui, sans-serif; }
 body .menu .menu-panel.parch .pick-small { color: var(--ink-soft); }
 body .menu .menu-panel.parch .pick:has(input:checked) { background: linear-gradient(#9c2a1c, #5e120b); border: 2px solid #f0cf72; box-shadow: 0 0 0 2px rgba(138, 31, 20, .35), 0 4px 10px rgba(60, 10, 5, .3); }
 body .menu .menu-panel.parch .pick:has(input:checked) .pick-big { color: #fff6e0; }

@@ -1,5 +1,8 @@
 # Dziennik zmian
 
+## 0.94.70 — 2026-11-07
+- Czcionka: tylko Inter 400–600 w całym interfejsie (Cinzel / Cinzel Decorative / Alegreya zdjęte z CSS, `index.html`, napisy na mapie w `spawnfx.ts`); wszystkie pogrubienia 700–900 → 600. Boty: bez zmian.
+
 ## 0.94.69 — 2026-11-07
 - `hud.ts`: pasek zapasów tylko ruda/drewno/kamień/jedzenie + „…”, które otwiera okno `.stock-modal` ze wszystkimi surowcami (ilość, zmiana/min, odświeżane na żywo); Esc / ✕ / klik w tło zamyka. Koniec nachodzenia kafelków. Boty: bez zmian.
 
