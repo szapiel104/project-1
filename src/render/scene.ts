@@ -951,8 +951,8 @@ export class GameRenderer {
     this.roadPlans.renderOrder = 2;
     this.scene.add(this.roadPlans);
 
-    // ?pb=1: części postaci rysowane razem (gpu/partBatch.ts) — na próbę, aż Michał potwierdzi wygląd
-    if (this.gpu_ && new URLSearchParams(location.search).has('pb')) Figures.batchScenes.add(this.scene);
+    // części postaci rysowane razem (gpu/partBatch.ts); ?nopb=1 = po staremu (Michał 7.11.2026: „wrzuć na prod”)
+    if (this.gpu_ && !new URLSearchParams(location.search).has('nopb')) Figures.batchScenes.add(this.scene);
     this.figures = new Figures(MAX_UNITS, this.scene);
     this.spearmen = new Figures(MAX_UNITS, this.scene, 'spearman');
     this.archers = new Figures(MAX_UNITS, this.scene, 'archer');

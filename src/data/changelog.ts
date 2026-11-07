@@ -10,6 +10,11 @@ export type { ChangeEntry } from './changelogTypes';
  */
 const NEW: ChangeEntry[] = [
   {
+    v: '0.94.53', date: '2026-11-07',
+    pl: ['Szybsze rysowanie postaci włączone dla wszystkich (po staremu: ?nopb=1 w adresie).'],
+    en: ['Faster character drawing is now on for everyone (the old way: add ?nopb=1 to the address).'],
+  },
+  {
     v: '0.94.52', date: '2026-11-07',
     pl: ['Szybsze rysowanie postaci do wypróbowania (dopisek ?pb=1 w adresie gry); domyślnie po staremu, dopóki nie sprawdzimy wyglądu.'],
     en: ['Faster character drawing available to try (add ?pb=1 to the game address); off by default until the look is confirmed.'],
