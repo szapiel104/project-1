@@ -518,3 +518,9 @@ body .menu:not(.previewing) .menu-head::after { display: none; }
 body .menu > .menu-account .acc-guest-row { grid-template-columns: 1fr 1fr; }
 body .menu:not(.previewing) .menu-head { display: block !important; }
 body .menu:not(.previewing) .menu-head > .menu-title.has-logo { grid-column: 1 / -1 !important; margin: 0 0 clamp(8px, 2vh, 22px) 0 !important; }
+/* równe odstępy w przyciskach: ikona 10 px od lewej krawędzi, po prawej strzałka w tym samym odstępie */
+body .menu:not(.previewing) .menu-bar .bar-item { padding: 6px 12px 6px 10px; }
+body .menu:not(.previewing) .menu-bar .bar-item:hover, body .menu:not(.previewing) .menu-bar .bar-item:focus-visible,
+body .menu:not(.previewing) .menu-bar .bar-item[aria-current='page'], body .menu:not(.previewing) .menu-bar .bar-item.bar-main { padding-left: 10px; }
+body .menu:not(.previewing) .menu-bar .bar-item::after { content: '›'; display: block; margin-left: auto; font-size: 1.5em; line-height: 1; color: #e9c766; opacity: .7; transform: translateY(-1px); transition: opacity .15s, transform .15s; }
+body .menu:not(.previewing) .menu-bar .bar-item:hover::after, body .menu:not(.previewing) .menu-bar .bar-item:focus-visible::after { opacity: 1; transform: translate(3px, -1px); }
