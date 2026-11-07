@@ -327,9 +327,9 @@ button.link-btn:focus-visible { outline: 2px solid #ffd76a; outline-offset: 3px;
 
 /* ===== Pasek grup wojska (1–0) w prawym dolnym rogu, od minimapy w lewo (Michał 2.11.2026) =====
    kronika zostaje sama w lewym dolnym rogu; przy otwartej liście budowy pasek się chowa jak minimapa */
-.army-groups { position: fixed; right: 250px; bottom: 140px; z-index: 55; }
+.army-groups { position: fixed; left: 16px; right: auto; bottom: 140px; z-index: 55; } /* grupy wojska 1–0 w lewym dolnym rogu (Michał 7.11.2026) */
 body.build-open .army-groups { display: none; }
-body.info-open .army-groups { right: 16px; }
+body.info-open .army-groups { left: 16px; right: auto; }
 
 /* ===== Okna menu na całą prawą część (Michał 2.11.2026: „ustawienia, Mój ród itd. na całą szerokość i wysokość”) ===== */
 .menu:not(.previewing) .menu-panel.wide, .menu.book-open:not(.previewing) .menu-panel.book {
