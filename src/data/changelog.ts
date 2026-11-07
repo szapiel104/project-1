@@ -10,6 +10,11 @@ export type { ChangeEntry } from './changelogTypes';
  */
 const NEW: ChangeEntry[] = [
   {
+    v: '0.94.55', date: '2026-11-07',
+    pl: ['Płynniej: kamyki na łąkach z 8 kształtów zamiast 23 (dalej różnie obrócone i w różnej wielkości), mniej osobnych rysowań.'],
+    en: ['Smoother: meadow pebbles use 8 shapes instead of 23 (still varied in rotation and size), fewer separate draws.'],
+  },
+  {
     v: '0.94.54', date: '2026-11-07',
     pl: ['Płynniej z daleka: kamyki, krzewy, podszyt, kępy trawy, kwiaty i trzcina rzucają cień tylko przy bliższej kamerze.'],
     en: ['Smoother from afar: pebbles, shrubs, undergrowth, grass tufts, flowers and reeds cast shadows only when the camera is closer.'],

@@ -1,5 +1,8 @@
 # Dziennik zmian
 
+## 0.94.55 — 2026-11-07
+- `terrain.ts`: kamyki po 2 kształty na rodzaj głazu (8 pul zamiast 23). Boty: bez zmian.
+
 ## 0.94.54 — 2026-11-07
 - `shadowcull.ts`: kamyki, krzewy, podszyt, kępy trawy, kwiaty, trzcina na liście drobiazgów (cień tylko z bliska). Boty: bez zmian.
 

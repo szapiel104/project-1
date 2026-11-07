@@ -1673,7 +1673,9 @@ function* terrainSteps(map: GameMap, models: ModelFactory, waterLevel: number): 
   // odmiana stała dla miejsca. Na pustyni skała z Sahary, a wysokie bruzdowane skały stoją na stoliwach i skałkach.
   pebbles.push(...rocks.splice(0));
   const ROCKS = rocks0ad();
-  const byKind = (k: string): typeof ROCKS => ROCKS.filter((r) => r.kind === k);
+  // po 2 kształty na rodzaj (8 zamiast 23): każdy kształt to osobne rysowanie (i drugie w cieniu), a różnorodność dają
+  // obrót, skala i odcień każdego kamienia (Michał 7.11.2026: wydajność)
+  const byKind = (k: string): typeof ROCKS => ROCKS.filter((r) => r.kind === k).slice(0, 2);
   const desert = map.biome === 'desert';
   const kindOf = (it: Item): typeof ROCKS => {
     const s = it.s.x, h = hash2(Math.round(it.pos.x * 10) + 31, Math.round(it.pos.z * 10), 0x5eed);
