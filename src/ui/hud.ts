@@ -725,6 +725,17 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
   let resW = 0;
   const refit = (): void => { const w = bar.clientWidth + Math.round(parseFloat(getComputedStyle(bar).zoom || '1') * 1000); if (w !== resW && bar.isConnected) { resW = w; fitRes(); } };
   setInterval(refit, 500);
+  // Michał 7.11.2026: „wszystkie surowce nachodzą na siebie” — kafelki rosną, gdy liczby zapasów rosną (120 → 12 000 → „50 mln”),
+  // a układ liczył się tylko po zmianie szerokości okna. Teraz: przy wykrytym przepełnieniu od razu, a co 3 s tak czy tak
+  // (też w drugą stronę — gdy liczby maleją, wracają kolejne kafelki)
+  let fitTick = 0;
+  setInterval(() => {
+    if (!bar.isConnected) return;
+    const last = (toggleLi.hidden ? toggleLi.previousElementSibling : toggleLi) as HTMLElement | null;
+    const crowded = resList.scrollWidth > resList.clientWidth + 1 || bar.scrollWidth > bar.clientWidth + 1
+      || (!!last && people.isConnected && last.getBoundingClientRect().right + 10 > people.getBoundingClientRect().left);
+    if (crowded || ++fitTick % 6 === 0) fitRes();
+  }, 500);
   window.addEventListener('resize', refit);
   void document.fonts?.ready.then(() => { resW = 0; refit(); });
   info.hidden = true;

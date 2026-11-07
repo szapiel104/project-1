@@ -1,5 +1,8 @@
 # Dziennik zmian
 
+## 0.94.68 — 2026-11-07
+- `hud.ts`: `fitRes` przelicza się też, gdy zapasy się przepełnią (rosnące liczby poszerzały kafelki, a układ liczył się tylko po zmianie okna) oraz co 3 s. Boty: bez zmian.
+
 ## 0.94.67 — 2026-11-07
 - `menuhead.css`: procent na pasku wczytywania 16 px, pasek 26 px. Boty: bez zmian.
 
