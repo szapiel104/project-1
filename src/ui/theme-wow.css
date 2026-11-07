@@ -501,3 +501,12 @@ body .menu:not(.previewing) .menu-head { display: block; padding: clamp(16px, 3.
 body .menu:not(.previewing) .menu-head > .menu-title.has-logo { width: min(100% - 20px, 460px); grid-column: auto; }
 body .menu:not(.previewing) .menu-head > .menu-title.has-logo svg.logo { width: 100%; }
 body .menu:not(.previewing) .menu-head::after { margin-left: 0; width: min(100% - 20px, 440px); }
+/* wspólna lewa krawędź: logo, przyciski, wersja i karta konta w jednej linii */
+body .menu:not(.previewing) { --lx: calc(var(--mx, 70px) - 12px); }
+body .menu:not(.previewing) .menu-head { padding-left: var(--lx); }
+body .menu:not(.previewing) .menu-head > .menu-title.has-logo { width: min(calc(100% - var(--lx) - 24px), 440px) !important; max-width: none !important; }
+body .menu:not(.previewing) .menu-head > .menu-title.has-logo svg.logo { width: 100% !important; max-width: none; }
+body .menu:not(.previewing) .menu-head::after { margin-left: var(--lx); }
+body .menu:not(.previewing) .menu-fine { padding: 0 0 8px var(--lx); }
+body .menu:not(.previewing) .menu-fine { font-family: var(--text); font-weight: 500; font-size: 13px; letter-spacing: .02em; color: #bda878; text-shadow: 0 1px 2px #000; }
+body .menu:not(.previewing) > .menu-account { margin-left: var(--lx); }
