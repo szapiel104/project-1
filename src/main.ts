@@ -2608,6 +2608,8 @@ if (EMPTY) {
 };
 // piaskownica testowa: podgląd renderera z konsoli (szukanie błędów w wyglądzie)
 if (SANDBOX) (window as unknown as { __renderer: unknown }).__renderer = renderer;
+// automatyczny „gracz” do testów wydajności: await __tour() (src/debug/tour.ts)
+if (SANDBOX) void import('./debug/tour');
 
 declare const __BUILD__: string;
 const badge = document.createElement('div');

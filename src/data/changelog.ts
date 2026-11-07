@@ -10,6 +10,11 @@ export type { ChangeEntry } from './changelogTypes';
  */
 const NEW: ChangeEntry[] = [
   {
+    v: '0.94.58', date: '2026-11-07',
+    pl: ['Dla twórców: automatyczny test gry (budowa osady w dzień, przeloty kamery, przybliżanie, spacer) z raportem płynności.'],
+    en: ['For developers: an automated game run (building a settlement by day, camera flights, zooming, a walk) with a smoothness report.'],
+  },
+  {
     v: '0.94.57', date: '2026-11-07',
     pl: ['Płynniej z daleka: najdalsze wersje budynków rysują się jedną bryłą zamiast kilku, a zboże w spichlerzach i uprawy na polach razem dla wszystkich budynków.'],
     en: ['Smoother from afar: the most distant building versions are drawn as a single mesh instead of several, and granary grain and field crops are drawn together for all buildings.'],

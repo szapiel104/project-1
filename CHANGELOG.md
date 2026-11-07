@@ -1,5 +1,8 @@
 # Dziennik zmian
 
+## 0.94.58 — 2026-11-07
+- `src/debug/tour.ts`: `await __tour()` w trybie testowym — dzień, ok. 24 budynki, 30 chłopów, przeloty kamery (12/30/55), zoom, przesuw, budowa w biegu, spacer; raport FPS, najgorsza klatka, p95, rysowania, błędy. Boty: bez zmian.
+
 ## 0.94.57 — 2026-11-07
 - `lod.ts`: lod2+ scalone w jedną siatkę (i jedną na wieko) ze wspólnym `FAR_MAT` (barwa materiału × 0,45 przy teksturze w kolorach wierzchołków) — w teście 60 → 7 rysowań.
 - `scene.ts`: `BATCH_ALSO` + `grainfill`, `crop`. Boty: bez zmian.
