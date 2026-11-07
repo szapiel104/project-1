@@ -1,5 +1,8 @@
 # Dziennik zmian
 
+## 0.94.63 — 2026-11-07
+- `saves/store.ts`: usunięte id w localStorage (`p1.savesGone`) — `listSaves` je pomija, `editIndex` wycina je przy każdej zmianie spisu w chmurze (stary spis z pamięci podręcznej / autozapis przywracał wpis); błąd `remove` w konsoli. Boty: bez zmian.
+
 ## 0.94.62 — 2026-11-07
 - `bandits.ts`: obchód obozu — co 90 ticków zbój bez celu idzie na losowe (hash2) pole w pierścieniu 3–4 pól wokół obozu, co trzeci raz wraca do ogniska. Boty: bez zmian (zbóje to nie bot gracza).
 

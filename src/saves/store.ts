@@ -132,7 +132,7 @@ async function cloudSaveIndex(uid: string, list: SaveMeta[]): Promise<void> {
 /** Spis w chmurze zmieniamy po kolei (dwa zapisy naraz nie gubią sobie wpisów) */
 let indexQueue: Promise<unknown> = Promise.resolve();
 const editIndex = (uid: string, f: (l: SaveMeta[]) => SaveMeta[]): Promise<void> => {
-  const job = indexQueue.then(async () => { const cur = await cloudIndex(uid); if (!cur) throw new Error('spis chmury niedostępny'); await cloudSaveIndex(uid, f(cur)); });
+  const job = indexQueue.then(async () => { const cur = await cloudIndex(uid); if (!cur) throw new Error('spis chmury niedostępny'); const g = gone(); await cloudSaveIndex(uid, f(cur).filter((x) => !g.has(x.id))); });
   indexQueue = job.catch(() => undefined);
   return job;
 };
@@ -145,10 +145,18 @@ async function cloudPut(m: SaveMeta, file: Blob): Promise<boolean> {
   try { await editIndex(uid, (l) => [m, ...l.filter((x) => x.id !== m.id)]); } catch (e) { console.warn('[zapisy] spis chmury', e); return false; }
   return true;
 }
+// Usunięte zapisy (Michał 7.11.2026: „nie zawsze działa usuwanie”): spis w chmurze bywa odczytany sprzed usunięcia
+// (pamięć podręczna, autozapis albo druga karta dopisuje swój wpis do starej wersji spisu) i zapis wracał na listę.
+// Numer usuniętego zapisu zostaje w przeglądarce: lista go pomija, a każda zmiana spisu w chmurze wycina go ponownie.
+const GONE_KEY = 'p1.savesGone';
+const gone = (): Set<string> => { try { return new Set(JSON.parse(localStorage.getItem(GONE_KEY) ?? '[]') as string[]); } catch { return new Set(); } };
+const markGone = (id: string): void => { try { localStorage.setItem(GONE_KEY, JSON.stringify([...gone(), id].slice(-200))); } catch { /* bez pamięci przeglądarki: zostaje zwykłe usuwanie */ } };
+
 async function cloudDel(id: string): Promise<void> {
   const uid = me()?.id;
   if (!uid || !cloudOk) return;
-  await supa.storage.from(BUCKET).remove([path(uid, `${id}.p1save`)]);
+  const { error } = await supa.storage.from(BUCKET).remove([path(uid, `${id}.p1save`)]);
+  if (error) console.warn('[zapisy] usuwanie z chmury', error);
   await editIndex(uid, (l) => l.filter((x) => x.id !== id));
 }
 
@@ -162,7 +170,8 @@ export async function listSaves(): Promise<SaveMeta[]> {
   const byId = new Map<string, SaveMeta>(local.map((m) => [m.id, { ...m, where: 'local' }]));
   if (owner !== 'guest') {
     const cloud = await cloudIndex(owner).catch(() => null);
-    for (const m of cloud ?? []) { const l = byId.get(m.id); byId.set(m.id, l ? { ...l, where: 'both' } : { ...m, where: 'cloud' }); }
+    const g = gone();
+    for (const m of cloud ?? []) { if (g.has(m.id)) continue; const l = byId.get(m.id); byId.set(m.id, l ? { ...l, where: 'both' } : { ...m, where: 'cloud' }); }
   }
   return [...byId.values()].sort((a, b) => b.created - a.created);
 }
@@ -212,6 +221,7 @@ export async function readSave(id: string): Promise<SaveFile | string> {
 }
 
 export async function deleteSave(id: string): Promise<void> {
+  markGone(id);
   await localDel(id);
   await cloudDel(id).catch(() => undefined);
 }
