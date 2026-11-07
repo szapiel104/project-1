@@ -709,3 +709,11 @@ html body .toolbar .stepper .step-text { display: inline-flex; align-items: cent
 html body .toolbar .stepper .step-ico { display: inline-flex; width: 18px; height: 18px; color: #e9c766; font-size: 0; letter-spacing: 0; }
 html body .toolbar .stepper .step-ico svg { width: 18px; height: 18px; }
 html body .toolbar .stepper strong { font-size: 15px; font-weight: 600; color: #f3e4c2; min-width: 3ch; text-align: center; }
+
+/* „Gra wstrzymana”: pas na całą szerokość przycisków, równo z nimi z lewej i prawej (Michał 7.11.2026: „równo ma być”) */
+html body .menu.in-game:not(.previewing) .menu-head > .menu-paused {
+  display: block; justify-self: stretch; box-sizing: border-box; text-align: center;
+  margin: 12px calc(var(--mx) * var(--ui, 1)) 0 calc(var(--lx) * (var(--ui, 1) - 1));
+  padding: 6px 12px; font-size: 14px; letter-spacing: .22em; font-weight: 600; color: #e9c766;
+  background: linear-gradient(90deg, rgba(233, 199, 102, 0), rgba(233, 199, 102, .12) 30%, rgba(233, 199, 102, .12) 70%, rgba(233, 199, 102, 0));
+  border: 0; border-top: 1px solid rgba(233, 199, 102, .45); border-bottom: 1px solid rgba(233, 199, 102, .45); border-radius: 0; box-shadow: none; text-shadow: none; }
