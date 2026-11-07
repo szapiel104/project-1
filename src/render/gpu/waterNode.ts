@@ -21,12 +21,17 @@ export const REFLECT_LAYER = 3;
  */
 /** Drobiazgi płaskie albo małe, których w odbiciu i tak nie widać — każdy to osobne składanie i rysowanie w lustrze */
 const NO_REFLECT = /^(ślady|kałuże|kruki|niesione|ryby|osmalenia|siatka budowy|uszkodzenia|graty|rodziny|postacie|wilki|tarany|wozy|drogi|śnieg|kamyki|kępy|kwiaty|zwierzęta|groby|poświata|budowy|naprawy|strzały|narzędzia)/;
+/** Drobiazgi w budynkach (wnętrza, zapasy, pochodnie, sufity): w falującym, połówkowym odbiciu ich nie widać (Michał 7.11.2026) */
+const REFLECT_SMALL = new Set(['interior', 'life', 'foodfill', 'fill', 'grainfill', 'armsfill', 'yardlog', 'ceiling', 'torch', 'flagcloth', 'crop', 'noworker', 'fire', 'flame', 'smoke']);
 export function markReflect(scene: THREE.Object3D, skip: Set<string>): void {
-  scene.traverse((o) => {
+  const walk = (o: THREE.Object3D, small: boolean): void => {
     const c = o.userData.cat as string | undefined;
-    if ((c && (skip.has(c) || NO_REFLECT.test(c) || c.endsWith(' (cień)'))) || o.userData.noReflect) o.layers.disable(REFLECT_LAYER);
+    const sm = small || REFLECT_SMALL.has(o.name);
+    if (sm || (c && (skip.has(c) || NO_REFLECT.test(c) || c.endsWith(' (cień)'))) || o.userData.noReflect) o.layers.disable(REFLECT_LAYER);
     else o.layers.enable(REFLECT_LAYER);
-  });
+    for (const ch of o.children) walk(ch, sm);
+  };
+  walk(scene, false);
 }
 export interface GpuWater {
   mat: THREE.MeshStandardMaterial;
