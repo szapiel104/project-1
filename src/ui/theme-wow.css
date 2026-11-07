@@ -699,3 +699,13 @@ html body .menu.previewing .menu-panel.ng-dock .ng-slider .pick-row.lands .pick-
 html body .menu.previewing .menu-panel.ng-dock .ng-slider .pick-row.lands .pick:has(input:checked) { box-shadow: 0 0 0 1px #f0cf72 !important; }
 html body .menu.previewing .menu-panel.ng-dock .ng-slider .pick-row.lands .pick:has(input:checked) .pick-art { box-shadow: none !important; }
 @media (prefers-reduced-motion: reduce) { html body .menu.previewing .menu-panel.ng-dock .ng-slider .pick-row.lands .pick .pick-art svg { transition: none; } }
+
+/* Górny pasek: Tempo / Podatki / Racje jako ikona + wartość, mniejsze przyciski (Michał 7.11.2026) */
+html body .toolbar .stepper { gap: 0; padding: 2px; border-radius: 6px; }
+html body .toolbar .stepper .step { min-width: 26px; min-height: 28px; width: 26px; padding: 0; font-size: 16px; line-height: 1; border-radius: 4px; background: rgba(255, 230, 180, .06); border: 1px solid rgba(233, 199, 102, .28); color: #e9c766; box-shadow: none; }
+html body .toolbar .stepper .step:hover { background: rgba(233, 199, 102, .18); border-color: #e9c766; }
+html body .toolbar .stepper .step:focus-visible { outline: 2px solid #e9c766; outline-offset: 1px; }
+html body .toolbar .stepper .step-text { display: inline-flex; align-items: center; gap: 6px; padding: 0 8px; }
+html body .toolbar .stepper .step-ico { display: inline-flex; width: 18px; height: 18px; color: #e9c766; font-size: 0; letter-spacing: 0; }
+html body .toolbar .stepper .step-ico svg { width: 18px; height: 18px; }
+html body .toolbar .stepper strong { font-size: 15px; font-weight: 600; color: #f3e4c2; min-width: 3ch; text-align: center; }

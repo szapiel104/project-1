@@ -625,8 +625,16 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
   people.append(jumpBox, stockBox, foodBox, popBox, armyBox, idleBox, popularBox);
   // szybkie sterowanie u góry: tempo gry, podatki i racje, każde z przyciskami minus i plus
   const controls = el('div', 'controls');
-  const stepper = (label: string, onStep: (dir: number) => void): HTMLElement => {
+  // ikony zamiast napisów TEMPO / PODATKI / RACJE (Michał 7.11.2026: „ikony, ładniejsze, żeby więcej się zmieściło”);
+  // nazwa zostaje w podpowiedzi i dla czytnika ekranu
+  const STEP_ICON: Record<string, string> = {
+    speed: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h12M6 21h12M7 3c0 5 4 6 5 9-1 3-5 4-5 9M17 3c0 5-4 6-5 9 1 3 5 4 5 9" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M9.5 18.5c.8-1.6 1.7-2.4 2.5-2.9.8.5 1.7 1.3 2.5 2.9z" fill="currentColor"/></svg>',
+    tax: '<svg viewBox="0 0 24 24" aria-hidden="true"><ellipse cx="12" cy="7" rx="7" ry="3" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M5 7v5c0 1.7 3.1 3 7 3s7-1.3 7-3V7M5 12v5c0 1.7 3.1 3 7 3s7-1.3 7-3v-5" fill="none" stroke="currentColor" stroke-width="1.8"/></svg>',
+    rations: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 13c0-4.4 3.6-8 8-8s8 3.6 8 8v4a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2z" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M8.5 10.5c.8-.9 1.8-1.4 3-1.5M12 13h0M8 15h8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>',
+  };
+  const stepper = (label: string, onStep: (dir: number) => void, icon = ''): HTMLElement => {
     const wrap = el('div', 'stepper');
+    wrap.title = label;
     wrap.setAttribute('role', 'group');
     wrap.setAttribute('aria-label', label);
     const minus = el('button', 'step', '−');
@@ -637,7 +645,9 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
     plus.setAttribute('aria-label', `${label}: ${t('hud.more')}`);
     const text = el('span', 'step-text');
     const value = el('strong');
-    text.append(el('span', 'name', label), value);
+    const name = el('span', 'name', label);
+    if (STEP_ICON[icon]) { name.innerHTML = STEP_ICON[icon]!; name.classList.add('step-ico'); }
+    text.append(name, value);
     minus.addEventListener('click', () => onStep(-1));
     plus.addEventListener('click', () => onStep(1));
     wrap.append(minus, text, plus);
@@ -652,17 +662,17 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
     if (events.onSpeed(SPEEDS[speedIndex]!) === false) speedIndex = was;
     showSpeed();
   };
-  const speedVal = stepper(t('hud.speed'), stepSpeed);
+  const speedVal = stepper(t('hud.speed'), stepSpeed, 'speed');
   const showSpeed = (): void => setText(speedVal, SPEEDS[speedIndex] === 0 ? t('hud.pause') : `${SPEEDS[speedIndex]}×`);
   showSpeed();
   const taxVal = stepper(t('hud.tax'), (dir) => {
     const next = Math.max(0, Math.min(RULES.taxes.length - 1, taxNow + dir));
     if (next !== taxNow) events.onTax(next);
-  });
+  }, 'tax');
   const rationVal = stepper(t('hud.rations'), (dir) => {
     const next = Math.max(0, Math.min(RULES.rations.length - 1, rationsNow + dir));
     if (next !== rationsNow) events.onRations(next);
-  });
+  }, 'rations');
   // jeden wąski pasek: zegar, surowce jako ikony z liczbą, stan osady, sterowanie
   bar.append(clockBox, resList, people);
   fitRes();
