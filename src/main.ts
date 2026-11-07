@@ -179,6 +179,14 @@ const canSaveNow = (): boolean => !!game && !net && !gameOver && !SANDBOX;
 /** Miniatura kadru gracza do kafelka zapisu (JPEG 320×180, wycinek ze środka ekranu) */
 function thumbShot(): string {
   try {
+    // kadr na całą osadę (Michał 7.11.2026: miniatura bez budynków, bo kamera stała nisko nad trawą): na chwilę ustawiamy
+    // widok z góry na środek własnych budynków, robimy klatkę i wracamy do widoku gracza
+    const mine = game ? game.buildings.filter((b) => b.owner === ME) : [];
+    const prev = renderer.walking || !mine.length ? null : renderer.camView;
+    if (prev && game) {
+      const cx = mine.reduce((a, b) => a + b.x, 0) / mine.length, cy = mine.reduce((a, b) => a + b.y, 0) / mine.length;
+      renderer.lookAt(cx, cy, 38);
+    }
     renderer.frame(0, 1, true); // świeża klatka i od razu odczyt (bez preserveDrawingBuffer)
     const c = document.createElement('canvas'); c.width = 320; c.height = 180;
     const g2 = c.getContext('2d');
@@ -187,7 +195,9 @@ function thumbShot(): string {
     let sw = w, sh = w / r;
     if (sh > h) { sh = h; sw = h * r; }
     g2.drawImage(canvas, (w - sw) / 2, (h - sh) / 2, sw, sh, 0, 0, 320, 180);
-    return c.toDataURL('image/jpeg', 0.72);
+    const url = c.toDataURL('image/jpeg', 0.72);
+    if (prev) renderer.setCamView(prev);
+    return url;
   } catch { return ''; }
 }
 function saveMetaOf(kind: SaveKind, name: string): Omit<SaveMeta, 'id' | 'created' | 'size' | 'owner' | 'where'> {
