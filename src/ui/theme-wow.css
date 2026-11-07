@@ -512,3 +512,5 @@ body .menu:not(.previewing) .menu-fine { font-family: var(--text); font-weight: 
 body .menu:not(.previewing) > .menu-account { margin-left: var(--lx); }
 body .menu:not(.previewing) .menu-head > .menu-title.has-logo svg.logo { height: auto !important; }
 body .menu:not(.previewing) .menu-head::after { margin-left: 0; width: min(calc(100% - var(--lx) - 24px), 440px); }
+body .menu:not(.previewing) .menu-head > .menu-title.has-logo { width: min(100%, 440px) !important; }
+body .menu:not(.previewing) .menu-head::after { width: min(100%, 420px); }
