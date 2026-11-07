@@ -162,7 +162,7 @@ export async function prepareGpu(canvas: HTMLCanvasElement): Promise<void> {
     let sb = subs.get(o.instanceMatrix);
     if (!sb) {
       const ib = new (THREE as any).InstancedInterleavedBuffer(o.instanceMatrix.array, 16, 1);
-      ib.setUsage(THREE.DynamicDrawUsage);
+      followVersion(ib, o.instanceMatrix);
       sb = { ib, at: new Map() };
       subs.set(o.instanceMatrix, sb);
     }
@@ -256,7 +256,7 @@ export async function prepareGpu(canvas: HTMLCanvasElement): Promise<void> {
           }
           if (!d && a.isInstancedBufferAttribute && a.itemSize === 3 && o.instanceColor && icArrays.has(a.array) && a.array !== o.instanceColor.array) {
             const sb = subOf(o);
-            if (!sb.col) { sb.col = new THREE.InstancedBufferAttribute(o.instanceColor.array, 3); sb.col.setUsage(THREE.DynamicDrawUsage); }
+            if (!sb.col) { sb.col = new THREE.InstancedBufferAttribute(o.instanceColor.array, 3); followVersion(sb.col, o.instanceColor); }
             changed = true;
             return sb.col;
           }
@@ -369,15 +369,26 @@ const ibCache = new WeakMap<object, any>();
  * Atrybut wierzchołka typu mat4 nie istnieje w WebGPU — 0.92.2–0.92.7 czytały tak macierz i ognisko rozciągało się
  * w długi pas (Michał 3.11.2026).
  */
+/**
+ * Lustro bufora (ta sama tablica, inny obiekt dla WebGPU) wysyła się na kartę tylko wtedy, gdy zmienił się oryginał.
+ * Dawniej lustra miały DynamicDrawUsage, a three.js (renderers/common/Attributes.js) wysyła taki bufor przy KAŻDYM
+ * rysowaniu każdego obiektu w każdym przejściu — pule drzew szły na kartę 15 razy na klatkę po ~280 KB, ok. 17 ms
+ * procesora na klatkę (pomiar na laptopie Michała 7.11.2026).
+ */
+function followVersion(mirror: any, src: { version: number }): void {
+  Object.defineProperty(mirror, 'version', { get: () => src.version, set: () => { /* wersję bierzemy z oryginału */ }, configurable: true });
+}
+
 export function instanceMatrixNode(im: THREE.InstancedBufferAttribute): any {
   const { W, TSL } = gpuMods!;
   const T = TSL as any, Wm = W as any;
   let ib = ibCache.get(im);
-  if (!ib) { ib = new Wm.InstancedInterleavedBuffer(im.array, 16, 1); ib.setUsage(Wm.DynamicDrawUsage); ibCache.set(im, ib); }
+  if (!ib) { ib = new Wm.InstancedInterleavedBuffer(im.array, 16, 1); followVersion(ib, im); ibCache.set(im, ib); }
   const imA = im as any;
   const sync = T.uniform(0).onFrameUpdate(() => {
-    if (ib.version !== imA.version) {
-      ib.clearUpdateRanges(); ib.updateRanges.push(...imA.updateRanges); imA.clearUpdateRanges(); ib.version = imA.version;
+    if (ib.syncedAt !== imA.version) {
+      // zakresy zmian oryginału przechodzą na lustro (wyśle się tylko zmieniona część); wersja idzie za oryginałem sama
+      ib.clearUpdateRanges(); ib.updateRanges.push(...imA.updateRanges); ib.syncedAt = imA.version;
     }
     return 0;
   });

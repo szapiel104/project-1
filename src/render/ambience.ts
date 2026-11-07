@@ -194,11 +194,11 @@ class Pool {
     this.life = new Float32Array(n).fill(1); this.base = new Float32Array(n);
     this.spin = new Float32Array(n); this.turn = new Float32Array(n);
     const geo = new THREE.BufferGeometry();
-    geo.setAttribute('position', new THREE.BufferAttribute(this.pos, 3).setUsage(THREE.DynamicDrawUsage));
-    geo.setAttribute('size', new THREE.BufferAttribute(this.size, 1).setUsage(THREE.DynamicDrawUsage));
-    geo.setAttribute('alpha', new THREE.BufferAttribute(this.alpha, 1).setUsage(THREE.DynamicDrawUsage));
-    geo.setAttribute('tint', new THREE.BufferAttribute(this.tint, 3).setUsage(THREE.DynamicDrawUsage));
-    geo.setAttribute('spin', new THREE.BufferAttribute(this.spin, 1).setUsage(atlas ? THREE.DynamicDrawUsage : THREE.StaticDrawUsage));
+    geo.setAttribute('position', new THREE.BufferAttribute(this.pos, 3));
+    geo.setAttribute('size', new THREE.BufferAttribute(this.size, 1));
+    geo.setAttribute('alpha', new THREE.BufferAttribute(this.alpha, 1));
+    geo.setAttribute('tint', new THREE.BufferAttribute(this.tint, 3));
+    geo.setAttribute('spin', new THREE.BufferAttribute(this.spin, 1));
     this.atlas = atlas;
     this.mat = new THREE.ShaderMaterial({
       uniforms: THREE.UniformsUtils.merge([THREE.UniformsLib.fog, { map: { value: null }, scale: { value: 600 }, uAtlas: { value: atlas ? 1 : 0 }, maxPx: { value: maxPx } }]),

@@ -59,14 +59,14 @@ export class GroundDetail {
     this.spl = new Float32Array(V * 4); this.snd = new Float32Array(V); this.uvs = new Float32Array(V * 2);
     this.idx = new Uint32Array(N * N * S * S * 6);
     const g = new THREE.BufferGeometry();
-    const dyn = (a: Float32Array, n: number): THREE.BufferAttribute => new THREE.BufferAttribute(a, n).setUsage(THREE.DynamicDrawUsage);
+    const dyn = (a: Float32Array, n: number): THREE.BufferAttribute => new THREE.BufferAttribute(a, n);
     g.setAttribute('position', dyn(this.pos, 3));
     g.setAttribute('normal', dyn(this.nor, 3));
     g.setAttribute('color', dyn(this.col, 3));
     g.setAttribute('uv', dyn(this.uvs, 2));
     g.setAttribute('splat', dyn(this.spl, 4));
     g.setAttribute('sand', dyn(this.snd, 1));
-    g.setIndex(new THREE.BufferAttribute(this.idx, 1).setUsage(THREE.DynamicDrawUsage));
+    g.setIndex(new THREE.BufferAttribute(this.idx, 1));
     g.setDrawRange(0, 0);
     this.mesh = new THREE.Mesh(g, material);
     this.mesh.receiveShadow = true;
@@ -77,7 +77,7 @@ export class GroundDetail {
     const { w, h, geo } = src;
     const bi = new Uint32Array(w * h * 6);
     for (let i = 0; i < bi.length; i++) bi[i] = i;
-    this.baseIdx = new THREE.BufferAttribute(bi, 1).setUsage(THREE.DynamicDrawUsage);
+    this.baseIdx = new THREE.BufferAttribute(bi, 1);
     geo.setIndex(this.baseIdx);
     geo.setDrawRange(0, bi.length);
   }

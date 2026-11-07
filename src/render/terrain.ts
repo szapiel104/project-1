@@ -1387,7 +1387,6 @@ function* terrainSteps(map: GameMap, models: ModelFactory, waterLevel: number): 
     mesh.visible = true; // widoczna od startu, żeby wstępna kompilacja shaderów ją objęła; pierwsze cullVeg ustawi właściwie
     mesh.frustumCulled = false;
     mesh.userData.noCull = true; // sama wybiera kawałki; cięcie instancji poza kadrem (scene.cullInstances) jej nie dotyczy
-    mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
     if (role === 'shadow') {
       mesh.layers.set(SHADOW_LAYER);
       mesh.castShadow = true;
@@ -1396,7 +1395,7 @@ function* terrainSteps(map: GameMap, models: ModelFactory, waterLevel: number): 
     } else {
       mesh.castShadow = false;
       mesh.receiveShadow = k.receive;
-      mesh.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(cap * 3), 3).setUsage(THREE.DynamicDrawUsage);
+      mesh.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(cap * 3), 3);
       cat(mesh, k.label);
     }
     group.add(mesh);

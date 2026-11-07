@@ -107,7 +107,6 @@ class TrackLayer {
   constructor(scene: THREE.Scene, name: string, map: THREE.Texture, color: number, alpha: number, max: number, uTime: { value: number }, uSnow: { value: number }) {
     const geo = new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2);
     this.born = new THREE.InstancedBufferAttribute(new Float32Array(max).fill(-1e6), 1);
-    this.born.setUsage(THREE.DynamicDrawUsage);
     geo.setAttribute('aBorn', this.born);
     // chłodny cień we wgłębieniu śniegu; oświetlony jak reszta (nocą ciemny), bez zapisu głębi i z przesunięciem ku kamerze
     const mat = new THREE.MeshLambertMaterial({ color, alphaMap: map, transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 });

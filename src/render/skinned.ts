@@ -202,8 +202,6 @@ export class SkinnedFigures {
     const geo = b.geo.clone();
     this.anim = new THREE.InstancedBufferAttribute(new Float32Array(this.max * 4), 4);
     this.team = new THREE.InstancedBufferAttribute(new Float32Array(this.max * 3), 3);
-    this.anim.setUsage(THREE.DynamicDrawUsage);
-    this.team.setUsage(THREE.DynamicDrawUsage);
     geo.setAttribute('aAnim', this.anim);
     geo.setAttribute('aTeam', this.team);
     const mat = cloneMaterial(b.mat);
@@ -222,7 +220,6 @@ export class SkinnedFigures {
     if (b.torch) {
       const tg = b.torch.clone();
       this.tAnim = new THREE.InstancedBufferAttribute(new Float32Array(this.max * 4), 4);
-      this.tAnim.setUsage(THREE.DynamicDrawUsage);
       tg.setAttribute('aAnim', this.tAnim);
       tg.setAttribute('aTeam', new THREE.InstancedBufferAttribute(new Float32Array(this.max * 3), 3));
       const tm = new THREE.InstancedMesh(tg, mat, this.max);
