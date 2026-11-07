@@ -524,3 +524,5 @@ body .menu:not(.previewing) .menu-bar .bar-item:hover, body .menu:not(.previewin
 body .menu:not(.previewing) .menu-bar .bar-item[aria-current='page'], body .menu:not(.previewing) .menu-bar .bar-item.bar-main { padding-left: 10px; }
 body .menu:not(.previewing) .menu-bar .bar-item::after { content: '›'; display: block; margin-left: auto; font-size: 1.5em; line-height: 1; color: #e9c766; opacity: .7; transform: translateY(-1px); transition: opacity .15s, transform .15s; }
 body .menu:not(.previewing) .menu-bar .bar-item:hover::after, body .menu:not(.previewing) .menu-bar .bar-item:focus-visible::after { opacity: 1; transform: translate(3px, -1px); }
+body .menu:not(.previewing) .menu-bar .bar-item::after { position: static; inset: auto; width: auto; height: auto; align-self: center; margin-right: 2px; background: none; border: 0; clip-path: none; transform: translateY(-2px); }
+body .menu:not(.previewing) .menu-bar .bar-item:hover::after, body .menu:not(.previewing) .menu-bar .bar-item:focus-visible::after { transform: translate(3px, -2px); }
