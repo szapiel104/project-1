@@ -79,6 +79,7 @@ import { FP } from './sim/state';
 import { unitIndex } from './data/units';
 import { randomTip } from './data/tips';
 import { glFallback } from './render/glcontext';
+import { maybeShowGpuHint } from './ui/gpuHint';
 
 let ME = 0; // gracz sterowany lokalnie (w grze przez sieć gość ma 1)
 const TICK_MS = 1000 / TICKS_PER_SECOND;
@@ -469,6 +470,7 @@ const menu = createMenu(document.body, {
     titleScreen = true;
     refreshContinue();
     menu.open(false);
+    maybeShowGpuHint(document.body); // raz: jak przełączyć przeglądarkę na mocniejszą kartę graficzną
   },
   onSurrender: () => {
     // w sieci: wyjście = kapitulacja u wszystkich (lockstep wyśle ją w tej samej turze); lokalnie od razu porażka

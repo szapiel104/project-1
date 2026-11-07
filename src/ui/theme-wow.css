@@ -717,3 +717,16 @@ html body .menu.in-game:not(.previewing) .menu-head > .menu-paused {
   padding: 6px 12px; font-size: 14px; letter-spacing: .22em; font-weight: 600; color: #e9c766;
   background: linear-gradient(90deg, rgba(233, 199, 102, 0), rgba(233, 199, 102, .12) 30%, rgba(233, 199, 102, .12) 70%, rgba(233, 199, 102, 0));
   border: 0; border-top: 1px solid rgba(233, 199, 102, .45); border-bottom: 1px solid rgba(233, 199, 102, .45); border-radius: 0; box-shadow: none; text-shadow: none; }
+
+/* Wskazówka: przeglądarka liczy grę na karcie wbudowanej w procesor (src/ui/gpuHint.ts) */
+.gpu-hint { position: fixed; right: 20px; top: 20px; z-index: 60; width: min(420px, calc(100vw - 32px)); padding: 16px 18px 14px;
+  background: linear-gradient(#241a12, #140e09); color: #f3e4c2; border: 1px solid #b08a3e; border-radius: 8px; font-size: 14px; line-height: 1.45; zoom: var(--ui, 1); }
+.gpu-hint-t { display: block; color: #e9c766; font-size: 16px; font-weight: 600; margin-bottom: 6px; }
+.gpu-hint p { margin: 0 0 8px; }
+.gpu-hint ol { margin: 0 0 12px; padding-left: 20px; display: grid; gap: 4px; }
+.gpu-hint code { font-size: 12.5px; color: #cdb98f; word-break: break-all; }
+.gpu-hint-row { display: flex; justify-content: flex-end; gap: 8px; }
+.gpu-hint button { min-height: 36px; padding: 0 16px; border-radius: 5px; font: inherit; font-weight: 600; cursor: pointer; }
+.gpu-hint-later { background: transparent; color: #cdb98f; border: 1px solid rgba(233, 199, 102, .35); }
+.gpu-hint-ok { background: linear-gradient(#9c2a1c, #5e120b); color: #fff2d6; border: 1px solid #f0cf72; }
+.gpu-hint button:focus-visible { outline: 2px solid #e9c766; outline-offset: 2px; }
