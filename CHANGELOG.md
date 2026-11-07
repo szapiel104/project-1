@@ -1,5 +1,11 @@
 # Dziennik zmian
 
+## 0.94.78 — 2026-11-07
+- `touch.ts` `touchAt` + `terrain.ts` `fell`: ścinane drzewo wysyła do karty tylko swoją instancję (wcześniej cały bufor lasu co klatkę).
+- `scene.ts` `warmGpu`: po zwykłym przejściu dodatkowe klatki z 4 stron i 2 odległości (bliska/daleka) przed startem; ekspozycja 1.02 → 1.08.
+- `waterNode.ts` `markReflect`: odbicie w wodzie bez wnętrz i drobiazgów budynków.
+- `menu.ts`/`book.css`: preset „Wydajna”; `theme-wow.css`: napisy min. 14 px. Boty: bez zmian.
+
 ## 0.94.77 — 2026-11-07
 - Menu główne: `theme-wow.css` (przyciski z ikonami, wspólna lewa krawędź `--lx`, logo na szerokość kolumny, karta gościa, lista przewijana w swoim polu siatki), `menu.ts` (bez podtytułu w nagłówku, opis gry w Ustawienia → Interfejs, `setCanContinue(on, thumb)`, pocztówka `.menu-shot`), `vista.ts` (losowa pora dnia `sv-dusk/dawn/night`), `main.ts` (miniatura zapisu z góry na całą osadę). Boty: bez zmian.
 

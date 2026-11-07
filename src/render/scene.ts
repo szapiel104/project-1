@@ -891,7 +891,7 @@ export class GameRenderer {
     // Cienie: jedno słońce, którego obszar cienia podąża za kamerą.
     // filmowe odwzorowanie tonów: jasne partie nie przepalają się, cienie zostają głębokie
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    this.renderer.toneMappingExposure = 1.02; // jaśniej niż dawniej (Michał 3.11.2026: za ciemno), dalej bez przepaleń
+    this.renderer.toneMappingExposure = 1.08; // jaśniej niż dawniej (Michał 3.11.2026: za ciemno), dalej bez przepaleń
     this.renderer.info.autoReset = false;
     this.renderer.shadowMap.enabled = true;
     this.renderer.shadowMap.type = THREE.PCFShadowMap;
@@ -1433,7 +1433,7 @@ export class GameRenderer {
   /** Ustawienia → Grafika: jasność obrazu (1 = 100%) */
   set brightness(v: number) {
     const b = Math.max(0.5, Math.min(2, v));
-    this.renderer.toneMappingExposure = 1.02 * Math.sqrt(b);
+    this.renderer.toneMappingExposure = 1.08 * Math.sqrt(b);
     this.grade.uniforms.bright!.value = b;
   }
   /** Testy: budynki stawiane od ręki stoją od razu, bez kilkusekundowego pokazu budowy */
