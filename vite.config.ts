@@ -5,6 +5,24 @@ import { modelPacks } from './tools/models/vite-plugin.mjs';
 // @ts-expect-error — wtyczka w czystym JS: kod gry pobiera się razem ze stroną (tools/build/preload-main.mjs)
 import { preloadMain } from './tools/build/preload-main.mjs';
 import pkg from './package.json' with { type: 'json' };
+// @ts-expect-error — typy Node nie są w tsconfig gry (to plik konfiguracji, wykonuje go Node)
+import { createHash } from 'node:crypto';
+// @ts-expect-error — jak wyżej
+import { readFileSync, readdirSync, statSync } from 'node:fs';
+
+/**
+ * Odcisk wszystkiego, co zmienia wygląd miniatur budynków w menu budowy (modele, rysowanie miniatur, dane budynków, tekstury).
+ * Miniatury z pamięci przeglądarki żyją, dopóki ten odcisk się nie zmieni — a nie przy każdej wersji gry (Michał 7.11.2026:
+ * „długo trwa wczytywanie budynków”: po każdym wdrożeniu menu budowy świeciło pustymi kartami, aż miniatury narysowały się od nowa).
+ */
+function thumbsKey(): string {
+  const h = createHash('sha1');
+  const add = (f: string): void => { try { h.update(f); h.update(readFileSync(f)); } catch { /* brak pliku: pomijamy */ } };
+  for (const f of ['src/render/thumbnails.ts', 'src/data/buildings.ts', 'src/render/textures.ts']) add(f);
+  for (const d of ['src/render/models']) { try { for (const f of readdirSync(d).sort()) add(`${d}/${f}`); } catch { /* nic */ } }
+  for (const d of ['public/textures/cc0', 'public/textures/terrain']) { try { for (const f of readdirSync(d).sort()) { const st = statSync(`${d}/${f}`); h.update(`${f}:${st.size}`); } } catch { /* nic */ } }
+  return h.digest('hex').slice(0, 12);
+}
 
 const BUILD = new Date().toLocaleString('pl-PL', { timeZone: 'Europe/Warsaw', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
 /** Wersja na ekranie wczytywania już w samym HTML (widać ją, zanim wczyta się kod gry) — Michał 28.10.2026 */
@@ -16,7 +34,7 @@ export default defineConfig(({ mode }) => ({
   base: './',
   // godzina zbudowania trafia do gry, żeby było widać, czy przeglądarka pokazuje najnowszą wersję
   // numer wersji z package.json trafia do dziennika błędów (po nim wiadomo, który kod i które mapy źródeł wziąć)
-  define: { __VERSION__: JSON.stringify(pkg.version), __BUILD__: JSON.stringify(BUILD) },
+  define: { __VERSION__: JSON.stringify(pkg.version), __BUILD__: JSON.stringify(BUILD), __THUMBS__: JSON.stringify(thumbsKey()) },
   // długie symulacje (bot, 10 000 ticków) potrzebują więcej czasu niż domyślne 5 s
   test: { testTimeout: 60000, setupFiles: ['tests/setup/lang.ts', 'tests/setup/models.ts'] },
   plugins: mode === 'single' ? [versionInHtml, modelPacks(true), viteSingleFile()] : [versionInHtml, versionFile, modelPacks(false), preloadMain()],

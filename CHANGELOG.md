@@ -1,5 +1,8 @@
 # Dziennik zmian
 
+## 0.94.71 — 2026-11-07
+- Miniatury budynków: klucz pamięci to odcisk (`__THUMBS__` w `vite.config.ts`: modele, `thumbnails.ts`, dane budynków, tekstury), a nie numer wersji — nie rysują się od nowa po każdym wdrożeniu. Boty: bez zmian.
+
 ## 0.94.70 — 2026-11-07
 - Czcionka: tylko Inter 400–600 w całym interfejsie (Cinzel / Cinzel Decorative / Alegreya zdjęte z CSS, `index.html`, napisy na mapie w `spawnfx.ts`); wszystkie pogrubienia 700–900 → 600. Boty: bez zmian.
 
