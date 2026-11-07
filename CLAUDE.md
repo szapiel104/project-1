@@ -58,6 +58,7 @@ Nad grą pracuje kilka czatów naraz, więc:
 ## Szybkie testy, szybki push (Michał 28.10.2026, na zawsze, dla wszystkich czatów)
 - Testy nie mogą zjadać większości czasu (zmiana minuta, testy 9 minut = bez sensu). Po zmianie: `npx tsc --noEmit` + `npm run build` + tylko testy związane ze zmienianymi plikami (`npx vitest run tests/<plik>`), i od razu push. Pełne `npx vitest run` (ok. 4 min) tylko przy dużych zmianach w symulacji.
 - Nie czekać na pełny zestaw testów i nie pytać Michała przed pushem — on sam sprawdza grę po wdrożeniu.
+- **Michał 7.11.2026: nie czekać na GitHub Actions i nie robić pomiarów (FPS, `__drawStat`, Playwright z pełną grafiką) — pomiary robi on.** Zmiana → `tsc` + build + testy plików → push → od razu następna rzecz. Wynik Actions zerknąć przy kolejnym pushu (`gh run list --limit 2`), bez `gh run watch`.
 - **Po pushu zawsze sprawdź wynik GitHub Actions** (`gh run list --branch main --limit 1`): Actions puszcza pełne testy i przy jednym czerwonym teście gra NIE trafia na stronę (2.11.2026 pięć wersji z rzędu nie weszło przez jeden test). Czerwone = napraw od razu.
 - **Każda skończona zmiana od razu idzie na produkcję: `git push origin main`** (to jest cała „komenda wdrożenia” — GitHub Actions sam buduje i wystawia grę na GitHub Pages w kilka minut). Nie zostawiać commitów tylko lokalnie i nie czekać, aż zmiana pojawi się na stronie; po pushu po prostu napisać Michałowi, co weszło. Gdy u niego widać starą wersję: Ctrl+F5 (numer wersji jest na ekranie wczytywania).
 

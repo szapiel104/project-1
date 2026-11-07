@@ -77,3 +77,11 @@ kwadratu, większa mapa 1 na 1.
 
 - 0.94.25 (4.11.2026): wspólne shadery pul (`?pule`) domyślnie wyłączone. U Michała (dev 1v1, 194 budynki, zapis wczytany) każda klatka padała: `DrawIndexed(24, 118)` z buforem macierzy na 66 sztuk (4224 B) — pula dostawała cudzy bufor mimo podstawiania w `getAttributes` (0.94.24 rozszerzyło warunek, nie pomogło; przycięcie `count` się nie odpaliło, więc to nie za duży `count`). Nie odtworzone na SwiftShader (`npm run check:console -- --webgpu`). Przed ponownym włączeniem: znaleźć, która ścieżka rysuje pulę bez podmienionego bufora.
 - 0.94.29 (5.11.2026): `?pule=1` domyślnie (wspólne shadery tylko dla pul ze zwykłymi materiałami). Sprawdzone w Chrome Michała na jego zapisie: `?pule=2` dalej daje `Instance range (count 477) requires a larger buffer (18560)` w przejściu cienia (`ShadowMaterial`, slot 6) — straż z 0.94.28 w `backend.draw` NIE widzi za małego bufora w `getVertexBuffers()` (ani w tablicy, ani w karcie), więc do karty idzie bufor spoza listy obiektu: podejrzenie — `currentSets.attributes[i] === vertexBuffer` w `_draw` pomija `setVertexBuffer`, a pod tym samym obiektem JS w karcie siedzi już inny bufor (albo wspólny stan węzła instancji dla cienia). `?pule=1` — 0 błędów. Pusty ekran z 0.94.24–0.94.26 to osobna sprawa: przejścia obrazu (QuadMesh) w kolejce potoków (naprawione w 0.94.27).
+
+
+## Plan wydajności (Michał 7.11.2026: „inni robią w WebGPU gry 100 razy ładniejsze i mają 120 FPS”)
+Hamuje procesor: tysiące osobnych obiektów, każdy przez ogólną ścieżkę three.js (dziesiątki µs na rysowanie). Etapy, po każdym gra działa, Michał mierzy:
+1. [ ] Postacie: jeden rodzaj = jedno rysowanie na materiał — części postaci sklejone w jedną siatkę z numerem części w wierzchołku, macierze części wszystkich ludzi w teksturze, ruch w shaderze TSL (wzór: `gpu/skinNode.ts`).
+2. [ ] Świat statyczny w dużych kawałkach: budynki z daleka, kamyki, płoty, graty sklejone po fragmentach mapy, tekstury w tablicy.
+3. [ ] Cienie: nieruchome rzeczy w mapie cieni liczonej tylko po ruchu kamery/słońca; ruchome postacie osobno.
+4. [ ] Las i krzaki wybierane na karcie (indirect draw), bez list na procesorze.
