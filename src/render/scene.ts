@@ -1834,6 +1834,33 @@ export class GameRenderer {
    * Tu każda klatka ma budżet składania (gpu/webgpu.ts, gpuFrameBudget): obiekty, na które nie starczyło czasu,
    * czekają do następnej klatki, a przeglądarka między klatkami oddycha (pasek się rusza, inne karty działają).
    */
+  /** Po jednym modelu każdego rodzaju budynku przy środku widoku (tylko do rozgrzania materiałów), dołączone do wspólnych pul */
+  private warmBuildingModels(): Map<number, THREE.Object3D> {
+    const out = new Map<number, THREE.Object3D>();
+    const g = this.state;
+    if (!g) return out;
+    const team = g.players[0]?.team ?? 0, color = TEAM_COLORS[team] ?? 0x888888;
+    const f = this.focusPoint;
+    let k = -1;
+    for (const def of BUILDINGS) {
+      if (def.wall || def.gate || def.road) continue;
+      try {
+        const mesh = this.models.building(def.id, color);
+        mergeStatic(mesh, def.id + ':' + team);
+        mesh.traverse((o) => { const m = o as THREE.Mesh; if (m.isMesh) { m.castShadow = true; m.receiveShadow = true; } });
+        mesh.position.set(f.x + ((out.size % 5) - 2) * 3, f.y, f.z + (Math.floor(out.size / 5) % 5 - 2) * 3);
+        this.buildingLayer.add(mesh);
+        out.set(k--, mesh);
+      } catch { /* rodzaj bez modelu: pomijamy */ }
+    }
+    this.syncBatches([...this.buildingMeshes, ...out]);
+    return out;
+  }
+  private dropWarmModels(roots: Map<number, THREE.Object3D>): void {
+    for (const m of roots.values()) this.buildingLayer.remove(m);
+    roots.clear();
+    this.syncBatches();
+  }
   private async warmGpu(onProgress?: (done: number, total: number) => void): Promise<void> {
     hideGlslMaterials(this.scene);
     // klatki z budżetem składania (present → gpuFrameBudget): każda składa ok. 45 ms nowych wariantów, resztę odkłada;
@@ -1861,8 +1888,13 @@ export class GameRenderer {
         await new Promise<void>((ok) => requestAnimationFrame(() => ok()));
       }
     };
+    // Michał 7.11.2026: „jak buduję, FPS spada” — pierwszy budynek danego rodzaju składał swoje materiały (także wersje
+    // do rysowania razem) w trakcie gry; tu stawiamy na chwilę po jednym modelu każdego rodzaju w barwach gracza,
+    // żeby karta złożyła je za ekranem wczytywania. Po rozgrzewce znikają (wspólne bryły zostają w pamięci podręcznej).
+    const warmRoots = this.warmBuildingModels();
     try {
       await drain(40000, true);
+      this.dropWarmModels(warmRoots);
       // Michał 7.11.2026: przy pierwszym okrążeniu kamery klatki stały 0,5–1,4 s, bo shadery tego, co było poza kadrem
       // albo w innej wersji z odległości, kompilowały się dopiero wtedy. Dokładamy po jednej klatce z innych stron i
       // odległości (cztery obroty, blisko i z daleka), zanim gracz zobaczy grę; potem kamera wraca na swoje miejsce.
