@@ -568,8 +568,8 @@ body .toolbar .stepper .step { min-width: 30px; min-height: 30px; }
 
 /* ===== „Nowa gra”: ciemny, płaski panel, bez starych cieni; wszystkie wybory widoczne (zawijane, bez suwaka) ===== */
 body .menu.previewing .menu-panel.wide.ng-dock {
-  --ink: #f3e4c2; --ink-soft: #cdb98f; --rubric: #e9c766;
-  background: linear-gradient(#241a12, #140e09); color: #f3e4c2; border-top: 1px solid #e9c766;
+  --ink: #f3e4c2; --ink-soft: #cdb98f; --rubric: #e9c766; --parch: #1a120c; --parch-edge: #6e5226;
+  background: linear-gradient(#241a12, #140e09) !important; background-image: linear-gradient(#241a12, #140e09) !important; color: #f3e4c2; border-top: 1px solid #e9c766;
   box-shadow: none; max-height: min(58vh, calc(100vh / var(--ui, 1) - 120px)); }
 body .menu .ng-dock, body .menu .ng-dock * { text-shadow: none !important; }
 body .menu .ng-dock .menu-heading, body .menu .ng-dock .pick-group legend { color: #e9c766; }
