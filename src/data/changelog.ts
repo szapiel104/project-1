@@ -9,6 +9,7 @@ export type { ChangeEntry } from './changelogTypes';
  * — tak jak CHANGELOG.md dla nas. `tests/changelog.test.ts` pilnuje, że najnowszy wpis ma wersję z package.json.
  */
 const NEW: ChangeEntry[] = [
+  { v: '0.94.65', date: '2026-11-07', pl: ['Numer wersji gry jest większy i ładniejszy: złota ramka, jasne litery, widoczny na ekranie wczytywania i w menu.'], en: ['The game version number is bigger and nicer: a gold frame and bright lettering, visible on the loading screen and in the menu.'] },
   { v: '0.94.64', date: '2026-11-07', pl: ['Ekran wczytywania: rada zajmuje całą szerokość, równo z paskiem, a procent jest na samym pasku.', 'Menu: wysokie okna (np. Wczytaj grę) nie nachodzą już na przyciski Znajomi i dzwonek.'], en: ['Loading screen: the tip now spans the full width, flush with the bar, and the percentage sits on the bar itself.', 'Menu: tall windows such as Load Game no longer overlap the Friends and bell buttons.'] },
   { v: '0.94.63', date: '2026-11-07', pl: ['Zapisy: usunięty zapis z chmury znika na dobre i nie wraca już na listę po kilku sekundach.'], en: ['Saves: a save deleted from the cloud is gone for good and no longer creeps back onto the list a few seconds later.'] },
   { v: '0.94.62', date: '2026-11-07', pl: ['Zbóje w obozie nie stoją już w miejscu. Obchodzą obóz, przystają przy palisadzie, wracają do ogniska i znów ruszają.'], en: ['Brigands no longer stand idle in their camp. They prowl around it, linger by the palisade, drift back to the fire and set off again.'] },

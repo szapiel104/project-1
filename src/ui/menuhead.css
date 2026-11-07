@@ -40,3 +40,13 @@ body .menu:not(.previewing) .menu-head > .menu-title {
 #loading .loading-bar::after { content: attr(data-pct); position: absolute; inset: 0; z-index: 2; display: grid; place-items: center;
   font: 700 13px/1 var(--text, sans-serif); letter-spacing: .06em; font-variant-numeric: tabular-nums; color: #fff6e0;
   text-shadow: 0 1px 2px rgba(0, 0, 0, .9), 0 0 6px rgba(0, 0, 0, .7); pointer-events: none; }
+
+/* Michał 7.11.2026: wersja gry ładniejsza i lepiej widoczna — złota ramka z podwójną obwódką jak reszta interfejsu,
+   większe, jasne litery z cieniem; na ekranie wczytywania i w pasku menu */
+#loading .loading-ver, .menu .tb-ver {
+  font-family: 'Cinzel', var(--display, serif); font-weight: 800; letter-spacing: .08em; text-transform: none;
+  color: #ffe9a8; text-shadow: 0 1px 2px rgba(0, 0, 0, .9), 0 0 8px rgba(233, 193, 69, .35);
+  background: linear-gradient(#2a1c10, #14090a); border: 1px solid #c9a65c;
+  box-shadow: 0 0 0 2px #0e0906, 0 0 0 3px #7a5c24, 0 4px 14px rgba(0, 0, 0, .55), inset 0 1px 0 rgba(255, 233, 168, .25); border-radius: 3px; }
+#loading .loading-ver { font-size: 19px; padding: 8px 16px; top: 18px; right: 22px; }
+.menu .tb-ver { font-size: 15px; padding: 7px 13px; }

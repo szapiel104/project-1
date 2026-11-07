@@ -1,5 +1,8 @@
 # Dziennik zmian
 
+## 0.94.65 — 2026-11-07
+- `menuhead.css`: znaczek wersji (`.loading-ver`, `.tb-ver`) w stylu gry — Cinzel, złota podwójna ramka, większy. Boty: bez zmian.
+
 ## 0.94.64 — 2026-11-07
 - Ekran wczytywania: rada 100% szerokości, „Rada” wyśrodkowana, procent w pasku (`data-pct`), duży procent ukryty.
 - Menu: odstęp 68 px pod paskiem Znajomi/dzwonek, gdy jest widoczny. Boty: bez zmian.
