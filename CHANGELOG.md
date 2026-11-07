@@ -3,6 +3,8 @@
 ## 0.94.80 — 2026-11-07
 - `weather.ts`: `climateOf(biome)`; `yearPos`/`seasonAt`/`shiftToSeason` biorą krainę — Północ stale 0,875 (środek zimy), Step i Pustynia `raw × 0,75` (bez zimy). Wywołania w `workers`, `economy`, `storms`, `forestry`, `scene.ts`, `main.ts` przekazują `g.map.biome`.
 - `forestry.ts`: na Północy sadzonki rosną i leśnicy sadzą mimo zimy. `groundNode.ts`: brak śniegu na szczytach przy `uDry` (Step, Pustynia).
+- Światło: niebo w dzień 1,42–1,58 (było 1,25–1,38), cieplejsze odbicie od ziemi, `shadow.radius` 4; `postNode.ts`: kontrast 1,03, podniesione cienie, żywsze barwy, słabsza winieta w dzień.
+- Animacje: `scene.ts` — zamach kroku narasta i gaśnie (`st.amp`), skręt bioder za krokiem; `peasants.ts` — oddech na stojąco.
 - Test `tests/climate.test.ts`. Boty: bez zmian (korzystają z tych samych pór roku przez symulację).
 
 ## 0.94.79 — 2026-11-07
