@@ -49,6 +49,21 @@ function spots(g: GameState, b: Building): number[] {
   return all.filter(([x, y]) => x >= 0 && y >= 0 && x < W && y < g.map.height && walkable(g, y * W + x, BANDITS)).map(([x, y]) => y * W + x);
 }
 
+/** Co ile ticków zbój w obozie zmienia miejsce (10 ticków = 1 s gry) */
+const WANDER_EVERY = 90;
+
+/** Pola dookoła obozu (pierścień 2–4 pola od działki), po których zbóje chodzą na obchód */
+function around(g: GameState, b: Building): number[] {
+  const W = g.map.width, [cx, cy] = centre(b), out: number[] = [];
+  for (let dy = -4; dy <= 4; dy++) for (let dx = -4; dx <= 4; dx++) {
+    const d = Math.max(Math.abs(dx), Math.abs(dy));
+    if (d < 3) continue;
+    const x = cx + dx, y = cy + dy;
+    if (x >= 0 && y >= 0 && x < W && y < g.map.height && walkable(g, y * W + x, BANDITS)) out.push(y * W + x);
+  }
+  return out;
+}
+
 function spawnBandit(g: GameState, b: Building, slot: number): void {
   const sp = spots(g, b);
   const t = sp[slot % Math.max(1, sp.length)] ?? (b.y + 3) * g.map.width + b.x + 1;
@@ -235,6 +250,14 @@ export function banditSystem(g: GameState): void {
       }
       // w obozie: pilnuje swojego miejsca przy ognisku, przy ogniu powoli się leczy
       if ((s.hold ?? -1) < 0 && !s.target) goHome(g, s, camp, i);
+      // obchód (Michał 7.11.2026: „niech nie stoją, tylko chodzą dookoła obozu”): co jakiś czas zbój idzie w inne
+      // miejsce wokół obozu (czaty, drewno, ognisko), postoi tam chwilę i znów rusza; losowanie stałe z ziarna (hash)
+      else if (!s.target && s.goal < 0 && !s.path.length && (g.tick + s.id * 37) % WANDER_EVERY === 0) {
+        const ring = around(g, camp), r = hash2(s.id, g.tick, 0xca4b);
+        // co trzeci obchód kończy się z powrotem przy ognisku
+        const t = r % 3 === 0 ? spots(g, camp)[i % Math.max(1, spots(g, camp).length)] : ring[r % Math.max(1, ring.length)];
+        if (t !== undefined) { s.hold = t; s.goal = t; s.path = []; }
+      }
       if (g.tick % 30 === 0 && s.hp < UNITS[s.kind]!.hp && !s.target && Math.hypot((s.px >> 8) - cx, (s.py >> 8) - cy) <= 4) s.hp++;
     }
   }

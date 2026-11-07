@@ -1,5 +1,8 @@
 # Dziennik zmian
 
+## 0.94.62 — 2026-11-07
+- `bandits.ts`: obchód obozu — co 90 ticków zbój bez celu idzie na losowe (hash2) pole w pierścieniu 3–4 pól wokół obozu, co trzeci raz wraca do ogniska. Boty: bez zmian (zbóje to nie bot gracza).
+
 ## 0.94.61 — 2026-11-07
 - `warmGpu`: zamiast sztywnych 10 s czeka, dopóki ubywa potoków do złożenia (najwyżej 40 s, 4 s bez postępu → start). Boty: bez zmian.
 
