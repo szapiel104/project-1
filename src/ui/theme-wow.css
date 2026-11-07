@@ -528,8 +528,11 @@ body .menu:not(.previewing) .menu-bar .bar-item::after { position: static; inset
 body .menu:not(.previewing) .menu-bar .bar-item:hover::after, body .menu:not(.previewing) .menu-bar .bar-item:focus-visible::after { transform: translate(3px, -2px); }
 
 /* tło menu: ostatnia osada albo świt / zmierzch / noc (Michał 7.11.2026) */
-.menu-scene .menu-shot { position: absolute; inset: -4%; background: center / cover no-repeat; filter: blur(5px) brightness(.85) saturate(1.1); opacity: 0; transition: opacity .6s; }
+/* miniatura ostatniej osady jako oprawiona „pocztówka” w prawym dolnym rogu, nad pejzażem (sama obramowana, bez rozmycia całego tła) */
+.menu-scene .menu-shot { position: absolute; inset: auto clamp(16px, 3vw, 56px) clamp(16px, 4vh, 48px) auto; width: clamp(240px, 22vw, 400px); aspect-ratio: 16 / 9; background: center / cover no-repeat;
+  border: 2px solid #e9c766; border-radius: 3px; box-shadow: 0 0 0 4px rgba(10, 6, 4, .75), 0 14px 34px rgba(0, 0, 0, .7); opacity: 0; transform: rotate(-1.2deg); transition: opacity .6s; }
+.menu-scene .menu-shot::after { content: attr(data-cap); position: absolute; left: -2px; right: -2px; bottom: -2px; padding: 6px 10px; font: 600 14px var(--text); letter-spacing: .04em; color: #fff0c8;
+  background: linear-gradient(0deg, rgba(10, 6, 4, .92), rgba(10, 6, 4, .55)); text-shadow: 0 1px 2px #000; }
 .menu-scene.has-shot .menu-shot { opacity: 1; }
-.menu-scene.has-shot .ld-scene { opacity: 0; }
 .menu-scene.sv-dawn .ld-scene { filter: hue-rotate(-14deg) saturate(1.15) brightness(1.08); }
 .menu-scene.sv-night .ld-scene { filter: hue-rotate(195deg) saturate(.85) brightness(.5); }

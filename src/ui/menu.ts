@@ -224,7 +224,7 @@ export function createMenu(root: HTMLElement, events: MenuEvents): Menu {
   scene.innerHTML = loadingScene();
   // tło menu (Michał 7.11.2026): ostatnia osada z zapisu (miniatura, rozmyta, jedna statyczna warstwa) albo jeden z trzech
   // pejzaży wylosowany przy wejściu na stronę (świt / zmierzch / noc — sam filtr barwy na tym samym obrazie, bez kosztu FPS)
-  const shot = el('div', 'menu-shot'); shot.setAttribute('aria-hidden', 'true');
+  const shot = el('div', 'menu-shot'); shot.setAttribute('aria-hidden', 'true'); shot.dataset.cap = tx('Twoja ostatnia osada', 'Your last settlement');
   scene.append(shot);
   const sceneVariant = ['dusk', 'dawn', 'night'][Math.floor(Math.random() * 3)]!;
   scene.classList.add(`sv-${sceneVariant}`);
