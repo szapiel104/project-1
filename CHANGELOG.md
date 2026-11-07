@@ -1,5 +1,8 @@
 # Dziennik zmian
 
+## 0.94.83 — 2026-11-07
+- `webgpu.ts` `onceperVersion`: backend wysyła bufor w danej wersji raz (cztery widoki kolumn mat4 wysyłały wspólny bufor 4–5×). `footprints.ts`: zakres nowych śladów zamiast całego pierścienia 24 576 sztuk. Grupy wojska `.army-groups` w lewym dolnym rogu. Boty: bez zmian.
+
 ## 0.94.82 — 2026-11-07
 - Wydajność WebGPU: usunięte `DynamicDrawUsage` (three.js `renderers/common/Attributes.js` wysyła taki bufor przy każdym rysowaniu w każdym przejściu — pule roślinności 15×/klatkę po ~280 KB, ok. 17 ms procesora). Lustra buforów w `webgpu.ts` (`followVersion`) biorą wersję z oryginału. Pomiar na laptopie Michała (RTX 3050): wysyłanie 17 → 3 ms na klatkę, 36–47 → 86 FPS. Uwaga: „karta graficzna ms” w F3 na WebGPU to czas procesora na złożenie klatki, nie praca karty. Boty: bez zmian.
 
