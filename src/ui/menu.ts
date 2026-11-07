@@ -1,3 +1,4 @@
+import { logoSvg } from './logo';
 import { pickArt, slider as cardSlider } from './newgameArt';
 import { menuIcon, type MenuIcon } from './menuIcons';
 import { gameTagline, loadingScene } from './loadscreen';
@@ -176,7 +177,8 @@ export function createMenu(root: HTMLElement, events: MenuEvents): Menu {
   // układ jak w starych gotykach: u góry herb i tytuł nad osadą, na dole na środku pasek z pozycjami menu
   // (pośrodku główna — nowa gra albo powrót do gry), a okna (nowa gra, ustawienia…) wyrastają nad paskiem
   const head = el('div', 'menu-head');
-  const title = el('p', 'menu-title', 'Project‑1');
+  const title = el('p', 'menu-title has-logo');
+  title.innerHTML = logoSvg('lgm');
   const sub = el('p', 'menu-sub', t('menu.subtitle'));
   // herb nad nazwą: tarcza z wieżą i skrzyżowanymi włóczniami
   const crest = el('div', 'menu-crest');

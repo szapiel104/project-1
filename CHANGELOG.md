@@ -1,5 +1,8 @@
 # Dziennik zmian
 
+## 0.94.76 — 2026-11-07
+- Logo: `src/ui/logo.ts` (Uncial Antiqua, SIL OFL, jako ścieżki SVG, bez ładowania czcionki) w `loadscreen.ts`, `menu.ts`, `index.html`; style `.has-logo` w `menuhead.css`. Boty: bez zmian.
+
 ## 0.94.75 — 2026-11-07
 - `shadowcull.ts`: wnętrza i drobiazgi w budynkach (`interior`, `foodfill`, `fill`, `grainfill`, `yardlog`, `ceiling`, `life`, `torch`, `flagcloth`, `crop`) rzucają cień tylko z bliska (pomiar: 475 z ok. 500 rysowań cienia z oddalenia).
 - `scene.ts` / `menu.ts`: dynamiczna rozdzielczość domyślnie włączona. Boty: bez zmian.
