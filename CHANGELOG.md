@@ -1,5 +1,8 @@
 # Dziennik zmian
 
+## 0.94.67 — 2026-11-07
+- `menuhead.css`: procent na pasku wczytywania 16 px, pasek 26 px. Boty: bez zmian.
+
 ## 0.94.66 — 2026-11-07
 - `postNode.ts` / `scene.ts`: zmiana układu efektów obrazu (AO, AA, poświata, wyostrzenie) tworzy nowy `GpuPost` (stary `dispose`) zamiast przebudowy w miejscu — koniec błędu `depthTexture` null. Boty: bez zmian.
 

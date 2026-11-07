@@ -9,6 +9,7 @@ export type { ChangeEntry } from './changelogTypes';
  * — tak jak CHANGELOG.md dla nas. `tests/changelog.test.ts` pilnuje, że najnowszy wpis ma wersję z package.json.
  */
 const NEW: ChangeEntry[] = [
+  { v: '0.94.67', date: '2026-11-07', pl: ['Ekran wczytywania: większy procent na pasku.'], en: ['Loading screen: a bigger percentage on the bar.'] },
   { v: '0.94.66', date: '2026-11-07', pl: ['Grafika: zmiana AO, wygładzania albo poświaty w trakcie gry nie wywala już błędu „efekty obrazu wyłączone”; efekty przebudowują się od razu.'], en: ['Graphics: changing AO, anti-aliasing or bloom while playing no longer throws the “image effects disabled” error; the effects rebuild straight away.'] },
   { v: '0.94.65', date: '2026-11-07', pl: ['Numer wersji gry jest większy i ładniejszy: złota ramka, jasne litery, widoczny na ekranie wczytywania i w menu.'], en: ['The game version number is bigger and nicer: a gold frame and bright lettering, visible on the loading screen and in the menu.'] },
   { v: '0.94.64', date: '2026-11-07', pl: ['Ekran wczytywania: rada zajmuje całą szerokość, równo z paskiem, a procent jest na samym pasku.', 'Menu: wysokie okna (np. Wczytaj grę) nie nachodzą już na przyciski Znajomi i dzwonek.'], en: ['Loading screen: the tip now spans the full width, flush with the bar, and the percentage sits on the bar itself.', 'Menu: tall windows such as Load Game no longer overlap the Friends and bell buttons.'] },

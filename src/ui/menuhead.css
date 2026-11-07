@@ -36,9 +36,9 @@ body .menu:not(.previewing) .menu-head > .menu-title {
 #loading .loading-card .ld-pct { display: none; }
 #loading .loading-tip { max-width: none; width: 100%; box-sizing: border-box; align-items: center; }
 #loading .loading-tip:not(:empty)::before { grid-row: auto; align-self: center; margin-top: 0; }
-#loading .loading-bar { height: 22px; }
+#loading .loading-bar { height: 26px; }
 #loading .loading-bar::after { content: attr(data-pct); position: absolute; inset: 0; z-index: 2; display: grid; place-items: center;
-  font: 700 13px/1 var(--text, sans-serif); letter-spacing: .06em; font-variant-numeric: tabular-nums; color: #fff6e0;
+  font: 800 16px/1 var(--text, sans-serif); letter-spacing: .08em; font-variant-numeric: tabular-nums; color: #fff6e0;
   text-shadow: 0 1px 2px rgba(0, 0, 0, .9), 0 0 6px rgba(0, 0, 0, .7); pointer-events: none; }
 
 /* Michał 7.11.2026: wersja gry ładniejsza i lepiej widoczna — złota ramka z podwójną obwódką jak reszta interfejsu,
