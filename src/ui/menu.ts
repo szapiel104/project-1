@@ -768,10 +768,10 @@ export function createMenu(root: HTMLElement, events: MenuEvents): Menu {
     };
     const intro = (text: string): HTMLElement => el('p', 'help-p', text);
     let current = 0;
-    const preset = (label: string, tier: number, desc = ''): HTMLButtonElement => {
-      const q = TIERS[tier]!;
+    const preset = (label: string, tier: number, desc = '', over?: Partial<typeof TIERS[number]>): HTMLButtonElement => {
+      const q = { ...TIERS[tier]!, ...over };
       const b = button('', () => {
-        Object.assign(settings, { scale: q.scale, shadows: q.shadows, ao: q.ao, grass: q.grass, soft: !!q.soft, aa: q.aa, reflections: q.reflections, aniso: 16, sharpen: q.aa === 'fxaa' || q.aa === 'smaa' ? 0.3 : 0 });
+        Object.assign(settings, { scale: q.scale, shadows: q.shadows, ao: q.ao, grass: q.grass, soft: !!q.soft, aa: q.aa, reflections: q.reflections, aniso: 16, sharpen: q.aa === 'fxaa' || q.aa === 'smaa' ? 0.3 : 0, ...(over ? { dynRes: true } : {}) });
         manual(); showSettings(current);
       }, 'menu-btn set-preset');
       // obecny poziom podświetlony, żeby było widać, na czym gra stoi
@@ -789,6 +789,8 @@ export function createMenu(root: HTMLElement, events: MenuEvents): Menu {
         presets.append(
           preset(tx('Niska', 'Low'), 1, tx('stary laptop', 'old laptop')),
           preset(tx('Średnia', 'Medium'), 2, tx('zwykły komputer', 'ordinary PC')),
+          // tryb wydajny (Michał 7.11.2026): cienie 2048 bez AO, szybkie wygładzanie, rozdzielczość dopasowuje się sama
+          preset(tx('Wydajna', 'Performance'), 3, tx('najwięcej klatek', 'most frames per second'), { shadows: 2048, ao: 'off', aa: 'fxaa', grass: 0.8 }),
           preset(tx('Wysoka', 'High'), 4, tx('dobra karta', 'good graphics card')),
           preset('Ultra', TIERS.length - 1, tx('mocna karta', 'strong graphics card')),
         );

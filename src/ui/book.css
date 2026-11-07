@@ -94,7 +94,7 @@ body .menu .set-sheet .set-toggle input:focus-visible + .dev-knob { outline: 3px
 body .menu .set-sheet .menu-link { color: #fff6e0; }
 
 /* gotowe poziomy grafiki jako karty z paskami mocy; obecny w złotej ramce */
-body .menu .set-presets { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin: 10px 0 6px; }
+body .menu .set-presets { grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 12px; margin: 10px 0 6px; }
 body .menu .menu-panel .set-presets .menu-btn.set-preset { display: grid; justify-items: center; align-content: center; gap: 6px; min-height: 104px; padding: 12px 8px; font: inherit; text-transform: none; letter-spacing: 0;
   color: var(--ink); background: rgba(255, 248, 228, .6); background-image: none; border: 1px solid rgba(122, 90, 46, .65); border-radius: 4px; box-shadow: none; text-shadow: none; cursor: pointer; }
 body .menu .menu-panel .set-presets .menu-btn.set-preset:hover { background: rgba(255, 252, 238, .95); border-color: var(--rubric); }
