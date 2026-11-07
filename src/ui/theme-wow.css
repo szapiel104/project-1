@@ -598,3 +598,18 @@ body .menu .ng-dock .pick:has(input:checked) .pick-small { color: #f6e3b4 !impor
 body .menu .ng-dock .menu-heading, body .menu .ng-dock .pick-group legend, body .menu .ng-dock .field > span, body .menu .ng-dock .field label { color: #e9c766 !important; }
 body .menu .ng-dock .preview-status, body .menu .ng-dock .hint { color: #cdb98f !important; }
 body .menu .ng-dock .ng-c { border-left-color: rgba(233, 199, 102, .25); }
+
+/* Nowa gra: niższy pasek, więcej widocznej mapy (Michał 7.11.2026: „za duże, prawie pół ekranu”) */
+body .menu.previewing .menu-panel.wide.ng-dock { max-height: min(30vh, calc(100vh / var(--ui, 1) - 200px)); padding-top: 8px; padding-bottom: 10px; }
+body .menu.previewing .menu-panel.ng-dock .menu-heading { display: none; }
+body .menu .ng-dock .pick-art { height: 30px !important; margin-bottom: 2px; }
+body .menu .ng-dock .ng-slider .pick, body .menu .ng-dock .ng-slider .pick-row.lands .pick { flex: 1 1 96px; max-width: 150px; padding: 4px 5px 5px; gap: 1px; }
+body .menu .ng-dock .ng-slider .pick-big { font-size: 14px; }
+body .menu .ng-dock .ng-slider .pick-small { font-size: 12px; line-height: 1.2; }
+body .menu .ng-dock .pick-group legend { margin-bottom: 2px; }
+body .menu .ng-dock .ng-col, body .menu .ng-dock .newgame { gap: 6px; }
+body .menu .ng-dock .dev-switch { padding: 3px 8px; gap: 8px; grid-template-columns: 40px 1fr; min-height: 0; }
+body .menu .ng-dock .dev-switch .dev-hint { display: none; }
+body .menu .ng-dock .dev-switch.dev-walls { grid-template-columns: auto 1fr; }
+body .menu .ng-dock .ng-c { grid-template-rows: none; grid-auto-rows: min-content; }
+body .menu .ng-dock .newgame-foot .menu-btn { min-height: 40px; }
