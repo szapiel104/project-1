@@ -1,5 +1,10 @@
 # Dziennik zmian
 
+## 0.94.79 — 2026-11-07
+- Nowa gra: panel po lewej z przewijaniem (`theme-wow.css`, reguły z `html body`, bo `newgame.css` ładuje się później), zwijane sekcje (`menu.ts` `section`), „Zaawansowane” zwinięte, tryb deweloperski widoczny na localhost.
+- `biomeArt.ts`: malowane pejzaże krain 16:9 w SVG (`pickArt` bierze je najpierw).
+- Kręciołek podglądu mapy wyśrodkowany nad mapą; menu główne: przyciski i karta gościa na tej samej szerokości; górny pasek zawija się zamiast wychodzić za ekran. Boty: bez zmian (tylko interfejs).
+
 ## 0.94.78 — 2026-11-07
 - `touch.ts` `touchAt` + `terrain.ts` `fell`: ścinane drzewo wysyła do karty tylko swoją instancję (wcześniej cały bufor lasu co klatkę).
 - `scene.ts` `warmGpu`: po zwykłym przejściu dodatkowe klatki z 4 stron i 2 odległości (bliska/daleka) przed startem; ekspozycja 1.02 → 1.08.
