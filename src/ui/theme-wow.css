@@ -673,3 +673,16 @@ html body .menu.previewing .menu-panel.ng-dock .ng-col, html body .menu.previewi
 html body .menu.previewing .menu-panel.ng-dock .field .menu-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; }
 html body .menu.previewing .menu-panel.ng-dock .field .menu-row input { width: 100%; min-width: 0; box-sizing: border-box; color: #2a1b0c; }
 html body .menu.previewing .menu-panel.ng-dock .pick-art { background: radial-gradient(ellipse at 50% 40%, #fbf3df, #ead6aa) !important; }
+html body .menu:not(.previewing) .menu-bar { padding-right: var(--mx); padding-left: var(--mx); box-sizing: border-box; }
+
+/* Nowa gra: czytelne pole nazwy mapy i przełączniki w „Zaawansowane” (ciemne, złota ramka, jasny tekst) */
+html body .menu.previewing .menu-panel.ng-dock .field .menu-row input { background: #0f0a06; color: #f3e4c2; border: 1px solid #8a6a32; border-radius: 4px; min-height: 40px; padding: 0 12px; font-size: 15px; box-shadow: none; }
+html body .menu.previewing .menu-panel.ng-dock .field .menu-row input::placeholder { color: #9c8862; }
+html body .menu.previewing .menu-panel.ng-dock .field .menu-row input:focus-visible { outline: 2px solid #e9c766; outline-offset: 1px; }
+html body .menu.previewing .menu-panel.ng-dock .pick-group legend { user-select: none; }
+html body .menu.previewing .menu-panel.ng-dock .dev-switch { background: rgba(255, 240, 210, .05) !important; border: 1px solid rgba(233, 199, 102, .28) !important; border-radius: 6px !important; color: #f3e4c2; grid-template-columns: 44px 1fr; padding: 8px 10px; }
+html body .menu.previewing .menu-panel.ng-dock .dev-switch .dev-text { color: #f3e4c2 !important; font-size: 14.5px; font-weight: 500; }
+html body .menu.previewing .menu-panel.ng-dock .dev-switch .dev-knob { background: #3a2c1c !important; border: 1px solid #8a6a32; }
+html body .menu.previewing .menu-panel.ng-dock .dev-switch input:checked + .dev-knob { background: #8c1f18 !important; border-color: #e9c766; }
+html body .menu.previewing .menu-panel.ng-dock .dev-switch.dev-walls { grid-template-columns: auto 1fr; }
+html body .menu.previewing .menu-panel.ng-dock .dev-walls select { background: #0f0a06; color: #f3e4c2; border: 1px solid #8a6a32; }
