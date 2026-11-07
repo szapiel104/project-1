@@ -121,7 +121,8 @@ describe('magowie bez rozkazu', () => {
       return s;
     });
     let busy = 0;
-    for (let t = 0; t < 900; t++) { step(g, []); if (t > 600) busy += mages.filter((m) => g.soldiers.includes(m) && m.target).length; }
+    // zajęty = bije w coś albo, ranny, wycofuje się na leczenie (to też nie bezczynność)
+    for (let t = 0; t < 900; t++) { step(g, []); if (t > 600) busy += mages.filter((m) => g.soldiers.includes(m) && (m.target || m.wounded)).length; }
     expect(busy).toBeGreaterThan(0);
   });
 });

@@ -2,7 +2,7 @@ import { BUILDINGS, buildingIndex, workArea } from '../../data/buildings';
 import { RULES } from '../../data/rules';
 import { Terrain } from '../../data/terrain';
 import { seasonAt } from '../weather';
-import { FP, Phase, type Building, type GameState, type Sapling } from '../state';
+import { FP, inForecourt, Phase, type Building, type GameState, type Sapling } from '../state';
 
 /**
  * Leśnictwo: leśniczy z chaty sadzi młode drzewka na wolnej łące w swoim terenie pracy, a drzewka rosną w las.
@@ -80,7 +80,8 @@ export function plantSpot(g: GameState, b: Building, planned: Set<number>): numb
   for (let y = Math.max(1, a.y0); y <= Math.min(h - 2, a.y1); y++)
     for (let x = Math.max(1, a.x0); x <= Math.min(w - 2, a.x1); x++) {
       const t = y * w + x;
-      if (tiles[t] !== Terrain.Grass || g.occupancy[t] || g.reserved[t] || g.roads[t] || g.roadPlan[t] || g.map.trails?.[t] || planned.has(t) || b.miss?.includes(t)) continue;
+      // plac przed bramą zamku zostaje wolny (od 0.94.84 nie jest brukowany, więc trzeba go chronić wprost)
+      if (tiles[t] !== Terrain.Grass || g.occupancy[t] || g.reserved[t] || g.roads[t] || g.roadPlan[t] || g.map.trails?.[t] || planned.has(t) || b.miss?.includes(t) || inForecourt(g, x, y)) continue;
       let forest = 0, bad = false;
       for (let dy = -1; dy <= 1 && !bad; dy++)
         for (let dx = -1; dx <= 1; dx++) {
@@ -101,7 +102,7 @@ export function plantSpot(g: GameState, b: Building, planned: Set<number>): numb
 /** Leśniczy skończył sadzić: na polu zostaje młode drzewko (o ile pole wciąż jest wolne) */
 export function plantSapling(g: GameState, u: { owner: number; job: number; target: number; px: number; py: number }): void {
   const t = u.target - 1;
-  if (t < 0 || g.map.tiles[t] !== Terrain.Grass || g.occupancy[t] || g.reserved[t] || g.roads[t] || g.roadPlan[t]) return;
+  if (t < 0 || g.map.tiles[t] !== Terrain.Grass || g.occupancy[t] || g.reserved[t] || g.roads[t] || g.roadPlan[t] || inForecourt(g, t % g.map.width, Math.floor(t / g.map.width))) return;
   const s: Sapling = { t, owner: u.owner, by: u.job, age: 0 };
   (g.saplings ??= []).push(s);
   g.reserved[t]!++;
