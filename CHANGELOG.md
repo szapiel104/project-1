@@ -1,5 +1,8 @@
 # Dziennik zmian
 
+## 0.94.56 — 2026-11-07
+- `scene.ts`: `BATCH_ALSO` obejmuje grupy `fill` i `life` (wspólne rysowanie w `syncBatches`). Boty: bez zmian.
+
 ## 0.94.55 — 2026-11-07
 - `terrain.ts`: kamyki po 2 kształty na rodzaj głazu (8 pul zamiast 23). Boty: bez zmian.
 

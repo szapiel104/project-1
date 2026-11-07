@@ -10,6 +10,11 @@ export type { ChangeEntry } from './changelogTypes';
  */
 const NEW: ChangeEntry[] = [
   {
+    v: '0.94.56', date: '2026-11-07',
+    pl: ['Płynniej w dużej osadzie: zapasy w składach i drobiazgi na podwórkach rysują się razem dla wszystkich budynków, a nie osobno.'],
+    en: ['Smoother in a big settlement: stock piles and yard clutter are drawn together for all buildings instead of one by one.'],
+  },
+  {
     v: '0.94.55', date: '2026-11-07',
     pl: ['Płynniej: kamyki na łąkach z 8 kształtów zamiast 23 (dalej różnie obrócone i w różnej wielkości), mniej osobnych rysowań.'],
     en: ['Smoother: meadow pebbles use 8 shapes instead of 23 (still varied in rotation and size), fewer separate draws.'],
