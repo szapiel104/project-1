@@ -2020,7 +2020,7 @@ let raidSeen = 0;
  * przyjdzie — krótko, co robić. Progi liczone z położenia w roku; skok pory roku z menu dewelopera nic nie ogłasza. */
 let yearSeen = -1;
 function winterNotes(p: (typeof game.players)[number]): void {
-  const pos = yearPos(game.tick, game.seasonShift ?? 0);
+  const pos = yearPos(game.tick, game.seasonShift ?? 0, game.map.biome);
   const was = yearSeen;
   yearSeen = pos;
   if (was < 0 || pos < was || pos - was > 0.02) return; // start gry, nowy rok albo przeskok pory roku
@@ -2504,7 +2504,7 @@ requestAnimationFrame(loop);
   /** Gotowy budynek w polu (x, y), bez budowy; zwraca id albo null (działka zajęta) */
   place(id: string, x: number, y: number, rot = 0, player = ME): number | null { const r = placeReady(game, id, x, y, rot, player); refresh(); return r; },
   /** Pora roku: środek wybranej pory (spring, summer, autumn, winter) */
-  season(name: Season): void { game.seasonShift = shiftToSeason(game.tick, name); refresh(); },
+  season(name: Season): void { game.seasonShift = shiftToSeason(game.tick, name, game.map.biome); refresh(); },
   /** Opad do zrzutów: 0..1 (zimą przy mrozie śnieg), −1 = z pogody; snow = śnieg na ziemi 0..1 (−1 = z pogody) */
   rain(v = 1, snow = -1): void { renderer.rainForce = v; renderer.snowForce = snow; },
   /** Otwiera okno budynku o danym id (jak kliknięcie) */
@@ -3228,7 +3228,7 @@ const devPanel = createDevPanel(document.body, withResync({
     devPanel.placed(`${tx('Jest', 'It is')} ${Math.floor(clockAt(game.tick).hour)}:${String(Math.floor((clockAt(game.tick).hour % 1) * 60)).padStart(2, '0')}.`);
   },
   onSeason: (s: Season) => {
-    game.seasonShift = shiftToSeason(game.tick, s);
+    game.seasonShift = shiftToSeason(game.tick, s, game.map.biome);
     refresh();
     const w = weatherOf(game, rainAt(game.tick));
     return `${SEASON_NAME[w.season]}: ${tx('teraz', 'now')} ${lang() === 'en' ? w.temp.toFixed(1) : w.temp.toFixed(1).replace('.', ',')}°C${w.temp < COLD ? tx(' — w chatach palą w piecach (drewno na opał)', ' — the hovels burn firewood in their hearths') : ''}.`;

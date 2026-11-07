@@ -26,7 +26,7 @@ export function forestSystem(g: GameState): void {
 function growSaplings(g: GameState): void {
   const list = g.saplings;
   if (!list?.length) return;
-  const winter = seasonAt(g.tick, g.seasonShift ?? 0) === 'winter';
+  const winter = seasonAt(g.tick, g.seasonShift ?? 0, g.map.biome) === 'winter' && g.map.biome !== 'north'; // Północ: tajga rośnie mimo zimy
   let keep = 0;
   for (const s of list) {
     const t = s.t;
@@ -50,7 +50,7 @@ function growSaplings(g: GameState): void {
 /** Wolny leśniczy stojący pod chatą dostaje następne pole do obsadzenia */
 function sendForesters(g: GameState): void {
   if (FORESTER < 0) return;
-  if (seasonAt(g.tick, g.seasonShift ?? 0) === 'winter') return;
+  if (seasonAt(g.tick, g.seasonShift ?? 0, g.map.biome) === 'winter' && g.map.biome !== 'north') return; // na Północy zima cały rok — leśnicy sadzą
   let planned: Set<number> | undefined;
   for (const b of g.buildings) {
     if (b.type !== FORESTER || b.build || b.off || !b.worker || b.door < 0) continue;

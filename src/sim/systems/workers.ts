@@ -19,7 +19,7 @@ import { seasonAt } from '../weather';
 export const FISH_WINTER = 2;
 /** Ile ticków trwa robota w terenie teraz (rybak zimą dwa razy dłużej) */
 export function siteTicks(g: GameState, prod: ProductionDef): number {
-  return prod.workTicks * (prod.output.res === 'fish' && seasonAt(g.tick, g.seasonShift ?? 0) === 'winter' ? FISH_WINTER : 1);
+  return prod.workTicks * (prod.output.res === 'fish' && seasonAt(g.tick, g.seasonShift ?? 0, g.map.biome) === 'winter' ? FISH_WINTER : 1);
 }
 import { feastDay, goesToPray } from './faith';
 import { dropPile, isStore, spareKeeper, stalledStep, takePile } from './storage';

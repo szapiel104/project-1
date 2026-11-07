@@ -30,7 +30,7 @@ export function fuelNeed(g: GameState, p: PlayerState): number {
  * (średni mróz zimy dla tej mapy), ile drewna jest w składzie i na ile dni starczy jedzenia przy obecnych racjach.
  */
 export function winterReadiness(g: GameState, p: PlayerState): { days: number; fuel: number; wood: number; foodDays: number } {
-  const pos = yearPos(g.tick, g.seasonShift ?? 0);
+  const pos = yearPos(g.tick, g.seasonShift ?? 0, g.map.biome);
   const days = pos < 0.75 ? (0.75 - pos) * YEAR_DAYS : 0;
   // średnie „zimno” zimy: próbki co ćwierć doby przez całą zimę (bez deszczu)
   const start = g.tick + Math.round(days * RULES.dayTicks);

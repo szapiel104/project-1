@@ -25,16 +25,26 @@ export const COLD = 8;
 function gameDays(tick: number, shift = 0): number {
   return tick / RULES.dayTicks + dayFraction(RULES.startHour) + shift;
 }
-/** Położenie w roku 0..1 (0 = początek wiosny); start gry w połowie wiosny */
-export function yearPos(tick: number, shift = 0): number {
-  return (((gameDays(tick, shift) + SEASON_DAYS / 2) / YEAR_DAYS) % 1 + 1) % 1;
+/**
+ * Klimat krainy (Michał 7.11.2026): Północ ma zimę cały rok, Step i Pustynia nie mają zimy wcale — ich rok to
+ * wiosna, lato i jesień rozciągnięte na cały rok; reszta krain ma zwykłe cztery pory.
+ */
+export function climateOf(biome?: Biome): 'winter' | 'warm' | 'normal' {
+  return biome === 'north' ? 'winter' : biome === 'desert' || biome === 'steppe' ? 'warm' : 'normal';
 }
-export function seasonAt(tick: number, shift = 0): Season {
-  return SEASONS[Math.min(3, Math.floor(yearPos(tick, shift) * 4))]!;
+/** Położenie w roku 0..1 (0 = początek wiosny); start gry w połowie wiosny. Z krainą: na Północy stale środek zimy,
+ * na Stepie i Pustyni rok kończy się przed zimą (0..0,75). */
+export function yearPos(tick: number, shift = 0, biome?: Biome): number {
+  const raw = (((gameDays(tick, shift) + SEASON_DAYS / 2) / YEAR_DAYS) % 1 + 1) % 1;
+  const c = climateOf(biome);
+  return c === 'winter' ? 0.875 : c === 'warm' ? raw * 0.75 : raw;
+}
+export function seasonAt(tick: number, shift = 0, biome?: Biome): Season {
+  return SEASONS[Math.min(3, Math.floor(yearPos(tick, shift, biome) * 4))]!;
 }
 /** Przesunięcie (w dniach), po którym w chwili `tick` jest środek danej pory roku */
-export function shiftToSeason(tick: number, season: Season): number {
-  const want = (SEASONS.indexOf(season) + 0.5) / 4;
+export function shiftToSeason(tick: number, season: Season, biome?: Biome): number {
+  const want = (SEASONS.indexOf(season) + 0.5) / 4 / (climateOf(biome) === 'warm' ? 0.75 : 1);
   let d = (want - yearPos(tick, 0)) * YEAR_DAYS;
   d = ((d % YEAR_DAYS) + YEAR_DAYS) % YEAR_DAYS;
   return d;
@@ -48,7 +58,7 @@ const hash = (a: number, b: number): number => {
 
 /** Temperatura w °C (z jedną cyfrą po przecinku). rain = 0..1 (deszcz chłodzi) */
 export function temperatureAt(tick: number, seed: number, rain = 0, shift = 0, biome?: Biome): number {
-  const pos = yearPos(tick, shift);
+  const pos = yearPos(tick, shift, biome);
   // rok: +24° w połowie lata (0.375), −6° w połowie zimy (0.875)
   const year = 9 + 15 * Math.cos(2 * Math.PI * (pos - 0.375));
   // doba: najcieplej ok. 15:00, najzimniej ok. 3:00 (±4°)
@@ -64,5 +74,5 @@ export function temperatureAt(tick: number, seed: number, rain = 0, shift = 0, b
 /** Pogoda w grze: pora roku, temperatura (z deszczem) i jak bardzo zimno (0 = ciepło, 1 = ok. 0°C, 1.75 = −6°C) */
 export function weatherOf(g: { tick: number; map: { seed: number; biome?: Biome }; seasonShift?: number }, rain = 0): { season: Season; temp: number; chill: number } {
   const temp = temperatureAt(g.tick, g.map.seed, rain, g.seasonShift ?? 0, g.map.biome);
-  return { season: seasonAt(g.tick, g.seasonShift ?? 0), temp, chill: Math.max(0, Math.min(2, (COLD - temp) / COLD)) };
+  return { season: seasonAt(g.tick, g.seasonShift ?? 0, g.map.biome), temp, chill: Math.max(0, Math.min(2, (COLD - temp) / COLD)) };
 }

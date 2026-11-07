@@ -53,6 +53,7 @@ describe('gotowość na zimę (skryba jesienią)', () => {
     const { winterReadiness } = await import('../src/sim/systems/economy');
     const { shiftToSeason } = await import('../src/sim/weather');
     const g = createGame(5);
+    g.map.biome = 'meadow'; // kraina z czterema porami (Step i Pustynia nie mają zimy, Północ ma ją cały rok)
     g.seasonShift = shiftToSeason(g.tick, 'autumn'); // środek jesieni
     const p = g.players[0]!;
     const w = winterReadiness(g, p);

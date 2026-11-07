@@ -1,5 +1,10 @@
 # Dziennik zmian
 
+## 0.94.80 — 2026-11-07
+- `weather.ts`: `climateOf(biome)`; `yearPos`/`seasonAt`/`shiftToSeason` biorą krainę — Północ stale 0,875 (środek zimy), Step i Pustynia `raw × 0,75` (bez zimy). Wywołania w `workers`, `economy`, `storms`, `forestry`, `scene.ts`, `main.ts` przekazują `g.map.biome`.
+- `forestry.ts`: na Północy sadzonki rosną i leśnicy sadzą mimo zimy. `groundNode.ts`: brak śniegu na szczytach przy `uDry` (Step, Pustynia).
+- Test `tests/climate.test.ts`. Boty: bez zmian (korzystają z tych samych pór roku przez symulację).
+
 ## 0.94.79 — 2026-11-07
 - Nowa gra: panel po lewej z przewijaniem (`theme-wow.css`, reguły z `html body`, bo `newgame.css` ładuje się później), zwijane sekcje (`menu.ts` `section`), „Zaawansowane” zwinięte, tryb deweloperski widoczny na localhost.
 - `biomeArt.ts`: malowane pejzaże krain 16:9 w SVG (`pickArt` bierze je najpierw).

@@ -116,6 +116,7 @@ export function groundNodeMaterial(t: GroundTextures, season?: SeasonU): { mater
   alb = mix(alb, mix(grass.mul(0.8), sandC, uDry), ledge.mul(0.85));
   const line = nM.g.mul(3).add(11.5).add(nD.r.sub(0.5).mul(1.5));
   let snow: N = smoothstep(line, line.add(1.4), wp.y).mul(mix(float(0.55), float(1), ss(0.3, 0.75, wn.y)));
+  snow = snow.mul(float(1).sub(ss(0.2, 0.35, uDry))); // Step i Pustynia: bez śniegu na szczytach (Michał 7.11.2026)
   const snowC = vec3(0.78, 0.81, 0.86).mul(lum(rock).mul(0.45).add(0.8)).mul(nD.g.mul(0.16).add(0.9));
   snow = snow.mul(ss(0, 0.35, float(1).sub(lum(rock).mul(0.6)).add(nD.b.mul(0.4)).sub(0.3)).mul(0.5).add(0.5));
   alb = mix(alb, snowC, clamp(snow, 0, 1));

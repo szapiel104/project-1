@@ -2027,7 +2027,7 @@ export class GameRenderer {
     // przy mrozie opad to śnieg (render/snowfall.ts), a zimą przy zachmurzeniu sypią też drobne śnieżyce
     const temp = g ? weatherOf(g, this.rain).temp : 10;
     const freezing = temp < 1;
-    const flurry = g && seasonAt(g.tick, g.seasonShift ?? 0) === 'winter' ? Math.max(0, (this.cover - 0.45) * 0.7) : 0;
+    const flurry = g && seasonAt(g.tick, g.seasonShift ?? 0, g.map.biome) === 'winter' ? Math.max(0, (this.cover - 0.45) * 0.7) : 0;
     const snowWant = this.rainOn && (freezing || flurry > 0) ? Math.min(1, (freezing ? this.rain : 0) + (temp < 3 ? flurry : 0)) : 0;
     if (!this.snowfall && snowWant > 0.01) { this.snowfall = new Snowfall(); this.scene.add(cat(this.snowfall.points, 'śnieg')); }
     this.snowfall?.update(dt, snowWant, this.focusPoint, this.renderer.domElement.height / (2 * Math.tan((this.cam.camera.fov * Math.PI) / 360)), this.night);
@@ -4997,7 +4997,7 @@ export class GameRenderer {
     if ((this.seasonScan -= dt) <= 0) { this.seasonScan = 3; for (const m of applySeason(this.scene)) this.pre.watch(m); }
     const w = weatherOf(g, this.rain);
     this.breath?.setTemp(w.temp);
-    const p = yearPos(g.tick, g.seasonShift ?? 0);
+    const p = yearPos(g.tick, g.seasonShift ?? 0, g.map.biome);
     const sm = (a: number, b: number, x: number): number => { const t = Math.max(0, Math.min(1, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
     // liście: żółkną od początku jesieni, opadają pod jej koniec, wiosną odrastają
     const bare = p < 0.2 ? 1 - sm(0.03, 0.13, p) : sm(0.7, 0.78, p);

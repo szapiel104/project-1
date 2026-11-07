@@ -23,13 +23,13 @@ const CROPS = new Set([buildingIndex('orchard'), buildingIndex('farm')]);
 
 /** Burza: mocny deszcz, ale nie zimą (zimą pada śnieg i nie grzmi) */
 export function stormAt(g: GameState): boolean {
-  return rainAt(g.tick) >= RULES.storm.rain && seasonAt(g.tick, g.seasonShift ?? 0) !== 'winter';
+  return rainAt(g.tick) >= RULES.storm.rain && seasonAt(g.tick, g.seasonShift ?? 0, g.map.biome) !== 'winter';
 }
 
 /** Susza: lato, gorący dzień (temperatura bez rytmu doby od RULES.drought.temp °C) i bez deszczu */
 export function droughtAt(g: GameState): boolean {
   const shift = g.seasonShift ?? 0;
-  if (seasonAt(g.tick, shift) !== 'summer' || rainAt(g.tick) > 0.05) return false;
+  if (seasonAt(g.tick, shift, g.map.biome) !== 'summer' || rainAt(g.tick) > 0.05) return false;
   // bez rytmu doby (najcieplej o 15, najzimniej o 3): zostaje rok i pogoda dnia, zmienia się płynnie z dnia na dzień
   const hour = clockAt(g.tick).hour;
   const t = temperatureAt(g.tick, g.map.seed, 0, shift, g.map.biome) - 4 * Math.cos((2 * Math.PI * (hour - 15)) / 24);
