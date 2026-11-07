@@ -10,6 +10,17 @@ export type { ChangeEntry } from './changelogTypes';
  */
 const NEW: ChangeEntry[] = [
   {
+    v: '0.94.49', date: '2026-11-07',
+    pl: [
+      'Naprawiony zastygły obraz po kilku minutach gry (kamera się ruszała, a obraz stał): po zniknięciu wozu albo znacznika gra niszczyła dane, z których dalej korzystali ludzie i budynki.',
+      'Autozapis co 5 minut zamiast co 3.',
+    ],
+    en: [
+      'Fixed the picture freezing after a few minutes of play (the camera moved but the image stood still): when a cart or marker vanished, the game destroyed data still used by people and buildings.',
+      'Autosave every 5 minutes instead of 3.',
+    ],
+  },
+  {
     v: '0.94.48', date: '2026-11-07',
     pl: [
       'Płynniej: szybki zapis co minutę i w wolnej chwili przeglądarki zamiast co 15 sekund w środku gry.',

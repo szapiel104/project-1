@@ -1,5 +1,10 @@
 # Dziennik zmian
 
+## 0.94.49 — 2026-11-07
+- `gpu/webgpu.ts`: `Attributes.delete` nie niszczy buforów instancji (`InstancedBufferAttribute`, `InstancedInterleavedBuffer`). `dispose` wspólnej geometrii kasował w three.js „atrybuty węzłowe” pierwszego obiektu, który ją rysował (np. macierze puli) — dziennik Michała: 14 tys. „used in submit while destroyed” na bufor od 125 s, zastygły obraz.
+- `main.ts`: autozapis co 5 min (było 3).
+- Boty: bez zmian.
+
 ## 0.94.48 — 2026-11-07
 - `main.ts`: zapis do `localStorage` co 60 s przez `requestIdleCallback` (było co 15 s w środku klatki; serialize dużej gry 4v4 ok. 20 ms).
 - `shadowcull.ts` (nowy): kategorie drobiazgów (postacie, zwierzęta, podwórka, graty, niesione ładunki, wilki, kruki, wozy…) bez cienia przy kamerze dalej niż 34 (z powrotem poniżej 30); w spacerze zawsze z cieniem.

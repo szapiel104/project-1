@@ -247,13 +247,13 @@ async function loadFrom(id: string): Promise<string | null> {
   });
   return null;
 }
-// autozapis co 3 minuty gry (tylko gdy gra naprawdę szła) — trzy ostatnie, najstarszy zastępowany
+// autozapis co 5 minut gry (Michał 7.11.2026) (tylko gdy gra naprawdę szła) — trzy ostatnie, najstarszy zastępowany
 let autoTick = -1;
 setInterval(() => {
   if (!canSaveNow() || titleScreen || game.tick === autoTick) return;
   autoTick = game.tick;
   void saveTo('auto', tx(`Autozapis — dzień ${clockAt(game.tick).day}`, `Autosave — day ${clockAt(game.tick).day}`));
-}, 180_000);
+}, 300_000);
 // szybki zapis: Ctrl+S (jeden, nadpisywany)
 window.addEventListener('keydown', (e) => {
   if (!(e.ctrlKey || e.metaKey) || e.key.toLowerCase() !== 's') return;

@@ -315,6 +315,17 @@ export async function prepareGpu(canvas: HTMLCanvasElement): Promise<void> {
   const bnd = (r as unknown as { _bindings: { get(o: unknown): { initialized?: boolean }; delete(o: unknown): void; deleteForRender(ro: unknown): void } })._bindings;
   const delForRender = bnd.deleteForRender.bind(bnd);
   bnd.deleteForRender = (ro: unknown): void => { if (bnd.get(ro).initialized === true) delForRender(ro); else bnd.delete(ro); };
+  // Usunięcie (dispose) wspólnej geometrii niszczy w three.js także atrybuty „węzłowe” pierwszego obiektu, który ją
+  // rysował — m.in. macierze instancji puli (instanceMatrix), choć pula żyje dalej i co klatkę je wpisuje. Kończyło się
+  // „used in submit while destroyed” w każdej klatce i zastygłym obrazem (dziennik Michała 7.11.2026, 125 s gry,
+  // ok. 14 tys. błędów na bufor). Bufory instancji zwalnia teraz tylko sama pula (zostają do końca jej życia).
+  const attrs = (r as unknown as { _attributes: { delete(a: unknown): unknown } })._attributes;
+  const attrDel = attrs.delete.bind(attrs);
+  attrs.delete = (a: unknown): unknown => {
+    const x = a as { isInstancedBufferAttribute?: boolean; isInterleavedBufferAttribute?: boolean; data?: { isInstancedInterleavedBuffer?: boolean } };
+    if (x.isInstancedBufferAttribute || (x.isInterleavedBufferAttribute && x.data?.isInstancedInterleavedBuffer)) return null;
+    return attrDel(a);
+  };
   (window as unknown as { __gpuStat: () => unknown }).__gpuStat = () => ({ deferred: gpuDeferredCount, pending: gpuPendingCount, spent: buildSpent });
   const shim = r as unknown as Record<string, unknown>;
   shim.capabilities = { getMaxAnisotropy: () => 16, maxSamples: 4, isWebGL2: true };
