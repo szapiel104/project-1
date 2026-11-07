@@ -579,7 +579,7 @@ export function createMenu(root: HTMLElement, events: MenuEvents): Menu {
     devBox.type = 'checkbox'; devBox.setAttribute('role', 'switch');
     devBox.addEventListener('change', () => { dev = devBox.checked; instLab.hidden = !dev; wallLab.hidden = !dev; preview(); });
     // tylko testerzy i administratorzy (rola w bazie, Michał 2.11.2026); w trybie testowym ?test zawsze
-    devLab.hidden = !isTester() && !SANDBOX_MENU;
+    devLab.hidden = !isTester() && !SANDBOX_MENU && !['localhost', '127.0.0.1'].includes(location.hostname); // lokalna kopia: zawsze widać
     devLab.append(devBox, el('span', 'dev-knob'), el('span', 'dev-text', tx('Tryb deweloperski', 'Developer mode')), el('span', 'dev-hint', tx('miasto w murach, wojsko, pełne zapasy', 'walled town, army, full supplies')));
     // w trybie deweloperskim: budynki od razu gotowe albo zwykła budowa (robotnicy noszą materiał, rusztowania)
     let instant = true;
