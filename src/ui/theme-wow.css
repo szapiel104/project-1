@@ -613,3 +613,19 @@ body .menu .ng-dock .dev-switch .dev-hint { display: none; }
 body .menu .ng-dock .dev-switch.dev-walls { grid-template-columns: auto 1fr; }
 body .menu .ng-dock .ng-c { grid-template-rows: none; grid-auto-rows: min-content; }
 body .menu .ng-dock .newgame-foot .menu-btn { min-height: 40px; }
+
+/* Nowa gra — nowy wygląd: zwijane sekcje, kafelki w jednej linii (ikona + nazwa + opis) */
+body .menu .ng-dock .pick-group legend { cursor: pointer; display: flex; align-items: center; gap: 6px; width: 100%; font-size: 12px; letter-spacing: .12em; text-transform: uppercase; }
+body .menu .ng-dock .pick-group legend::before { content: '▾'; color: #e9c766; transition: transform .15s; }
+body .menu .ng-dock .pick-group.ng-folded legend::before { transform: rotate(-90deg); }
+body .menu .ng-dock .pick-group legend:focus-visible { outline: 2px solid #e9c766; outline-offset: 2px; }
+body .menu .ng-dock .pick-group.ng-folded .ng-slider .pick:not(:has(input:checked)) { display: none; }
+body .menu .ng-dock .pick-group.ng-adv.ng-folded > :not(legend) { display: none !important; }
+body .menu .ng-dock .pick-group.ng-adv { display: grid; gap: 4px; }
+body .menu .ng-dock .ng-slider .pick, body .menu .ng-dock .ng-slider .pick-row.lands .pick {
+  display: grid !important; grid-template-columns: 38px 1fr; grid-template-rows: auto auto; column-gap: 7px; align-items: center; flex: 1 1 150px; max-width: 200px; padding: 4px 8px 4px 4px; border-radius: 5px !important; }
+body .menu .ng-dock .pick .pick-art { grid-row: 1 / 3; width: 38px; height: 30px !important; margin: 0; }
+body .menu .ng-dock .ng-slider .pick-big { grid-column: 2; padding: 0; font-size: 13.5px; line-height: 1.1; }
+body .menu .ng-dock .ng-slider .pick-small { grid-column: 2; padding: 0; font-size: 11.5px; line-height: 1.15; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+body .menu .ng-dock .ng-slider .pick:has(.pick-art) { min-height: 38px; }
+body .menu .ng-dock .pick:not(:has(.pick-art)) { display: block !important; }

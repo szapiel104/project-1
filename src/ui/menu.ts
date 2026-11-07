@@ -516,7 +516,7 @@ export function createMenu(root: HTMLElement, events: MenuEvents): Menu {
       lab.append(el('strong', 'pick-big', big), el('span', 'pick-small', small));
       return lab;
     };
-    const section = (name: string, ...kids: Node[]): HTMLElement => { const f = el('fieldset', 'pick-group'); f.append(el('legend', '', name), ...kids); return f; };
+    const section = (name: string, ...kids: Node[]): HTMLElement => { const f = el('fieldset', 'pick-group'); const lg = el('legend', '', name); lg.tabIndex = 0; lg.setAttribute('role', 'button'); const tog = (): void => { f.classList.toggle('ng-folded'); lg.setAttribute('aria-expanded', String(!f.classList.contains('ng-folded'))); }; lg.setAttribute('aria-expanded', 'true'); lg.addEventListener('click', tog); lg.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); tog(); } }); f.append(lg, ...kids); return f; };
 
     let preset: MapPresetId = '1v1';
     const modeRow = el('div', 'pick-row');
@@ -612,7 +612,7 @@ export function createMenu(root: HTMLElement, events: MenuEvents): Menu {
       col('ng-a', section(t('hud.mode'), cardSlider(modeRow, t('hud.mode')))),
       col('ng-a2', section(t('menu.level'), cardSlider(levelRow, t('menu.level')))),
       col('ng-b', section(tx('Kraina', 'Land'), cardSlider(biomeRow, tx('Kraina', 'Land')))),
-      col('ng-c', seedWrap, status, devLab, instLab, wallLab, warn, foot),
+      col('ng-c', seedWrap, status, (() => { const adv = section(tx('Zaawansowane', 'Advanced'), devLab, instLab, wallLab); adv.classList.add('ng-adv', 'ng-folded'); adv.querySelector('legend')?.setAttribute('aria-expanded', 'false'); return adv; })(), warn, foot),
     );
     form.addEventListener('submit', (e) => { e.preventDefault(); clearTimeout(timer); wrap.classList.remove('previewing'); events.onNewGame(seed.value.trim() || 'project-1', preset, level, dev, instant, walls, biome); });
     screen(t('menu.newGame'), true, form);
