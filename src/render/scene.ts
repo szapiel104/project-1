@@ -3051,7 +3051,7 @@ export class GameRenderer {
   }
   private batchGroups = new Map<string, THREE.Mesh[]>();
   /** Budynki razem po materiale (buildingBatch.ts); ?batch=0 — dawne łączenie po parze bryła+materiał */
-  private matBatchOn = /[?&]batch=1/.test(location.search); // wyłączone: części budynków mieszały się między budynkami (Michał 8.11.2026)
+  private matBatchOn = !/[?&]batch=0/.test(location.search); // 8.11.2026: mieszanie części naprawione (rebuild zamiast setGeometrySize)
   private matBatches?: MaterialBatches;
   private syncMatBatches(roots: Iterable<[number, THREE.Object3D]>, keepOff: boolean): void {
     const mb = (this.matBatches ??= new MaterialBatches(this.buildingLayer));
