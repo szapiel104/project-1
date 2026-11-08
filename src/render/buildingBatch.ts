@@ -44,11 +44,8 @@ export class MaterialBatches {
     let gid = e.geoIds.get(geo);
     if (gid === undefined) {
       const v = vertsOf(geo), ix = indexOf(geo);
-      if (e.verts + v > e.maxVerts || e.index + ix > e.maxIndex) {
-        e.maxVerts = Math.max(e.maxVerts * 2, e.verts + v);
-        e.maxIndex = Math.max(e.maxIndex * 2, e.index + ix);
-        e.mesh.setGeometrySize(e.maxVerts, e.maxIndex);
-      }
+      if (e.verts + v > e.maxVerts || e.index + ix > e.maxIndex)
+        this.rebuild(e, Math.max(e.maxVerts * 2, e.verts + v), Math.max(e.maxIndex * 2, e.index + ix), e.maxInst);
       gid = e.mesh.addGeometry(geo);
       e.geoIds.set(geo, gid);
       e.verts += v; e.index += ix;
@@ -59,7 +56,7 @@ export class MaterialBatches {
       if (e.instGeo[e.used] !== gid) { e.mesh.setGeometryIdAt(id, gid); e.instGeo[e.used] = gid; }
       e.mesh.setVisibleAt(id, true);
     } else {
-      if (e.inst.length >= e.maxInst) { e.maxInst *= 2; e.mesh.setInstanceCount(e.maxInst); }
+      if (e.inst.length >= e.maxInst) this.rebuild(e, e.maxVerts, e.maxIndex, e.maxInst * 2);
       id = e.mesh.addInstance(gid);
       e.inst.push(id); e.instGeo.push(gid);
     }
@@ -81,6 +78,30 @@ export class MaterialBatches {
 
   /** Liczba wspólnych siatek (do okna wydajności) */
   get size(): number { let n = 0; for (const e of this.entries.values()) if (e.mesh.visible) n++; return n; }
+
+  /**
+   * Większy pakiet od zera zamiast setGeometrySize / setInstanceCount: przy powiększaniu w miejscu three.js podmienia
+   * bufory, a na WebGPU rysowanie zostawało przy starych z nowymi zakresami — części jednych budynków pojawiały się
+   * w innych (Michał 8.11.2026: wiatrak w zamku). Bryły i sztuki przepisujemy do nowego pakietu w tej samej kolejności.
+   */
+  private rebuild(e: Entry, maxVerts: number, maxIndex: number, maxInst: number): void {
+    const old = e.mesh;
+    const mesh = new THREE.BatchedMesh(maxInst, maxVerts, maxIndex, old.material as THREE.Material);
+    mesh.castShadow = old.castShadow; mesh.receiveShadow = old.receiveShadow;
+    mesh.perObjectFrustumCulled = false; mesh.sortObjects = false; mesh.frustumCulled = false; mesh.userData.noCull = true;
+    const remap = new Map<number, number>();
+    for (const [geo, gid] of e.geoIds) { const n = mesh.addGeometry(geo); remap.set(gid, n); e.geoIds.set(geo, n); }
+    const m = new THREE.Matrix4();
+    for (let i = 0; i < e.inst.length; i++) {
+      const oldId = e.inst[i]!, g = remap.get(e.instGeo[i]!)!;
+      const id = mesh.addInstance(g);
+      old.getMatrixAt(oldId, m); mesh.setMatrixAt(id, m); mesh.setVisibleAt(id, old.getVisibleAt(oldId));
+      e.inst[i] = id; e.instGeo[i] = g;
+    }
+    this.parent.remove(old); old.dispose();
+    this.parent.add(mesh);
+    e.mesh = mesh; e.maxVerts = maxVerts; e.maxIndex = maxIndex; e.maxInst = maxInst;
+  }
 
   private create(key: string, geo: THREE.BufferGeometry, mat: THREE.Material, cast: boolean, recv: boolean): Entry {
     const maxInst = 64, maxVerts = Math.max(4096, vertsOf(geo) * 4), maxIndex = geo.index ? Math.max(8192, indexOf(geo) * 4) : 0;
