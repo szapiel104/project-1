@@ -1,5 +1,8 @@
 # Dziennik zmian
 
+## 0.94.85 — 2026-11-08
+- Łączenie budynków po materiale (`buildingBatch.ts`) domyślnie wyłączone (`?batch=1` włącza): części budynków rysowały się w innych budynkach. Do naprawy.
+
 ## 0.94.84 — 2026-11-07
 - `buildingBatch.ts`: budynki razem po materiale (`THREE.BatchedMesh`), ?batch=0 — dawne pule bryła+materiał. Pełna osada (70 budynków, 90 żołnierzy, 40 chłopów, RTX 3050): obiekty w obrazie 305 → 195, procesor 20,5 → 17,9 ms, najgorsza klatka 51 → 34 ms.
 - `scene.ts` `warmBuildingModels`: po jednym modelu każdego rodzaju budynku w rozgrzewce (materiały i pule) — przy stawianiu nowych rodzajów brak klatek > 200 ms (było do 0,9 s); wczytywanie ok. +5 s.
