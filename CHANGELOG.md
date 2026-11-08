@@ -1,5 +1,8 @@
 # Dziennik zmian
 
+## 0.94.87 — 2026-11-08
+- `keep.py`: ciosy łuku bramy obrócone `roll` wzdłuż stycznej (było `rot` wokół pionu). Boty: bez zmian.
+
 ## 0.94.86 — 2026-11-08
 - `buildingBatch.ts`: przy braku miejsca nowy BatchedMesh od zera (`rebuild`) zamiast `setGeometrySize`/`setInstanceCount` (na WebGPU rysowanie zostawało przy starych buforach → części budynków w innych budynkach). Łączenie znów domyślnie włączone (`?batch=0` wyłącza).
 
