@@ -1,5 +1,8 @@
 # Dziennik zmian
 
+## 0.94.86 — 2026-11-08
+- `buildingBatch.ts`: przy braku miejsca nowy BatchedMesh od zera (`rebuild`) zamiast `setGeometrySize`/`setInstanceCount` (na WebGPU rysowanie zostawało przy starych buforach → części budynków w innych budynkach). Łączenie znów domyślnie włączone (`?batch=0` wyłącza).
+
 ## 0.94.85 — 2026-11-08
 - Łączenie budynków po materiale (`buildingBatch.ts`) domyślnie wyłączone (`?batch=1` włącza): części budynków rysowały się w innych budynkach. Do naprawy.
 
