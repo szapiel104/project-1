@@ -564,9 +564,11 @@ for s in (-1, 1):
 b.box('base', 'castle', 1.0, WALK + ROOM_UP - 0.15 - (G + 0.95), 1.36, cx(gx), G + 0.95, GZ + 0.2, bottom=True)   # sklepienie przejazdu: spód widać z dołu
 b.box('base', 'castleDark', 1.0, 0.06, 1.44, cx(gx), WALK + ROOM_UP - 0.15, GZ + 0.2)
 b.merlons_line('base', 'castle', cx(gx) - 0.45, GZ + 0.84, cx(gx) + 0.45, GZ + 0.84, WALK + ROOM_UP - 0.09, step=0.22, w=0.12, h=0.16, t=0.08)
-for k in range(9):  # łuk z ciosów od frontu
+for k in range(9):  # łuk z ciosów od frontu: każdy cios obrócony w płaszczyźnie łuku, wzdłuż stycznej
+    # (dawniej obrót szedł wokół pionu — ciosy sterczały na boki jak rozsypane, Michał 8.11.2026)
     a = math.pi * (k + 0.5) / 9
-    b.box('base', 'castleDark', 0.13, 0.09, 0.05, cx(gx) - math.cos(a) * 0.44, G + 0.78 + math.sin(a) * 0.16, GZ + 0.925, -a + math.pi / 2)
+    b.box('base', 'castleDark', 0.13, 0.09, 0.05, cx(gx) - math.cos(a) * 0.44, G + 0.78 + math.sin(a) * 0.16, GZ + 0.925,
+          roll=math.atan2(0.16 * math.cos(a), 0.44 * math.sin(a)))
 # krata (osobna grupa 'portcullis', zapisana opuszczona): gra podnosi ją o PORT_LIFT, gdy pod zamkiem spokojnie,
 # i opuszcza, gdy podchodzi wróg — podniesiona chowa się w murze nad przejazdem, spod sklepienia widać tylko zęby
 PORT_Z = GZ + 0.75
