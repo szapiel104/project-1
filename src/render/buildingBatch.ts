@@ -60,7 +60,12 @@ export class MaterialBatches {
       id = e.mesh.addInstance(gid);
       e.inst.push(id); e.instGeo.push(gid);
     }
-    e.mesh.setMatrixAt(id, matrix);
+    // macierz bez zmian (budynek stoi): nie przepisujemy jej — każde setMatrixAt oznacza całą teksturę macierzy do wysłania
+    // na kartę, a w pełnej wiosce szło tak ~100 tekstur w każdej klatce (Michał 9.11.2026: „30 FPS na 5070”)
+    const arr = (e.mesh as unknown as { _matricesTexture: { image: { data: Float32Array } } })._matricesTexture.image.data, el = matrix.elements, o = id * 16;
+    let same = true;
+    for (let k = 0; k < 16; k++) if (arr[o + k] !== Math.fround(el[k]!)) { same = false; break; }
+    if (!same) e.mesh.setMatrixAt(id, matrix);
     e.used++;
   }
 

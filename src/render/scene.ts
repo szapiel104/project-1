@@ -3832,8 +3832,12 @@ export class GameRenderer {
 
 
 
+  private roadTick = -1;
   private syncRoads(g: GameState, view: TerrainView): void {
-    if (g.tick % 3 !== 0 && this.roadSum >= 0) return;
+    // sprawdzane raz na 3 ticki symulacji, a nie w każdej klatce, w której tick jest podzielny przez 3 (przy kilku klatkach
+    // na tick dwa przebiegi po całej mapie szły co klatkę — 9 % czasu procesora w pomiarze Michała 9.11.2026)
+    if ((g.tick % 3 !== 0 || g.tick === this.roadTick) && this.roadSum >= 0) return;
+    this.roadTick = g.tick;
     let sum = 0;
     for (let i = 0; i < g.roads.length; i++) if (g.roads[i]) sum = (sum * 31 + i * 3 + g.roads[i]!) | 0;
     if (sum !== this.roadSum) { this.roadSum = sum; view.setRoads(g.roads, roadMaterials()); }
