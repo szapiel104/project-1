@@ -9,6 +9,27 @@ export type { ChangeEntry } from './changelogTypes';
  * — tak jak CHANGELOG.md dla nas. `tests/changelog.test.ts` pilnuje, że najnowszy wpis ma wersję z package.json.
  */
 const NEW: ChangeEntry[] = [
+  { v: '0.94.89', date: '2026-11-09', pl: [
+    'Nowe okna budynków w stylu gry RPG: pergamin w oprawie jak księga, portret budynku w nagłówku, sekcje jako karty, a na dole wytrzymałość i przyciski-ikony (włącz/wyłącz, targ, zasięg, przenieś, rozbierz z potwierdzeniem).',
+    'Załoga w każdym budynku: głowy pracowników, magazynierów i żołnierzy na wieży, wolne miejsca w ramce. Klik w głowę pokazuje tę osobę albo zaznacza żołnierza.',
+    'Twierdza pokazuje straż miejską z paskami zdrowia, a po śmierci strażnika odlicza, kiedy przyjdzie nowy.',
+    'Magazyny jak ekwipunek: towary w slotach z liczbą w rogu, receptury warsztatów jako sloty ze strzałką.',
+    'Okna postaci, oddziału i rynku w tym samym stylu; „Przejdź się oczami” to ikona oka w nagłówku.',
+    'Zasoby, dzień i stan osady na pasku u góry ekranu; na dole zostaje budowanie. Grupy wojska 1–0 w kolumnie w lewym dolnym rogu.',
+    'Menu budowy: same obrazki budynków w grubszej ramie, nazwa i koszt w karcie po najechaniu. Bez przycisku „Wyburzanie” — budynek rozbiera się koszem w jego oknie.',
+    'Nowe ikony zboża, chleba, jabłek, ryb, mięsa i mąki. Leśniczy na pustyni sadzi palmy.',
+    'Cienie z daleka bez pasków na płaskim terenie.',
+  ], en: [
+    'New RPG-style building windows: parchment in a book-like binding, a portrait of the building in the header, sections as cards, and at the bottom the building\'s health and icon buttons (start/stop, market, range, move, demolish with a confirmation).',
+    'Every building shows its crew: the heads of workers, storekeepers and men on a tower, with free posts framed. Click a head to see that person or select the soldier.',
+    'The keep shows the town watch with health bars and, when a guard falls, counts down until a new one arrives.',
+    'Stores look like an inventory: goods in slots with the count in the corner; workshop recipes as slots with an arrow.',
+    'The person, company and market windows share the same look; "Walk in his shoes" is an eye icon in the header.',
+    'Supplies, the day and the state of the settlement now sit in a bar along the top of the screen; building stays at the bottom. Army groups 1–0 stack in a column in the lower left corner.',
+    'Build menu: just the building pictures in a heavier frame, with name and cost in the card on hover. No more "Demolish" button — pull a building down with the bin in its window.',
+    'New icons for grain, bread, apples, fish, meat and flour. Foresters in the desert plant palms.',
+    'Distant shadows no longer show stripes on flat ground.',
+  ] },
   { v: '0.94.88', date: '2026-11-09', pl: ['Naprawione: kopalnia (i inne budynki) daleko od zamku nie stały już bez końca w budowie — chłopi z materiałem znajdują drogę także na drugi koniec mapy.'], en: ['Fixed: a mine (or any building) far from the castle no longer stays under construction forever — villagers carrying materials now find their way even to the far end of the map.'] },
   { v: '0.94.87', date: '2026-11-08', pl: ['Zamek: kamienie łuku nad bramą układają się w równy łuk, zamiast sterczeć na boki.'], en: ['Castle: the stones of the arch above the gate now form a neat arch instead of sticking out sideways.'] },
   { v: '0.94.86', date: '2026-11-08', pl: ['Budynki znów rysują się razem po materiale (płynniejsza duża osada) — z naprawionym błędem, przez który części jednych budynków pojawiały się w innych.'], en: ['Buildings are drawn together by material again (smoother large settlements) — with the bug fixed that made parts of one building show up in another.'] },

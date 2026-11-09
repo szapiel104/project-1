@@ -1,5 +1,15 @@
 # Dziennik zmian
 
+## 0.94.89 — 2026-11-09
+- Okna budynków od nowa (`theme-wow.css`, blok „Okno budynku: pergamin…”): nagłówek z portretem (`thumbs`), właścicielem i stanem; sekcje jako karty; stopka z HP i `icon-act` (wł./wył. przez `ICON.power`, targ `ICON.market`).
+- `crewPanel.ts`: załoga budynku (pracownicy `crewOf`/`crewWanted`, wieża `garrisonRoom`, twierdza i barak górników — straż z HP i odliczaniem `watchInfo`/`campWatch`); `onPerson` zaznacza chłopa albo żołnierza. Magazynierzy przez ten sam moduł.
+- Pasek zasobów na górze (`status-top`), raporty pod przyciskiem (`.report.below`), kronika/alarm/wersja/FPS/Deweloper pod paskiem; bez przycisku „Wyburzanie” (pomoc PL+EN).
+- Okno postaci (ikona oka, wiersze cech), oddziału i rynku na pergaminie; grupy 1–0 w kolumnie; menu budowy bez podpisów.
+- Ikony: snopek zboża, chleb, jabłka, ryba, mięso, mąka. Leśniczy na pustyni: palmy w puli młodych drzew (`terrain.ts`).
+- `scene.ts` `aimSun`: `normalBias`/`bias` skalowane z obszarem cienia (z daleka paski na bruku).
+- Vite: wtyczka `no-auto-reload` (kod TS bez przeładowania karty, przycisk „Nowy kod gotowy”).
+- Boty: bez zmian (zmiany tylko w interfejsie i grafice).
+
 ## 0.94.88 — 2026-11-09
 - `workers.ts`: drogi do budynku w fazach ToRepair/ToFetch/Returning/ToSite — gdy zwykłe szukanie (koszt 900 ≈ 90 pól) nic nie da, drugi raz A* do drzwi z kosztem 8000. Zgłoszenie gracza: kopalnia daleko od bazy nigdy się nie budowała (chłopi stali z deskami przy składzie). Test w `oremine.test.ts`. Boty: korzystają z tej samej poprawki.
 
