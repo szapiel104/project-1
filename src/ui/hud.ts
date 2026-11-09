@@ -1273,8 +1273,9 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
     slotsToggle.title = label;
     slotsToggle.setAttribute('aria-label', label);
     slotsToggle.innerHTML = slotsOpen
-      ? '<svg viewBox="0 0 20 20" width="16" height="16" aria-hidden="true"><path d="M12.5 4l-6 6 6 6" fill="none" stroke="currentColor" stroke-width="2.4"/></svg>'
-      : `<span class="army-toggle-n">1–0</span><svg viewBox="0 0 20 20" width="14" height="14" aria-hidden="true"><path d="M7.5 4l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2.4"/></svg>`;
+      // grupy stoją w kolumnie od dołu do góry (Michał 9.11.2026), więc strzałka zwija w dół, a rozwija w górę
+      ? '<svg viewBox="0 0 20 20" width="16" height="16" aria-hidden="true"><path d="M4 7.5l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2.4"/></svg>'
+      : `<span class="army-toggle-n">1–0</span><svg viewBox="0 0 20 20" width="14" height="14" aria-hidden="true"><path d="M4 12.5l6-6 6 6" fill="none" stroke="currentColor" stroke-width="2.4"/></svg>`;
   };
   slotsToggle.addEventListener('click', () => { slotsOpen = !slotsOpen; try { localStorage.setItem('project1.armyOpen', slotsOpen ? '1' : '0'); } catch { /* jw. */ } paintSlotsToggle(); });
   paintSlotsToggle();
