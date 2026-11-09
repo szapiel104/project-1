@@ -1645,3 +1645,6 @@ html body .menu .help-pane a.menu-link:hover, html body .menu .help-pane a.menu-
 html body .menu .help-pane a.menu-link::after { content: '↗'; margin-left: 8px; font-size: 13px; color: #c9a457; }
 html body .menu .help-pane .set-row:has(> .menu-link) .hint { margin: 0; font-style: normal; font-size: 15px; color: var(--ink, #2a1b0c); }
 @media (max-width: 760px) { html body .menu .help-pane .set-row:has(> .menu-link) { grid-template-columns: 1fr; } }
+body .menu .help-pane .credit-team li { grid-template-columns: 220px minmax(0, 1fr); }
+body .menu .help-pane .credit-team .credit-a { font-size: 16px; font-weight: 700; }
+body .menu .help-pane .credit-team .credit-t { font-style: normal; font-size: 15px; }

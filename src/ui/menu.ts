@@ -747,12 +747,19 @@ export function createMenu(root: HTMLElement, events: MenuEvents): Menu {
       // autorzy grafiki z paczek (CC BY i CC BY-SA wymagają podpisu w grze; pełna lista w CREDITS.md)
       [tx('Autorzy', 'Credits'), () => [
         el('h3', 'help-h', tx('Twórcy gry', 'Made by')),
-        el('p', 'help-p', tx(
-          'Michał Szapiel — twórca gry i założyciel SuroCrave.',
-          'Michał Szapiel — creator of the game and founder of SuroCrave.')),
-        el('p', 'help-p', tx(
-          'Mikołaj Szymczak — najlepszy tester i twórca nowych pomysłów.',
-          'Mikołaj Szymczak — our finest tester and the man behind many new ideas.')),
+        // jak w napisach końcowych gier: osoba i jej rola (Michał 9.11.2026: „napisz profesjonalniej”)
+        ((): HTMLElement => {
+          const ul = el('ul', 'credit-list credit-team');
+          for (const [who, role] of [
+            ['Michał Szapiel', tx('Pomysł, projekt i produkcja gry · założyciel SuroCrave', 'Concept, game design and production · founder of SuroCrave')],
+            ['Mikołaj Szymczak', tx('Testy rozgrywki i projektowanie nowych mechanik', 'Playtesting and new gameplay design')],
+          ] as const) {
+            const li = el('li');
+            li.append(el('span', 'credit-a', who), el('span', 'credit-t', role));
+            ul.append(li);
+          }
+          return ul;
+        })(),
         el('h3', 'help-h', tx('Grafika z zewnątrz', 'Third-party art')),
         el('p', 'help-p', tx(
           'Koń, pałka wodna i liście na stawie: 0 A.D. © Wildfire Games (wildfiregames.com), licencja CC BY-SA 3.0.',
