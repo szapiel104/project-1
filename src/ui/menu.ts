@@ -404,8 +404,9 @@ export function createMenu(root: HTMLElement, events: MenuEvents): Menu {
         list.push(barBtn(tx('Zapisz grę', 'Save game'), tx('Zapis z miniaturą: do 20 zapisów, w przeglądarce i w chmurze konta (Ctrl+S — szybki zapis)', 'A save with a thumbnail: up to 20, in the browser and your account’s cloud (Ctrl+S — quick save)'), () => showSaves('save'), '', 'save'));
         list.push(barBtn(tx('Wczytaj grę', 'Load game'), tx('Twoje zapisy i autozapisy z miniaturami', 'Your saves and autosaves with thumbnails'), () => showSaves('load'), '', 'load'));
       }
-      list.push(barBtn(t('menu.settings'), tx('Grafika, dźwięk, interfejs i sterowanie', 'Graphics, sound, interface and controls'), showSettings, '', 'settings'));
-      list.push(barBtn(t('menu.howTo'), tx('Poradnik: osada, gospodarka, wojsko', 'A guide: settlement, economy, warfare'), showHelp, '', 'help'));
+      // oddech między grą (kontynuuj, nowa, wczytaj, sieć) a resztą (ustawienia z poradnikiem, co nowego)
+      list.push('gap');
+      list.push(barBtn(t('menu.settings'), tx('Grafika, dźwięk, interfejs, sterowanie i poradnik „Jak grać”', 'Graphics, sound, interface, controls and the “How to play” guide'), showSettings, '', 'settings'));
       list.push(barBtn(tx('Co nowego', 'What’s new'), tx('Dziennik zmian: co weszło w kolejnych wersjach gry', 'Changelog: what each version of the game brought'), showChanges, '', 'news'));
       if (isTester()) list.push(notesItem());
       list.push('gap');
@@ -885,6 +886,18 @@ export function createMenu(root: HTMLElement, events: MenuEvents): Menu {
       ...other.map(([title, make]) => ({ title, group: 1, icon: 'eye' as MenuIcon, make })),
     ];
     pages.forEach((p, i) => { p.icon = SET_ICONS[i] ?? 'scroll'; });
+    // „Jak grać” przeniesione z głównego menu do Ustawień (Michał 9.11.2026): rozdziały poradnika jako trzecia grupa stron
+    const helpBlock = (b: HelpBlock): Node => {
+      if (typeof b === 'string') return el('p', 'help-p', b);
+      if ('h' in b) return el('h3', 'help-h', b.h);
+      if ('tip' in b) { const q = el('p', 'help-tip'); q.append(el('strong', '', tx('Rada', 'Tip')), document.createTextNode(` ${b.tip}`)); return q; }
+      const table = el('table', 'help-table');
+      b.table.forEach((row, i) => { const tr = el('tr'); for (const cell of row) tr.append(el(i === 0 ? 'th' : 'td', '', cell)); table.append(tr); });
+      return table;
+    };
+    const HOWTO_ICONS: MenuIcon[] = ['flag', 'axe', 'wheat', 'friends', 'flask', 'hammer', 'moon', 'sword', 'shield', 'online', 'mouse'];
+    HELP_CHAPTERS.forEach((c, ci) => pages.push({ title: c.title, group: 2, icon: HOWTO_ICONS[ci] ?? 'scroll', make: () => c.blocks.map(helpBlock) }));
+    const groupName = (gi: number): string => (gi === 0 ? t('menu.graphics') : gi === 1 ? tx('Pozostałe', 'Other') : t('menu.howTo'));
     const book = el('div', 'help-book set-book');
     const nav = el('nav', 'help-nav');
     nav.setAttribute('aria-label', t('menu.settings'));
@@ -897,13 +910,13 @@ export function createMenu(root: HTMLElement, events: MenuEvents): Menu {
       const pg = pages[i]!;
       const sheet = el('article', 'help-text set-sheet');
       const inGroup = pages.filter((x) => x.group === pg.group);
-      sheet.append(bookHead(`${pg.group === 0 ? t('menu.graphics') : tx('Pozostałe', 'Other')} · ${inGroup.indexOf(pg) + 1} / ${inGroup.length}`, pg.title, pg.icon), ...pg.make());
+      sheet.append(bookHead(`${groupName(pg.group)} · ${inGroup.indexOf(pg) + 1} / ${inGroup.length}`, pg.title, pg.icon), ...pg.make());
       pane.replaceChildren(sheet);
       pane.scrollTop = 0;
     };
     let group = -1, n = 0;
     pages.forEach((pg, i) => {
-      if (pg.group !== group) { group = pg.group; list.append(el('p', 'help-toc-group', group === 0 ? t('menu.graphics') : tx('Pozostałe', 'Other'))); n = 0; }
+      if (pg.group !== group) { group = pg.group; list.append(el('p', 'help-toc-group', groupName(group))); n = 0; }
       n++;
       const b = button('', () => show(i), 'help-toc-item');
       b.setAttribute('role', 'tab'); b.setAttribute('aria-controls', pane.id);

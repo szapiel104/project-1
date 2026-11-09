@@ -1626,3 +1626,8 @@ body .menu .help-pane .credit-list li { display: grid; grid-template-columns: mi
 body .menu .help-pane .credit-t { color: var(--ink, #2a1b0c); font-style: italic; }
 body .menu .help-pane .credit-a { color: var(--ink, #2a1b0c); font-weight: 600; }
 body .menu .help-pane .credit-l { color: #7a4a1c; font-size: 13px; font-weight: 600; text-align: right; }
+/* przerwa w menu między grą a ustawieniami: ozdobna kreska z rombem; na niskich ekranach maleje, żeby lista nie zjeżdżała w dół */
+html body .menu:not(.previewing) .menu-list .mi-gap { display: flex !important; align-items: center; justify-content: center; height: clamp(10px, 4.5vh, 46px); pointer-events: none; }
+html body .menu:not(.previewing) .menu-list .mi-gap::before { content: '◆'; font-size: 10px; color: #a8823e; padding: 0 12px;
+  background: linear-gradient(90deg, transparent, rgba(194, 154, 69, .55) 30%, transparent 30%, transparent 70%, rgba(194, 154, 69, .55) 70%, transparent) center / 100% 1px no-repeat; width: 70%; text-align: center; }
+@media (max-height: 760px) { html body .menu:not(.previewing) .menu-list .mi-gap { height: 8px; } html body .menu:not(.previewing) .menu-list .mi-gap::before { display: none; } }
