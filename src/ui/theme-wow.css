@@ -818,3 +818,17 @@ html body .info .icon-act { background: linear-gradient(#3a2614, #24160c) !impor
 #ui .info, #ui .info * { --parch-ink: #f4e6c6; --parch-soft: #d8c79e; --parch-red: #ff9a82; --parch-line: rgba(201, 162, 79, .4); }
 #ui .info { background-image: radial-gradient(120% 80% at 50% 0%, rgba(120, 72, 30, .35), transparent 60%), linear-gradient(#2a1b10, #170e08) !important; background-color: #1d120a !important; }
 #ui .info :is(.stock-item, .power-row-box, .gate-box, .info-owner) { background: rgba(0, 0, 0, .3) !important; }
+
+/* Magazyn (stodoła, spichlerz, skład): kafle jak w oknie „Zapasy” — ikona, nazwa, duża liczba z prawej; okno szersze, 3 kolumny (Michał 9.11.2026) */
+#ui .floaters .info:has(.info-stock:not([hidden])) { width: min(560px, calc(100vw / var(--ui, 1) - 32px)); }
+#ui .info .info-stock .stock-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+#ui .info .info-stock .stock-item { display: grid; grid-template-columns: 30px minmax(0, 1fr) auto; grid-template-rows: none; align-items: center; column-gap: 8px; min-height: 48px; padding: 6px 10px;
+  background: linear-gradient(rgba(255, 240, 210, .07), rgba(0, 0, 0, .25)) !important; border: 1px solid rgba(201, 162, 79, .4) !important; border-radius: 5px; }
+#ui .info .info-stock .stock-item .ico { grid-column: 1; grid-row: 1; }
+#ui .info .info-stock .stock-item .ico svg { width: 28px; height: 28px; }
+#ui .info .info-stock .stock-item span:last-child { grid-column: 2; grid-row: 1; font-size: 14px; line-height: 1.15; overflow-wrap: anywhere; color: #e6d6b2 !important; }
+#ui .info .info-stock .stock-item strong { grid-column: 3; grid-row: 1; font-size: 20px; font-variant-numeric: tabular-nums; text-align: right; color: #fff3d6 !important; }
+#ui .info .info-stock .stock-item:has(.ico[data-food]) { border-color: rgba(120, 170, 70, .6) !important; }
+#ui .info .info-stock .stock-empty { grid-column: 1 / -1; padding: 8px; color: #c9b48a; }
+#ui .info .info-stock .stock-total { display: flex; justify-content: space-between; gap: 10px; margin: 0; font-size: 14px; }
+@media (max-width: 760px) { #ui .info .info-stock .stock-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
