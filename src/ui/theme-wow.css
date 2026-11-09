@@ -1023,3 +1023,4 @@ html body .info .icon-act { background: linear-gradient(#3a2614, #24160c) !impor
 #ui .card { padding: 4px; }
 #ui .card img { margin: -4px auto -4px; }
 #ui .card .build-name { position: absolute !important; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+#ui .floaters .info .actions .info-market:disabled { display: none !important; } /* bez targu skrót nic nie daje — nie pokazujemy szarej płytki */
