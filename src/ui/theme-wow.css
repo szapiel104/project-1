@@ -1148,3 +1148,27 @@ html body .info .icon-act { background: linear-gradient(#3a2614, #24160c) !impor
 .keeper-party.compact .keeper-card.free .keeper-face { width: 40px; height: 40px; }
 /* licznik „Na wieży: 13/16” jest już w nagłówku załogi — zostaje tylko przycisk „zejdźcie” */
 #ui .info:not(.is-person):not(.army-mode):has(> .info-crew:not([hidden])) .gate-box > .gate-state { display: none; }
+/* okno oddziału na pergaminie: bez szarych pudeł, płytki jak w oknie budynku, równe rzędy przycisków szyku */
+#ui#ui .floaters .info.army-mode :is(.army-box, .roster, .army-icons, .army-help) { background: none !important; border: 0 !important; box-shadow: none !important; padding: 0 !important; margin: 0 24px !important; }
+#ui#ui .floaters .info.army-mode .army-box { display: grid; gap: 14px; }
+#ui#ui .floaters .info.army-mode .army-kinds { display: flex; flex-wrap: wrap; gap: 8px; }
+#ui#ui .floaters .info.army-mode .army-kind { min-height: 48px; padding: 3px 12px 3px 3px; gap: 10px; border-radius: 4px; background: linear-gradient(#4a3322, #2d1b0e) !important; border: 1px solid #1a0f07 !important; box-shadow: inset 0 1px 0 rgba(255, 236, 200, .22), 0 2px 0 rgba(0, 0, 0, .3) !important; }
+#ui#ui .floaters .info.army-mode .army-kind :is(.army-kind-name, span) { color: #fff4dc !important; font-size: 15px; font-weight: 600; text-shadow: 0 1px 1px #000 !important; }
+#ui#ui .floaters .info.army-mode .army-kind-pic { width: 40px; height: 40px; border: 1px solid #c29a45; border-radius: 3px; }
+#ui#ui .floaters .info.army-mode .army-kind-pic svg { width: 40px; height: 40px; }
+#ui#ui .floaters .info.army-mode .army-kind .army-kind-n { color: #fff !important; background: #8a1f14 !important; border-radius: 3px; padding: 2px 7px; }
+#ui#ui .floaters .info.army-mode .army-icons { display: flex !important; flex-wrap: wrap; gap: 12px; align-items: center; }
+#ui#ui .floaters .info.army-mode .army-iseg { display: inline-flex; gap: 4px; }
+#ui#ui .floaters .info.army-mode .army-ibtn { width: 44px; height: 44px; min-width: 0; padding: 0; display: grid; place-items: center; border-radius: 4px; margin: 0;
+  background: linear-gradient(#4a3322, #2d1b0e) !important; border: 1px solid #1a0f07 !important; color: #fff4dc !important; box-shadow: inset 0 1px 0 rgba(255, 236, 200, .22), 0 2px 0 rgba(0, 0, 0, .3) !important; }
+#ui#ui .floaters .info.army-mode .army-ibtn svg { width: 24px; height: 24px; }
+#ui#ui .floaters .info.army-mode .army-ibtn[aria-pressed='true'] { background: linear-gradient(#b0382a, #7a1c12) !important; box-shadow: inset 0 0 0 2px #e9c766, 0 2px 0 rgba(0, 0, 0, .3) !important; }
+#ui#ui .floaters .info.army-mode .army-ibtn:hover { filter: brightness(1.2); }
+#ui#ui .floaters .info.army-mode .roster { display: flex; flex-wrap: wrap; gap: 6px; }
+#ui#ui .floaters .info.army-mode .roster-card { border: 1px solid #c29a45; border-radius: 3px; background: #3b2716; box-shadow: 0 2px 0 rgba(0, 0, 0, .3); overflow: hidden; }
+#ui#ui .floaters .info.army-mode .roster-card.big { width: 56px; }
+#ui#ui .floaters .info.army-mode .roster-card.big svg { width: 54px; height: 54px; }
+#ui#ui .floaters .info.army-mode .army-help-toggle { width: 100%; min-height: 42px; display: flex; align-items: center; justify-content: space-between; padding: 0 14px; border-radius: 4px; font-weight: 600;
+  background: linear-gradient(#4a3322, #2d1b0e) !important; border: 1px solid #1a0f07 !important; color: #fff4dc !important; }
+#ui#ui .floaters .info.army-mode .army-help-toggle * { color: #fff4dc !important; text-shadow: none !important; }
+#ui#ui .floaters .info.army-mode .army-help :is(p, li, dt, dd, kbd) { color: #2a1b0c !important; }
