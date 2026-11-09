@@ -1715,6 +1715,7 @@ export class GameRenderer {
   /** Ustawienia grafiki i kamery z menu */
   setGraphics(o: { ao: string; shadows: number; scale: number; dayNight: boolean; camSpeed: number; edgeScroll: boolean; grass?: number; detail?: number; soft?: boolean; dynRes?: boolean; label?: string; aa?: AaMode; aniso?: number; reflections?: boolean; sharpen?: number }): void {
     if (TEST) o = { ...o, ao: 'off', shadows: 0, scale: 0.5, edgeScroll: false, aa: 'off', reflections: false, sharpen: 0 };
+    this.shadowForce = 5; // nowa mapa cieni po zmianie ustawień: odświeżana w kolejnych klatkach
     this.quality = `${o.label ? o.label + ': ' : ''}AO ${o.ao}, cienie ${o.shadows || 'wył.'}, skala ${o.scale}, trawa ${(o.grass ?? 1) > 0 ? Math.round((o.grass ?? 1) * 100) + '%' : 'wył.'}`;
     this.grassReach = o.grass ?? 1;
     // zasięg szczegółów: z automatu jakości, a przy ręcznych ustawieniach z trawy (bez trawy = bliżej)
@@ -2718,7 +2719,12 @@ export class GameRenderer {
       const moving = Math.abs(cp.x - lc.x) + Math.abs(cp.y - lc.y) + Math.abs(cp.z - lc.z) > 0.02;
       lc.copy(cp);
       this.sun.shadow.autoUpdate = false;
-      this.sun.shadow.needsUpdate = moving || (this.shadowTick++ & 1) === 0;
+      // po zmianie grafiki (inna mapa cieni) kilka klatek z rzędu: pominięte odświeżenie zostawiało zniszczoną teksturę
+      // cieni w użyciu i karta zgłaszała błędy (dziennik Michała 9.11.2026: „Destroyed texture ShadowDepthTexture”)
+      const force = this.shadowForce > 0 || this.sun.shadow.map !== this.shadowMapSeen;
+      if (this.shadowForce > 0) this.shadowForce--;
+      this.shadowMapSeen = this.sun.shadow.map;
+      this.sun.shadow.needsUpdate = force || moving || (this.shadowTick++ & 1) === 0;
     }
     this.updateSeason(dt);
     // cienie chmur: przy pogodzie z chmurami wyraźniejsze, nocą, w deszczu (pełne zachmurzenie) i we mgle znikają
@@ -3876,6 +3882,8 @@ export class GameRenderer {
   private frameCounter = 0;
   private matrixFrame = -1;
   private shadowTick = 0;
+  private shadowForce = 0;
+  private shadowMapSeen: unknown = null;
   private shadowCamAt = new THREE.Vector3();
   private syncRoads(g: GameState, view: TerrainView): void {
     // sprawdzane raz na 3 ticki symulacji, a nie w każdej klatce, w której tick jest podzielny przez 3 (przy kilku klatkach

@@ -2139,3 +2139,6 @@ body.menu-open .devpanel { display: none; }
 .perf .perf-report { pointer-events: auto; flex: 1 0 100%; min-height: 40px; padding: 8px 14px; font: 700 15px/1.2 var(--text); color: #2a1b0c; background: linear-gradient(#f3d98c, #c9a24f); border: 1px solid #6b4a1c; cursor: pointer; text-align: center; }
 .perf .perf-report:disabled { opacity: .8; cursor: progress; }
 .perf .perf-report:focus-visible { outline: 3px solid var(--gold); }
+/* okno F3 przewija się i łapie mysz (zaznaczanie, kopiowanie dziennika błędów); Michał 9.11.2026: „nie scrolluje” */
+.perf:not([hidden]) { pointer-events: auto; overflow-y: auto; overscroll-behavior: contain; user-select: text; }
+.perf pre { user-select: text; }

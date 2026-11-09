@@ -109,6 +109,7 @@ export class StrategyCamera {
 
   lookAt(x: number, z: number, dist = this.dist): void {
     this.lift = 0;
+    this.gy = undefined; // skok w nowe miejsce: wysokość lotu od terenu w tym miejscu
     // poza grywalnym środkiem (np. koniec spaceru przy krawędzi): od razu najbliższy dozwolony punkt, żeby kamera nie utknęła
     [x, z] = this.clampGoal(x, z);
     this.target.set(x, 0, z);
@@ -202,9 +203,10 @@ export class StrategyCamera {
     // punkt na ziemi leży na wysokości terenu, żeby przy niskim kącie nie patrzeć w głąb pagórka
     // wysokość terenu uśredniona z okolicy i wygładzona w czasie: kamera płynie nad pagórkami, zamiast podskakiwać
     // na każdym garbie i krawędzi skały (Michał 9.11.2026: „lata w powietrzu, a czuje teren i skacze”)
-    const tx = this.target.x, tz = this.target.z, r = 2.5;
-    const want = (this.ground(tx, tz) * 2 + this.ground(tx + r, tz) + this.ground(tx - r, tz) + this.ground(tx, tz + r) + this.ground(tx, tz - r)) / 6;
-    if (this.gy === undefined || Math.abs(want - this.gy) > 6) this.gy = want; else this.gy += (want - this.gy) * 0.08;
+    // Michał 9.11.2026: „niech nie sprawdza terenu — lecę prosto, to lecę prosto”. Kamera leci na stałej wysokości
+    // (poziom terenu w miejscu, gdzie ją ustawiono: start, skok na mapie, spacer); terenu pilnuje tylko granica niżej,
+    // żeby nie wejść pod górę
+    if (this.gy === undefined) this.gy = this.ground(this.target.x, this.target.z);
     this.target.y = this.gy + this.lift;
     // z bliska kamera sama się kładzie niżej (widok bardziej z boku, jak przy patrzeniu na oddział z konia)
     const close = Math.max(0, Math.min(1, (14 - this.dist) / 10));
