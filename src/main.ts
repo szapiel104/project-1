@@ -160,9 +160,8 @@ function applyUi(ui: UiSave | undefined): void {
   if (Number.isInteger(ui.form) && ui.form! >= 0 && ui.form! <= 3) armyForm = ui.form!;
   if (ui.march === 0 || ui.march === 1) armyMarch = ui.march;
   if (ui.cam) renderer.setCamView(ui.cam);
-  // tempo: przyciskami, żeby pasek pokazał tę samą wartość (pauzy nie odtwarzamy)
-  const idx = [0, 1, 2, 3, 5].indexOf(ui.speed ?? 1);
-  if (idx > 1) { hud.stepSpeed(-9); hud.stepSpeed(1); for (let i = 1; i < idx; i++) hud.stepSpeed(1); }
+  // tempo po wczytaniu zapisu zawsze 1× (Michał 9.11.2026: „gra zawsze zaczyna od prędkości 1”), bez względu na zapisane
+  hud.stepSpeed(-9); hud.stepSpeed(1);
   armyBarUpdate();
 }
 
@@ -944,6 +943,9 @@ function start(seedText: string, preset: MapPresetId, loaded?: GameState, level 
     // nowa gra: tempo na starcie z ustawień (Rozgrywka)
     speed = Math.min(3, gfx.startSpeed ?? 1); // najwyżej 3×
     hud.setSpeed(speed);
+  } else {
+    // wczytany zapis: zawsze 1× (Michał 9.11.2026)
+    speed = 1; hud.setSpeed(1);
   }
   currentPreset = preset;
   currentSeedText = seedText;

@@ -1648,3 +1648,7 @@ html body .menu .help-pane .set-row:has(> .menu-link) .hint { margin: 0; font-st
 body .menu .help-pane .credit-team li { grid-template-columns: 220px minmax(0, 1fr); }
 body .menu .help-pane .credit-team .credit-a { font-size: 16px; font-weight: 700; }
 body .menu .help-pane .credit-team .credit-t { font-style: normal; font-size: 15px; }
+body .menu .help-pane .credit-table { font-size: 13.5px; }
+body .menu .help-pane .credit-table td { vertical-align: top; padding: 7px 10px; line-height: 1.4; }
+body .menu .help-pane .credit-table td:first-child { font-weight: 700; }
+body .menu .help-pane .credit-table td:nth-child(4) { white-space: nowrap; font-weight: 600; color: #7a4a1c; }

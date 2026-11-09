@@ -760,19 +760,35 @@ export function createMenu(root: HTMLElement, events: MenuEvents): Menu {
           }
           return ul;
         })(),
-        el('h3', 'help-h', tx('Grafika z zewnątrz', 'Third-party art')),
-        el('p', 'help-p', tx(
-          'Koń, pałka wodna i liście na stawie: 0 A.D. © Wildfire Games (wildfiregames.com), licencja CC BY-SA 3.0.',
-          'Horse, cattails and pond leaves: 0 A.D. © Wildfire Games (wildfiregames.com), CC BY-SA 3.0 licence.')),
-        el('p', 'help-p', tx(
-          'Pochodnia: Secret Histories (Mooses2k), licencja CC BY-SA 4.0.',
-          'Torch: Secret Histories (Mooses2k), CC BY-SA 4.0 licence.')),
-        el('p', 'help-p', tx(
-          'Kamień, snopek i sztaby żelaza w składzie (Sketchfab, licencja CC BY 4.0): matousekfoto („Granite block”), Korea Culture Information Service Agency („Sheaf of Rice”), Aparicio Silva 3D („Blacksmith Ingots”).',
-          'Stone, sheaf and iron bars in the stockpile (Sketchfab, CC BY 4.0 licence): matousekfoto ("Granite block"), Korea Culture Information Service Agency ("Sheaf of Rice"), Aparicio Silva 3D ("Blacksmith Ingots").')),
-        el('p', 'help-p', tx(
-          'Na licencji CC0 (dziękujemy autorom): drzewa, trawa, krzaki, kosz, jabłko, chleb, beczka i strzecha — Poly Haven; tekstury — ambientCG; kruk — OpenGameArt; ryba — Khronos glTF Sample Assets (Microsoft); ciała postaci — MakeHuman / MPFB; ruch — CMU Graphics Lab Motion Capture Database.',
-          'Under CC0 (with thanks to the authors): trees, grass, bushes, basket, apple, bread, barrel and thatch — Poly Haven; textures — ambientCG; raven — OpenGameArt; fish — Khronos glTF Sample Assets (Microsoft); character bodies — MakeHuman / MPFB; motion — CMU Graphics Lab Motion Capture Database.')),
+        el('h3', 'help-h', tx('Grafika i biblioteki z zewnątrz', 'Third-party art and libraries')),
+        // szczegółowo (Michał 9.11.2026: „co, gdzie, od kogo i jak”): co to jest, gdzie w grze, kto zrobił / skąd, licencja, jak użyte
+        ((): HTMLElement => {
+          const table = el('table', 'help-table credit-table');
+          const head = el('tr');
+          for (const h of [tx('Co', 'What'), tx('Gdzie w grze', 'Where in the game'), tx('Autor i źródło', 'Author and source'), tx('Licencja', 'Licence'), tx('Jak użyte', 'How it is used')]) head.append(el('th', '', h));
+          table.append(head);
+          for (const row of [
+            [tx("Koń", "Horse"), tx("przy koszarach i stajni", "by the barracks and stable"), "0 A.D. © Wildfire Games (wildfiregames.com)", "CC BY-SA 3.0", tx("siatka, szkielet, ruch i tekstury bez zmian rysunku", "mesh, rig, motion and textures, drawing unchanged")],
+            [tx("Pałka wodna, liście na stawie", "Cattails, pond leaves"), tx("brzegi jezior i stawów", "lake and pond shores"), "0 A.D. © Wildfire Games", "CC BY-SA 3.0", tx("przeniesione skryptem, rysunek bez zmian", "ported by script, drawing unchanged")],
+            [tx("Głazy i skały", "Boulders and rocks"), tx("teren, kamieniołom", "terrain, quarry"), "0 A.D. © Wildfire Games", "CC BY-SA 3.0", tx("siatki i tekstury bez zmian, obrót osi i skala", "meshes and textures unchanged, axis and scale only")],
+            [tx("Palmy, krzewy i trawy pustyni", "Desert palms, shrubs and grasses"), tx("kraina Pustynia", "the Desert land"), "0 A.D. © Wildfire Games", "CC BY-SA 3.0", tx("rysunek bez zmian, maska przezroczystości", "drawing unchanged, alpha mask split")],
+            [tx("Pochodnia w ręce", "Hand torch"), tx("spacer oczami postaci", "walking in a character's shoes"), "Secret Histories (Mooses2k)", "CC BY-SA 4.0", tx("model bez zmian", "model unchanged")],
+            [tx("Blok granitu", "Granite block"), tx("kamień w składzie", "stone in the stockpile"), "matousekfoto (Sketchfab, skan)", "CC BY 4.0", tx("bez odchudzania, tylko skala", "no decimation, scale only")],
+            [tx("Snopek zboża", "Sheaf of grain"), tx("zboże w stodole", "grain in the barn"), "Korea Culture Information Service Agency (Sketchfab)", "CC BY 4.0", tx("bez odchudzania, tylko skala", "no decimation, scale only")],
+            [tx("Sztaby żelaza", "Iron ingots"), tx("żelazo w składzie", "iron in the stockpile"), "Aparicio Silva 3D (Sketchfab)", "CC BY 4.0", tx("trzy sztaby z zestawu, bez odchudzania", "three ingots from the set, no decimation")],
+            [tx("Drzewa, trawa, krzaki", "Trees, grass, bushes"), tx("lasy, łąki", "forests, meadows"), "Poly Haven", "CC0", tx("sfotografowane w Blenderze na karty i obrazki z daleka", "baked in Blender to cards and far impostors")],
+            [tx("Kosz, jabłko, chleb, beczka", "Basket, apple, bread, barrel"), tx("budynki, zapasy, ładunki", "buildings, stores, loads"), "Poly Haven (skany)", "CC0", tx("oryginalne siatki i tekstury", "original meshes and textures")],
+            [tx("Mur zamku, strzecha", "Castle wall, thatch"), tx("zamek, dachy", "the keep, roofs"), "Poly Haven (Rob Tuytel i in.)", "CC0", tx("zmniejszone do 2K, wyrównana barwa", "reduced to 2K, colour evened")],
+            [tx("Tekstury bruku, desek, ziemi, trawy, skał, płótna, metalu", "Paving, planks, soil, grass, rock, cloth, metal textures"), tx("cały świat gry", "the whole game world"), "ambientCG", "CC0", tx("2K/1K, mapy normalnych", "2K/1K, normal maps")],
+            [tx("Kruk", "Raven"), tx("nad polami i lasem", "over fields and forest"), "OpenGameArt („Raven”)", "CC0", tx("przerobiony na obrazek", "converted to a sprite")],
+            [tx("Ryba", "Fish"), tx("rybak, spiżarnie", "the fisherman, pantries"), "Khronos glTF Sample Assets © 2017 Microsoft", "CC0", tx("model bez zmian", "model unchanged")],
+            [tx("Ciała postaci", "Character bodies"), tx("wszyscy ludzie", "all people"), "MPFB / MakeHuman Community", "CC0", tx("szkielet i ciało", "rig and body")],
+            [tx("Ruch postaci", "Character motion"), tx("chód, praca, walka", "walking, work, combat"), "CMU Graphics Lab Motion Capture Database (konwersja B. Hahne)", tx("wolne użycie", "free use"), tx("dane wolne do użytku, także w grach", "free to use, games included")],
+            [tx("Fizyka gruzu", "Rubble physics"), tx("zawalone budynki", "collapsing buildings"), "cannon-es © Stefan Hedman, pmndrs", "MIT", tx("biblioteka bez zmian", "library unchanged")],
+          ]) { const tr = el('tr'); for (const c of row) tr.append(el('td', '', c)); table.append(tr); }
+          return table;
+        })(),
+        el('p', 'hint', tx('CC BY i CC BY-SA wymagają podania autora — dlatego są tutaj. Pełne adresy i nazwy plików: CREDITS.md w repozytorium gry.', 'CC BY and CC BY-SA require credit — hence this list. Full links and file names: CREDITS.md in the game repository.')),
         el('h3', 'help-h', tx('Muzyka', 'Music')),
         el('p', 'help-p', tx('Utwory z OpenGameArt i nagrania chorału gregoriańskiego z Wikimedia Commons; licencje CC0, CC BY, CC BY-SA i domena publiczna. Dziękujemy autorom.', 'Tracks from OpenGameArt and Gregorian chant recordings from Wikimedia Commons; CC0, CC BY, CC BY-SA and public domain. With thanks to the authors.')),
         ((): HTMLElement => {
