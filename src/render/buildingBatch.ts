@@ -21,6 +21,8 @@ interface Entry {
   maxVerts: number;
   maxIndex: number;
   maxInst: number;
+  /** Czy w tej klatce choć jedna sztuka jest widoczna */
+  anyVisible: boolean;
 }
 
 const attrKey = (g: THREE.BufferGeometry): string => Object.keys(g.attributes).sort().map((k) => {
@@ -34,10 +36,10 @@ export class MaterialBatches {
   private entries = new Map<string, Entry>();
   constructor(private readonly parent: THREE.Object3D) {}
 
-  begin(): void { for (const e of this.entries.values()) e.used = 0; }
+  begin(): void { for (const e of this.entries.values()) { e.used = 0; e.anyVisible = false; } }
 
   /** Jedna nieruchoma część budynku (bryła, materiał, macierz świata) */
-  add(geo: THREE.BufferGeometry, mat: THREE.Material, matrix: THREE.Matrix4, cast: boolean, recv: boolean): void {
+  add(geo: THREE.BufferGeometry, mat: THREE.Material, matrix: THREE.Matrix4, cast: boolean, recv: boolean, hidden = false): void {
     const key = mat.uuid + (cast ? 'c' : '') + (recv ? 'r' : '') + '|' + attrKey(geo);
     let e = this.entries.get(key);
     if (!e) e = this.create(key, geo, mat, cast, recv);
@@ -54,14 +56,18 @@ export class MaterialBatches {
     if (e.used < e.inst.length) {
       id = e.inst[e.used]!;
       if (e.instGeo[e.used] !== gid) { e.mesh.setGeometryIdAt(id, gid); e.instGeo[e.used] = gid; }
-      e.mesh.setVisibleAt(id, true);
+      e.mesh.setVisibleAt(id, !hidden);
     } else {
       if (e.inst.length >= e.maxInst) this.rebuild(e, e.maxVerts, e.maxIndex, e.maxInst * 2);
       id = e.mesh.addInstance(gid);
       e.inst.push(id); e.instGeo.push(gid);
+      if (hidden) e.mesh.setVisibleAt(id, false);
     }
+    // budynek poza kadrem i poza mapą cieni: sztuka zostaje na swoim miejscu (numery się nie przesuwają), tylko schowana
     // macierz bez zmian (budynek stoi): nie przepisujemy jej — każde setMatrixAt oznacza całą teksturę macierzy do wysłania
     // na kartę, a w pełnej wiosce szło tak ~100 tekstur w każdej klatce (Michał 9.11.2026: „30 FPS na 5070”)
+    if (hidden) { e.used++; e.anyVisible ||= false; return; }
+    e.anyVisible = true;
     const arr = (e.mesh as unknown as { _matricesTexture: { image: { data: Float32Array } } })._matricesTexture.image.data, el = matrix.elements, o = id * 16;
     let same = true;
     for (let k = 0; k < 16; k++) if (arr[o + k] !== Math.fround(el[k]!)) { same = false; break; }
@@ -72,7 +78,7 @@ export class MaterialBatches {
   end(): void {
     for (const e of this.entries.values()) {
       for (let i = e.used; i < e.inst.length; i++) e.mesh.setVisibleAt(e.inst[i]!, false);
-      e.mesh.visible = e.used > 0;
+      e.mesh.visible = e.used > 0 && e.anyVisible; // cała paczka poza kadrem: bez rysowania
     }
   }
 
@@ -119,7 +125,7 @@ export class MaterialBatches {
     mesh.userData.noCull = true;
     mesh.frustumCulled = false; // całość obejmuje całą osadę; cięcie do kadru robi każda sztuka osobno
     this.parent.add(mesh);
-    const e: Entry = { mesh, geoIds: new Map(), inst: [], instGeo: [], used: 0, verts: 0, index: 0, maxVerts, maxIndex, maxInst };
+    const e: Entry = { mesh, geoIds: new Map(), inst: [], instGeo: [], used: 0, verts: 0, index: 0, maxVerts, maxIndex, maxInst, anyVisible: false };
     this.entries.set(key, e);
     return e;
   }

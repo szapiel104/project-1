@@ -3111,13 +3111,35 @@ export class GameRenderer {
   /** Budynki razem po materiale (buildingBatch.ts); ?batch=0 — dawne łączenie po parze bryła+materiał */
   private matBatchOn = !/[?&]batch=0/.test(location.search); // 8.11.2026: mieszanie części naprawione (rebuild zamiast setGeometrySize)
   private matBatches?: MaterialBatches;
+  private batchView = new THREE.Frustum();
+  private batchShadow = new THREE.Frustum();
+  private batchSphere = new THREE.Sphere();
   private syncMatBatches(roots: Iterable<[number, THREE.Object3D]>, keepOff: boolean): void {
     const mb = (this.matBatches ??= new MaterialBatches(this.buildingLayer));
     mb.begin();
     this.buildingLayer.updateMatrixWorld();
+    // budynki poza kadrem kamery i poza zasięgiem mapy cieni nie idą do karty (Michał 9.11.2026: paczki rysowały całą
+    // wioskę w obrazie i drugi raz w cieniu, także to, czego nie widać). Kula budynku liczona raz, z zapasem 2 pól.
+    const cam = this.cam.camera;
+    cam.updateMatrixWorld();
+    const view = this.batchView.setFromProjectionMatrix(this.cullM.multiplyMatrices(cam.projectionMatrix, cam.matrixWorldInverse));
+    let shadowFr: THREE.Frustum | null = null;
+    if (this.sun.castShadow && this.renderer.shadowMap.enabled) {
+      this.sun.updateMatrixWorld(); this.sun.target.updateMatrixWorld(); this.sun.shadow.updateMatrices(this.sun);
+      shadowFr = this.batchShadow.copy(this.sun.shadow.getFrustum());
+    }
+    const sph = this.batchSphere;
+    const seen = (root: THREE.Object3D): boolean => {
+      if (this.walk || keepOff) return true;
+      let r = root.userData.cullSphere as THREE.Sphere | undefined;
+      if (!r) { r = new THREE.Box3().setFromObject(root).getBoundingSphere(new THREE.Sphere()); r.radius += 2; root.userData.cullSphere = r; }
+      sph.copy(r);
+      return view.intersectsSphere(sph) || (!!shadowFr && shadowFr.intersectsSphere(sph));
+    };
     for (const [id, root] of roots) {
       const parts = this.staticParts(root);
       const own = this.sites.sites.has(id) || !root.visible;
+      const hide = !own && !seen(root);
       for (const m of parts) {
         if (own) { m.layers.set(0); continue; }
         let vis = m.visible;
@@ -3127,11 +3149,11 @@ export class GameRenderer {
           const mats = m.material, subs = groupGeos(m.geometry);
           if (!subs.length || subs.some((sg) => { const mt = mats[sg.userData.materialIndex as number]; return !mt || mt.transparent; })) { m.layers.set(0); continue; }
           m.layers.set(BATCH_LAYER);
-          for (const sg of subs) mb.add(sg, mats[sg.userData.materialIndex as number]!, m.matrixWorld, m.castShadow, m.receiveShadow);
+          for (const sg of subs) mb.add(sg, mats[sg.userData.materialIndex as number]!, m.matrixWorld, m.castShadow, m.receiveShadow, hide);
           continue;
         }
         m.layers.set(BATCH_LAYER);
-        mb.add(m.geometry, m.material as THREE.Material, m.matrixWorld, m.castShadow, m.receiveShadow);
+        mb.add(m.geometry, m.material as THREE.Material, m.matrixWorld, m.castShadow, m.receiveShadow, hide);
       }
     }
     if (!keepOff) mb.end();
