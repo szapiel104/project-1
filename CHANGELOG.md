@@ -1,5 +1,12 @@
 # Dziennik zmian
 
+## 0.94.90 — 2026-11-09
+- `marketPanel.ts`: suwaki + pole liczby (max: sprzedaż = stan, kupno = szukanie połówkowe po `canTrade`), przyciski-ikony, krzyżyk zamyka zaznaczenie; okno budynku przewija się pod towarami.
+- `market.py`: szyld nad przejściem, kramy rozsunięte; `workers.ts` `marketVisit` (fazy ToMarket/Shopping 34/35, deterministycznie z id i godziny, tylko bez budów i gruzu).
+- Nocna zmiana: `wakeBuilders` (3 chłopów, `nightShift`), `army.ts` przydział budowy nocą tylko im. Boty: ten sam rozkaz `build`, więc też.
+- `placement.ts` `demolish`: plac budowy zwraca niedoniesione od razu, doniesione w gruzie w całości; `workers.ts` `rubbleFor` — ToFetch do gruzu ≤20 pól.
+- `fieldtent.py`: pawilon w pasach (`canvasRed`); `gameTip.ts` dymki; `scene.ts` `HEAVY_TRIS` (siatki >40k trójkątów poza BatchedMesh — cięcie do kadru); `?perf=1` wystawia `__renderer`.
+
 ## 0.94.89 — 2026-11-09
 - Okna budynków od nowa (`theme-wow.css`, blok „Okno budynku: pergamin…”): nagłówek z portretem (`thumbs`), właścicielem i stanem; sekcje jako karty; stopka z HP i `icon-act` (wł./wył. przez `ICON.power`, targ `ICON.market`).
 - `crewPanel.ts`: załoga budynku (pracownicy `crewOf`/`crewWanted`, wieża `garrisonRoom`, twierdza i barak górników — straż z HP i odliczaniem `watchInfo`/`campWatch`); `onPerson` zaznacza chłopa albo żołnierza. Magazynierzy przez ten sam moduł.

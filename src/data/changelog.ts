@@ -9,6 +9,23 @@ export type { ChangeEntry } from './changelogTypes';
  * — tak jak CHANGELOG.md dla nas. `tests/changelog.test.ts` pilnuje, że najnowszy wpis ma wersję z package.json.
  */
 const NEW: ChangeEntry[] = [
+  { v: '0.94.90', date: '2026-11-09', pl: [
+    'Rynek: duże okno z suwakami „sprzedaj” (do tego, co masz) i „kup” (na ile starczy rudy i miejsca), ilość można też wpisać; trzy towary w rzędzie, pracownicy pod listą.',
+    'Rynek ma szyld na środku i przejście między kramami, a wolni chłopi czasem przychodzą coś kupić.',
+    'Budowa postawiona nocą: trzech chłopów wstaje i buduje (także u przeciwników).',
+    'Rozbiórka nieukończonej budowy zwraca od razu wszystko, czego jeszcze nie doniesiono; budowlańcy biorą materiał z pobliskiego gruzu.',
+    'Namiot polowy wygląda jak pawilon z turnieju: pasy lnu i czerwonego sukna, lamówka, maszty z gałkami.',
+    'Dymki w stylu gry, grubsze nagłówki kart, ruda pierwsza na górnym pasku, surowiec „Drabiny”, okno postaci bez zbędnego „i”.',
+    'Wydajność: ciężkie modele w budynkach (np. jabłka w sadach) poza ekranem nie obciążają już karty graficznej.',
+  ], en: [
+    'Market: a large window with sliders to sell (up to what you hold) and buy (as far as your ore and storage allow); you can also type the amount; three goods per row, workers below the list.',
+    'The market has its sign in the middle and a walkway between the stalls, and idle peasants now and then come to buy something.',
+    'A building site placed at night: three peasants get up and build (for opponents too).',
+    'Pulling down an unfinished site returns everything not yet carried there straight away; builders take materials from nearby rubble.',
+    'The field tent now looks like a tournament pavilion: stripes of linen and red cloth, a scalloped valance, poles with finials.',
+    'Game-styled tooltips, bolder card headings, ore first on the top bar, the resource is now simply "Ladders", no needless "i" on a person\'s window.',
+    'Performance: heavy models inside buildings (such as the apples in orchards) no longer burden the graphics card when off screen.',
+  ] },
   { v: '0.94.89', date: '2026-11-09', pl: [
     'Nowe okna budynków w stylu gry RPG: pergamin w oprawie jak księga, portret budynku w nagłówku, sekcje jako karty, a na dole wytrzymałość i przyciski-ikony (włącz/wyłącz, targ, zasięg, przenieś, rozbierz z potwierdzeniem).',
     'Załoga w każdym budynku: głowy pracowników, magazynierów i żołnierzy na wieży, wolne miejsca w ramce. Klik w głowę pokazuje tę osobę albo zaznacza żołnierza.',
