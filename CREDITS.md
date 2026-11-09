@@ -1,6 +1,6 @@
 # Twórcy gry
 - **Michał Szapiel** — twórca gry i założyciel SuroCrave
-- **Mikołaj Szymczak** — najlepszy tester i twórca nowych pomysłów
+- **Mikołaj Szymczak** — tester
 
 # Zasoby z zewnątrz
 

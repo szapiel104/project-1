@@ -752,7 +752,7 @@ export function createMenu(root: HTMLElement, events: MenuEvents): Menu {
           const ul = el('ul', 'credit-list credit-team');
           for (const [who, role] of [
             ['Michał Szapiel', tx('Pomysł, projekt i produkcja gry · założyciel SuroCrave', 'Concept, game design and production · founder of SuroCrave')],
-            ['Mikołaj Szymczak', tx('Testy rozgrywki i projektowanie nowych mechanik', 'Playtesting and new gameplay design')],
+            ['Mikołaj Szymczak', tx('Tester', 'Tester')],
           ] as const) {
             const li = el('li');
             li.append(el('span', 'credit-a', who), el('span', 'credit-t', role));
