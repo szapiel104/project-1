@@ -1631,3 +1631,6 @@ html body .menu:not(.previewing) .menu-list .mi-gap { display: flex !important; 
 html body .menu:not(.previewing) .menu-list .mi-gap::before { content: '◆'; font-size: 10px; color: #a8823e; padding: 0 12px;
   background: linear-gradient(90deg, transparent, rgba(194, 154, 69, .55) 30%, transparent 30%, transparent 70%, rgba(194, 154, 69, .55) 70%, transparent) center / 100% 1px no-repeat; width: 70%; text-align: center; }
 @media (max-height: 760px) { html body .menu:not(.previewing) .menu-list .mi-gap { height: 8px; } html body .menu:not(.previewing) .menu-list .mi-gap::before { display: none; } }
+/* strona księgi (Ustawienia, Autorzy, Jak grać): tekst na całą szerokość kartki, ten sam margines u góry, po bokach i u dołu */
+html body .menu .help-pane { padding: clamp(28px, 4vh, 48px) !important; }
+html body .menu .help-pane .help-text, html body .menu .help-pane .help-text.set-sheet { max-width: none !important; margin: 0 !important; }
