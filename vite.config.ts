@@ -52,6 +52,8 @@ export default defineConfig(({ mode }) => ({
   // długie symulacje (bot, 10 000 ticków) potrzebują więcej czasu niż domyślne 5 s
   test: { testTimeout: 60000, setupFiles: ['tests/setup/lang.ts', 'tests/setup/models.ts'] },
   plugins: mode === 'single' ? [versionInHtml, modelPacks(true), viteSingleFile()] : [versionInHtml, versionFile, modelPacks(false), preloadMain(), noAutoReload],
+  // lokalnie: zgoda na próbkowanie JS z samej strony (window.__prof w src/debug/prof.ts — gdzie ucieka czas klatki)
+  server: { headers: { 'Document-Policy': 'js-profiling' } },
   build: {
     outDir: mode === 'single' ? 'dist-single' : 'dist',
     chunkSizeWarningLimit: 1200,

@@ -2666,6 +2666,8 @@ if (EMPTY) {
 if (SANDBOX || new URLSearchParams(location.search).has('perf')) (window as unknown as { __renderer: unknown }).__renderer = renderer;
 // automatyczny „gracz” do testów wydajności: await __tour() (src/debug/tour.ts)
 if (SANDBOX) void import('./debug/tour');
+// próbkowanie procesora z samej strony (lokalnie, src/debug/prof.ts): JSON.stringify(await __prof(8))
+if (import.meta.env.DEV || new URLSearchParams(location.search).has('perf')) void import('./debug/prof');
 
 declare const __BUILD__: string;
 const badge = document.createElement('div');
