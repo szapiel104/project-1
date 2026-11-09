@@ -15,6 +15,8 @@ import { gpuMods } from './webgpu';
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /** Warstwa obiektów widocznych w odbiciu wody (markReflect) */
 export const REFLECT_LAYER = 3;
+/** Czy w kadrze jest woda (scene.ts co klatkę): bez wody w kadrze lustro się nie odświeża — to drugie rysowanie sceny */
+export const reflectGate = { on: true };
 /**
  * Co jakiś czas (nowe obiekty w scenie): wszystko na warstwę odbicia poza tym, czego w tafli i tak nie widać
  * albo co kosztuje bez efektu (lista jak w WebGL-owym waterReflect.ts, plus ślady i kałuże).
@@ -101,7 +103,7 @@ export function waterNodeMaterial(waves: THREE.Texture, waterY: number, clear = 
     base.getVirtualCamera = (cam: THREE.Camera): THREE.Camera => { const v = getCam(cam); v.layers.set(REFLECT_LAYER); return v; };
     const upd = base.updateBefore.bind(base);
     let n = 0;
-    base.updateBefore = (frame: unknown): unknown => (base.hasOutput && (n++ & 1) ? undefined : upd(frame));
+    base.updateBefore = (frame: unknown): unknown => (base.hasOutput && (!reflectGate.on || (n++ & 1)) ? undefined : upd(frame));
   }
   refl.uvNode = refl.uvNode.add(slope.mul(0.25));
   const F = float(0.06).add(float(0.94).mul(pow(float(1).sub(clamp(dot(nW, V), 0, 1)), 5)));

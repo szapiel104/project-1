@@ -86,7 +86,7 @@ import { Snowfall } from './snowfall';
 import { gpuBackend, gpuDeferredCount, gpuFrameBudget, gpuLoading, gpuPending, hideGlslMaterials, takeGpuRenderer } from './gpu/webgpu';
 import { GpuPost } from './gpu/postNode';
 import { makeGpuEnvironment } from './gpu/envNode';
-import { markReflect, REFLECT_LAYER } from './gpu/waterNode';
+import { markReflect, REFLECT_LAYER, reflectGate } from './gpu/waterNode';
 import { SKIP as REFLECT_SKIP } from './waterReflect';
 import { Footprints } from './footprints';
 import { maxHp } from '../sim/systems/placement';
@@ -2677,6 +2677,7 @@ export class GameRenderer {
     // w trakcie kompilacji shaderów w tle nie rysujemy: rysowanie czekałoby na kartę i strona by zamarzła
     if (this.warming || this.held || this.building) return;
     const f0 = performance.now();
+    this.frameCounter++;
     this.fparts = {};
     this.lastAlpha = alpha;
     namedTick();
@@ -2738,8 +2739,8 @@ export class GameRenderer {
       // od razu: przy 30 FPS 10 klatek to 1/3 s, w której przy przesuwaniu widać, jak rzeczy „doczytują się” (Michał 9.11.2026)
       const ff = this.focusPoint, fd = this.walk ? 0 : this.cam.distance;
       const moved = Math.abs(ff.x - this.lodAt.x) + Math.abs(ff.z - this.lodAt.z) > 1.5 || Math.abs(fd - this.lodAt.d) > 1.5;
-      if (moved) { this.lodAt.x = ff.x; this.lodAt.z = ff.z; this.lodAt.d = fd; }
-      if (this.lodTick++ % 10 === 0 || moved) { const f = this.focusPoint; v.lod(f.x, f.z, this.walk ? 0 : Math.max(0, this.cam.distance - 30) * 0.35, this.walk ? 1 : this.detail, !!this.walk); }
+      // w ruchu co 3. klatkę (przy szybkim locie kamerą liczenie w każdej klatce zjadało czas), w spoczynku co 10.
+      if (this.lodTick++ % 10 === 0 || (moved && this.lodTick % 3 === 0)) { this.lodAt.x = ff.x; this.lodAt.z = ff.z; this.lodAt.d = fd; const f = this.focusPoint; v.lod(f.x, f.z, this.walk ? 0 : Math.max(0, this.cam.distance - 30) * 0.35, this.walk ? 1 : this.detail, !!this.walk); }
       T('drogi', () => this.syncRoads(g, v));
       T('gruz', () => this.rubble.sync(g, v, dt));
       T('groby', () => this.graves.sync(g, v));
@@ -2756,6 +2757,9 @@ export class GameRenderer {
       T('wojsko', () => { this.syncSoldiers(g, v, alpha); this.placeFoeMark(); });
       T('klimat', () => { this.syncAmbience(g, v, dt); this.syncFlames(g); });
       T('zwierzęta', () => { this.wolves.sync(g, v, alpha, { time: this.time, calm: this.calm, night: this.night, prevPos: this.prevPos }); this.wolfBlood(g); this.crowLayer.sync(g, v, { time: this.time, calm: this.calm }); this.forestEyes.sync(g, v, { time: this.time, calm: this.calm, night: this.night }); this.syncVillage(g, v, dt); });
+      // macierze świata całej sceny RAZ na klatkę, tuż przed paczkami budynków (wszystko, co rusza obiekty, już się
+      // wykonało); paczki i rysowanie (obraz, cienie, odbicie) biorą je stąd — wcześniej scena była przeliczana 2–4 razy
+      T('macierze', () => { this.scene.updateMatrixWorld(); this.matrixFrame = this.frameCounter; });
       T('budynki razem', () => this.syncBatches());
       T('kadr', () => { this.cullInstances(); this.cullVegetation(v); });
     }
@@ -2781,11 +2785,12 @@ export class GameRenderer {
     // macierze świata całej sceny liczone RAZ na klatkę: three.js przelicza je przy każdym render() — obraz, mapa cieni,
     // odbicie w wodzie — a to przejście po tysiącach części budynków (pomiar w grze Michała 9.11.2026: updateMatrixWorld,
     // compose i mnożenie macierzy to kilka ms klatki). W trakcie rysowania nic w scenie się nie przesuwa.
-    this.scene.updateMatrixWorld();
+    if (this.matrixFrame !== this.frameCounter) this.scene.updateMatrixWorld();
     const autoMW = this.scene.matrixWorldAutoUpdate;
     this.scene.matrixWorldAutoUpdate = false;
     try {
       if (!this.gpu_) this.view?.reflectWater(this.renderer, this.scene, this.cam.camera, this.bloom.enabled);
+      else reflectGate.on = this.inMine ? false : (this.view?.waterInView(this.cam.camera) ?? true);
       this.present();
     } finally { restore(); this.scene.matrixWorldAutoUpdate = autoMW; }
     const gpu = performance.now() - tg;
@@ -3123,7 +3128,7 @@ export class GameRenderer {
   private syncMatBatches(roots: Iterable<[number, THREE.Object3D]>, keepOff: boolean): void {
     const mb = (this.matBatches ??= new MaterialBatches(this.buildingLayer));
     mb.begin();
-    this.buildingLayer.updateMatrixWorld();
+    if (this.matrixFrame !== this.frameCounter) this.buildingLayer.updateMatrixWorld();
     // budynki poza kadrem kamery i poza zasięgiem mapy cieni nie idą do karty (Michał 9.11.2026: paczki rysowały całą
     // wioskę w obrazie i drugi raz w cieniu, także to, czego nie widać). Kula budynku liczona raz, z zapasem 2 pól.
     const cam = this.cam.camera;
@@ -3873,6 +3878,8 @@ export class GameRenderer {
 
 
   private roadTick = -1;
+  private frameCounter = 0;
+  private matrixFrame = -1;
   private shadowTick = 0;
   private shadowCamAt = new THREE.Vector3();
   private syncRoads(g: GameState, view: TerrainView): void {

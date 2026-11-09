@@ -122,6 +122,8 @@ export interface TerrainView {
   setSky(c: THREE.Color): void;
   /** Odbicie lustrzane w wodzie: rysowane raz na klatkę przed obrazem (on = false: tańsze odbicie nieba) */
   reflectWater(renderer: THREE.WebGLRenderer, scene: THREE.Scene, camera: THREE.PerspectiveCamera, on: boolean): void;
+  /** Czy kamera widzi jakąkolwiek wodę (WebGPU: bez wody w kadrze lustro stoi) */
+  waterInView(camera: THREE.PerspectiveCamera): boolean;
   /** Pogoda i pora dnia dla mgły w dolinach, chmur przy szczytach i strumieni */
   setAtmosphere(a: Atmosphere): void;
   /** Kierunek ku słońcu (świat) i jego barwa: odblaski na wodzie; golden = złota godzina (0..1) */
@@ -2418,6 +2420,14 @@ function* terrainSteps(map: GameMap, models: ModelFactory, waterLevel: number): 
     trunkNear,
     animate,
     setSky(c: THREE.Color) { wm.sky.value.copy(c); streams?.setSky(c); },
+    waterInView(camera: THREE.PerspectiveCamera) {
+      if (!hasWater) return false;
+      if (wetEdge) return true;
+      camera.updateMatrixWorld();
+      wetFrustum.setFromProjectionMatrix(wetM.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse));
+      for (const b of wetBoxes) if (wetFrustum.intersectsBox(b)) return true;
+      return false;
+    },
     reflectWater(renderer: THREE.WebGLRenderer, scene: THREE.Scene, camera: THREE.PerspectiveCamera, on: boolean) {
       // odbicie to drugie rysowanie prawie całej sceny: liczymy je tylko, gdy w kadrze jest jakakolwiek woda
       // (wtedy obraz jest ten sam, a bez wody w kadrze nikt odbicia i tak nie zobaczy)
