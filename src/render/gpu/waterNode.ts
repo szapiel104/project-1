@@ -22,7 +22,7 @@ export const REFLECT_LAYER = 3;
 /** Drobiazgi płaskie albo małe, których w odbiciu i tak nie widać — każdy to osobne składanie i rysowanie w lustrze */
 // pnie, krzewy i podszyt: w falującym odbiciu z góry ich nie widać, a las to najdroższa geometria klatki (Michał 7.11.2026,
 // pomiar na RTX 3050: las ok. 14 z 20 ms karty); korony zostają, więc las przy brzegu dalej się odbija
-const NO_REFLECT = /^(ślady|kałuże|kruki|niesione|ryby|osmalenia|siatka budowy|uszkodzenia|graty|rodziny|postacie|wilki|tarany|wozy|drogi|śnieg|kamyki|kępy|kwiaty|zwierzęta|groby|poświata|budowy|naprawy|strzały|narzędzia|drzewa: pnie|drzewa leśniczych: pnie|krzewy|podszyt|trzcina)/;
+const NO_REFLECT = /^(ślady|kałuże|kruki|niesione|ryby|osmalenia|siatka budowy|uszkodzenia|graty|rodziny|postacie|wilki|tarany|wozy|drogi|śnieg|kamyki|kępy|kwiaty|zwierzęta|groby|poświata|budowy|naprawy|strzały|narzędzia|drzewa: pnie|drzewa leśniczych: pnie|krzewy|podszyt|trzcina|roślinność pustyni|puszcza za mapą: obrazki)/;
 /** Drobiazgi w budynkach (wnętrza, zapasy, pochodnie, sufity): w falującym, połówkowym odbiciu ich nie widać (Michał 7.11.2026) */
 const REFLECT_SMALL = new Set(['interior', 'life', 'foodfill', 'fill', 'grainfill', 'armsfill', 'yardlog', 'ceiling', 'torch', 'flagcloth', 'crop', 'noworker', 'fire', 'flame', 'smoke']);
 export function markReflect(scene: THREE.Object3D, skip: Set<string>): void {
