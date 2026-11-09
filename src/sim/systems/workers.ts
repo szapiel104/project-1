@@ -59,6 +59,8 @@ export function crewWanted(def: { crew?: { per: number; max: number } }, pop: nu
 /** Wszyscy pracujący w budynku: brygadzista i reszta załogi */
 export const crewOf = (b: Building): number[] => (b.worker ? [b.worker, ...(b.crew ?? [])] : [...(b.crew ?? [])]);
 
+/** Drogi do budynku, które wolno szukać dalej niż zwykłe 90 pól (budowa i praca daleko od osady) */
+const LONG_TRIPS = new Set<Phase>([Phase.ToRepair, Phase.ToFetch, Phase.Returning, Phase.ToSite]);
 const OFF_DUTY = new Set<Phase>([Phase.ToEvening, Phase.Evening, Phase.ToSleep, Phase.Sleeping]);
 /** Zajęcia, które chłop z pustymi rękami rzuca wieczorem (resztę kończy: niesie ładunek do składu, dokańcza wyrób) */
 const AFTER_HOURS = new Set<Phase>([Phase.Idle, Phase.Returning, Phase.ToInputStore, Phase.Repairing, Phase.ToRepair, Phase.ToFetch, Phase.Paving, Phase.ToPave, Phase.ToRoadFetch, Phase.ToRubble, Phase.ToRest, Phase.ToPlant, Phase.Stalled]);
@@ -823,7 +825,14 @@ export function workerSystem(g: GameState): void {
       continue;
     }
     if (goal(here)) { arrive(g, u, prod); continue; }
-    const path = findPath(g, here, goal, 900, u.owner, -1, 0, true);
+    let path = findPath(g, here, goal, 900, u.owner, -1, 0, true);
+    // Daleki plac budowy albo daleka praca (np. kopalnia na drugim końcu mapy): 900 to ok. 90 pól marszu, więc chłop
+    // z deskami stał przy składzie bez końca i budowa nigdy nie ruszała (zgłoszenie gracza 9.11.2026). Gdy cel jest
+    // budynkiem, szukamy jeszcze raz, dalej, A* prosto do jego drzwi (tanie: rozlewa się tylko w stronę celu).
+    if (!path && LONG_TRIPS.has(u.phase)) {
+      const tb = buildingById(g, u.phase === Phase.Returning ? u.job : u.target);
+      if (tb && tb.door >= 0) path = findPath(g, here, goal, 8000, u.owner, tb.door, 1, true);
+    }
     if (path && path.length) u.path = path;
     else if (!path && (u.phase === Phase.ToSleep || u.phase === Phase.ToEvening)) {
       // nie da się dojść (np. zamknięty w murach): śpi albo siedzi tam, gdzie stoi

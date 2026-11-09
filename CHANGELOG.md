@@ -1,5 +1,8 @@
 # Dziennik zmian
 
+## 0.94.88 — 2026-11-09
+- `workers.ts`: drogi do budynku w fazach ToRepair/ToFetch/Returning/ToSite — gdy zwykłe szukanie (koszt 900 ≈ 90 pól) nic nie da, drugi raz A* do drzwi z kosztem 8000. Zgłoszenie gracza: kopalnia daleko od bazy nigdy się nie budowała (chłopi stali z deskami przy składzie). Test w `oremine.test.ts`. Boty: korzystają z tej samej poprawki.
+
 ## 0.94.87 — 2026-11-08
 - `keep.py`: ciosy łuku bramy obrócone `roll` wzdłuż stycznej (było `rot` wokół pionu). Boty: bez zmian.
 

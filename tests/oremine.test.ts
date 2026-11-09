@@ -252,3 +252,27 @@ describe('kopalnia pod górami', () => {
     expect(UNITS[GUARD]).toBeDefined();
   });
 });
+
+// Zgłoszenie gracza 9.11.2026: kopalnia daleko od zamku nie chciała się zbudować przez całą grę — szukanie drogi
+// kończyło się po ~90 polach, więc chłopi stali z deskami przy składzie. Teraz droga do budynku liczy się dalej.
+it('kopalnia ok. 130 pól od zamku też się buduje', () => {
+  const g = createGame(3);
+  const def = BUILDINGS[MINE]!, keep = playerKeep(g, 0)!, { width, height, tiles } = g.map;
+  let at: { x: number; y: number; rot: number; d: number } | null = null;
+  for (let y = 0; y < height; y++)
+    for (let x = 0; x < width; x++) {
+      if (tiles[y * width + x] !== Terrain.Mountain) continue;
+      const d = Math.hypot(x - keep.x, y - keep.y);
+      if (at && Math.abs(d - 130) >= Math.abs(at.d - 130)) continue;
+      for (const rot of [0, 2, 1, 3]) {
+        const w = rot % 2 ? def.h : def.w, h = rot % 2 ? def.w : def.h;
+        const bx = rot === 0 || rot === 2 ? x - 1 : rot === 1 ? x + 1 : x - w, by = rot === 0 ? y + 1 : rot === 2 ? y - h : y - 1;
+        if (canPlace(g, 0, MINE, bx, by, false, rot) === null) { at = { x: bx, y: by, rot, d }; break; }
+      }
+    }
+  expect(at && at.d).toBeGreaterThan(110);
+  step(g, [{ type: 'build', player: 0, building: 'oremine', x: at!.x, y: at!.y, rot: at!.rot }]);
+  const mine = g.buildings.find((b) => b.type === MINE)!;
+  for (let t = 0; t < 6000 && mine.build > 0; t++) step(g, []);
+  expect(mine.build).toBe(0);
+}, 120000);

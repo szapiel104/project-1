@@ -9,6 +9,7 @@ export type { ChangeEntry } from './changelogTypes';
  * — tak jak CHANGELOG.md dla nas. `tests/changelog.test.ts` pilnuje, że najnowszy wpis ma wersję z package.json.
  */
 const NEW: ChangeEntry[] = [
+  { v: '0.94.88', date: '2026-11-09', pl: ['Naprawione: kopalnia (i inne budynki) daleko od zamku nie stały już bez końca w budowie — chłopi z materiałem znajdują drogę także na drugi koniec mapy.'], en: ['Fixed: a mine (or any building) far from the castle no longer stays under construction forever — villagers carrying materials now find their way even to the far end of the map.'] },
   { v: '0.94.87', date: '2026-11-08', pl: ['Zamek: kamienie łuku nad bramą układają się w równy łuk, zamiast sterczeć na boki.'], en: ['Castle: the stones of the arch above the gate now form a neat arch instead of sticking out sideways.'] },
   { v: '0.94.86', date: '2026-11-08', pl: ['Budynki znów rysują się razem po materiale (płynniejsza duża osada) — z naprawionym błędem, przez który części jednych budynków pojawiały się w innych.'], en: ['Buildings are drawn together by material again (smoother large settlements) — with the bug fixed that made parts of one building show up in another.'] },
   { v: '0.94.85', date: '2026-11-08', pl: ['Naprawione: części budynków (np. skrzydła wiatraka) nie pojawiają się już w innych budynkach.'], en: ['Fixed: parts of buildings (such as windmill sails) no longer show up inside other buildings.'] },
