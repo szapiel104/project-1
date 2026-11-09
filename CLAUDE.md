@@ -132,3 +132,8 @@ Nad grą pracuje kilka czatów naraz, więc:
 ## Pomysły
 - **Progresja gracza (poziomy, doświadczenie, rozwój postaci, ranking — kierunek RPG/MMO):** plan i kolejność partii w `docs/progresja.md`. Gdy Michał prosi o coś z tego obszaru, bierz następną nieoznaczoną partię i oznacz ją datą po wdrożeniu.
 - Lista kolejnych partii jest w `docs/pomysly.md`. Gdy Michał pyta „co dalej”, podpowiadaj z niej (i dopisuj tam nowe pomysły, zdejmuj zrobione).
+
+## Dev, main i przeglądarka (Michał 9.11.2026, dla wszystkich czatów — nadpisuje starsze punkty o pushu na main)
+- **Nie wypychamy od razu na `main`.** Zmiany testujemy lokalnie i wypychamy na `dev`; `main` (wydanie, wersja + „Co nowego”) tylko gdy Michał o to poprosi.
+- **Po pushu na `dev` nie sprawdzamy, czy już trafił** (bez `fetch`/`rev-parse`/`gh run list` — to nic nie wnosi).
+- **Nie zamykamy kart w Chrome Michała** (nadpisuje punkt 8 w „Testy”). Po sprawdzeniu wracamy w tej samej karcie do menu gry (adres gry bez `?test=1`), zamiast ją zamykać.
