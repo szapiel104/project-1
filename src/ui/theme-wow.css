@@ -1092,3 +1092,28 @@ html body .info .icon-act { background: linear-gradient(#3a2614, #24160c) !impor
 /* załoga pokazana kaflami — zdublowany wiersz „imię — co robi” w warsztacie znika, zostaje pasek postępu */
 #ui .info:not(.is-person):not(.army-mode):has(> .info-crew:not([hidden])) .prod-worker > .prod-head { display: none !important; }
 #ui .info:not(.is-person):not(.army-mode) .info-crew > .logi-head { margin-bottom: 10px; }
+/* grubsza oprawa jak okładka księgi */
+#ui .floaters .info:not(.is-person):not(.army-mode) { box-shadow: 0 0 0 3px #d8b25e, 0 0 0 6px #6e4a1e, 0 0 0 17px #3a2414, 0 0 0 19px #0b0704, inset 0 0 44px rgba(120, 78, 28, .32), 0 22px 40px rgba(0, 0, 0, .6) !important; margin: 19px; }
+
+/* okno postaci w tym samym stylu: pergamin, oprawa, atrament, brązowe płytki */
+#ui .floaters .info.is-person {
+  width: min(460px, calc(100vw / var(--ui, 1) - 40px)); padding: 0 0 20px; display: grid; gap: 16px; margin: 19px;
+  background-color: #eddcb5 !important; background-image: var(--parch-img) !important; background-size: 100% 100%, auto, 420px auto !important;
+  background-repeat: no-repeat, no-repeat, repeat !important; background-blend-mode: normal, normal, multiply !important;
+  border: 0 !important; border-radius: 4px !important; color: #2a1b0c !important;
+  box-shadow: 0 0 0 3px #d8b25e, 0 0 0 6px #6e4a1e, 0 0 0 17px #3a2414, 0 0 0 19px #0b0704, inset 0 0 44px rgba(120, 78, 28, .32), 0 22px 40px rgba(0, 0, 0, .6) !important; }
+#ui .floaters .info.is-person > * { margin: 0 24px !important; }
+#ui .floaters .info.is-person > .info-head { margin: 0 !important; display: flex; align-items: center; gap: 12px; padding: 18px 20px 14px 24px; background: none !important; border: 0 !important; box-shadow: none !important; position: relative; }
+#ui .floaters .info.is-person > .info-head::before { display: none !important; }
+#ui .floaters .info.is-person > .info-head::after { content: ''; position: absolute; left: 24px; right: 24px; bottom: 0; height: 1px; background: linear-gradient(90deg, transparent, rgba(120, 86, 40, .35) 12%, rgba(120, 86, 40, .35) 88%, transparent); }
+#ui .floaters .info.is-person .info-title { flex: 1; min-width: 0; }
+#ui .floaters .info.is-person .info-name { margin: 0; color: #3b2512 !important; font-size: 26px; font-weight: 700 !important; text-shadow: none !important; text-transform: none; letter-spacing: 0; text-align: left; }
+#ui .floaters .info.is-person :is(p, span, small, li, strong, div):not(:is(.btn-main, .icon-act, .info-ibtn, .info-x) *) { color: #2a1b0c !important; text-shadow: none !important; }
+#ui .floaters .info.is-person :is(p, li) { font-size: 15px; line-height: 1.5; }
+#ui .floaters .info.is-person :is(.info-ibtn, .info-x) { width: 32px; height: 32px; padding: 0; display: grid; place-items: center; border-radius: 4px; background: linear-gradient(#4a3322, #2d1b0e) !important; border: 1px solid #1a0f07 !important; color: #fff4dc !important; box-shadow: inset 0 1px 0 rgba(255, 236, 200, .22) !important; }
+#ui .floaters .info.is-person .info-x:hover { background: #8a2a1c !important; }
+#ui .floaters .info.is-person :is(.btn-main, .walk-btn, .actions button) { min-height: 44px; border-radius: 4px; font-weight: 600; background: linear-gradient(#4a3322, #2d1b0e) !important; border: 1px solid #1a0f07 !important; color: #fff4dc !important; text-shadow: 0 1px 1px #000 !important; box-shadow: inset 0 1px 0 rgba(255, 236, 200, .22), inset 0 0 0 1px rgba(194, 154, 69, .3), 0 2px 0 rgba(0, 0, 0, .35) !important; }
+#ui .floaters .info.is-person :is(.btn-main, .walk-btn):hover { filter: brightness(1.2); }
+#ui .floaters .info.is-person :is(.power-row-box, .info-stock, .info-logi, .info-prod, .gate-box, .info-worker, .person-box) { background: none !important; border: 0 !important; box-shadow: none !important; }
+#ui .floaters .info.is-person .info-foot { margin: 0 !important; padding: 0 24px; background: none; }
+#ui .floaters .info.is-person .info-foot .actions { border: 0 !important; padding: 0 !important; }
