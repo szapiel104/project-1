@@ -3399,9 +3399,12 @@ if (import.meta.hot) {
     const b = document.createElement('button');
     b.id = 'p1-stale';
     b.type = 'button';
-    b.textContent = tx('Nowy kod gotowy — kliknij, by odświeżyć (F5)', 'New code ready — click to reload (F5)');
-    b.style.cssText = 'position:fixed;left:50%;bottom:150px;transform:translateX(-50%);z-index:99999;padding:8px 16px;font:600 14px Inter,sans-serif;background:#2a1b10;color:#ffe9a8;border:1px solid #c9a24f;border-radius:6px;cursor:pointer;box-shadow:0 4px 16px rgba(0,0,0,.5)';
-    b.addEventListener('click', () => location.reload());
+    // duży napis na środku ekranu (Michał 9.11.2026), żeby nie przegapić; krzyżyk w rogu chowa go bez odświeżania
+    b.innerHTML = `<b style="display:block;font:800 34px/1.15 Inter,sans-serif;letter-spacing:.06em;text-transform:uppercase;color:#ffe9a8">${tx('Nowy kod gotowy', 'New code ready')}</b>`
+      + `<span style="display:block;margin-top:10px;font:600 17px/1.3 Inter,sans-serif;color:#e8d3a0">${tx('Kliknij albo naciśnij F5, żeby odświeżyć', 'Click or press F5 to reload')}</span>`
+      + `<span data-x style="position:absolute;top:8px;right:12px;font:600 18px Inter,sans-serif;color:#c9a24f" title="${tx('Ukryj', 'Hide')}">✕</span>`;
+    b.style.cssText = 'position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);z-index:99999;padding:30px 56px;background:rgba(32,20,10,.94);border:3px solid #c9a24f;box-shadow:0 0 0 2px #1a0f07,0 0 0 5px rgba(201,162,79,.45),0 18px 60px rgba(0,0,0,.7);cursor:pointer;text-align:center';
+    b.addEventListener('click', (e) => { if ((e.target as HTMLElement).closest('[data-x]')) b.remove(); else location.reload(); });
     document.body.append(b);
   });
 }

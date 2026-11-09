@@ -1201,7 +1201,11 @@ export function armySystem(g: GameState): void {
         if (!range && (foe.up || high(g, foe) !== high(g, s)) && !towerUnder(g, tileOf(g, foe)) && !climbableWall(g, tileOf(g, foe))) { s.target = 0; s.path = []; continue; }
         // wręcz tylko na tym samym poziomie: do obrońcy na wieży trzeba najpierw wejść na pomost
         const level = !!range || high(g, s) === high(g, foe);
-        if (level && gap(s, foe) <= (range ? range * FP : MELEE) && !s.path.length && (!range || lineOfSight(g, s, foe, high(g, s), high(g, foe)))) {
+        // strzelec do obrońcy na wieży albo murze: strzela też zza przeszkody (łukiem, ponad blankami), tylko trafia rzadziej
+        // (Michał 9.11.2026: wrodzy łucznicy i magowie stali pod wieżą i nie strzelali do łuczników na górze)
+        const upFoe = !!range && (!!foe.up || high(g, foe));
+        const clear = !range || lineOfSight(g, s, foe, high(g, s), high(g, foe));
+        if (level && gap(s, foe) <= (range ? range * FP : MELEE) && !s.path.length && (clear || upFoe)) {
           if (s.cd === 0) {
             // strzelcy nie strzelają równo jak na komendę: każdy naciąga łuk w swoim rytmie (kilka ticków rozrzutu)
             s.cd = def.cooldown + (range ? hash2(s.id, g.tick, 0xb0e) % 4 : 0);
@@ -1210,7 +1214,9 @@ export function armySystem(g: GameState): void {
             if (range) s.shot = g.tick;
             // strzała może chybić; chybiona spada w kłąb walki i może zranić swojego, który stoi tuż przy celu
             let hit: Soldier | undefined = foe;
-            if (range && !def.magic && !arrowHits(g, s, gap(s, foe))) {
+            // zasłonięty obrońca na górze: połowa strzał i czarów rozbija się na blankach
+            const blocked = !clear && hash2(s.id, g.tick, 0xb1a) % 100 < 50;
+            if (range && (blocked || (!def.magic && !arrowHits(g, s, gap(s, foe))))) {
               hit = undefined;
               for (const o of g.soldiers) if (o !== foe && o.hp > 0 && team(g, o.owner) === team(g, s.owner) && gap(o, foe) <= FP + FP / 4 && hash2(o.id, g.tick, 0xf1e) % 100 < 35) { hit = o; break; }
             }
