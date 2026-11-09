@@ -1132,3 +1132,19 @@ html body .info .icon-act { background: linear-gradient(#3a2614, #24160c) !impor
 #ui .info:not(.is-person):not(.army-mode) .stock-grid { grid-template-columns: repeat(auto-fill, 80px); }
 #ui .info:not(.is-person):not(.army-mode) .stock-item { width: 80px; height: 80px; }
 #ui .info:not(.is-person):not(.army-mode) .stock-item .ico svg { width: 50px; height: 50px; }
+/* sekcje oddzielone: cienka kreska z odstępem między załogą, recepturą, stanem i zapasami (Michał 9.11.2026: „zlewają się”) */
+#ui .info:not(.is-person):not(.army-mode) > :is(.info-crew, .info-prod, .info-stock, .info-logi, .gate-box, .info-site, .recruit):not([hidden]) ~ :is(.info-crew, .info-prod, .info-stock, .info-logi, .gate-box, .info-site, .recruit):not([hidden]) { padding-top: 18px !important; border-top: 1px solid rgba(120, 86, 40, .35) !important; }
+#ui .info:not(.is-person):not(.army-mode) .prod-recipe { padding: 4px 0 2px !important; }
+#ui .info:not(.is-person):not(.army-mode) .prod-status { margin-top: 4px; }
+/* liczba w slocie na ciemnej plakietce, żeby duże liczby (×128) nie wychodziły poza slot */
+#ui .info:not(.is-person):not(.army-mode) .prod-chip strong { top: auto; bottom: 30px; right: 4px; padding: 1px 5px; border-radius: 3px; background: rgba(12, 7, 3, .78); font-size: 15px !important; line-height: 1.25; }
+/* załoga wieży: zwarta siatka portretów, klik zaznacza żołnierza */
+.keeper-party.compact { grid-template-columns: repeat(auto-fill, 58px); gap: 6px; }
+.keeper-party.compact .keeper-card { padding: 0; width: 58px; height: 58px; justify-content: center; }
+.keeper-party.compact .keeper-card .keeper-txt { display: none; }
+.keeper-party.compact .keeper-face { width: 50px; height: 50px; border: 0; }
+.keeper-party.compact .keeper-face svg { width: 50px; height: 50px; }
+.keeper-party.compact .keeper-card.free .keeper-name { display: none; }
+.keeper-party.compact .keeper-card.free .keeper-face { width: 40px; height: 40px; }
+/* licznik „Na wieży: 13/16” jest już w nagłówku załogi — zostaje tylko przycisk „zejdźcie” */
+#ui .info:not(.is-person):not(.army-mode):has(> .info-crew:not([hidden])) .gate-box > .gate-state { display: none; }

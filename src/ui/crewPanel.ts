@@ -6,7 +6,7 @@ import { tx } from '../i18n';
  * zaznacza go i pokazuje na mapie. Wolne miejsca to kafle z przerywaną ramką, które wypełniają się, gdy ktoś przyjdzie.
  */
 export interface CrewMember { id: number; name: string; doing: string; /** rodzaj żołnierza (archer, spearman…) albo brak = chłop */ kind?: string }
-export interface CrewInfo { title: string; members: CrewMember[]; max: number; /** co zrobić, by wolne miejsce się zapełniło */ freeHint: string }
+export interface CrewInfo { title: string; members: CrewMember[]; max: number; /** co zrobić, by wolne miejsce się zapełniło */ freeHint: string; /** same portrety bez imion (załoga wieży) */ compact?: boolean }
 
 /** Twarz chłopa: słomiany kapelusz, lniana koszula */
 export const PEASANT_FACE = `<svg viewBox="0 0 32 32" aria-hidden="true">
@@ -31,7 +31,8 @@ export const crewKey = (c: CrewInfo): string => `${c.title}|${c.max}|${c.members
 
 /** Sama drużyna (kafle), bez nagłówka — używa jej też okno magazynu */
 export function crewParty(c: CrewInfo, face: (kind?: string) => string, pick?: (unit: number) => void): HTMLElement {
-  const party = node('div', 'keeper-party');
+  // żołnierze: zwarta siatka portretów (jak oddział), chłopi: kafle z imieniem i zajęciem
+  const party = node('div', c.members.some((m) => m.kind) || (c.compact ?? false) ? 'keeper-party compact' : 'keeper-party');
   for (let i = 0; i < Math.max(c.max, c.members.length); i++) {
     const m = c.members[i];
     if (!m) {
@@ -48,7 +49,7 @@ export function crewParty(c: CrewInfo, face: (kind?: string) => string, pick?: (
     const txt = node('span', 'keeper-txt');
     txt.append(node('strong', 'keeper-name', m.name), node('span', 'keeper-doing', m.doing));
     card.append(txt);
-    card.title = tx(`${m.name} — pokaż na mapie`, `${m.name} — show on the map`);
+    card.title = m.kind ? tx(`${m.doing}${m.name ? ` ${m.name}` : ''} — kliknij, by go zaznaczyć`, `${m.doing}${m.name ? ` ${m.name}` : ''} — click to select him`) : tx(`${m.name} — pokaż na mapie`, `${m.name} — show on the map`);
     if (pick) card.addEventListener('click', () => pick(m.id));
     party.append(card);
   }
