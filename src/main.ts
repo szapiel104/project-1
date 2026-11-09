@@ -2660,7 +2660,8 @@ if (EMPTY) {
   return { obraz: sum('O '), cienie: sum('C '), kategorie: list.slice(0, 40).map(([k, v]) => `${v} ${k}`) };
 };
 // piaskownica testowa: podgląd renderera z konsoli (szukanie błędów w wyglądzie)
-if (SANDBOX) (window as unknown as { __renderer: unknown }).__renderer = renderer;
+// ?perf=1 w zwykłej grze: dostęp do sceny z konsoli przy pomiarach na prawdziwym zapisie (Michał 9.11.2026)
+if (SANDBOX || new URLSearchParams(location.search).has('perf')) (window as unknown as { __renderer: unknown }).__renderer = renderer;
 // automatyczny „gracz” do testów wydajności: await __tour() (src/debug/tour.ts)
 if (SANDBOX) void import('./debug/tour');
 
