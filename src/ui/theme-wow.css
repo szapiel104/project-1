@@ -1591,3 +1591,9 @@ html body .menu:not(.previewing) .menu-head > .menu-title.has-logo::before, html
   background: repeating-linear-gradient(180deg, #c29a45 0 4px, #5a3d1c 4px 5px, #8a6a32 5px 8px, #2a1a0c 8px 9px); border-radius: 2px; }
 html body .menu:not(.previewing) .menu-head > .menu-title.has-logo::before { left: 22%; }
 html body .menu:not(.previewing) .menu-head > .menu-title.has-logo::after { right: 22%; left: auto; }
+/* tablica z logo przy górnej krawędzi i równo z przyciskami z lewej i prawej (ta sama skala i wcięcia co lista) */
+html body .menu:not(.previewing) .menu-head { zoom: var(--ui, 1); padding: 0 var(--mx) 0 var(--lx) !important; box-sizing: border-box; }
+html body .menu:not(.previewing) .menu-head > .menu-title.has-logo { width: 100% !important; max-width: none !important; margin: 0 0 clamp(14px, 3vh, 30px) !important; border-top: 0; border-radius: 0 0 5px 5px;
+  padding: 18px 24px 16px !important; display: flex !important; justify-content: center; }
+html body .menu:not(.previewing) .menu-head > .menu-title.has-logo::before, html body .menu:not(.previewing) .menu-head > .menu-title.has-logo::after { display: none; }
+html body .menu:not(.previewing) .menu-head > .menu-title.has-logo svg.logo { width: min(100%, 420px) !important; }
