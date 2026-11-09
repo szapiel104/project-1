@@ -175,6 +175,8 @@ const M = {
   hide: mat(0x7a5a3e, 'burlap'), hideDark: mat(0x58402c, 'burlap'),
   // płótno namiotu polowego: jasny, zgrzebny len i ciemniejsze, zabłocone pasy i koce
   canvas: mat(0xd8cba6, 'burlap'), canvasDark: mat(0x9a8f78, 'burlap'),
+  // czerwone sukno w pasach namiotu polowego (pawilon jak z turnieju, Michał 9.11.2026)
+  canvasRed: mat(0x9a2c1e, 'burlap'),
   thatchDark: mat(0xa9862f, 'thatch'), fish: mat(0x9cc3d6), sawdust: mat(0xd9c08a, 'soil'), needle: mat(0x3c7a3a, 'needles'),
   // woda w studni i korycie: ciemna, gładka tafla z połyskiem (bez tekstury)
   water: new THREE.MeshStandardMaterial({ color: 0x1b3a40, roughness: 0.15, metalness: 0.1 }),

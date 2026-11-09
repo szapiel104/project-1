@@ -71,56 +71,111 @@ def vslab(group, mat, pts, z, t, out):
 b.box('base', 'soil', 2.0, 0.01, 1.71, 0, 0, -0.425)
 
 # ---------------- namiot ----------------
+# Michał 9.11.2026: „namiot nie pasuje do gry RPG, brzydki” — teraz pawilon jak z turnieju: pasy jasnego lnu i czerwonego
+# sukna, połacie lekko obwisłe między masztami, z okapu zwisa ząbkowana lamówka, wejście z odgarniętymi połami,
+# maszty z gałkami. Płótno z grubością (dwie warstwy), więc od środka i od dołu nic nie znika.
 X = 1.02            # ściany boczne
 ZB, ZF = -1.3, 0.45  # tył i przód
-WH, RH = 0.55, 1.22  # wysokość ścian i kalenicy
+WH, RH = 0.58, 1.3   # wysokość ścian i kalenicy
 T = 0.014           # grubość płótna
-OV = 0.07           # okap
+OV = 0.09           # okap
+NS = 10             # pasów na długość namiotu
+STRIPE = ('canvas', 'canvasRed')
 
 
 def roof_y(x):
     return WH + (RH - WH) * (1 - abs(x) / X)
 
 
-# ściany boczne
+def sag(f):
+    """Obwiśnięcie płótna między masztami (f = 0…1 wzdłuż kalenicy): najgłębiej w połowie, zero przy masztach"""
+    return 0.035 * math.sin(math.pi * f)
+
+
+# ściany boczne: pionowe pasy na przemian jasne i czerwone, u dołu ciemniejszy, zabłocony brzeg
 for s in (-1, 1):
-    b.box('base', 'canvas', T, WH, ZF - ZB, s * (X - T / 2), 0.0, (ZF + ZB) / 2)
-    # dolny brzeg ściany obłożony ciemniejszym, zabłoconym pasem płótna (o włos na zewnątrz)
+    for k in range(NS):
+        z0 = ZB + (ZF - ZB) * k / NS
+        z1 = ZB + (ZF - ZB) * (k + 1) / NS
+        b.box('base', STRIPE[k % 2], T, WH, z1 - z0 + 0.001, s * (X - T / 2), 0.0, (z0 + z1) / 2)
     b.box('base', 'canvasDark', 0.006, 0.07, ZF - ZB, s * (X + 0.003), 0.0, (ZF + ZB) / 2)
-# dach: dwie połacie z grubością, z okapem nad ścianami i nad szczytami
+
+# dach: każda połać z pasów od kalenicy do okapu, pas zgięty w trzech miejscach (lekko wklęsła połać, jak napięte płótno)
+CUTS = (0.0, 0.33, 0.66, 1.0)
+
+
+def roof_pt(s, u, f):
+    """Punkt połaci: u = 0 kalenica … 1 okap, f = 0 tył … 1 przód"""
+    x = s * (X + OV) * u
+    y = RH + (WH - 0.04 - RH) * u - 0.05 * math.sin(math.pi * u) - sag(f) * (1 - u * 0.6)
+    z = ZB - OV + (ZF - ZB + 2 * OV) * f
+    return (x, y, z)
+
+
 for s in (-1, 1):
-    away = (0, 0.2, (ZF + ZB) / 2)
-    b.slope('base', 'canvas', [(0, RH, ZB - OV), (0, RH, ZF + OV), (s * (X + OV), WH - 0.035, ZF + OV), (s * (X + OV), WH - 0.035, ZB - OV)], away, t=T)
-    # szwy na połaci: ciemniejsze pasy płótna od kalenicy do okapu (o włos nad połacią)
-    for k in (1, 2, 3):
-        z = ZB + (ZF - ZB) * k / 4
-        b.slope('base', 'canvasDark', [(0.02 * s, RH + 0.007, z - 0.018), (0.02 * s, RH + 0.007, z + 0.018), (s * (X + OV - 0.01), WH - 0.028, z + 0.018), (s * (X + OV - 0.01), WH - 0.028, z - 0.018)], away, t=0.004)
-# szczyt tylny: zamknięty
+    away = (0, 0.25, (ZF + ZB) / 2)
+    for k in range(NS):
+        f0, f1 = k / NS, (k + 1) / NS
+        for c in range(3):
+            u0, u1 = CUTS[c], CUTS[c + 1]
+            b.slope('base', STRIPE[k % 2], [roof_pt(s, u0, f0), roof_pt(s, u0, f1), roof_pt(s, u1, f1), roof_pt(s, u1, f0)], away, t=T)
+
+# ząbkowana lamówka zwisająca z okapu po bokach: języki płótna na przemian w obu barwach
+for s in (-1, 1):
+    n = 14
+    for k in range(n):
+        f0, f1 = k / n, (k + 1) / n
+        p0, p1 = roof_pt(s, 1.0, f0), roof_pt(s, 1.0, f1)
+        x = p0[0] + s * 0.004
+        top = min(p0[1], p1[1]) - T - 0.002
+        zc = (p0[2] + p1[2]) / 2
+        w = (p1[2] - p0[2]) / 2 - 0.004
+        pts = [(top, p0[2] + 0.004), (top, p1[2] - 0.004), (top - 0.06, zc + w * 0.55), (top - 0.085, zc), (top - 0.06, zc - w * 0.55)]
+        o = [(x, y, z) for y, z in pts]
+        i = [(x - s * 0.008, y, z) for y, z in pts]
+        mat = STRIPE[(k + 1) % 2]
+        b.poly('base', mat, o, away=(x - s, top, zc))
+        b.poly('base', mat, i, away=(x + s, top, zc))
+        for q in range(len(o)):
+            j = (q + 1) % len(o)
+            b.poly('base', mat, [o[q], o[j], i[j], i[q]], away=(x - s * 0.004, top - 0.04, zc))
+
+# szczyty: tylny zamknięty, przedni z wejściem; trójkąt nad ścianą w pasach od kalenicy
 vslab('base', 'canvas', [(-X, 0.0), (X, 0.0), (X, WH), (0, RH), (-X, WH)], ZB, T, -1)
-# szczyt przedni: wejście w środku, nad nim trójkąt płótna
-DO, DH = 0.5, 0.78   # pół szerokości i wysokość wejścia
+for s in (-1, 1):
+    vslab('base', 'canvasRed', [(s * X, 0.0), (s * (X - 0.12), 0.0), (s * (X - 0.12), roof_y(X - 0.12)), (s * X, WH)][::(1 if s < 0 else -1)], ZB - 0.006, 0.006, -1)
+vslab('base', 'canvasRed', [(-0.12, 0.0), (0.12, 0.0), (0.12, roof_y(0.12)), (0, RH), (-0.12, roof_y(0.12))], ZB - 0.006, 0.006, -1)
+DO, DH = 0.42, 0.8   # pół szerokości i wysokość wejścia
 for s in (-1, 1):
     pts = [(s * X, 0.0), (s * DO, 0.0), (s * DO, roof_y(DO)), (s * X, WH)]
     if s > 0:
         pts = list(reversed(pts))
     vslab('base', 'canvas', pts, ZF, T, 1)
-vslab('base', 'canvas', [(-DO, DH), (DO, DH), (DO, roof_y(DO)), (0, RH), (-DO, roof_y(DO))], ZF, T, 1)
-# podwinięta płachta wejścia: wałek płótna nad wejściem przewiązany sznurem
-stick('base', 'canvasDark', (-DO + 0.02, DH - 0.03, ZF + 0.04), (DO - 0.02, DH - 0.03, ZF + 0.04), 0.035, seg=8)
-for x in (-0.3, 0.3):
-    stick('base', 'rope', (x, DH - 0.075, ZF + 0.04), (x, DH + 0.015, ZF + 0.04), 0.039, seg=8)
-# maszty i kalenica (maszt przedni wystaje nad dach z proporcem)
-for z, top in ((ZB + 0.06, RH + 0.04), (ZF - 0.06, RH + 0.32)):
-    stick('base', 'woodDark', (0, 0.0, z), (0, top, z), 0.025)
+vslab('base', 'canvasRed', [(-DO, DH), (DO, DH), (DO, roof_y(DO)), (0, RH), (-DO, roof_y(DO))], ZF, T, 1)
+# czerwone pasy na przednim szczycie (o włos przed płótnem), obramowanie wejścia
+for s in (-1, 1):
+    vslab('base', 'canvasRed', [(s * X, 0.0), (s * (X - 0.12), 0.0), (s * (X - 0.12), roof_y(X - 0.12)), (s * X, WH)][::(1 if s < 0 else -1)], ZF + 0.006, 0.006, 1)
+    vslab('base', 'canvasRed', [(s * DO, 0.0), (s * (DO + 0.05), 0.0), (s * (DO + 0.05), roof_y(DO + 0.05)), (s * DO, roof_y(DO))][::(1 if s < 0 else -1)], ZF + 0.006, 0.006, 1)
+# poły wejścia odgarnięte na boki i przewiązane sznurem: trójkątne płaty płótna marszczone w trzech fałdach
+for s in (-1, 1):
+    x0 = s * DO
+    for k in range(3):
+        xa = x0 + s * (0.012 + k * 0.022)
+        vslab('base', 'canvasRed' if k != 1 else 'canvas', [(xa, 0.02), (xa + s * 0.03, 0.02), (xa + s * 0.026, DH - 0.02), (xa - s * 0.03, DH + 0.05)][::(1 if s < 0 else -1)], ZF + 0.02 + k * 0.012, 0.008, 1)
+    stick('base', 'rope', (x0 + s * 0.005, 0.36, ZF + 0.06), (x0 + s * 0.09, 0.36, ZF + 0.06), 0.012, seg=6)
+# maszty z gałkami, kalenica; proporzec na maszcie przednim
+for z, top in ((ZB + 0.06, RH + 0.1), (ZF - 0.06, RH + 0.36)):
+    stick('base', 'woodDark', (0, 0.0, z), (0, top, z), 0.026)
+    b.prism('base', 'gold', 0.032, 0.012, 0.045, 0, top, z, seg=10)
+    b.prism('base', 'gold', 0.012, 0.0, 0.04, 0, top + 0.045, z, seg=10)
 stick('base', 'woodDark', (0, RH - 0.035, ZB + 0.02), (0, RH - 0.035, ZF - 0.02), 0.018)
-PENNANT = [0.0, RH + 0.3, ZF - 0.06]
+PENNANT = [0.0, RH + 0.32, ZF - 0.06]
 
 # odciągi z liny do śledzi wbitych w ziemię
 for z in (ZB + 0.15, (ZB + ZF) / 2, ZF - 0.15):
     for s in (-1, 1):
-        # śledzie bliżej namiotu (dalekie wersje modelu gubią cienkie liny: obrys z daleka ma zostać prawie ten sam)
-        stick('base', 'rope', (s * (X + OV - 0.02), WH - 0.04, z), (s * 1.22, 0.05, z), 0.006, seg=4)
-        b.box('base', 'woodDark', 0.025, 0.08, 0.025, s * 1.24, 0.0, z, roll=-s * 0.25)
+        stick('base', 'rope', (s * (X + OV - 0.02), WH - 0.05, z), (s * 1.24, 0.05, z), 0.006, seg=4)
+        b.box('base', 'woodDark', 0.025, 0.08, 0.025, s * 1.26, 0.0, z, roll=-s * 0.25)
 for s in (-1, 1):
     stick('base', 'rope', (s * 0.4, roof_y(0.4) - 0.02, ZB - OV + 0.01), (s * 0.4, 0.05, -1.46), 0.006, seg=4)
     b.box('base', 'woodDark', 0.025, 0.08, 0.025, s * 0.4, 0.0, -1.47, tilt=-0.25)
