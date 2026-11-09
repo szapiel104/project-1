@@ -1383,3 +1383,12 @@ body:not(.menu-open) .fps-tag { right: 108px !important; width: 84px; border-rig
 body:not(.menu-open) .build { right: 192px !important; border-right: 0 !important; border-radius: 0 0 0 6px !important; }
 body.hide-fps:not(.menu-open) .build { right: 108px !important; }
 body .scribe .scribe-log-btn { height: 38px; }
+/* pod paskiem: osobne plakietki z odstępami i od krawędzi (Michał 9.11.2026: „odsuń, nachodzą na siebie”) */
+body .scribe { left: 10px; top: 64px; }
+body .scribe .scribe-log-btn { border: 1px solid #9a7a2a !important; border-radius: 4px !important; }
+.alarm { top: 64px; left: calc(142px / var(--ui, 1)); border: 1px solid #9a7a2a !important; border-radius: 4px !important; }
+body:not(.menu-open) :is(.build, .fps-tag, .dev-open) { top: 64px !important; border: 1px solid #9a7a2a !important; border-radius: 4px !important; }
+body:not(.menu-open) #ui ~ .dev-open, body:not(.menu-open) .dev-open { top: 64px !important; right: 10px !important; }
+body:not(.menu-open) .fps-tag { right: 126px !important; }
+body:not(.menu-open) .build { right: 218px !important; border-radius: 4px !important; }
+body.hide-fps:not(.menu-open) .build { right: 126px !important; }
