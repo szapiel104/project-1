@@ -1020,3 +1020,5 @@ html body .info .icon-act { background: linear-gradient(#3a2614, #24160c) !impor
 #ui .info:not(.is-person):not(.army-mode) .icon-act:disabled { background: linear-gradient(#cdbb92, #a89870) !important; color: #6a5a3a !important; box-shadow: none; opacity: .8; }
 #ui .info:not(.is-person):not(.army-mode) .power-btn { background: linear-gradient(#e6bd5a, #a8741f) !important; color: #2a1b0c !important; border: 1px solid #5a3a10 !important; font-weight: 800; }
 @media (max-width: 1100px) { #ui .info.is-store .info-stock, #ui .info.is-store > .info-logi { grid-template-columns: 1fr; } }
+#ui .info .keeper-count { color: #6a3d0c !important; }
+#ui .info .keeper-slot:not(.on) { color: rgba(90, 64, 28, .6); border-color: rgba(90, 64, 28, .7); background: rgba(90, 64, 28, .1); }
