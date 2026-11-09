@@ -1488,3 +1488,13 @@ body.hide-fps:not(.menu-open) .build { right: 126px !important; }
   background: linear-gradient(90deg, #8a5a1c, rgba(138, 90, 28, .5) 60%, transparent); }
 #ui .info:not(.is-person):not(.army-mode) :is(.stock-title, .logi-head) > strong::before { content: '◆'; margin-right: 8px; font-size: 10px; vertical-align: 2px; color: #a8781e; }
 #ui .info:not(.is-person):not(.army-mode) .info-head .info-name, .market-panel .market-title { font-weight: 800 !important; letter-spacing: .02em; text-shadow: 0 1px 0 rgba(255, 248, 225, .8) !important; }
+/* rynek: trzy towary w rzędzie; w kaflu ikona z nazwą, pod spodem dwa wiersze: suwak, liczba, kwadratowy przycisk (Michał 9.11.2026) */
+.market-panel .market-grid { grid-template-columns: repeat(3, minmax(0, 1fr)) !important; }
+@media (max-width: 1300px) { .market-panel .market-grid { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; } }
+.market-panel .market-tile { grid-template-columns: auto minmax(0, 1fr) !important; grid-template-rows: auto auto; column-gap: 12px; row-gap: 4px; align-items: center; }
+.market-panel .market-tile-top { grid-row: 1 / 3; grid-column: 1; }
+.market-panel .market-side { grid-column: 2; display: flex !important; align-items: center; gap: 6px; }
+.market-panel .market-side .market-ctl { flex: 1; min-width: 0; }
+.market-panel .market-side .market-btn { flex: none; width: 54px !important; height: 34px !important; min-height: 0 !important; padding: 0 !important; display: inline-flex; flex-direction: row; justify-content: center; align-items: center; gap: 3px; }
+.market-panel .market-tile-top { flex-direction: column; align-items: center; gap: 4px; width: 84px; }
+.market-panel .market-name { text-align: center; font-size: 13.5px; }
