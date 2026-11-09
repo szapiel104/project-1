@@ -3211,8 +3211,10 @@ perfReport.addEventListener('click', () => {
     }
   })();
 });
-perfErr.append(perfErrList, perfErrCopy, perfReport);
-perfBox.append(perfMain, perfGpu, perfErr);
+perfErr.append(perfErrList, perfErrCopy);
+// przycisk raportu na samej górze okna: dół okna chował się pod dolnym paskiem (Michał 9.11.2026: „nie widzę”)
+perfReport.className = 'perf-report';
+perfBox.append(perfReport, perfMain, perfGpu, perfErr);
 document.body.append(perfBox);
 // mały licznik FPS zawsze widoczny pod wersją; klik albo F3 rozwija pełne statystyki
 const fpsTag = document.createElement('button');

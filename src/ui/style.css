@@ -2135,3 +2135,7 @@ body.menu-open .devpanel { display: none; }
   -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; -webkit-text-stroke: 1.5px rgba(42, 20, 6, .85);
   filter: drop-shadow(0 4px 0 #2a1406) drop-shadow(0 0 18px rgba(255, 170, 60, .45)) drop-shadow(0 8px 24px rgba(0, 0, 0, .7)); }
 #loading .loading-crest svg { filter: drop-shadow(0 0 30px rgba(255, 190, 90, .55)) drop-shadow(0 6px 6px #000); }
+/* raport wydajności: duży przycisk na górze okna F3 (dół okna bywał ucięty pod dolnym paskiem) */
+.perf .perf-report { pointer-events: auto; flex: 1 0 100%; min-height: 40px; padding: 8px 14px; font: 700 15px/1.2 var(--text); color: #2a1b0c; background: linear-gradient(#f3d98c, #c9a24f); border: 1px solid #6b4a1c; cursor: pointer; text-align: center; }
+.perf .perf-report:disabled { opacity: .8; cursor: progress; }
+.perf .perf-report:focus-visible { outline: 3px solid var(--gold); }
