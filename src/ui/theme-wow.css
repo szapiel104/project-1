@@ -1457,3 +1457,5 @@ body.hide-fps:not(.menu-open) .build { right: 126px !important; }
 .market-panel .market-side .market-btn svg { width: 14px; height: 14px; flex: none; }
 .market-panel .market-side .market-btn b { font-size: 13px; font-weight: 700; color: #fff4dc; }
 .market-panel .market-info { margin: 0 20px 14px; }
+.market-panel input.market-n { width: 46px; min-width: 0; height: 22px; padding: 0 4px; text-align: right; font: 700 12.5px var(--text); color: #2a1b0c; background: rgba(255, 252, 240, .8); border: 1px solid #8a6d3b; border-radius: 3px; }
+.market-panel input.market-n:focus { outline: 2px solid #8a5a1c; outline-offset: 0; }

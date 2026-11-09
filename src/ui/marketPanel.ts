@@ -61,14 +61,14 @@ export function createMarketPanel(onTrade: (res: number, amount: number) => void
   document.getElementById('ui')?.append(root) ?? document.body.append(root);
 
   // suwaki (Michał 9.11.2026): ile sprzedać — od 1 do tego, co masz; ile kupić — do tego, na co cię stać i co się zmieści
-  type Side = { range: HTMLInputElement; btn: HTMLButtonElement; label: HTMLElement; sell: boolean };
+  type Side = { range: HTMLInputElement; btn: HTMLButtonElement; label: HTMLInputElement; sell: boolean };
   type Tile = { id: ResourceId; have: HTMLElement; sides: Side[] };
   const tiles = new Map<ResourceId, Tile>();
   let lastG: GameState | null = null, lastMe = 0;
   const paintSide = (tile: Tile, sd: Side): void => {
     const n = Number(sd.range.value) || 0;
     const price = n > 0 ? (sd.sell ? sellPrice(tile.id, n) : buyPrice(tile.id, n)) : 0;
-    sd.label.textContent = `${n}`;
+    if (document.activeElement !== sd.label) sd.label.value = `${n}`;
     // mały przycisk-ikona: moneta ze strzałką (sprzedaż: ruda przychodzi, kupno: ruda odchodzi); cena obok, opis w dymku
     sd.btn.innerHTML = `${icon('gold', 16)}<b>${sd.sell ? '+' : '−'}${price}</b>`;
     const say = sd.sell ? tx(`Sprzedaj ${n} za ${price} rudy`, `Sell ${n} for ${price} ore`) : tx(`Kup ${n} za ${price} rudy`, `Buy ${n} for ${price} ore`);
@@ -110,13 +110,26 @@ export function createMarketPanel(onTrade: (res: number, amount: number) => void
         range.type = 'range'; range.min = '1'; range.max = '1'; range.step = '1'; range.value = String(MARKET_LOTS[0]);
         range.className = 'market-range';
         range.setAttribute('aria-label', sell ? tx(`Ile sprzedać: ${t(RESOURCE_DEFS[id].name)}`, `How much ${t(RESOURCE_DEFS[id].name)} to sell`) : tx(`Ile kupić: ${t(RESOURCE_DEFS[id].name)}`, `How much ${t(RESOURCE_DEFS[id].name)} to buy`));
-        const label = document.createElement('span');
+        // pole z liczbą: można wpisać ilość z klawiatury — tylko cyfry, a za dużo zmienia się w największą możliwą
+        const label = document.createElement('input');
+        label.type = 'text'; label.inputMode = 'numeric'; label.autocomplete = 'off'; label.maxLength = 5;
         label.className = 'market-n';
+        label.setAttribute('aria-label', range.getAttribute('aria-label') ?? '');
         const btn = document.createElement('button');
         btn.type = 'button';
         btn.className = 'market-btn';
         const sd: Side = { range, btn, label, sell };
         range.addEventListener('input', () => paintSide(rec, sd));
+        label.addEventListener('input', () => {
+          const digits = label.value.replace(/\D+/g, '');
+          const max = Number(range.max) || 1;
+          let n = digits ? Number(digits) : 0;
+          if (n > max) n = max;
+          label.value = digits ? String(n) : '';
+          if (n >= 1) { range.value = String(n); paintSide(rec, sd); }
+        });
+        label.addEventListener('blur', () => { label.value = range.value; });
+        label.addEventListener('keydown', (e) => { e.stopPropagation(); if (e.key === 'Enter') btn.click(); });
         btn.addEventListener('click', () => { const n = Number(range.value) || 0; if (!btn.disabled && n > 0) onTrade(resIndex(id), sell ? -n : n); });
         rec.sides.push(sd);
         const ctl = document.createElement('div');
