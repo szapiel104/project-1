@@ -1353,9 +1353,9 @@ body.menu-open .report { display: none !important; }
 .market-panel .market-line .mb-price { color: #fff4dc !important; font-size: 18px; text-shadow: 0 1px 1px #000; }
 .market-panel .market-line .market-btn:disabled { filter: grayscale(.6) brightness(.85); opacity: .55; }
 /* grupy wojska 1–0: kolumna w lewym dolnym rogu, od dołu do góry; przycisk zwijania pod spodem */
-.army-groups { flex-direction: column-reverse; align-items: stretch; bottom: 80px; }
+.army-groups { flex-direction: column; align-items: stretch; bottom: 80px; }
 .army-slots { flex-direction: column-reverse; }
-.army-slots:not([hidden]) + .army-toggle { border-left: 1px solid var(--gold-dark); border-bottom: 0; }
+.army-slots:not([hidden]) + .army-toggle { border-left: 1px solid var(--gold-dark); border-top: 0; }
 .army-toggle { min-height: 26px; width: auto; }
 .army-toggle[aria-expanded="false"] { height: auto; min-height: 40px; }
 .army-slot { width: 48px; height: 42px; }
