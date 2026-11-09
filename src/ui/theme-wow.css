@@ -820,7 +820,7 @@ html body .info .icon-act { background: linear-gradient(#3a2614, #24160c) !impor
 #ui .info :is(.stock-item, .power-row-box, .gate-box, .info-owner) { background: rgba(0, 0, 0, .3) !important; }
 
 /* Magazyn (stodoła, spichlerz, skład): kafle jak w oknie „Zapasy” — ikona, nazwa, duża liczba z prawej; okno szersze, 3 kolumny (Michał 9.11.2026) */
-#ui .floaters .info.is-store { width: min(820px, calc(100vw / var(--ui, 1) - 32px)); position: fixed; }
+
 #ui .info .info-stock .stock-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
 #ui .info .info-stock .stock-item { display: grid; grid-template-columns: 34px minmax(0, 1fr) auto; grid-template-rows: none; align-items: center; column-gap: 8px; min-height: 56px; padding: 8px 12px;
   background: linear-gradient(rgba(255, 240, 210, .07), rgba(0, 0, 0, .25)) !important; border: 1px solid rgba(201, 162, 79, .4) !important; border-radius: 5px; }
@@ -868,7 +868,7 @@ html body .info .icon-act { background: linear-gradient(#3a2614, #24160c) !impor
 /* ===== Okno magazynu w stylu „Warehouse”: jasny pergamin, ciemny tusz, duże ikony w ciemnych płytkach (Michał 9.11.2026) =====
    Wszystko czytelne od razu: tło jasne, napisy czarnobrunatne, towary jako duże „sloty” jak w ekwipunku RPG. */
 #ui .info:not(.is-person):not(.army-mode), #ui .info:not(.is-person):not(.army-mode) * { --parch-ink: #2a1b0c; --parch-soft: #5c4224; --parch-red: #8a1f14; --parch-line: rgba(120, 88, 40, .55); }
-#ui .floaters .info.is-store { width: min(760px, calc(100vw / var(--ui, 1) - 32px));
+#ui .floaters .info.is-store {
   background: radial-gradient(120% 70% at 50% 0%, #f6e9c6, transparent 70%), repeating-linear-gradient(0deg, rgba(120, 88, 40, .035) 0 2px, transparent 2px 4px), #ecdcb4 !important;
   background-image: radial-gradient(120% 70% at 50% 0%, #f6e9c6, transparent 70%), repeating-linear-gradient(0deg, rgba(120, 88, 40, .035) 0 2px, transparent 2px 4px) !important;
   border: 2px solid #3a2a14 !important; box-shadow: inset 0 0 0 2px #c9a24f, inset 0 0 0 4px #3a2a14, 0 14px 40px rgba(0, 0, 0, .6) !important; color: #2a1b0c !important; }
@@ -922,7 +922,7 @@ html body .info .icon-act { background: linear-gradient(#3a2614, #24160c) !impor
 @media (max-width: 860px) { #ui .info:not(.is-person):not(.army-mode) .stock-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 
 /* ===== Układ szeroki zamiast pionowego: okno budynku ma dwie kolumny (Michał 9.11.2026) ===== */
-#ui .floaters .info:not(.is-person):not(.army-mode):not(.is-store) { width: min(660px, calc(100vw / var(--ui, 1) - 32px)); }
+#ui .floaters .info:not(.is-person):not(.army-mode) { width: min(720px, calc(100vw / var(--ui, 1) - 32px)); }
 #ui .info:not(.is-person):not(.army-mode) { grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 14px; row-gap: 12px; padding-bottom: 16px; }
 #ui .info:not(.is-person):not(.army-mode) > * { grid-column: 1 / -1; }
 #ui .info:not(.is-person):not(.army-mode) > .info-owner:has(+ .hp-line:not([hidden])) { grid-column: 1; }
@@ -995,7 +995,7 @@ html body .info .icon-act { background: linear-gradient(#3a2614, #24160c) !impor
 #ui .info:not(.is-person):not(.army-mode) .prod-stat { min-height: 50px; align-content: center; align-items: center; }
 
 /* ===== Magazyn: szersze okno, sekcje obok siebie, ciepłe (nie szare) belka i przyciski (Michał 9.11.2026) ===== */
-#ui .floaters .info.is-store { width: min(1020px, calc(100vw / var(--ui, 1) - 32px)); }
+
 #ui .info.is-store .info-stock { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; align-items: start; background: transparent !important; border: 0 !important; padding: 0 !important; }
 #ui .info.is-store .stock-sec { display: grid; gap: 10px; padding: 14px 16px; background: rgba(255, 255, 255, .28); border: 1px solid rgba(120, 88, 40, .55); border-radius: 8px; box-shadow: inset 0 1px 0 rgba(255, 255, 255, .5); }
 #ui .info.is-store .stock-sec:only-child { grid-column: 1 / -1; }
@@ -1021,3 +1021,18 @@ html body .info .icon-act { background: linear-gradient(#3a2614, #24160c) !impor
 @media (max-width: 1100px) { #ui .info.is-store .info-stock, #ui .info.is-store > .info-logi { grid-template-columns: 1fr; } }
 #ui .info .keeper-count { color: #6a3d0c !important; }
 #ui .info .keeper-slot:not(.on) { color: rgba(90, 64, 28, .6); border-color: rgba(90, 64, 28, .7); background: rgba(90, 64, 28, .1); }
+
+/* jedna szerokość i jedno miejsce dla wszystkich okien budynków (bez skakania przy przeklikiwaniu); magazyn: jedna karta, jedna siatka kafli */
+#ui .info.is-store .info-stock { display: block; }
+#ui .info.is-store .stock-grid { grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); }
+#ui .info.is-store .stock-item { grid-template-columns: 60px minmax(0, 1fr); overflow: visible; }
+#ui .info.is-store .stock-item strong { white-space: nowrap; font-size: 26px; }
+#ui .info.is-store .stock-item::after { left: 6px; right: 6px; bottom: 3px; border-radius: 3px; width: auto; background: linear-gradient(90deg, #c98a1f var(--share, 0%), rgba(90, 64, 28, .18) var(--share, 0%)); }
+#ui .info.is-store .stock-item:has(.ico[data-food])::after { background: linear-gradient(90deg, #3f8f2a var(--share, 0%), rgba(90, 64, 28, .18) var(--share, 0%)); }
+#ui .info.is-store .stock-cap { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 12px; }
+#ui .info.is-store .stock-cap:has(> .stock-bar:only-child) { grid-template-columns: 1fr; }
+#ui .info.is-store .stock-cap-l { display: inline-flex; align-items: center; gap: 6px; min-width: 96px; font-weight: 800; }
+#ui .info.is-store .stock-cap-l .ico svg { width: 22px; height: 22px; }
+#ui .info.is-store .stock-cap-n { font-weight: 700; font-size: 15px; font-variant-numeric: tabular-nums; }
+#ui .info.is-store .stock-cap-n[data-over='true'] { color: #a3261b !important; }
+#ui .info.is-store .stock-sec { background: rgba(255, 255, 255, .28); }

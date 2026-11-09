@@ -709,12 +709,6 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
   const uiK = (): number => parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--ui')) || 1;
   const placeInfo = (): void => {
     if (info.closest('.market-info')) { info.style.left = ''; info.style.top = ''; return; }
-    // magazyn (stodoła, spichlerz, skład): duże okno pośrodku ekranu, żeby zapasy było dobrze widać
-    if (info.classList.contains('is-store')) {
-      const k = uiK(), w = info.offsetWidth || 760;
-      info.style.left = `${Math.max(0, (window.innerWidth / k - w) / 2)}px`; info.style.top = `${Math.max(56, Math.round(window.innerHeight / k * 0.08))}px`;
-      return;
-    }
     if (!infoPos) { info.style.left = ''; info.style.top = ''; return; }
     const k = uiK(), w = info.offsetWidth || 320;
     const x = Math.max(0, Math.min(window.innerWidth / k - w - 4, infoPos.x));
@@ -1624,41 +1618,59 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
         const key = JSON.stringify(i.stock);
         if (storeBox.dataset.key !== key) {
           storeBox.dataset.key = key;
-          storeBox.replaceChildren(...i.stock.flatMap((st) => {
-            // nagłówek: po lewej rodzaj towaru, po prawej ile leży w TYM budynku i ile miejsca (czerwono, gdy ponad miejsce)
-            const head = el('div', 'stock-head2');
-            const label = st.kind === 'granary' ? t('cat.food') : st.kind === 'grain' ? tx('Zboże', 'Grain') : tx('Towary', 'Goods');
+          // wszystko w jednej karcie, jedna siatka kafli (stodoła: towary i zboże razem, jak w spichlerzu); pojemność każdego rodzaju osobnym paskiem
+          const stocks = i.stock;
+          const labelOf = (k: string): string => k === 'granary' ? t('cat.food') : k === 'grain' ? tx('Zboże', 'Grain') : tx('Towary', 'Goods');
+          const iconOf = (k: string): string => k === 'granary' ? 'granary' : k === 'grain' ? 'wheat' : 'store';
+          const multi = stocks.length > 1;
+          const sumUsed = stocks.reduce((n, st) => n + st.hereUsed, 0), sumHere = stocks.reduce((n, st) => n + st.here, 0);
+          const sec = el('div', 'stock-sec');
+          const head = el('div', 'stock-head2');
+          const title = el('span', 'stock-title');
+          title.append(icon(multi ? 'store' : iconOf(stocks[0]!.kind)), el('strong', '', multi ? tx('Zapasy', 'Supplies') : labelOf(stocks[0]!.kind)));
+          const fill = el('span', 'stock-fill', tx(`${num(sumUsed)} z ${num(sumHere)} miejsc`, `${num(sumUsed)} of ${num(sumHere)} spaces`));
+          if (sumUsed > sumHere) fill.dataset.over = 'true';
+          head.append(title, fill);
+          sec.append(head);
+          // pasek pojemności: jeden na rodzaj
+          const capBar = (st: (typeof stocks)[number]): HTMLElement => {
+            const row = el('div', 'stock-cap');
             const over = st.hereUsed > st.here;
-            const title = el('span', 'stock-title');
-            title.append(icon(st.kind === 'granary' ? 'granary' : st.kind === 'grain' ? 'wheat' : 'store'), el('strong', '', label));
-            const fill = el('span', 'stock-fill', tx(`${num(st.hereUsed)} z ${num(st.here)} miejsc`, `${num(st.hereUsed)} of ${num(st.here)} spaces`));
-            if (over) fill.dataset.over = 'true';
-            head.append(title, fill);
             const bar = el('div', 'stock-bar');
             if (over) bar.dataset.over = 'true';
             const fillEl = el('span');
             fillEl.style.width = `${Math.min(100, (st.hereUsed / Math.max(1, st.here)) * 100)}%`;
             bar.append(fillEl);
-            const grid = el('div', 'stock-grid');
-            if (!st.items.length) grid.append(el('span', 'stock-empty', tx('Pusto', 'Empty')));
-            for (const it of st.items) {
-              const cell = el('div', 'stock-item');
-              cell.title = t(RESOURCE_DEFS[it.id as keyof typeof RESOURCE_DEFS].name);
-              cell.append(icon(it.id), el('strong', '', num(it.amount)), el('span', '', t(RESOURCE_DEFS[it.id as keyof typeof RESOURCE_DEFS].name)));
-              // udział w pojemności tego rodzaju: cienki pasek pod kaflem
-              cell.style.setProperty('--share', `${Math.min(100, (it.amount / Math.max(1, st.here)) * 100).toFixed(1)}%`);
-              grid.append(cell);
-            }
-            const extra: HTMLElement[] = [];
-            const kv = (k: string, v: string, bad = false): HTMLElement => { const r = el('p', 'stock-total'); r.append(el('span', '', k), el('strong', '', v)); if (bad) r.dataset.over = 'true'; return r; };
-            if (over) extra.push(kv(tx('Ponad miejsce w tym budynku', 'Beyond this building\'s room'), num(st.hereUsed - st.here), true));
-            if (st.stores > 1) extra.push(kv(tx(`Razem we wszystkich (${st.stores})`, `Across all ${st.stores}`), `${num(Math.min(st.used, st.max))} / ${num(st.max)}`));
+            if (multi) {
+              const lab = el('span', 'stock-cap-l');
+              lab.append(icon(iconOf(st.kind)), el('strong', '', labelOf(st.kind)));
+              const n = el('span', 'stock-cap-n', `${num(st.hereUsed)} / ${num(st.here)}`);
+              if (over) n.dataset.over = 'true';
+              row.append(lab, bar, n);
+            } else row.append(bar);
+            return row;
+          };
+          sec.append(...stocks.map(capBar));
+          const grid = el('div', 'stock-grid');
+          const all = stocks.flatMap((st) => st.items.map((it) => ({ it, st })));
+          if (!all.length) grid.append(el('span', 'stock-empty', tx('Pusto', 'Empty')));
+          for (const { it, st } of all) {
+            const cell = el('div', 'stock-item');
+            cell.title = t(RESOURCE_DEFS[it.id as keyof typeof RESOURCE_DEFS].name);
+            cell.append(icon(it.id), el('strong', '', num(it.amount)), el('span', '', t(RESOURCE_DEFS[it.id as keyof typeof RESOURCE_DEFS].name)));
+            cell.style.setProperty('--share', `${Math.min(100, (it.amount / Math.max(1, st.here)) * 100).toFixed(1)}%`);
+            grid.append(cell);
+          }
+          sec.append(grid);
+          const kv = (k: string, v: string, bad = false): HTMLElement => { const r = el('p', 'stock-total'); r.append(el('span', '', k), el('strong', '', v)); if (bad) r.dataset.over = 'true'; return r; };
+          for (const st of stocks) {
+            const pre = multi ? `${labelOf(st.kind)}: ` : '';
+            if (st.hereUsed > st.here) sec.append(kv(`${pre}${tx('ponad miejsce w tym budynku', 'beyond this building\'s room')}`.replace(/^./, (c) => c.toUpperCase()), num(st.hereUsed - st.here), true));
+            if (st.stores > 1) sec.append(kv(`${pre}${tx(`razem we wszystkich (${st.stores})`, `across all ${st.stores}`)}`.replace(/^./, (c) => c.toUpperCase()), `${num(Math.min(st.used, st.max))} / ${num(st.max)}`));
             // zapas większy niż pojemność (np. łup, tryb testowy): ta część nie leży w żadnym magazynie
-            if (st.used > st.max) extra.push(kv(tx('Nie mieści się w żadnym magazynie', 'Fits in no store at all'), num(st.used - st.max), true));
-            const sec = el('div', `stock-sec stock-${st.kind}`);
-            sec.append(head, bar, grid, ...extra);
-            return [sec];
-          }));
+            if (st.used > st.max) sec.append(kv(`${pre}${tx('nie mieści się w żadnym magazynie', 'fits in no store at all')}`.replace(/^./, (c) => c.toUpperCase()), num(st.used - st.max), true));
+          }
+          storeBox.replaceChildren(sec);
         }
       }
       logiBox.hidden = !i.logistics;
