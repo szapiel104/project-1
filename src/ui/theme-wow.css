@@ -1278,4 +1278,4 @@ html body .info .icon-act { background: linear-gradient(#3a2614, #24160c) !impor
 #ui#ui .floaters .info.army-mode .info-x:hover { background: #8a2a1c !important; }
 #ui#ui .floaters .info.army-mode > :is(.army-box, .roster) { margin: 0 20px !important; }
 #ui#ui .floaters .info.army-mode .army-box { padding: 12px !important; border-radius: 5px; background: rgba(90, 62, 28, .11) !important; }
-#ui#ui .floaters .info.army-mode :is(.army-help, .army-tip), #ui#ui .floaters .info.army-mode .info-desc-btn, #ui#ui .floaters .info.army-mode .info-desc, #ui#ui .floaters .info.army-mode .info-foot { display: none !important; }
+#ui#ui .floaters .info.army-mode .army-help, #ui#ui .floaters .info.army-mode .info-desc-btn, #ui#ui .floaters .info.army-mode .info-desc, #ui#ui .floaters .info.army-mode .info-foot { display: none !important; }
