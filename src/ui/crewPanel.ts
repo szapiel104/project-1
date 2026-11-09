@@ -31,8 +31,8 @@ export const crewKey = (c: CrewInfo): string => `${c.title}|${c.max}|${c.members
 
 /** Sama drużyna (kafle), bez nagłówka — używa jej też okno magazynu */
 export function crewParty(c: CrewInfo, face: (kind?: string) => string, pick?: (unit: number) => void): HTMLElement {
-  // żołnierze: zwarta siatka portretów (jak oddział), chłopi: kafle z imieniem i zajęciem
-  const party = node('div', c.members.some((m) => m.kind) || (c.compact ?? false) ? 'keeper-party compact' : 'keeper-party');
+  // same głowy obok siebie (Michał 9.11.2026: „bez napisów, tylko głowy”); imię i zajęcie w dymku
+  const party = node('div', 'keeper-party compact');
   for (let i = 0; i < Math.max(c.max, c.members.length); i++) {
     const m = c.members[i];
     if (!m) {
@@ -49,7 +49,8 @@ export function crewParty(c: CrewInfo, face: (kind?: string) => string, pick?: (
     const txt = node('span', 'keeper-txt');
     txt.append(node('strong', 'keeper-name', m.name), node('span', 'keeper-doing', m.doing));
     card.append(txt);
-    card.title = m.kind ? tx(`${m.doing}${m.name ? ` ${m.name}` : ''} — kliknij, by go zaznaczyć`, `${m.doing}${m.name ? ` ${m.name}` : ''} — click to select him`) : tx(`${m.name} — pokaż na mapie`, `${m.name} — show on the map`);
+    card.title = m.kind ? tx(`${m.doing}${m.name ? ` ${m.name}` : ''} — kliknij, by go zaznaczyć`, `${m.doing}${m.name ? ` ${m.name}` : ''} — click to select him`) : tx(`${m.name} — ${m.doing}. Kliknij, by pokazać na mapie`, `${m.name} — ${m.doing}. Click to show on the map`);
+    card.setAttribute('aria-label', card.title);
     if (pick) card.addEventListener('click', () => pick(m.id));
     party.append(card);
   }
