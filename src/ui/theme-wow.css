@@ -806,3 +806,15 @@ html body .info .power-badge[data-shut="true"] { color: #f0a08a !important; }
 html body .info .power-btn { background: rgba(255, 240, 210, .08) !important; color: #f4e6c6 !important; border: 1px solid rgba(201, 162, 79, .5) !important; }
 html body .info .info-desc { background: rgba(0, 0, 0, .35) !important; color: #f1e3c4 !important; border-left: 2px solid #c9a24f !important; }
 html body .info .icon-act { background: linear-gradient(#3a2614, #24160c) !important; }
+
+/* tiles.css ma #ui .info … (ciemny tusz na pergaminie) — bijemy go identyczną specyficznością, żeby wszystkie napisy w oknie były jasne */
+#ui .info p, #ui .info .hint, #ui .info .logi-note, #ui .info .power-note, #ui .info .gate-state,
+#ui .info .info-desc, #ui .info .info-desc:not(:empty), #ui .info li, #ui .info small { color: #f1e3c4 !important; text-shadow: none !important; }
+#ui .info .info-desc:not(:empty) { background: rgba(0, 0, 0, .35) !important; background-image: none !important; font-size: 14px; line-height: 1.5; }
+#ui .info :is(.stock-head, .logi-head, .prod-head) { color: #e9c766 !important; }
+#ui .info label, #ui .info .info-owner, #ui .info .hp-line { color: #f4e6c6 !important; }
+
+/* wszystkie reguły pergaminowe z tiles.css czytają --parch-*; w oknie podmieniamy je na jasne napisy i ciemne tło */
+#ui .info, #ui .info * { --parch-ink: #f4e6c6; --parch-soft: #d8c79e; --parch-red: #ff9a82; --parch-line: rgba(201, 162, 79, .4); }
+#ui .info { background-image: radial-gradient(120% 80% at 50% 0%, rgba(120, 72, 30, .35), transparent 60%), linear-gradient(#2a1b10, #170e08) !important; background-color: #1d120a !important; }
+#ui .info :is(.stock-item, .power-row-box, .gate-box, .info-owner) { background: rgba(0, 0, 0, .3) !important; }
