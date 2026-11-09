@@ -1226,19 +1226,13 @@ export class GameRenderer {
     this.envTex = this.gpu_ ? makeGpuEnvironment(this.renderer) ?? undefined : makeEnvironment(this.renderer);
     canvas.addEventListener('pointermove', (e) => {
       // kursor nad budynkiem (wieża, mur, dach chaty) wskazuje ten budynek, a nie ziemię za nim — łatwiej kliknąć
-      // wieżę albo mur, żeby wysłać na nie wojsko (Michał 28.10.2026); promień po budynkach najwyżej co 40 ms
-      if (e.pointerType !== 'touch') {
-        let tile: TileRef | null = null;
-        if (!this.ghost.visible && !this.painting) {
-          const now = performance.now();
-          if (now - this.hoverPickAt >= 40) { this.hoverPickAt = now; this.hoverPicked = this.pickBuilding(e); }
-          tile = this.hoverPicked;
-        }
-        this.hover(tile ?? this.pick(e));
-      }
+      // wieżę albo mur, żeby wysłać na nie wojsko (Michał 28.10.2026). Promienie (budynki i teren) liczymy raz na
+      // klatkę z ostatniego położenia myszy (frame → flushHover), a nie przy każdym ruchu myszy: mysz wysyła setki
+      // zdarzeń na sekundę i przy locie kamerą myszą gra spadała do 20 FPS (Michał 9.11.2026)
+      if (e.pointerType !== 'touch') this.hoverEv = e;
       if (this.painting && e.buttons === 1) { const tile = this.pick(e); if (tile) this.onPaint(tile); }
     });
-    canvas.addEventListener('pointerleave', () => this.hover(null));
+    canvas.addEventListener('pointerleave', () => { this.hoverEv = null; this.hover(null); });
     canvas.addEventListener('pointerdown', (e) => { if (this.painting && e.button === 0) { const tile = this.pick(e); if (tile) this.onPaintDown(tile); } });
     canvas.addEventListener('pointerup', (e) => {
       if (this.walk) return; // podczas spaceru klik tylko łapie kursor
@@ -2685,6 +2679,7 @@ export class GameRenderer {
     if (this.state && (this.reachTick = (this.reachTick + 1) % 30) === 0) this.updateReach(this.state);
     if (this.state && this.siteGhosts) this.siteGhosts.sync(this.state, this.siteGhostOwner, this.buildingMeshes);
     if (this.walk && this.state) this.stepWalk(realDt); else this.cam.update(realDt);
+    this.flushHover();
     {
       // słuch: w widoku z góry ucho w punkcie, na który patrzy kamera (wyżej przy oddaleniu), w spacerze w oczach postaci
       const f = this.focusPoint, cam = this.cam.camera;
@@ -6477,6 +6472,25 @@ export class GameRenderer {
 
   private hoverPickAt = 0;
   private hoverPicked: TileRef | null = null;
+  private hoverEv: PointerEvent | null = null;
+  private hoverCam = new THREE.Vector3();
+  /** Podświetlenie pola pod kursorem raz na klatkę; w ruchu kamery co 3. klatkę (kursor i tak jedzie z mapą) */
+  private flushHover(): void {
+    const e = this.hoverEv;
+    if (!e) return;
+    const cp = this.cam.camera.position;
+    const moving = this.hoverCam.distanceToSquared(cp) > 1e-4;
+    if (moving && this.frameCounter % 3 !== 0) return;
+    this.hoverCam.copy(cp);
+    this.hoverEv = null;
+    let tile: TileRef | null = null;
+    if (!this.ghost.visible && !this.painting) {
+      const now = performance.now();
+      if (now - this.hoverPickAt >= 40) { this.hoverPickAt = now; this.hoverPicked = this.pickBuilding(e); }
+      tile = this.hoverPicked;
+    }
+    this.hover(tile ?? this.pick(e));
+  }
 
   private pickBuilding(e: PointerEvent): TileRef | null {
     if (!this.state) return null;
@@ -6484,7 +6498,13 @@ export class GameRenderer {
     const ndc = new THREE.Vector2(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
     this.ray.setFromCamera(ndc, this.cam.camera);
     this.ray.layers.enable(BATCH_LAYER); // stałe bryły budynków rysowane razem leżą na osobnej warstwie (kliknięcie dalej je trafia)
-    const hit = this.ray.intersectObjects([...this.buildingMeshes.values()], true)[0];
+    // najpierw kula budynku (tania), dopiero trafione budynki sprawdzane trójkąt po trójkącie
+    const near: THREE.Object3D[] = [];
+    for (const m of this.buildingMeshes.values()) {
+      const sp = m.userData.cullSphere as THREE.Sphere | undefined;
+      if (!sp || this.ray.ray.intersectsSphere(sp)) near.push(m);
+    }
+    const hit = this.ray.intersectObjects(near, true)[0];
     if (!hit) return null;
     let o: THREE.Object3D | null = hit.object;
     while (o && o.parent !== this.buildingLayer) o = o.parent;
