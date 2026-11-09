@@ -1039,3 +1039,29 @@ html body .info .icon-act { background: linear-gradient(#3a2614, #24160c) !impor
 #ui .card-row > .card:hover, #ui .card-row > .card:focus-visible { position: relative; z-index: 1; border-color: #c29a45 !important; }
 /* statystyki warsztatu: długie wartości („1756 (na 878 cykli)”) zawijają się zamiast ucinać */
 #ui .info:not(.is-person):not(.army-mode) .prod-stat strong { white-space: normal !important; font-size: 16px; line-height: 1.2; overflow-wrap: anywhere; }
+/* portret budynku w nagłówku i ten sam budynek jako blady znak wodny w tle okna — od razu widać, co kliknięto (Michał 9.11.2026) */
+#ui .info:not(.is-person):not(.army-mode) .info-head { align-items: center; gap: 16px; padding-left: 22px; }
+#ui .info:not(.is-person):not(.army-mode) .info-pic { flex: none; width: 84px; height: 84px; display: grid; place-items: center; overflow: hidden; border-radius: 4px;
+  background: radial-gradient(circle at 50% 45%, #fff6dc, #e2cc9a 70%); border: 2px solid #5a3d1c; box-shadow: inset 0 0 0 1px rgba(236, 208, 138, .7), 0 2px 0 rgba(0, 0, 0, .3); }
+#ui .info:not(.is-person):not(.army-mode) .info-pic img { width: 104px; height: 104px; object-fit: contain; margin: -6px; }
+#ui .info:not(.is-person):not(.army-mode)::after { content: ''; position: absolute; right: -40px; bottom: 40px; width: 340px; height: 340px; pointer-events: none; z-index: 0;
+  background: var(--info-art, none) center / contain no-repeat; opacity: .09; filter: sepia(1) saturate(.6); }
+#ui .info:not(.is-person):not(.army-mode) > * { position: relative; z-index: 1; }
+/* „Twój budynek” wyraźnie: zielona plakietka z białym napisem; cudzy — kolor relacji i imię */
+#ui .info:not(.is-person):not(.army-mode) .info-owner::before { width: 16px; height: 20px; }
+#ui .info:not(.is-person):not(.army-mode) .info-owner-rel { padding: 3px 10px !important; border-radius: 3px; background: #2f6a28 !important; color: #fff !important; font-size: 12.5px !important; letter-spacing: .06em !important; }
+#ui .info:not(.is-person):not(.army-mode) .info-owner[data-rel='ally'] .info-owner-rel { background: #1f5a8a !important; color: #fff !important; }
+#ui .info:not(.is-person):not(.army-mode) .info-owner[data-rel='enemy'] .info-owner-rel { background: #a8281f !important; color: #fff !important; }
+#ui .info:not(.is-person):not(.army-mode) .info-owner-name { font-size: 15px; color: var(--ink) !important; }
+#ui .info:not(.is-person):not(.army-mode) .info-owner-name::before { content: none; }
+#ui .info:not(.is-person):not(.army-mode) .power-badge { font-size: 14px; }
+/* statystyki warsztatu w dwóch kolumnach, żeby nic się nie rozjeżdżało */
+#ui .info:not(.is-person):not(.army-mode) .prod-rows { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+#ui .info:not(.is-person):not(.army-mode) .prod-stat { grid-template-columns: auto 1fr; align-items: baseline; column-gap: 10px; }
+#ui .info:not(.is-person):not(.army-mode) .prod-stat strong { font-size: 17px; }
+#ui .info:not(.is-person):not(.army-mode) .prod-stat span { font-size: 13px; }
+/* przyciski-ikony w stopce większe */
+#ui .info:not(.is-person):not(.army-mode) :is(.icon-act, .info-market) { width: 52px !important; height: 52px !important; }
+#ui .info:not(.is-person):not(.army-mode) :is(.icon-act, .info-market) svg { width: 26px; height: 26px; }
+/* proste budynki (wieża, chata, studnia…) węższe; szerokie tylko te z zapasami, warsztatem albo magazynierami */
+#ui .floaters .info:not(.is-person):not(.army-mode):not(:has(> :is(.info-stock, .info-prod, .info-logi, .recruit, .info-site):not([hidden]))) { width: min(460px, calc(100vw / var(--ui, 1) - 32px)); }

@@ -971,7 +971,14 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
   const infoMeta = el('div', 'info-meta');
   infoMeta.append(ownerLine, powerBadge);
   infoTitle.append(infoName, infoMeta);
-  infoHead.append(infoTitle, descBtn, xBtn);
+  // obrazek budynku w ramce, jak portret w grze RPG (ten sam co w menu budowy)
+  const infoPic = el('div', 'info-pic');
+  const infoImg = document.createElement('img');
+  infoImg.alt = '';
+  infoImg.decoding = 'async';
+  infoPic.append(infoImg);
+  infoPic.hidden = true;
+  infoHead.append(infoPic, infoTitle, descBtn, xBtn);
   // stopka okna jak w grze: wytrzymałość z lewej, przyciski-ikony z prawej
   const infoFoot = el('div', 'info-foot');
   infoFoot.append(hpLine, infoActions);
@@ -1445,7 +1452,7 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
       recruit.hidden = true;
       towerBox.hidden = true;
       gateBox.hidden = true;
-      powerBox.hidden = true; ownerLine.hidden = true; powerBadge.hidden = true; powerBtn.hidden = true;
+      powerBox.hidden = true; infoPic.hidden = true; info.style.removeProperty('--info-art'); infoImg.removeAttribute('src'); ownerLine.hidden = true; powerBadge.hidden = true; powerBtn.hidden = true;
       quarBox.hidden = true;
       // resztki okna budynku (plac budowy, zapasy, zasięg strzału) nie mogą zostać na karcie człowieka
       siteBox.hidden = true; prodBox.hidden = true; storeBox.hidden = true; logiBox.hidden = true; areaBtn.hidden = true; mineBtn.hidden = true; watchState.hidden = true; riotBox.hidden = true; infoDesc.hidden = false;
@@ -1468,7 +1475,7 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
       recruit.hidden = true;
       towerBox.hidden = true;
       gateBox.hidden = true;
-      powerBox.hidden = true; ownerLine.hidden = true; powerBadge.hidden = true; powerBtn.hidden = true;
+      powerBox.hidden = true; infoPic.hidden = true; info.style.removeProperty('--info-art'); infoImg.removeAttribute('src'); ownerLine.hidden = true; powerBadge.hidden = true; powerBtn.hidden = true;
       quarBox.hidden = true;
       siteBox.hidden = true; prodBox.hidden = true; storeBox.hidden = true; logiBox.hidden = true; areaBtn.hidden = true; mineBtn.hidden = true; watchState.hidden = true; riotBox.hidden = true;
       walkBtn.hidden = true;
@@ -1537,12 +1544,15 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
       infoId = i.id;
       roster.hidden = true; hideArmy();
       setText(infoName, t(i.def.name));
+      { const src = thumbs.get(i.def.id); infoPic.hidden = !src; if (src && infoImg.getAttribute('src') !== src) { infoImg.src = src; info.style.setProperty('--info-art', `url("${src}")`); } if (!src) info.style.removeProperty('--info-art'); }
       ownerLine.hidden = !i.owner;
       if (i.owner) {
         const rel = i.owner.rel === 'enemy' ? tx('Wróg', 'Enemy') : i.owner.rel === 'ally' ? tx('Sojusznik', 'Ally') : tx('Twoje', 'Yours');
         ownerLine.dataset.rel = i.owner.rel;
         ownerLine.style.setProperty('--team', `#${i.owner.color.toString(16).padStart(6, '0')}`);
-        ownerLine.replaceChildren(el('span', 'info-owner-rel', rel), el('span', 'info-owner-name', i.owner.name));
+        // swój budynek: jedno jasne „Twój budynek”; cudzy: kto to (sojusznik / wróg) i jak się nazywa
+        if (i.owner.rel === 'own') ownerLine.replaceChildren(el('span', 'info-owner-rel', tx('Twój budynek', 'Your building')));
+        else ownerLine.replaceChildren(el('span', 'info-owner-rel', rel), el('span', 'info-owner-name', i.owner.name));
       }
       hpLine.hidden = i.hp === undefined;
       if (i.hp !== undefined && i.maxHp) { setText(hpText, `${t('hud.hp')}: ${i.hp} / ${i.maxHp}`); hpFill.style.width = `${Math.max(0, (i.hp / i.maxHp) * 100)}%`; hpFill.dataset.low = String(i.hp < i.maxHp * 0.35); }
