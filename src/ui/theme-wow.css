@@ -1298,7 +1298,7 @@ body .scribe { top: 60px; bottom: auto; }
 body .scribe-log { top: 112px; bottom: auto; }
 .build { top: 60px; right: 190px; font-size: 14px; padding: 7px 12px; line-height: 1.2; }
 .fps-tag { top: 60px; right: 104px; font-size: 14px; padding: 7px 10px; line-height: 1.2; }
-#ui ~ .dev-open, .dev-open { top: 60px !important; right: 12px; }
+#ui ~ .dev-open, .dev-open { top: 58px !important; }
 .alarm { top: 60px; }
 .toast { top: 112px; }
 .report.below::after { bottom: auto; top: -12px; border: 10px solid transparent; border-bottom-color: var(--wood-edge); border-top: 0; }
@@ -1383,4 +1383,3 @@ body .scribe .scribe-log-btn { height: 31px; min-height: 0; }
 .build { right: 192px !important; border-right: 0 !important; border-radius: 0 0 0 6px !important; }
 body.hide-fps .build { right: 108px !important; }
 body .scribe .scribe-log-btn { height: 38px; }
-.dev-open { top: 55.6px !important; }
