@@ -1262,3 +1262,20 @@ html body .info .icon-act { background: linear-gradient(#3a2614, #24160c) !impor
 .keeper-party.compact .keeper-card.free.soon .keeper-face { opacity: 0; }
 /* twierdza z kaflami straży: zbędny wiersz „Straż miejska 6/6 · pinezki” znika */
 #ui#ui .floaters .info:has(> .info-crew:not([hidden])) > .gate-state { display: none !important; }
+/* okno oddziału: ten sam pergamin i oprawa co budynki i postacie; bez rozwijanego opisu skrótów (Michał 9.11.2026: „bez opisów”) */
+#ui#ui .floaters .info.army-mode {
+  width: min(400px, calc(100vw / var(--ui, 1) - 40px)); padding: 0 0 18px; display: grid; gap: 14px; margin: 13px;
+  background-color: #eddcb5 !important; background-image: var(--parch-img) !important; background-size: 100% 100%, auto, 420px auto !important;
+  background-repeat: no-repeat, no-repeat, repeat !important; background-blend-mode: normal, normal, multiply !important;
+  border: 0 !important; border-radius: 4px !important; color: #2a1b0c !important;
+  box-shadow: 0 0 0 2px #d8b25e, 0 0 0 4px #6e4a1e, 0 0 0 12px #3a2414, 0 0 0 13px #0b0704, inset 0 0 40px rgba(120, 78, 28, .3), 0 18px 34px rgba(0, 0, 0, .6) !important; }
+#ui#ui .floaters .info.army-mode > .info-head { margin: 0 !important; display: flex; align-items: center; gap: 10px; padding: 14px 16px 12px 20px; background: none !important; border: 0 !important; box-shadow: none !important; position: relative; }
+#ui#ui .floaters .info.army-mode > .info-head::before { display: none !important; }
+#ui#ui .floaters .info.army-mode > .info-head::after { content: ''; position: absolute; left: 20px; right: 20px; bottom: 0; height: 1px; background: linear-gradient(90deg, transparent, rgba(120, 86, 40, .35) 12%, rgba(120, 86, 40, .35) 88%, transparent); }
+#ui#ui .floaters .info.army-mode .info-title { flex: 1; min-width: 0; }
+#ui#ui .floaters .info.army-mode .info-name { margin: 0; color: #3b2512 !important; font-size: 22px; font-weight: 700 !important; text-shadow: none !important; text-transform: none; letter-spacing: 0; }
+#ui#ui .floaters .info.army-mode :is(.info-ibtn, .info-x) { width: 28px; height: 28px; padding: 0; display: grid; place-items: center; border-radius: 4px; background: linear-gradient(#4a3322, #2d1b0e) !important; border: 1px solid #1a0f07 !important; color: #fff4dc !important; box-shadow: inset 0 1px 0 rgba(255, 236, 200, .22) !important; }
+#ui#ui .floaters .info.army-mode .info-x:hover { background: #8a2a1c !important; }
+#ui#ui .floaters .info.army-mode > :is(.army-box, .roster) { margin: 0 20px !important; }
+#ui#ui .floaters .info.army-mode .army-box { padding: 12px !important; border-radius: 5px; background: rgba(90, 62, 28, .11) !important; }
+#ui#ui .floaters .info.army-mode :is(.army-help, .army-tip), #ui#ui .floaters .info.army-mode .info-desc-btn, #ui#ui .floaters .info.army-mode .info-desc, #ui#ui .floaters .info.army-mode .info-foot { display: none !important; }
