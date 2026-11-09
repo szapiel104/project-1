@@ -3519,8 +3519,11 @@ export class GameRenderer {
     // pogodny dzień: daleka widoczność; mgła rano i w mgliste dni, gęsta w deszczu
     // mgła liczy się od kamery: zaczyna się zawsze dopiero za ziemią, na którą patrzymy, więc osady nie zakrywa
     const cd = this.walk ? 2 : this.cam.distance;
-    fog.near = cd * 0.95 + 70 * (1 - m * 0.8) - this.rain * 20;
-    fog.far = Math.max(fog.near + 45, cd + 220 - m * 140 - this.rain * 90);
+    // zasięg widzenia zależy od jakości (Michał 9.11.2026: „za daleko widzę, gra muli”): na niższych ustawieniach mgła
+    // zamyka widok bliżej, więc kamera nie rysuje dalekich gór, palm i budynków; na Ultra zostaje jak było (220)
+    const reach = Math.max(0, Math.min(1, (this.detail - 0.55) / 0.8)); // minimum 0, „wysoka” (1) ok. 0,56, Ultra (1,35) 1
+    fog.near = cd * 0.95 + (50 + 20 * reach) * (1 - m * 0.8) - this.rain * 20;
+    fog.far = Math.max(fog.near + 45, cd + 150 + 70 * reach - m * 140 * (0.7 + 0.3 * reach) - this.rain * 90);
     // za mgłą i tak nic nie widać: kamera nie rysuje dalej niż mgła (dużo mniej trójkątów w gęstej pogodzie i przy niskim kącie)
     const cam = this.cam.camera, wantFar = fog.far + 15;
     if (Math.abs(cam.far - wantFar) > 8) { cam.far = wantFar; cam.updateProjectionMatrix(); }
