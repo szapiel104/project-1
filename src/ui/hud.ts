@@ -263,7 +263,7 @@ export const ICONS: Record<string, string> = {
 function num(n: number): string { return n.toLocaleString(lang() === 'en' ? 'en-GB' : 'pl-PL'); }
 
 /** Krótki zapis dużych liczb, żeby pasek się nie rozjeżdżał: 14315 → 14,3k, 1000000 → 1 mln */
-function short(n: number): string {
+export function short(n: number): string {
   const a = Math.abs(n);
   const dec = lang() === 'en' ? '.' : ',';
   if (a >= 1e6) return `${(n / 1e6).toFixed(a >= 1e7 ? 0 : 1).replace('.0', '').replace('.', dec)}${tx(' mln', 'M')}`;

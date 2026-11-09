@@ -4,7 +4,7 @@ import { RESOURCE_DEFS, resIndex, type ResourceId } from '../data/resources';
 import { t, tx } from '../i18n';
 import type { GameState } from '../sim/state';
 import { canTrade } from '../sim/systems/market';
-import { ICONS } from './hud';
+import { ICONS, short } from './hud';
 
 /**
  * Okno rynku (Michał 30.10.2026): po kliknięciu własnego, gotowego rynku. Duże okno na środku ekranu (druga wersja:
@@ -69,6 +69,11 @@ export function createMarketPanel(onTrade: (res: number, amount: number) => void
     h.textContent = tx(grp.pl, grp.en);
     const grid = document.createElement('div');
     grid.className = 'market-grid';
+    // nagłówek kolumn: nad zielonymi „Sprzedaj”, nad czerwonymi „Kup”
+    const cols = document.createElement('div');
+    cols.className = 'market-cols';
+    cols.innerHTML = `<span></span><span class="sell">${tx('Sprzedaj', 'Sell')}</span><span class="buy">${tx('Kup', 'Buy')}</span>`;
+    grid.append(cols);
     for (const id of goods) {
       const tile = document.createElement('div');
       tile.className = 'market-tile';
@@ -82,15 +87,12 @@ export function createMarketPanel(onTrade: (res: number, amount: number) => void
       name.textContent = t(RESOURCE_DEFS[id].name);
       const have = document.createElement('span');
       have.className = 'market-have';
-      top.append(ic, name, have);
+      ic.append(have);
+      top.append(ic, name);
       const btns: Tile['btns'] = [];
       const line = (sell: boolean): HTMLElement => {
         const row = document.createElement('div');
         row.className = `market-line ${sell ? 'sell' : 'buy'}`;
-        const lab = document.createElement('span');
-        lab.className = 'market-line-label';
-        lab.textContent = sell ? tx('Sprzedaj', 'Sell') : tx('Kup', 'Buy');
-        row.append(lab);
         for (const n of MARKET_LOTS) {
           const amount = sell ? -n : n;
           const price = sell ? sellPrice(id, n) : buyPrice(id, n);
@@ -144,10 +146,13 @@ export function createMarketPanel(onTrade: (res: number, amount: number) => void
       const k = p.res.join(',');
       if (k === key) return;
       key = k;
-      purse.innerHTML = `${icon('gold', 26)}<b>${p.res[GOLD]}</b>`;
+      purse.innerHTML = `${icon('gold', 26)}<b>${short(p.res[GOLD]!)}</b>`;
+      purse.title = tx(`Ruda: ${p.res[GOLD]}`, `Ore: ${p.res[GOLD]}`);
       for (const [id, r] of tiles) {
         const i = resIndex(id);
-        r.have.innerHTML = `<small>${tx('masz', 'you have')}</small> ${p.res[i]}`;
+        // krótko (85 mln, 14,3k) — długie liczby rozpychały kafel; dokładna liczba w dymku
+        r.have.textContent = short(p.res[i]!);
+        r.have.title = tx(`Masz ${p.res[i]}`, `You have ${p.res[i]}`);
         for (const { el, amount } of r.btns) {
           const err = canTrade(g, me, i, amount);
           el.disabled = !!err;
