@@ -87,3 +87,6 @@ body .menu:not(.previewing) .menu-head > .menu-title {
 body .menu:not(.previewing) .menu-head > .menu-title.has-logo {
   font-size: min(clamp(44px, min(8vh, 4.6vw), 104px), calc((100cqi - clamp(48px, 6.4vh, 76px) - clamp(12px, 1.2vw, 20px)) / 3.9)); justify-self: start; margin-inline: 0; }
 body .menu.in-game:not(.previewing) .menu-head > .menu-title.has-logo { font-size: min(clamp(40px, min(6.6vh, 4vw), 84px), calc((100cqi - clamp(48px, 6.4vh, 76px) - clamp(12px, 1.2vw, 20px)) / 3.9)); }
+/* strzałki rad kwadratowe (Michał 9.11.2026: „szerokość taka sama jak wysokość”) */
+#loading .loading-card .ld-top { align-items: center; }
+#loading .tip-arrow { width: 44px; height: 44px; aspect-ratio: 1; padding: 0; display: grid; place-items: center; align-self: center; }
