@@ -606,11 +606,21 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
   const jumpStock = jumpBtn('stockpile', 'store');
   const jumpGranary = jumpBtn('granary', 'granary');
   const jumpMarket = jumpBtn('market', 'store');
+  // magazyn: skrót do rynku (kamera leci do najbliższego rynku; kolejny klik — następny)
+  const marketBtn = el('button', 'info-market');
+  marketBtn.type = 'button';
+  iconBtn(marketBtn, ICON.market, tx('Do rynku', 'To the market'));
+  marketBtn.hidden = true;
+  marketBtn.addEventListener('click', () => events.onJump('market'));
   let jumpKey = '';
+  let marketCount = 0;
   const paintJumps = (j: Record<JumpKind, number>): void => {
     const key = `${j.barracks}:${j.stockpile}:${j.granary}:${j.market}`;
     if (key === jumpKey) return;
     jumpKey = key;
+    marketCount = j.market;
+    marketBtn.disabled = !j.market;
+    setLabel(marketBtn, j.market ? tx('Do rynku: pokaż na mapie', 'To the market: show on the map') : tx('Nie masz jeszcze rynku', 'You have no market yet'));
     const set = (b: HTMLButtonElement, n: number, name: string, none: string): void => {
       b.disabled = !n;
       const label = n ? (n > 1 ? tx(`${name} (${n}): pokaż. Kolejny klik — następny budynek.`, `${name} (${n}): show. Click again for the next one.`) : tx(`${name}: pokaż na mapie`, `${name}: show on the map`)) : none;
@@ -910,7 +920,7 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
   demolish.classList.add('icon-danger');
   iconBtn(tDown, ICON.down, tx('Zejdźcie z wieży', 'Come down from the tower'));
   close.hidden = true;
-  infoActions.append(areaBtn, moveBtn, demolish);
+  infoActions.append(marketBtn, areaBtn, moveBtn, demolish);
   // plac budowy: pasek postępu, materiał (przyniesiony / potrzebny, w drodze), robotnicy i co się teraz dzieje
   // warsztat: przepis z ikonami, pracownik z postępem roboty, stan (co blokuje) i liczby
   const prodBox = el('div', 'info-prod');
@@ -1412,6 +1422,7 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
     showPerson(person) {
       info.hidden = !person;
       if (!person) return;
+      info.classList.remove('is-store'); marketBtn.hidden = true;
       infoId = 0;
       setText(infoName, person.name);
       info.classList.add('is-person');
@@ -1436,6 +1447,7 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
     showArmy(army, ctl) {
       info.hidden = army.length === 0;
       if (!army.length) { rosterKey = ''; hideArmy(); return; }
+      info.classList.remove('is-store'); marketBtn.hidden = true;
       infoId = 0;
       setText(infoName, `${t('hud.soldiers')}: ${army.length}`);
       // portrety jak w klasycznych strategiach: hełm na tarczy w barwie drużyny i pasek zdrowia pod spodem
@@ -1606,6 +1618,8 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
       } else infoDesc.hidden = false;
       storeBox.hidden = !i.stock?.length;
       info.classList.toggle('is-store', !!i.stock?.length && !i.site);
+      marketBtn.hidden = !(i.stock?.length && !i.site);
+      marketBtn.disabled = !marketCount;
       if (i.stock?.length) {
         const key = JSON.stringify(i.stock);
         if (storeBox.dataset.key !== key) {

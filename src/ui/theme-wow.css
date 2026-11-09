@@ -864,3 +864,59 @@ html body .info .icon-act { background: linear-gradient(#3a2614, #24160c) !impor
 #ui .info .prod-stat strong.warn { color: #ff9a82 !important; }
 #ui .info .prod-stat span { font-size: 13px; color: #d8c79e !important; line-height: 1.2; }
 @media (prefers-reduced-motion: reduce) { #ui .info .prod-arrow i, #ui .info .prod-bar > span::after { animation: none !important; } }
+
+/* ===== Okno magazynu w stylu „Warehouse”: jasny pergamin, ciemny tusz, duże ikony w ciemnych płytkach (Michał 9.11.2026) =====
+   Wszystko czytelne od razu: tło jasne, napisy czarnobrunatne, towary jako duże „sloty” jak w ekwipunku RPG. */
+#ui .info.is-store, #ui .info.is-store * { --parch-ink: #2a1b0c; --parch-soft: #5c4224; --parch-red: #8a1f14; --parch-line: rgba(120, 88, 40, .55); }
+#ui .floaters .info.is-store { width: min(760px, calc(100vw / var(--ui, 1) - 32px));
+  background: radial-gradient(120% 70% at 50% 0%, #f6e9c6, transparent 70%), repeating-linear-gradient(0deg, rgba(120, 88, 40, .035) 0 2px, transparent 2px 4px), #ecdcb4 !important;
+  background-image: radial-gradient(120% 70% at 50% 0%, #f6e9c6, transparent 70%), repeating-linear-gradient(0deg, rgba(120, 88, 40, .035) 0 2px, transparent 2px 4px) !important;
+  border: 2px solid #3a2a14 !important; box-shadow: inset 0 0 0 2px #c9a24f, inset 0 0 0 4px #3a2a14, 0 14px 40px rgba(0, 0, 0, .6) !important; color: #2a1b0c !important; }
+#ui .info.is-store .info-head { background: linear-gradient(#4a4a50, #26262b) !important; border-bottom: 2px solid #c9a24f !important; }
+#ui .info.is-store .info-head .info-name { color: #ffe9a8 !important; font-size: 24px; letter-spacing: .04em; text-align: center; }
+#ui .info.is-store :is(p, span, small, li, label, strong, .hint):not(.info-head *):not(.stock-item *):not(.icon-act *) { color: #2a1b0c !important; text-shadow: none !important; }
+#ui .info.is-store :is(.info-owner, .power-row-box, .info-logi, .logi-block, .info-desc, .gate-box, .stock-head2 + *):not(.stock-grid) { background: rgba(255, 255, 255, .38) !important; border: 1px solid rgba(120, 88, 40, .5) !important; }
+#ui .info.is-store .info-owner * { color: #2a1b0c !important; }
+#ui .info.is-store .info-owner-rel { background: #2f6a1c; color: #fff !important; }
+#ui .info.is-store .info-desc:not(:empty) { background: rgba(255, 255, 255, .4) !important; border-left: 3px solid #8a6d3b !important; }
+#ui .info.is-store .hp-bar { background: #3a2a14 !important; border-color: #3a2a14; }
+#ui .info.is-store .hp-line, #ui .info.is-store .hp-line > span:first-child { color: #3b2a14 !important; font-weight: 700; }
+/* sekcje: ramka-karta zamiast ciemnych pudełek */
+#ui .info.is-store .info-stock { background: rgba(255, 255, 255, .22) !important; border: 1px solid rgba(120, 88, 40, .55) !important; padding: 14px 16px; gap: 12px; }
+#ui .info.is-store .stock-head2 { padding: 6px 0 8px; border-bottom: 3px double rgba(90, 64, 28, .7); margin: 0 0 4px; }
+#ui .info.is-store .stock-title strong { font-size: 22px; font-weight: 800; letter-spacing: .03em; color: #2a1b0c !important; }
+#ui .info.is-store .stock-title .ico svg { width: 30px; height: 30px; }
+#ui .info.is-store .stock-fill { font-size: 15px; font-weight: 700; color: #5c4224 !important; }
+#ui .info.is-store .stock-fill[data-over='true'] { color: #a3261b !important; }
+#ui .info.is-store .stock-bar { height: 12px; background: #3a2a14 !important; border: 1px solid #2a1b0c; border-radius: 6px; }
+#ui .info.is-store .stock-bar > span { background: linear-gradient(#ffd96a, #c98a1f) !important; border-radius: 6px; }
+#ui .info.is-store .stock-bar[data-over='true'] > span { background: linear-gradient(#ff8a72, #b02a1c) !important; }
+/* towary: slot z dużą ikoną + liczba + nazwa */
+#ui .info.is-store .stock-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+#ui .info.is-store .stock-item { display: grid; grid-template-columns: 60px minmax(0, 1fr); grid-template-rows: auto auto; align-content: center; column-gap: 12px; row-gap: 0; min-height: 76px; padding: 8px 12px 8px 8px;
+  background: linear-gradient(#fbf1d6, #e6d3a3) !important; border: 1px solid #8a6d3b !important; border-radius: 6px; box-shadow: 0 2px 0 rgba(58, 42, 20, .35), inset 0 1px 0 #fff8e0; }
+#ui .info.is-store .stock-item .ico { grid-column: 1; grid-row: 1 / 3; width: 60px; height: 60px; display: grid; place-items: center;
+  background: radial-gradient(circle at 50% 35%, #4b3a28, #1f160d); border: 2px solid #c9a24f; border-radius: 8px; box-shadow: inset 0 0 8px rgba(0, 0, 0, .7); }
+#ui .info.is-store .stock-item .ico svg { width: 42px; height: 42px; filter: drop-shadow(0 1px 1px rgba(0, 0, 0, .7)); }
+#ui .info.is-store .stock-item strong { grid-column: 2; grid-row: 1; align-self: end; text-align: left; font-size: 28px; font-weight: 800; line-height: 1.05; color: #2a1b0c !important; }
+#ui .info.is-store .stock-item span:last-child { grid-column: 2; grid-row: 2; align-self: start; font-size: 15px; font-weight: 600; color: #5c4224 !important; }
+#ui .info.is-store .stock-item:has(.ico[data-food]) { border-color: #4f7d2a !important; }
+#ui .info.is-store .stock-total { padding: 4px 2px; font-size: 15px; font-weight: 600; }
+#ui .info.is-store .stock-total strong { color: #2a1b0c !important; }
+#ui .info.is-store .stock-total[data-over='true'] strong, #ui .info.is-store .stock-total[data-over='true'] span { color: #a3261b !important; }
+#ui .info.is-store .stock-empty { color: #5c4224 !important; }
+/* magazynierzy */
+#ui .info.is-store .logi-block { padding: 12px 14px; border-radius: 6px; }
+#ui .info.is-store .logi-head strong { font-size: 18px; font-weight: 800; }
+#ui .info.is-store .logi-list strong { color: #8a1f14 !important; }
+#ui .info.is-store .power-badge { color: #2d6a1c !important; font-weight: 800; }
+#ui .info.is-store .power-badge[data-shut='true'] { color: #a3261b !important; }
+#ui .info.is-store .power-btn { background: #e6d3a3 !important; color: #2a1b0c !important; border: 1px solid #8a6d3b !important; font-weight: 700; }
+/* przyciski ikon: ciemne płytki jak w nagłówku, złota ikona */
+#ui .info.is-store .actions { border-top: 2px solid rgba(90, 64, 28, .6) !important; }
+#ui .info.is-store .icon-act { background: linear-gradient(#4a4a50, #26262b) !important; border: 1px solid #c9a24f !important; color: #ffe9a8 !important; }
+#ui .info.is-store .icon-act * { color: inherit !important; }
+#ui .info.is-store .icon-act.icon-danger { color: #ff9a82 !important; }
+#ui .info.is-store .icon-act:disabled { opacity: .45; }
+#ui .info.is-store .info-market { color: #ffe9a8 !important; }
+@media (max-width: 860px) { #ui .info.is-store .stock-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
