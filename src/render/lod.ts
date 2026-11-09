@@ -19,6 +19,8 @@ import { coreReady, simplifyAll, type BucketData, type LevelData } from './lodco
  * niż ułamek piksela (ile — zależy od jakości grafiki: minimum przełącza blisko, Ultra bardzo daleko).
  */
 
+/** Materiały dachów, których nie upraszczamy (buildings.ts zapisuje wzór tekstury w userData.pattern) */
+const ROOF_PATTERNS = new Set(['slate', 'thatch', 'tiles']);
 /** Grupy budynku, które tworzą „wieko” (znikają przy podglądzie wnętrza) */
 const LIDS = new Set(['shell', 'roof', 'chimney']);
 /** Kroki błędu kolejnych poziomów (każdy liczony z poprzedniego): łącznie ok. 0.006 / 0.02 / 0.05 jednostki */
@@ -68,6 +70,9 @@ function collect(root: THREE.Object3D): { mesh: THREE.Mesh; lid: boolean }[] {
       const m = ch as THREE.Mesh;
       if (m.isMesh && !ch.name) {
         const mat = m.material as THREE.Material;
+        // dachy (łupek, strzecha, dachówka) zostają pełne także z daleka: uproszczone traciły współrzędne tekstury i głębię
+        // (parallax), więc łupkowe dachy wież i zamku z oddali wyglądały na szare, cienkie płaty (Michał 9.11.2026)
+        if (ROOF_PATTERNS.has(mat.userData.pattern as string)) { walk(ch, lid || LIDS.has(ch.name)); continue; }
         if (!(m as THREE.InstancedMesh).isInstancedMesh && !(m as unknown as THREE.SkinnedMesh).isSkinnedMesh && !Array.isArray(m.material)
           && mat.visible && !mat.transparent && m.geometry.attributes.position && triCount(m.geometry) >= 1) out.push({ mesh: m, lid });
       }

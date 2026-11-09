@@ -122,6 +122,7 @@ const mat = (color: number, tex?: Pattern): THREE.MeshStandardMaterial => {
   const nm = tex ? normal(tex) : null;
   const m = new THREE.MeshStandardMaterial({ color, flatShading: true, roughness: 0.92, metalness: 0, map: tex ? pattern(tex) : null, bumpMap: tex ? bump(tex) : null, normalMap: nm, normalScale: new THREE.Vector2(0.9, 0.9), bumpScale: tex === 'ashlar' ? 0.9 : tex === 'dressed' ? 0.7 : tex === 'cobble' ? 1.6 : 1.4 });
   m.userData.tile = (tex && TILE[tex]) || 0;
+  if (tex) m.userData.pattern = tex;
   // kamień murów i łupek: prawdziwa głębia (fugi chowają się za licami) — parallax.ts
   // strzecha, deski (dachy z gontu i desek), bruk i cegła też: mapa wysokości z jasności zdjęcia (gen w CHANGELOG 0.73.0)
   const POM: Partial<Record<string, number>> = { ashlar: 0.009, slate: 0.012, thatch: 0.014, planks: 0.008, cobble: 0.012, bricks: 0.012 };

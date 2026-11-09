@@ -119,7 +119,31 @@ import { MERGE_IN, BATCH_LAYER, mergeStatic } from './merge';
 import { MaterialBatches } from './buildingBatch';
 /** Nazwane grupy budynku rysowane razem z innymi budynkami tego samego rodzaju (syncBatches): pochodnia, dalekie wersje */
 // fill (zapasy w składach) i life (życie podwórka) też razem: same siatki z wspólnymi geometriami, w zapisie Michała ok. 46 osobnych rysowań (7.11.2026)
-const BATCH_ALSO = /^(torch|lod\d+|fill|grainfill|crop|life)$/;
+// skrzydła drzwi i bram (leafL/leafR) i drabiny wież też razem: pakiet bierze macierz świata każdej części co klatkę,
+// więc otwierane drzwi dalej się ruszają, a schowana drabina znika (widoczność sprawdzana co klatkę) — Michał 9.11.2026
+const BATCH_ALSO = /^(torch|lod\d+|fill|grainfill|crop|life|leafL|leafR|ladder)$/;
+/**
+ * Część z kilkoma materiałami (np. zapasy w składzie: towar + skrzynka) dzielimy na kawałki po grupach geometrii —
+ * każdy kawałek idzie do pakietu swojego materiału. Wcześniej takie części rysowały się osobno (38 rysowań zapasów
+ * w obrazie i drugie tyle w cieniu na zapisie Michała, 9.11.2026). Kawałki dzielą bufory z oryginałem.
+ */
+const subGeos = new WeakMap<THREE.BufferGeometry, THREE.BufferGeometry[]>();
+function groupGeos(g: THREE.BufferGeometry): THREE.BufferGeometry[] {
+  let list = subGeos.get(g);
+  if (list) return list;
+  list = g.groups.map((gr) => {
+    const s = new THREE.BufferGeometry();
+    for (const k of Object.keys(g.attributes)) s.setAttribute(k, g.attributes[k]!);
+    const total = g.index ? g.index.count : g.getAttribute('position').count;
+    const end = Math.min(total, gr.start + gr.count);
+    if (g.index) s.setIndex(new THREE.BufferAttribute((g.index.array as Uint16Array | Uint32Array).slice(gr.start, end), 1));
+    else { const ix = new Uint32Array(Math.max(0, end - gr.start)); for (let i = 0; i < ix.length; i++) ix[i] = gr.start + i; s.setIndex(new THREE.BufferAttribute(ix, 1)); }
+    s.userData.materialIndex = gr.materialIndex ?? 0;
+    return s;
+  });
+  subGeos.set(g, list);
+  return list;
+}
 /** Siatki budynków cięższe od tego nie idą do wspólnego pakietu (scene.ts staticParts) */
 const HEAVY_TRIS = 40000;
 import { Precompiler } from './precompile';
@@ -3049,8 +3073,8 @@ export class GameRenderer {
         // budynków (wspólne dla budynków tego samego rodzaju) też idą razem
         if (ch.name && !MERGE_IN.has(ch.name) && !BATCH_ALSO.test(ch.name)) continue;
         const m = ch as THREE.Mesh;
-        if (m.isMesh && !ch.name && !(m as THREE.InstancedMesh).isInstancedMesh && !Array.isArray(m.material)) {
-          const mat = m.material as THREE.Material;
+        if (m.isMesh && !ch.name && !(m as THREE.InstancedMesh).isInstancedMesh) {
+          const mat = (Array.isArray(m.material) ? m.material[0] : m.material) as THREE.Material;
           // ciężkie skany (np. 128 jabłek w sadzie = 900 tys. trójkątów) zostają osobno: wspólny pakiet rysuje się bez cięcia
           // do kadru, więc sady i spiżarnie poza ekranem szły do karty w każdej klatce i w każdym cieniu (pełna wioska 27 FPS,
           // Michał 9.11.2026); osobna siatka odpada sama, gdy jest poza kadrem — wygląd bez zmian
@@ -3081,6 +3105,13 @@ export class GameRenderer {
         let vis = m.visible;
         for (let q: THREE.Object3D | null = m.parent; vis && q; q = q.parent) { if (!q.visible) vis = false; if (q === root) break; }
         if (!vis) { m.layers.set(0); continue; }
+        if (Array.isArray(m.material)) {
+          const mats = m.material, subs = groupGeos(m.geometry);
+          if (!subs.length || subs.some((sg) => { const mt = mats[sg.userData.materialIndex as number]; return !mt || mt.transparent; })) { m.layers.set(0); continue; }
+          m.layers.set(BATCH_LAYER);
+          for (const sg of subs) mb.add(sg, mats[sg.userData.materialIndex as number]!, m.matrixWorld, m.castShadow, m.receiveShadow);
+          continue;
+        }
         m.layers.set(BATCH_LAYER);
         mb.add(m.geometry, m.material as THREE.Material, m.matrixWorld, m.castShadow, m.receiveShadow);
       }
@@ -3100,7 +3131,7 @@ export class GameRenderer {
         if (own) { m.layers.set(0); continue; }
         let vis = m.visible;
         for (let q: THREE.Object3D | null = m.parent; vis && q; q = q.parent) { if (!q.visible) vis = false; if (q === root) break; }
-        if (!vis) { m.layers.set(0); continue; }   // i tak niewidoczna
+        if (!vis || Array.isArray(m.material)) { m.layers.set(0); continue; }   // i tak niewidoczna (albo kilka materiałów: tylko pakiety po materiale)
         const mat = m.material as THREE.Material;
         const key = m.geometry.uuid + mat.uuid + (m.castShadow ? 'c' : '') + (m.receiveShadow ? 'r' : '');
         let l = groups.get(key);
