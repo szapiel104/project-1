@@ -223,12 +223,16 @@ export function savesPanel(mode: 'save' | 'load', go: SavesActions): HTMLElement
       });
     };
     const items: [string, () => void, boolean?][] = [];
-    if (mode === 'save' && m.kind === 'manual' && go.canSave()) items.push([tx('Nadpisz obecną grą', 'Overwrite with this game'), overwrite]);
+    // w oknie „Zapisz grę” na zapisie ręcznym główny przycisk to „Nadpisz” (Michał 9.11.2026: „w trakcie gry nie można
+    // nadpisywać”) — wcześniej nadpisanie siedziało schowane w menu „⋯”; wczytanie przechodzi do tego menu
+    const saveHere = mode === 'save' && m.kind === 'manual' && go.canSave();
+    if (saveHere) items.push([tx('Wczytaj ten zapis', 'Load this save'), doLoad]);
     items.push([tx('Zmień nazwę', 'Rename'), rename]);
     items.push([tx('Pobierz plik .p1save', 'Download .p1save file'), () => void exportSave(m.id).then((e) => { if (e) say(e, true); })]);
     if (me() && m.where === 'local') items.push([tx('Wyślij do chmury', 'Upload to cloud'), () => void uploadSave(m.id).then((ok) => { say(ok ? tx('Zapis jest w chmurze.', 'The save is in the cloud.') : tx('Nie udało się wysłać — sprawdź internet.', 'Upload failed — check your connection.'), !ok); void refresh(); })]);
     items.push([tx('Usuń zapis', 'Delete save'), del, true]);
-    acts.append(load, moreMenu(items, tx(`Więcej działań: ${m.name}`, `More actions: ${m.name}`)));
+    const primary = saveHere ? btn(tx('Nadpisz', 'Overwrite'), overwrite, 'menu-btn btn-ok sv-btn sv-load sv-overwrite') : load;
+    acts.append(primary, moreMenu(items, tx(`Więcej działań: ${m.name}`, `More actions: ${m.name}`)));
     body.append(acts, el('span', 'sv-meta', `${tx('wersja gry', 'game version')} ${m.build}${m.size ? ' · ' + kb(m.size) : ''}`));
     c.append(shot, body);
     return c;
