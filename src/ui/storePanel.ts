@@ -81,11 +81,20 @@ export function renderLogistics(s: StoreLogistics, icon: (id: string) => HTMLEle
   // magazynierzy
   const crew = node('div', 'logi-block');
   const head = node('p', 'logi-head');
-  head.append(icon('store'), node('strong', '', tx(`Magazynierzy: ${s.keepers.length} / ${s.want}`, `Storekeepers: ${s.keepers.length} / ${s.want}`)));
+  head.append(icon('store'), node('strong', '', tx('Magazynierzy', 'Storekeepers')));
+  // sloty jak w drużynie RPG: zajęte świecą na zielono, wolne to przerywana ramka; liczba obok
+  const slots = node('span', 'keeper-slots');
+  slots.title = tx(`${s.keepers.length} z ${s.want} magazynierów`, `${s.keepers.length} of ${s.want} storekeepers`);
+  for (let i = 0; i < s.want; i++) {
+    const slot = node('span', i < s.keepers.length ? 'keeper-slot on' : 'keeper-slot');
+    slot.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4" fill="currentColor"/><path d="M4 21c0-4.6 3.6-7.5 8-7.5s8 2.9 8 7.5z" fill="currentColor"/></svg>';
+    slots.append(slot);
+  }
+  head.append(slots, node('em', 'keeper-count', `${s.keepers.length} / ${s.want}`));
   crew.append(head);
   if (s.keepers.length) {
     const list = node('ul', 'logi-list');
-    for (const k of s.keepers) { const li = node('li'); li.append(node('strong', '', k.name), ` — ${k.doing}`); list.append(li); }
+    for (const k of s.keepers) { const li = node('li'); li.append(node('i', 'keeper-dot'), node('strong', '', k.name), node('span', 'keeper-doing', k.doing)); list.append(li); }
     crew.append(list);
   } else crew.append(node('p', 'logi-note', tx('Nikt tu teraz nie pracuje: magazynier przyjdzie, gdy przy ognisku będzie wolny chłop. Bez niego robotnicy sami wnoszą swój towar.', 'Nobody works here just now: a storekeeper will come once an idle peasant is free by the fire. Until then the workers carry their own goods in.')));
   out.push(crew);
