@@ -129,7 +129,8 @@ export interface TerrainView {
   /** Wykop pod budowę (depth 0 = zasypany): opuszcza teren działki tylko w obrazie */
   dig(x: number, y: number, w: number, h: number, depth: number): void;
   /** Wyrównuje teren pod działką do wysokości y (nasyp albo wkop), z łagodnym przejściem na 2 pola dookoła */
-  level(x: number, y: number, w: number, h: number, height: number): void;
+  /** `keepRock`: narożniki działki przy skale zostają na wysokości skały (kopalnia: góra schodzi do portalu, bez szczeliny) */
+  level(x: number, y: number, w: number, h: number, height: number, keepRock?: boolean): void;
   /** Poziomy szczegółów wokół punktu (x, z); reach poszerza zasięg, gdy kamera jest daleko */
   /** `detail` (0–1) skraca odległości szczegółów na słabszych poziomach grafiki (1 = pełne) */
   lod(x: number, z: number, reach: number, detail?: number, walk?: boolean): void;
@@ -2431,7 +2432,7 @@ function* terrainSteps(map: GameMap, models: ModelFactory, waterLevel: number): 
     },
     setAtmosphere(a: Atmosphere) { mistFx?.update(fxTime, a); },
     setSun(dir: THREE.Vector3, color: THREE.Color, golden: number) { wm.sunDir.value.copy(dir).normalize(); wm.sunCol.value.copy(color).multiplyScalar(dir.y > 0 ? 0.6 + golden * 0.8 : 0); },
-    level(x: number, y: number, fw: number, fh: number, y0: number) {
+    level(x: number, y: number, fw: number, fh: number, y0: number, keepRock = false) {
       streams?.blocked(x, y, fw, fh);
       mistFx?.clearAt(x + fw / 2 + ox, y + fh / 2 + oz, Math.max(fw, fh) / 2 + 3);
       levelLock ??= new Uint8Array((w + 1) * (h + 1));
@@ -2461,6 +2462,9 @@ function* terrainSteps(map: GameMap, models: ModelFactory, waterLevel: number): 
           // narożnik przy górach POZA działką zostaje: zbocze masywu nie schodzi do poziomu działki (kopalnia stoi tyłem do skały).
           // Sama działka jest zawsze równa — inaczej zbocze wjeżdżało w grotę kopalni i zasłaniało ją od środka.
           if (d > 0 && rockCorner(cx, cy)) continue;
+          // kopalnia: narożnik działki przy skale też zostaje (Michał 9.11.2026: „to góra ma się dostosować do kraty”) —
+          // obniżony odsłaniał szczelinę między działką a siatką masywu, przez którą widać było wodę pod mapą
+          if (keepRock && rockCorner(cx, cy)) continue;
           // narożnik pod innym, już stojącym budynkiem: skarpa nowego go nie rusza (inaczej sąsiad zawisał w powietrzu albo się zapadał)
           // (także pierwszy pierścień skarpy: tam stoi okap, cokół albo brzeg kopca sąsiada)
           const held = lock[ci]!;

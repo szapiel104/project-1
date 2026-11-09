@@ -18,12 +18,19 @@ b = Building()
 # Michał 9.11.2026: „bardziej w górze, a nie taki wystający” — cała kopalnia cofnięta w głąb działki (o DZ), więc czoło
 # skały z portalem stoi w połowie działki, a zbocze i grota chowają się w masywie za nią; przed portalem zostaje plac
 # z torami i hałdą. Przesunięcie dokładane do każdej bryły i do wszystkich punktów w danych modelu (niżej, przed save).
-DZ = -2.5
+DZ = -1.65
+# grota i jej strop (widać je tylko w podglądzie wnętrza) jeszcze głębiej: za portalem teren wznosi się do skały
+# (scene.ts → level z keepRock), a ściany groty nie mogą z niego wystawać
+DZI = -1.5
 # wszystkie bryły (box, prism, wheel, crystal) składają się z poly, więc wystarczy przesunąć poly; kosz z paczki
 # ('basket') zapisuje tylko miejsce, bez poly — jego przesuwamy osobno
 _poly, _prism = b.poly, b.prism
-b.poly = lambda group, mat, pts, away=None: _poly(group, mat, [(x, y, z + DZ) for x, y, z in pts], away=None if away is None else (away[0], away[1], away[2] + DZ))
-b.prism = lambda group, mat, r0, r1, h, x=0.0, y=0.0, z=0.0, **k: _prism(group, mat, r0, r1, h, x, y, z + (DZ if mat == 'basket' else 0.0), **k)
+def _dz(group):
+    return DZ + (DZI if group in ('interior', 'ceiling') else 0.0)
+
+
+b.poly = lambda group, mat, pts, away=None: _poly(group, mat, [(x, y, z + _dz(group)) for x, y, z in pts], away=None if away is None else (away[0], away[1], away[2] + _dz(group)))
+b.prism = lambda group, mat, r0, r1, h, x=0.0, y=0.0, z=0.0, **k: _prism(group, mat, r0, r1, h, x, y, z + (_dz(group) if mat == 'basket' else 0.0), **k)
 lights, lamps, solid, open_, spots = [], [], [], [], []
 
 P = 0.05                                   # posadzka groty
@@ -81,7 +88,7 @@ for sx in (-1, 1):
 b.poly('shell', 'rockDark', [(-OX, OY, zf(OY)), (OX, OY, zf(OY)), (OX, OY, KZ1 - 0.3), (-OX, OY, KZ1 - 0.3)], away=(0, 4, 1.0))
 # czeluść w otworze: z zewnątrz sztolnia ginie w mroku (jak wyjście widziane od środka), zamiast oświetlonej groty;
 # należy do garbu, więc znika razem z nim przy podglądzie wnętrza i w spacerze w środku
-b.box('shell', 'void', 2 * OX + 0.04, OY + 0.02, 0.03, 0, 0, KZ1 - 0.33)
+b.box('shell', 'void', 2 * OX + 0.04, OY + 0.02, 0.03, 0, 0, 1.03)
 # rama portalu: dwa grube słupy i oczep z belki, zastrzały
 PX, PZ = KX + 0.1, 1.2
 for sx in (-1, 1):
@@ -240,8 +247,8 @@ VIEWS = [
 solid = [[r[0], r[1], r[2] + DZ, r[3] + DZ] for r in solid]
 open_ = [[r[0], r[1], r[2] + DZ, r[3] + DZ] for r in open_]
 lights = [[x, y, round(z + DZ, 3)] for x, y, z in lights]
-lamps = [[x, y, round(z + DZ, 3), *rest] for x, y, z, *rest in lamps]
-spots = [[x, round(z + DZ, 3), f] for x, z, f in spots]
+lamps = [[x, y, round(z + DZ + (DZI if rest and rest[0] == 'interior' else 0.0), 3), *rest] for x, y, z, *rest in lamps]
+spots = [[x, round(z + DZ + DZI, 3), f] for x, z, f in spots]
 VIEWS = [[n, [c[0], c[1], c[2] + DZ], [t[0], t[1], t[2] + DZ], *rest] for n, c, t, *rest in VIEWS]
 b.save('mine', maxe=0.24, rays=16, reach=0.35, extra={
     'solid': solid, 'open': open_, 'floorY': P, 'lights': lights, 'lamps': lamps, 'spots': spots, 'views': VIEWS})

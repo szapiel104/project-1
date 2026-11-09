@@ -3337,7 +3337,7 @@ export class GameRenderer {
       // budynek siada lekko poniżej najwyższego punktu działki, a teren pod nim się wyrównuje (nasyp od dołu stoku,
       // wkop od góry), więc fundament nigdzie nie wisi nad ziemią i do środka nie zagląda trawa ze zbocza
       const ground = low + (top - low) * 0.35;
-      if (!def.wall && !def.road) view.level(b.x, b.y, fp.w, fp.h, ground - 0.01);
+      if (!def.wall && !def.road) view.level(b.x, b.y, fp.w, fp.h, ground - 0.01, def.id === 'oremine');
       // model sadu stoi na płycie łąki grubej na ORCHARD_FLOOR (w grze niewidocznej): opuszczamy go, żeby płot, jabłka
       // i szopa stały na terenie, a nie 5 cm nad nim
       const sink = orchard ? ORCHARD_FLOOR : 0;
@@ -3409,7 +3409,7 @@ export class GameRenderer {
       // kopalnia: skała zbocza z tej samej paczki co głazy i skałki wokół (na pustyni piaskowiec), żeby wejście zlało się z górą
       if (def.id === 'oremine') {
         const rock = rockMaterial(g.map.biome === 'desert' ? 'sahara' : 'temperate');
-        mesh.getObjectByName('shell')?.traverse((o) => { const m = o as THREE.Mesh; if (m.isMesh && !Array.isArray(m.material) && (m.material as THREE.Material).userData.pattern === 'rock') m.material = rock; });
+        mesh.traverse((o) => { const m = o as THREE.Mesh; if (m.isMesh && !Array.isArray(m.material) && (m.material as THREE.Material).userData.pattern === 'rock') m.material = rock; });
       }
       // daleka wersja: zapamiętujemy bryły teraz (dach na miejscu, nic nie zdjęte), liczymy ją dopiero, gdy będzie potrzebna
       const lod = prepareLod(mesh, def.id);
