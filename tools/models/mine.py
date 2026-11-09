@@ -15,6 +15,15 @@ sys.path.insert(0, os.path.dirname(__file__))
 from building import Building  # noqa: E402
 
 b = Building()
+# Michał 9.11.2026: „bardziej w górze, a nie taki wystający” — cała kopalnia cofnięta w głąb działki (o DZ), więc czoło
+# skały z portalem stoi w połowie działki, a zbocze i grota chowają się w masywie za nią; przed portalem zostaje plac
+# z torami i hałdą. Przesunięcie dokładane do każdej bryły i do wszystkich punktów w danych modelu (niżej, przed save).
+DZ = -0.9
+# wszystkie bryły (box, prism, wheel, crystal) składają się z poly, więc wystarczy przesunąć poly; kosz z paczki
+# ('basket') zapisuje tylko miejsce, bez poly — jego przesuwamy osobno
+_poly, _prism = b.poly, b.prism
+b.poly = lambda group, mat, pts, away=None: _poly(group, mat, [(x, y, z + DZ) for x, y, z in pts], away=None if away is None else (away[0], away[1], away[2] + DZ))
+b.prism = lambda group, mat, r0, r1, h, x=0.0, y=0.0, z=0.0, **k: _prism(group, mat, r0, r1, h, x, y, z + (DZ if mat == 'basket' else 0.0), **k)
 lights, lamps, solid, open_, spots = [], [], [], [], []
 
 P = 0.05                                   # posadzka groty
@@ -206,6 +215,11 @@ for z in [x * 0.3 - 0.3 for x in range(7)]:
 for sx in (-1, 1):
     b.box('interior', 'iron', 0.025, 0.03, KZ1 - (-0.45), sx * 0.17, P + 0.02, (KZ1 - 0.45) / 2)
     b.box('base', 'iron', 0.025, 0.03, 1.5 - KZ1 + 0.3, sx * 0.17, 0.02, (KZ1 + 1.5) / 2 - 0.15)
+# tor biegnie dalej przez plac przed portalem aż do skraju działki (kopalnia cofnięta w górę, plac jest dłuższy)
+for z in (1.62, 1.92, 2.22):
+    b.box('base', 'woodDark', 0.46, 0.025, 0.07, 0, 0, z)
+for sx in (-1, 1):
+    b.box('base', 'iron', 0.025, 0.03, 0.9, sx * 0.17, 0.02, 1.92)
 # wózek na szynach, na przedsionku przed portalem (nie zastawia przejścia do środka: stoi z boku toru? nie — tor jest w osi,
 # więc wózek stoi w grocie pod lewą ścianą, zepchnięty z toru na bocznicę)
 WX, WZ = -0.78, -0.22
@@ -263,5 +277,12 @@ VIEWS = [
     ['grota od wejścia', [0.0, P + 0.42, 1.1], [-0.3, 0.5, -0.4], ['base', 'interior', 'ceiling'], 16],
     ['grota: lewa ściana', [0.6, P + 0.42, -0.1], [-1.1, 0.5, 0.1], ['base', 'interior', 'ceiling'], 16],
 ]
+# punkty w danych modelu (przeszkody, przejścia, światła, miejsca górników, kamery widoków) też cofnięte o DZ
+solid = [[r[0], r[1], r[2] + DZ, r[3] + DZ] for r in solid]
+open_ = [[r[0], r[1], r[2] + DZ, r[3] + DZ] for r in open_]
+lights = [[x, y, round(z + DZ, 3)] for x, y, z in lights]
+lamps = [[x, y, round(z + DZ, 3), *rest] for x, y, z, *rest in lamps]
+spots = [[x, round(z + DZ, 3), f] for x, z, f in spots]
+VIEWS = [[n, [c[0], c[1], c[2] + DZ], [t[0], t[1], t[2] + DZ], *rest] for n, c, t, *rest in VIEWS]
 b.save('mine', maxe=0.24, rays=16, reach=0.35, extra={
     'solid': solid, 'open': open_, 'floorY': P, 'lights': lights, 'lamps': lamps, 'spots': spots, 'views': VIEWS})
