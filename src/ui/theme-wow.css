@@ -1172,3 +1172,14 @@ html body .info .icon-act { background: linear-gradient(#3a2614, #24160c) !impor
   background: linear-gradient(#4a3322, #2d1b0e) !important; border: 1px solid #1a0f07 !important; color: #fff4dc !important; }
 #ui#ui .floaters .info.army-mode .army-help-toggle * { color: #fff4dc !important; text-shadow: none !important; }
 #ui#ui .floaters .info.army-mode .army-help :is(p, li, dt, dd, kbd) { color: #2a1b0c !important; }
+/* sekcje jako ciemniejsze karty na pergaminie zamiast kresek (Michał 9.11.2026) */
+#ui .info:not(.is-person):not(.army-mode) > :is(.info-crew, .info-prod, .info-stock, .info-logi, .gate-box, .info-site, .recruit):not([hidden]) {
+  padding: 14px 16px !important; border: 0 !important; border-radius: 5px !important; background: rgba(90, 62, 28, .11) !important; box-shadow: inset 0 1px 3px rgba(90, 58, 20, .18) !important; }
+#ui .info:not(.is-person):not(.army-mode) > :is(.info-crew, .info-prod, .info-stock, .info-logi, .gate-box, .info-site, .recruit):not([hidden]) ~ :is(.info-crew, .info-prod, .info-stock, .info-logi, .gate-box, .info-site, .recruit):not([hidden]) { border-top: 0 !important; padding-top: 14px !important; }
+#ui .info:not(.is-person):not(.army-mode) > * { margin-left: 22px !important; margin-right: 22px !important; }
+#ui .info:not(.is-person):not(.army-mode) > :is(.info-head, .info-foot) { margin: 0 !important; }
+#ui .info:not(.is-person):not(.army-mode) { row-gap: 12px; }
+/* w karcie warsztatu stan i liczby na jaśniejszym tle, żeby odcinały się od karty */
+#ui .info:not(.is-person):not(.army-mode) .info-prod .prod-stat { background: rgba(255, 250, 235, .55) !important; }
+#ui .info:not(.is-person):not(.army-mode) .info-prod .prod-status { background: rgba(255, 250, 235, .55); }
+#ui .info:not(.is-person):not(.army-mode) .info-logi > * { padding: 0 !important; background: none !important; }
