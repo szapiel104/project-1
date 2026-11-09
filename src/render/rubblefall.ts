@@ -21,6 +21,8 @@ const MAX_TIME = 6;
 /** Tyle zawaleń liczy się naraz; kolejne kładą gruz od razu (np. w wielkiej bitwie) */
 const MAX_FALLS = 6;
 const STEP = 1 / 60;
+/** Najwięcej kawałków liczonych w fizyce na jedno zawalenie (duże budynki dawały ich setki) */
+const MAX_BODIES = 60;
 
 interface Fall { pile: THREE.Group; world: InstanceType<Cannon['World']>; pairs: [InstanceType<Cannon['Body']>, THREE.Object3D][]; t: number }
 
@@ -82,7 +84,9 @@ export class RubbleFalls {
     world.defaultContactMaterial.restitution = 0.12;
 
     // ziemia: siatka wysokości pod działką (z zapasem), a pod nią płaszczyzna na wypadek kawałka, który odleci dalej
-    const pad = 1, es = 0.1;
+    // oczko siatki co najmniej 0,2 i najwyżej ok. 30 × 30 oczek: przy 0,1 duży budynek dawał dziesiątki tysięcy trójkątów
+    // ziemi do zderzeń i gra spadała do 1 FPS przy każdym zawaleniu (Michał 9.11.2026)
+    const pad = 1, es = Math.max(0.2, (Math.max(w, h) + 2 * pad) / 30);
     const nx = Math.ceil((w + 2 * pad) / es) + 1, nz = Math.ceil((h + 2 * pad) / es) + 1;
     const x0 = -w / 2 - pad, zTop = h / 2 + pad;
     let low = 0;
@@ -110,6 +114,8 @@ export class RubbleFalls {
     const pairs: Fall['pairs'] = [];
     const n = pile.children.length;
     pile.children.forEach((o, i) => {
+      // najwyżej MAX_BODIES kawałków spada w fizyce; reszta leży od razu tam, gdzie ułożył ją rubbleModel
+      if (i >= MAX_BODIES) return;
       const m = o as THREE.Mesh;
       const geo = m.geometry as THREE.BufferGeometry & { parameters?: { width?: number; height?: number; depth?: number; radius?: number } };
       const par = geo.parameters ?? {};
@@ -150,7 +156,7 @@ export class RubbleFalls {
       const gone = !f.pairs.length || !f.pile.parent;
       if (!gone) {
         f.t += dt;
-        f.world.step(STEP, Math.min(dt, 0.1), 4);
+        f.world.step(STEP, Math.min(dt, 0.05), 2); // przy wolnych klatkach nie dokładamy kroków (spirala spowolnienia)
         this.copy(f);
       }
       const asleep = f.pairs.every(([b]) => b.sleepState === 2);
