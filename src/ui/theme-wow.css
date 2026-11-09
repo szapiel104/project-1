@@ -1242,3 +1242,23 @@ html body .info .icon-act { background: linear-gradient(#3a2614, #24160c) !impor
 /* wieża z załogą w kaflach: karta „na wieży” tylko z przyciskiem „zejdźcie”; bez żołnierzy znika cała */
 #ui#ui .floaters .info:has(> .info-crew:not([hidden])) > .tower-box:not(:has(.icon-act:not([hidden]))) { display: none !important; }
 #ui#ui .floaters .info:has(> .info-crew:not([hidden])) > .tower-box { background: none !important; box-shadow: none !important; padding: 0 !important; justify-content: flex-end; margin-bottom: -6px !important; }
+/* okno postaci: „przejdź się” jako ikona oka w nagłówku; wiek nagłówkiem karty, każda informacja w osobnym wierszu */
+#ui#ui .floaters .info.is-person .info-head .walk-btn { flex: none; width: 28px !important; height: 28px !important; min-height: 0 !important; margin: 0 !important; padding: 0 !important; display: grid !important; place-items: center; border-radius: 4px; }
+#ui#ui .floaters .info.is-person .info-head .walk-btn[hidden] { display: none !important; }
+#ui#ui .floaters .info.is-person .info-head .walk-btn svg { width: 18px; height: 18px; }
+#ui#ui .floaters .info.is-person:not(.army-mode) .info-desc { padding: 10px 14px 8px !important; margin-bottom: -12px !important; border-bottom: 1px solid rgba(120, 86, 40, .3) !important; }
+#ui#ui .floaters .info.is-person:not(.army-mode) .info-desc + * { display: grid !important; gap: 0; padding: 4px 14px 8px !important; }
+#ui#ui .floaters .info.is-person .person-row { display: grid; grid-template-columns: 76px 1fr; gap: 10px; align-items: baseline; padding: 6px 0; border-top: 1px solid rgba(120, 86, 40, .18); }
+#ui#ui .floaters .info.is-person .person-row:first-child { border-top: 0; }
+#ui#ui .floaters .info.is-person .person-k { font-size: 12px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: #6e4a1e !important; }
+#ui#ui .floaters .info.is-person .person-v { font-size: 15.5px; font-weight: 600; color: #2a1b0c !important; }
+/* twierdza: zdrowie strażnika pod głową, odliczanie na wolnym miejscu */
+.keeper-card { position: relative; }
+.keeper-hp { position: absolute; left: 3px; right: 3px; bottom: 2px; height: 4px; background: #1a0f07; border-radius: 2px; overflow: hidden; }
+.keeper-hp > span { display: block; height: 100%; background: linear-gradient(#86d064, #3f8f2a); }
+.keeper-hp > span[data-low='true'] { background: linear-gradient(#e0705a, #9a2a1a); }
+.keeper-party.compact .keeper-card.free.soon { border-style: solid; border-color: #c29a45; background: rgba(194, 154, 69, .15); }
+.keeper-timer { position: absolute; inset: 0; display: grid; place-items: center; font-size: 12.5px; font-weight: 700; color: #6e4a1e; font-variant-numeric: tabular-nums; }
+.keeper-party.compact .keeper-card.free.soon .keeper-face { opacity: 0; }
+/* twierdza z kaflami straży: zbędny wiersz „Straż miejska 6/6 · pinezki” znika */
+#ui#ui .floaters .info:has(> .info-crew:not([hidden])) > .gate-state { display: none !important; }

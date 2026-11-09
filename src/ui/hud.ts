@@ -901,6 +901,8 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
   watchState.hidden = true;
   const walkBtn = el('button', 'btn-main walk-btn', tx('Przejdź się jego oczami (F)', 'Walk in his shoes (F)')); walkBtn.type = 'button'; walkBtn.hidden = true;
   walkBtn.addEventListener('click', () => events.onWalk());
+  // w oknie postaci przycisk to ikona oka w nagłówku, obok „i” i krzyżyka (Michał 9.11.2026)
+  iconBtn(walkBtn, ICON.walk, tx('Przejdź się jego oczami (F)', 'Walk in his shoes (F)'));
   const areaBtn = el('button', 'btn-plain area-btn', tx('Pokaż teren pracy', 'Show work area')); areaBtn.type = 'button'; areaBtn.hidden = true;
   // kopalnia: przejście do sztolni oczami chłopa (osobna lokacja pod ziemią)
   const mineBtn = el('button', 'btn-main walk-btn', tx('Wejdź do kopalni', 'Enter the mine')); mineBtn.type = 'button'; mineBtn.hidden = true;
@@ -977,11 +979,11 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
   infoImg.decoding = 'async';
   infoPic.append(infoImg);
   infoPic.hidden = true;
-  infoHead.append(infoPic, infoTitle, descBtn, xBtn);
+  infoHead.append(infoPic, infoTitle, walkBtn, descBtn, xBtn);
   // stopka okna jak w grze: wytrzymałość z lewej, przyciski-ikony z prawej
   const infoFoot = el('div', 'info-foot');
   infoFoot.append(hpLine, infoActions);
-  info.append(infoHead, riotBox, gateBox, powerBox, quarBox, towerBox, watchState, walkBtn, mineBtn, recruit, armyPanel, roster, armyCtl.help, siteBox, crewBox, prodBox, storeBox, logiBox, infoDesc, infoWorker, trainBtn, trainNote, infoFoot);
+  info.append(infoHead, riotBox, gateBox, powerBox, quarBox, towerBox, watchState, mineBtn, recruit, armyPanel, roster, armyCtl.help, siteBox, crewBox, prodBox, storeBox, logiBox, infoDesc, infoWorker, trainBtn, trainNote, infoFoot);
   let infoId = 0;
   let lastInfoId = -1;
   const demolishAsk = confirmBtn(demolish, () => events.onDemolish(infoId));
@@ -1442,7 +1444,14 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
       setText(infoDesc, person.lines[0] ?? '');
       infoWorker.hidden = person.lines.length < 2;
       infoWorker.textContent = '';
-      person.lines.slice(1).forEach((line, k) => { if (k) infoWorker.append(document.createElement('br')); infoWorker.append(line); });
+      // każda informacja w osobnym wierszu: etykieta (Cech, Teraz…) mocniej, wartość obok
+      for (const line of person.lines.slice(1)) {
+        const row = el('span', 'person-row');
+        const cut = line.indexOf(': ');
+        if (cut > 0) row.append(el('b', 'person-k', line.slice(0, cut)), el('span', 'person-v', line.slice(cut + 2)));
+        else row.append(el('span', 'person-v', line));
+        infoWorker.append(row);
+      }
       demolish.hidden = true; moveBtn.hidden = true;
       trainBtn.hidden = true;
       trainNote.hidden = true;

@@ -1104,13 +1104,22 @@ function buildingInfo(b: GameState['buildings'][number]): BuildingInfo {
 function crewInfo(b: GameState['buildings'][number]): CrewInfo | undefined {
   const def = BUILDINGS[b.type]!;
   if (b.owner !== ME || b.build || b.ruined || def.keepers) return undefined;
+  // twierdza i barak górników: strażnicy z paskiem zdrowia; po śmierci wolne miejsce odlicza, kiedy przyjdzie nowy
+  if (def.id === 'keep' || def.id === 'minecamp') {
+    const w = def.id === 'keep' ? watchInfo(game, b.owner) : campWatch(game, b);
+    const men = game.soldiers.filter((s) => s.owner === b.owner && UNITS[s.kind]!.guard && s.hp > 0 && (def.id === 'keep' ? !s.camp : s.camp === b.id));
+    return { title: def.id === 'keep' ? tx('Straż miejska', 'Town watch') : tx('Straż kopalni', 'Mine guard'), max: Math.max(w?.want ?? men.length, men.length), compact: true,
+      timer: w?.training ? `${w.training} s` : undefined,
+      freeHint: w?.training ? tx(`Nowy strażnik za ${w.training} s`, `A new guard in ${w.training} s`) : w?.note ? `${tx('Wolne miejsce', 'Free post')}: ${w.note}` : tx('Wolne miejsce — przyjdzie nowy strażnik', 'Free post — a new guard will come'),
+      members: men.map((s) => ({ id: s.id, name: personCard(s.id)?.name ?? '', doing: t(UNITS[s.kind]!.name), kind: UNITS[s.kind]!.id, hp: s.hp / UNITS[s.kind]!.hp })) };
+  }
   const room = garrisonRoom(def.id);
   if (room) {
     const men = game.soldiers.filter((s) => towerOf(game, s) === b.id);
     return { title: tx('Załoga', 'Garrison'), max: room, compact: true, freeHint: tx('Zaznacz żołnierzy i kliknij budynek prawym przyciskiem — wejdą na górę', 'Select men and right-click the building — they will climb up'),
       members: men.map((s) => ({ id: s.id, name: personCard(s.id)?.name ?? '', doing: t(UNITS[s.kind]!.name), kind: UNITS[s.kind]!.id })) };
   }
-  if (!(def.production || def.staff) || def.id === 'keep') return undefined;
+  if (!(def.production || def.staff)) return undefined;
   const ids = crewOf(b);
   return { title: tx('Pracownicy', 'Workers'), max: Math.max(ids.length, crewWanted(def, game.units.reduce((n, u) => n + (u.owner === b.owner ? 1 : 0), 0))),
     freeHint: b.off ? tx('Budynek wyłączony — włącz go, a przyjdzie wolny chłop', 'The building is shut — start it up and an idle peasant will come') : tx('Przyjdzie pierwszy wolny chłop spod ogniska', 'The first idle peasant by the fire will come'),

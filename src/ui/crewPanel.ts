@@ -5,8 +5,8 @@ import { tx } from '../i18n';
  * miejsca”). Każdy pracownik, magazynier albo żołnierz na wieży ma kafel z twarzą, imieniem i tym, co robi; klik
  * zaznacza go i pokazuje na mapie. Wolne miejsca to kafle z przerywaną ramką, które wypełniają się, gdy ktoś przyjdzie.
  */
-export interface CrewMember { id: number; name: string; doing: string; /** rodzaj żołnierza (archer, spearman…) albo brak = chłop */ kind?: string }
-export interface CrewInfo { title: string; members: CrewMember[]; max: number; /** co zrobić, by wolne miejsce się zapełniło */ freeHint: string; /** same portrety bez imion (załoga wieży) */ compact?: boolean }
+export interface CrewMember { id: number; name: string; doing: string; /** rodzaj żołnierza (archer, spearman…) albo brak = chłop */ kind?: string; /** zdrowie 0…1 (pasek pod głową) */ hp?: number }
+export interface CrewInfo { title: string; members: CrewMember[]; max: number; /** co zrobić, by wolne miejsce się zapełniło */ freeHint: string; /** na pierwszym wolnym miejscu: za ile przyjdzie następny (np. „34 s”) */ timer?: string; /** same portrety bez imion (załoga wieży) */ compact?: boolean }
 
 /** Twarz chłopa: słomiany kapelusz, lniana koszula */
 export const PEASANT_FACE = `<svg viewBox="0 0 32 32" aria-hidden="true">
@@ -27,7 +27,7 @@ const node = <K extends keyof HTMLElementTagNameMap>(tag: K, cls = '', text = ''
 };
 
 /** Klucz do sprawdzenia, czy trzeba przerysować (bez przebudowy co klatkę) */
-export const crewKey = (c: CrewInfo): string => `${c.title}|${c.max}|${c.members.map((m) => `${m.id}:${m.doing}`).join(',')}`;
+export const crewKey = (c: CrewInfo): string => `${c.title}|${c.max}|${c.timer ?? ''}|${c.freeHint}|${c.members.map((m) => `${m.id}:${m.doing}:${Math.round((m.hp ?? 1) * 20)}`).join(',')}`;
 
 /** Sama drużyna (kafle), bez nagłówka — używa jej też okno magazynu */
 export function crewParty(c: CrewInfo, face: (kind?: string) => string, pick?: (unit: number) => void): HTMLElement {
@@ -38,6 +38,8 @@ export function crewParty(c: CrewInfo, face: (kind?: string) => string, pick?: (
     if (!m) {
       const free = node('div', 'keeper-card free');
       free.innerHTML = '<span class="keeper-face"></span>';
+      // pierwsze wolne miejsce odlicza, za ile przyjdzie następny (strażnik po śmierci, rekrut)
+      if (i === c.members.length && c.timer) { free.classList.add('soon'); free.append(node('span', 'keeper-timer', c.timer)); }
       free.append(node('span', 'keeper-name', tx('Wolne miejsce', 'Free post')));
       free.title = c.freeHint;
       party.append(free);
@@ -46,10 +48,11 @@ export function crewParty(c: CrewInfo, face: (kind?: string) => string, pick?: (
     const card = node('button', 'keeper-card');
     card.type = 'button';
     card.innerHTML = `<span class="keeper-face">${face(m.kind)}</span>`;
+    if (m.hp !== undefined) { const bar = node('span', 'keeper-hp'); const fill = node('span'); fill.style.width = `${Math.round(Math.max(0, Math.min(1, m.hp)) * 100)}%`; if (m.hp < 0.35) fill.dataset.low = 'true'; bar.append(fill); card.append(bar); }
     const txt = node('span', 'keeper-txt');
     txt.append(node('strong', 'keeper-name', m.name), node('span', 'keeper-doing', m.doing));
     card.append(txt);
-    card.title = m.kind ? tx(`${m.doing}${m.name ? ` ${m.name}` : ''} — kliknij, by go zaznaczyć`, `${m.doing}${m.name ? ` ${m.name}` : ''} — click to select him`) : tx(`${m.name} — ${m.doing}. Kliknij, by pokazać na mapie`, `${m.name} — ${m.doing}. Click to show on the map`);
+    card.title = m.kind ? `${m.doing}${m.name ? ` ${m.name}` : ''}${m.hp !== undefined ? ` · ${tx('zdrowie', 'health')} ${Math.round(m.hp * 100)}%` : ''} — ${tx('kliknij, by go zaznaczyć', 'click to select him')}` : tx(`${m.name} — ${m.doing}. Kliknij, by pokazać na mapie`, `${m.name} — ${m.doing}. Click to show on the map`);
     card.setAttribute('aria-label', card.title);
     if (pick) card.addEventListener('click', () => pick(m.id));
     party.append(card);
