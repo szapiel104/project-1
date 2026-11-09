@@ -776,3 +776,33 @@ html body .info .icon-act.icon-danger:hover, html body .info .icon-act.armed { b
 html body .info .icon-act-q { font-size: 14px; font-weight: 600; white-space: nowrap; }
 /* główne przyciski w oknie (brama, przejdź się jego oczami, kopalnia) */
 html body .info :is(.walk-btn, .gate-btn, .btn-main) { min-height: 40px; border-radius: 6px; font-size: 15px; }
+
+/* Okno budynku w stylu RPG: ciemna skóra, podwójna złota ramka, złote nagłówki, jasne napisy (Michał 9.11.2026: „szare tło nieczytelne, mało RPGowe”) */
+html body .floaters .info, html body .info {
+  background:
+    radial-gradient(120% 80% at 50% 0%, rgba(120, 72, 30, .35), transparent 60%),
+    repeating-linear-gradient(45deg, rgba(255, 255, 255, .012) 0 2px, transparent 2px 5px),
+    linear-gradient(#2a1b10, #170e08) !important;
+  border: 1px solid #c9a24f !important;
+  box-shadow: inset 0 0 0 3px #1a0f08, inset 0 0 0 4px rgba(201, 162, 79, .45), 0 12px 32px rgba(0, 0, 0, .55) !important;
+  color: #f4e6c6 !important; }
+html body .info .info-head { background: linear-gradient(#3a2614, #22150b) !important; border-bottom: 1px solid #c9a24f !important; }
+html body .info :is(p, span, small, strong, li, .hint, .gate-state, .power-note, .logi-note) { color: #f1e3c4; }
+html body .info .info-owner { background: rgba(0, 0, 0, .35) !important; border: 1px solid rgba(201, 162, 79, .35) !important; color: #f4e6c6 !important; }
+html body .info .info-owner * { color: #f4e6c6; }
+html body .info .hp-line, html body .info .hp-line > span:first-child { color: #e9d6aa !important; font-size: 13px; }
+html body .info .hp-bar > span { background: linear-gradient(#7fcf5a, #3f8f2a) !important; }
+html body .info :is(.power-row-box, .info-stock, .info-logi, .info-prod, .info-site, .gate-box, .army-box, .roster) {
+  background: rgba(0, 0, 0, .3) !important; border: 1px solid rgba(201, 162, 79, .3) !important; }
+html body .info :is(.stock-head, .logi-head, .prod-head, .stock-head2), html body .info :is(.stock-head, .logi-head, .prod-head, .stock-head2) * { color: #e9c766 !important; }
+html body .info :is(.stock-head, .logi-head, .prod-head, .stock-head2) :is(span, small):last-child { color: #c9b48a !important; }
+html body .info .stock-item { background: rgba(255, 240, 210, .07) !important; border: 1px solid rgba(201, 162, 79, .35) !important; color: #f4e6c6 !important; }
+html body .info .stock-item * { color: #f4e6c6 !important; }
+html body .info .stock-item strong { color: #fff3d6 !important; }
+html body .info :is(.stock-bar, .prod-bar) { background: rgba(0, 0, 0, .5) !important; border: 1px solid rgba(201, 162, 79, .3); border-radius: 4px; }
+html body .info :is(.stock-bar, .prod-bar) > span { background: linear-gradient(#e9c766, #a8792b) !important; }
+html body .info .power-badge { color: #8fd66a !important; font-weight: 600; }
+html body .info .power-badge[data-shut="true"] { color: #f0a08a !important; }
+html body .info .power-btn { background: rgba(255, 240, 210, .08) !important; color: #f4e6c6 !important; border: 1px solid rgba(201, 162, 79, .5) !important; }
+html body .info .info-desc { background: rgba(0, 0, 0, .35) !important; color: #f1e3c4 !important; border-left: 2px solid #c9a24f !important; }
+html body .info .icon-act { background: linear-gradient(#3a2614, #24160c) !important; }
