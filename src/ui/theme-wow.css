@@ -1382,3 +1382,5 @@ body .scribe .scribe-log-btn { height: 31px; min-height: 0; }
 .fps-tag { right: 108px !important; width: 84px; border-right: 0 !important; }
 .build { right: 192px !important; border-right: 0 !important; border-radius: 0 0 0 6px !important; }
 body.hide-fps .build { right: 108px !important; }
+body .scribe .scribe-log-btn { height: 38px; }
+.dev-open { top: 55.6px !important; }
