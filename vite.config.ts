@@ -15,6 +15,7 @@ import { readFileSync, readdirSync, statSync } from 'node:fs';
  * Miniatury z pamięci przeglądarki żyją, dopóki ten odcisk się nie zmieni — a nie przy każdej wersji gry (Michał 7.11.2026:
  * „długo trwa wczytywanie budynków”: po każdym wdrożeniu menu budowy świeciło pustymi kartami, aż miniatury narysowały się od nowa).
  */
+// (odcisk liczony przy starcie serwera; zmiana tego pliku restartuje `npx vite`, więc miniatury przeliczają się od nowa)
 function thumbsKey(): string {
   const h = createHash('sha1');
   const add = (f: string): void => { try { h.update(f); h.update(readFileSync(f)); } catch { /* brak pliku: pomijamy */ } };
