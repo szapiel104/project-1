@@ -1463,3 +1463,10 @@ body.hide-fps:not(.menu-open) .build { right: 126px !important; }
 .market-panel .market-ico { width: 58px; height: 58px; }
 .market-panel .market-ico svg { width: 42px; height: 42px; }
 .market-panel .market-name { font-size: 15px; font-weight: 700; }
+/* rynek: po lewej na całą wysokość, dwa towary w rzędzie, szersze suwaki i niskie pole liczby (Michał 9.11.2026) */
+#ui .market-panel, .market-panel { left: 13px; right: auto; top: 110px; bottom: 82px; max-height: none; width: min(1000px, calc(100vw - 40px)); }
+.market-panel .market-grid { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
+.market-panel .market-tile { grid-template-columns: minmax(0, 1fr) 170px 170px !important; }
+.market-panel input.market-n { height: 24px !important; min-height: 0 !important; width: 52px !important; flex: none; line-height: 22px; box-sizing: border-box; }
+.market-panel .market-range { min-width: 60px; }
+@media (max-width: 1100px) { .market-panel .market-grid { grid-template-columns: 1fr !important; } }
