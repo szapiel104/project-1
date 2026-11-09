@@ -1644,7 +1644,9 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
             for (const it of st.items) {
               const cell = el('div', 'stock-item');
               cell.title = t(RESOURCE_DEFS[it.id as keyof typeof RESOURCE_DEFS].name);
-              cell.append(icon(it.id), el('strong', '', String(it.amount)), el('span', '', t(RESOURCE_DEFS[it.id as keyof typeof RESOURCE_DEFS].name)));
+              cell.append(icon(it.id), el('strong', '', num(it.amount)), el('span', '', t(RESOURCE_DEFS[it.id as keyof typeof RESOURCE_DEFS].name)));
+              // udział w pojemności tego rodzaju: cienki pasek pod kaflem
+              cell.style.setProperty('--share', `${Math.min(100, (it.amount / Math.max(1, st.here)) * 100).toFixed(1)}%`);
               grid.append(cell);
             }
             const extra: HTMLElement[] = [];
@@ -1653,7 +1655,9 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
             if (st.stores > 1) extra.push(kv(tx(`Razem we wszystkich (${st.stores})`, `Across all ${st.stores}`), `${num(Math.min(st.used, st.max))} / ${num(st.max)}`));
             // zapas większy niż pojemność (np. łup, tryb testowy): ta część nie leży w żadnym magazynie
             if (st.used > st.max) extra.push(kv(tx('Nie mieści się w żadnym magazynie', 'Fits in no store at all'), num(st.used - st.max), true));
-            return [head, bar, grid, ...extra];
+            const sec = el('div', `stock-sec stock-${st.kind}`);
+            sec.append(head, bar, grid, ...extra);
+            return [sec];
           }));
         }
       }
