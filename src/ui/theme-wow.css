@@ -989,3 +989,7 @@ html body .info .icon-act { background: linear-gradient(#3a2614, #24160c) !impor
   background-color: #ecdcb4 !important;
   background-image: radial-gradient(120% 70% at 50% 0%, #f6e9c6, transparent 70%), repeating-linear-gradient(0deg, rgba(120, 88, 40, .035) 0 2px, transparent 2px 4px) !important;
   border: 2px solid #3a2a14 !important; box-shadow: inset 0 0 0 2px #c9a24f, inset 0 0 0 4px #3a2a14, 0 14px 40px rgba(0, 0, 0, .6) !important; color: #2a1b0c !important; }
+#ui .info:not(.is-person):not(.army-mode) .info-prod { background: transparent !important; border: 0 !important; padding: 0 !important; box-shadow: none !important; }
+#ui .info:not(.is-person):not(.army-mode) .prod-rows { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+#ui .info:not(.is-person):not(.army-mode) .prod-stat { grid-template-columns: auto 1fr; align-items: baseline; column-gap: 12px; }
+#ui .info:not(.is-person):not(.army-mode) .prod-stat strong { font-size: 22px; white-space: nowrap; }
