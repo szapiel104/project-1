@@ -59,8 +59,23 @@ export function createMarketPanel(onTrade: (res: number, amount: number) => void
   root.append(head, note, infoSlot, body);
   document.getElementById('ui')?.append(root) ?? document.body.append(root);
 
-  type Tile = { have: HTMLElement; btns: { el: HTMLButtonElement; amount: number }[] };
+  // suwaki (Michał 9.11.2026): ile sprzedać — od 1 do tego, co masz; ile kupić — do tego, na co cię stać i co się zmieści
+  type Side = { range: HTMLInputElement; btn: HTMLButtonElement; label: HTMLElement; sell: boolean };
+  type Tile = { id: ResourceId; have: HTMLElement; sides: Side[] };
   const tiles = new Map<ResourceId, Tile>();
+  let lastG: GameState | null = null, lastMe = 0;
+  const paintSide = (tile: Tile, sd: Side): void => {
+    const n = Number(sd.range.value) || 0;
+    const price = n > 0 ? (sd.sell ? sellPrice(tile.id, n) : buyPrice(tile.id, n)) : 0;
+    sd.label.textContent = `${n}`;
+    sd.btn.innerHTML = `<span class="mb-n">${sd.sell ? tx('Sprzedaj', 'Sell') : tx('Kup', 'Buy')} ${n}</span><span class="mb-price">${sd.sell ? '+' : '−'}${price}${icon('gold', 16)}</span>`;
+    sd.btn.setAttribute('aria-label', sd.sell ? tx(`Sprzedaj ${n} za ${price} rudy`, `Sell ${n} for ${price} ore`) : tx(`Kup ${n} za ${price} rudy`, `Buy ${n} for ${price} ore`));
+    const err = !lastG || n <= 0 ? 'trade.goods' : canTrade(lastG, lastMe, resIndex(tile.id), sd.sell ? -n : n);
+    sd.btn.disabled = !!err;
+    sd.btn.title = err === 'trade.have' ? tx('Nie masz tyle tego towaru', 'You haven’t that much of it')
+      : err === 'trade.gold' ? tx('Za mało rudy', 'Not enough ore')
+      : err === 'trade.room' ? tx('Nie zmieści się w magazynach', 'No room left in your stores') : '';
+  };
   for (const grp of GROUPS) {
     const goods = MARKET_GOODS.filter((id) => (RESOURCE_DEFS[id].store ?? null) === grp.kind);
     if (!goods.length) continue;
@@ -69,11 +84,6 @@ export function createMarketPanel(onTrade: (res: number, amount: number) => void
     h.textContent = tx(grp.pl, grp.en);
     const grid = document.createElement('div');
     grid.className = 'market-grid';
-    // nagłówek kolumn: nad zielonymi „Sprzedaj”, nad czerwonymi „Kup”
-    const cols = document.createElement('div');
-    cols.className = 'market-cols';
-    cols.innerHTML = `<span></span><span class="sell">${tx('Sprzedaj', 'Sell')}</span><span class="buy">${tx('Kup', 'Buy')}</span>`;
-    grid.append(cols);
     for (const id of goods) {
       const tile = document.createElement('div');
       tile.className = 'market-tile';
@@ -89,27 +99,32 @@ export function createMarketPanel(onTrade: (res: number, amount: number) => void
       have.className = 'market-have';
       ic.append(have);
       top.append(ic, name);
-      const btns: Tile['btns'] = [];
-      const line = (sell: boolean): HTMLElement => {
-        const row = document.createElement('div');
-        row.className = `market-line ${sell ? 'sell' : 'buy'}`;
-        for (const n of MARKET_LOTS) {
-          const amount = sell ? -n : n;
-          const price = sell ? sellPrice(id, n) : buyPrice(id, n);
-          const b = document.createElement('button');
-          b.type = 'button';
-          b.className = 'market-btn';
-          b.innerHTML = `<span class="mb-n">${n} ${tx('szt.', 'pcs')}</span><span class="mb-price">${sell ? '+' : '−'}${price}${icon('gold', 18)}</span>`;
-          b.setAttribute('aria-label', sell ? tx(`Sprzedaj ${n} za ${price} rudy`, `Sell ${n} for ${price} ore`) : tx(`Kup ${n} za ${price} rudy`, `Buy ${n} for ${price} ore`));
-          b.addEventListener('click', () => { if (!b.disabled) onTrade(resIndex(id), amount); });
-          btns.push({ el: b, amount });
-          row.append(b);
-        }
-        return row;
+      const rec: Tile = { id, have, sides: [] };
+      const side = (sell: boolean): HTMLElement => {
+        const box = document.createElement('div');
+        box.className = `market-side ${sell ? 'sell' : 'buy'}`;
+        const range = document.createElement('input');
+        range.type = 'range'; range.min = '1'; range.max = '1'; range.step = '1'; range.value = String(MARKET_LOTS[0]);
+        range.className = 'market-range';
+        range.setAttribute('aria-label', sell ? tx(`Ile sprzedać: ${t(RESOURCE_DEFS[id].name)}`, `How much ${t(RESOURCE_DEFS[id].name)} to sell`) : tx(`Ile kupić: ${t(RESOURCE_DEFS[id].name)}`, `How much ${t(RESOURCE_DEFS[id].name)} to buy`));
+        const label = document.createElement('span');
+        label.className = 'market-n';
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'market-btn';
+        const sd: Side = { range, btn, label, sell };
+        range.addEventListener('input', () => paintSide(rec, sd));
+        btn.addEventListener('click', () => { const n = Number(range.value) || 0; if (!btn.disabled && n > 0) onTrade(resIndex(id), sell ? -n : n); });
+        rec.sides.push(sd);
+        const ctl = document.createElement('div');
+        ctl.className = 'market-ctl';
+        ctl.append(range, label);
+        box.append(ctl, btn);
+        return box;
       };
-      tile.append(top, line(true), line(false));
+      tile.append(top, side(true), side(false));
       grid.append(tile);
-      tiles.set(id, { have, btns });
+      tiles.set(id, rec);
     }
     body.append(h, grid);
   }
@@ -148,17 +163,21 @@ export function createMarketPanel(onTrade: (res: number, amount: number) => void
       key = k;
       purse.innerHTML = `${icon('gold', 26)}<b>${short(p.res[GOLD]!)}</b>`;
       purse.title = tx(`Ruda: ${p.res[GOLD]}`, `Ore: ${p.res[GOLD]}`);
+      lastG = g; lastMe = me;
       for (const [id, r] of tiles) {
         const i = resIndex(id);
         // krótko (85 mln, 14,3k) — długie liczby rozpychały kafel; dokładna liczba w dymku
         r.have.textContent = short(p.res[i]!);
         r.have.title = tx(`Masz ${p.res[i]}`, `You have ${p.res[i]}`);
-        for (const { el, amount } of r.btns) {
-          const err = canTrade(g, me, i, amount);
-          el.disabled = !!err;
-          el.title = err === 'trade.have' ? tx('Nie masz tyle tego towaru', 'You haven’t that much of it')
-            : err === 'trade.gold' ? tx('Za mało rudy', 'Not enough ore')
-            : err === 'trade.room' ? tx('Nie zmieści się w magazynach', 'No room left in your stores') : '';
+        for (const sd of r.sides) {
+          // największa partia: sprzedaż — tyle, ile masz; kupno — na ile starczy rudy i miejsca (szukanie połówkowe)
+          let max = 0;
+          if (sd.sell) max = Math.min(1000, p.res[i]!);
+          else { let lo = 0, hi = 1000; while (lo < hi) { const m = Math.ceil((lo + hi) / 2); if (canTrade(g, me, i, m)) hi = m - 1; else lo = m; } max = lo; }
+          sd.range.max = String(Math.max(1, max));
+          sd.range.disabled = max <= 0;
+          if (Number(sd.range.value) > max) sd.range.value = String(Math.max(1, max));
+          paintSide(r, sd);
         }
       }
     },
