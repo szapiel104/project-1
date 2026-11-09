@@ -1292,3 +1292,23 @@ html body .info .icon-act { background: linear-gradient(#3a2614, #24160c) !impor
 .toast { top: 118px; }
 .report { bottom: auto; top: 70px; }
 body.menu-open #ui .status.status-top, body.walking #ui .status.status-top { display: none; }
+/* pasek zasobów od lewej do prawej krawędzi; kronika pod nim z lewej, wersja · FPS · deweloper pod nim z prawej, w jednym rzędzie */
+#ui .status.status-top { left: 0; right: 0; transform: none; width: auto; max-width: none; border-left: 0; border-right: 0; border-radius: 0; padding: 4px 12px 5px;
+  border-bottom: 1px solid #9a7a2a; box-shadow: 0 1px 0 #0b0704, 0 4px 14px rgba(0, 0, 0, .5), inset 0 -1px 0 rgba(255, 220, 160, .12); }
+.scribe { top: 60px; }
+.scribe-log { top: 112px; }
+.build { top: 60px; right: 190px; font-size: 14px; padding: 7px 12px; line-height: 1.2; }
+.fps-tag { top: 60px; right: 104px; font-size: 14px; padding: 7px 10px; line-height: 1.2; }
+#ui ~ .dev-open, .dev-open { top: 60px !important; right: 12px; }
+.alarm { top: 60px; }
+.toast { top: 112px; }
+.report { top: 112px; }
+/* dolna belka: suwaki prędkości, podatków i racji jak płytki z gry, równej wysokości z „Wyburzaniem” */
+#ui .toolbar .stepper { min-height: 40px; padding: 0 3px; gap: 4px; border-radius: 4px; background: linear-gradient(#1a1008, #24170c) !important; border: 1px solid #6e5226 !important; box-shadow: inset 0 1px 3px rgba(0, 0, 0, .6), 0 0 0 1px #0b0704 !important; }
+#ui .toolbar .stepper .step { width: 32px; height: 32px; min-height: 0; padding: 0; display: grid; place-items: center; font-size: 18px; font-weight: 600; line-height: 1; border-radius: 3px;
+  color: #fff4dc; background: linear-gradient(#5a3f2a, #2d1b0e) !important; border: 1px solid #1a0f07 !important; box-shadow: inset 0 1px 0 rgba(255, 236, 200, .22), inset 0 0 0 1px rgba(194, 154, 69, .25) !important; }
+#ui .toolbar .stepper .step:hover { filter: brightness(1.25); }
+#ui .toolbar .stepper .step-text { min-width: 92px; justify-content: center; gap: 7px; padding: 0 4px; }
+#ui .toolbar .stepper .step-text strong { font-size: 16px; font-weight: 600; color: #ffe7a6; }
+#ui .toolbar .stepper .step-ico svg { width: 18px; height: 18px; }
+#ui .toolbar .wreck { min-height: 40px; border-radius: 4px; padding: 0 16px; }
