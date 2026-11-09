@@ -24,13 +24,18 @@ export interface UnderwaterIn {
   sun: any;
   /** Kamera sceny (w przejściu obrazu wbudowane węzły kamery dotyczą prostokąta na cały ekran) */
   cam: { pos: any; world: any; projInv: any };
+  /** 1 = w środku (sztolnia kopalni leży 80 m pod mapą, poniżej tafli): bez efektu wody */
+  indoor?: any;
 }
 
 export function underwater(T: any, i: UnderwaterIn): any {
   // liczone tylko, gdy kamera jest przy tafli albo pod nią (warunek wspólny dla całej klatki — karta pomija resztę)
   return T.Fn(() => {
     const out = T.vec3(i.c).toVar();
-    T.If(i.cam.pos.y.lessThan(WATER_Y + 0.4), () => { out.assign(underwaterBody(T, i)); });
+    // w sztolni kopalni (pod mapą, niżej niż tafla) bez wody: wcześniej całe wnętrze barwiło się na niebiesko-zielono,
+    // a płomienie latarń wyglądały na niebieskie (Michał 9.11.2026: „świecą się lekko i na niebiesko”)
+    const dry = i.indoor ?? T.float(0);
+    T.If(i.cam.pos.y.lessThan(WATER_Y + 0.4).and(dry.lessThan(0.5)), () => { out.assign(underwaterBody(T, i)); });
     return out;
   })();
 }

@@ -115,7 +115,7 @@ export class GpuPost {
       c = c.mul(float(1).sub(ccm.mul(0.3)));
     }
     // pod wodą: nurkowanie (gpu/underwaterNode.ts) — linia wody, załamanie, toń, kaustyki, promienie słońca
-    c = underwater(T, { col, dep: sp.getTextureNode('depth'), c, night: this.u.night, sun: this.u.sun, cam: sceneCam });
+    c = underwater(T, { col, dep: sp.getTextureNode('depth'), c, night: this.u.night, sun: this.u.sun, cam: sceneCam, indoor: this.u.indoor });
     c = clamp(c, 0, 40);
     if (o.bloom) c = c.add(fx.bloom(vec4(c, 1), 0.18, 0.45, 1.6).rgb);
     // tone mapping i sRGB jawnie z renderera: bez tego węzeł brał je z kontekstu przejścia, a FXAA/SMAA liczą obraz

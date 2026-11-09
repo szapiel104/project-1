@@ -18,7 +18,7 @@ b = Building()
 # Michał 9.11.2026: „bardziej w górze, a nie taki wystający” — cała kopalnia cofnięta w głąb działki (o DZ), więc czoło
 # skały z portalem stoi w połowie działki, a zbocze i grota chowają się w masywie za nią; przed portalem zostaje plac
 # z torami i hałdą. Przesunięcie dokładane do każdej bryły i do wszystkich punktów w danych modelu (niżej, przed save).
-DZ = -0.9
+DZ = -2.5
 # wszystkie bryły (box, prism, wheel, crystal) składają się z poly, więc wystarczy przesunąć poly; kosz z paczki
 # ('basket') zapisuje tylko miejsce, bez poly — jego przesuwamy osobno
 _poly, _prism = b.poly, b.prism
@@ -64,66 +64,16 @@ def mound(group, cx, cz, rx, rz, h, seg=12, seed=0.0, mat='rock', dark='rockDark
         b.poly(group, mat, [last[k], last[(k + 1) % seg], top], away=away)
 
 
-# Michał 9.11.2026: „nie taki kloc, tylko krata z drewnianym wejściem i idealnie wpasuje się w górę”. Zamiast kopców
-# jedno zbocze: skalne czoło z otworem sztolni, nad nim stok wznoszący się w tył (wchodzi w masyw za działką, gdzie znika
-# w terenie gór), boki schodzą łagodnie do ziemi. Gęsta siatka z nierównościami zamiast kilku wielkich ścian; materiał
-# skały gra podmienia na kamień z tej samej paczki co głazy wokół (pustynia: piaskowiec), żeby zlał się z górą.
-FY, W, OX, OY = 1.45, 1.55, KX + 0.05, HK + 0.08    # wysokość czoła, półszerokość zbocza, otwór sztolni
-ZF0, LEAN = 1.2, 0.25                               # czoło u dołu i jego pochylenie w tył na całej wysokości
-ZB, RISE, FLARE, GY = -2.7, 0.9, 1.25, -0.45        # tył (w masywie), wznios stoku, rozchylenie boków, spód pod ziemią
-zf = lambda y: ZF0 - LEAN * max(0.0, min(1.0, y / FY))
-ZT = zf(FY)
-AWAY_IN = (0, 0.9, -0.6)
-xs = sorted(set([-W, -OX, OX, W] + [-W + (W - OX) * k / 3 for k in (1, 2)] + [OX + (W - OX) * k / 3 for k in (1, 2)] + [-OX / 2, 0.0, OX / 2]))
-ys = [GY, 0.0, OY / 2, OY, (OY + FY) / 2, FY]
-
-
-def face_pt(x, y):
-    # brzegi otworu, krawędzie czoła i górny rząd (wspólny ze stokiem) bez nierówności — tam bryły muszą się stykać
-    edge = abs(abs(x) - OX) < 1e-6 or abs(abs(x) - W) < 1e-6 or y in (GY, FY) or (abs(x) < OX + 1e-6 and abs(y - OY) < 1e-6)
-    d = 0.0 if edge else jit(x * 3.1, y * 2.3, 0.07)
-    return (x, y, zf(y) + d)
-
-
-for i in range(len(xs) - 1):
-    for j in range(len(ys) - 1):
-        x0, x1, y0, y1 = xs[i], xs[i + 1], ys[j], ys[j + 1]
-        if (x0 + x1) / 2 > -OX and (x0 + x1) / 2 < OX and (y0 + y1) / 2 < OY:
-            continue  # otwór sztolni
-        m = 'rockDark' if (i + j) % 3 == 0 else 'rock'
-        b.poly('shell', m, [face_pt(x0, y0), face_pt(x1, y0), face_pt(x1, y1), face_pt(x0, y1)], away=AWAY_IN)
-
-# stok nad czołem: od górnej krawędzi czoła w tył i w górę, do masywu za działką
-zs = [ZT + (ZB - ZT) * k / 6 for k in range(7)]
-xt = [-W + 2 * W * k / 10 for k in range(11)]
-
-
-def top_pt(x, z):
-    edge = z == ZT or abs(abs(x) - W) < 1e-6
-    hy = FY + (ZT - z) * RISE + (0.0 if edge else jit(x * 2.7, z * 1.9, 0.16))
-    # boki stoku lekko opadają (zaokrąglony grzbiet zamiast płaskiej płyty)
-    hy -= 0.8 * (abs(x) / W) ** 2 * min(1.0, (ZT - z) / 1.2)
-    return (x, hy, z)
-
-
-for i in range(len(xt) - 1):
-    for j in range(len(zs) - 1):
-        m = 'rockDark' if (i * 3 + j) % 4 == 0 else 'rock'
-        b.poly('shell', m, [top_pt(xt[i], zs[j]), top_pt(xt[i + 1], zs[j]), top_pt(xt[i + 1], zs[j + 1]), top_pt(xt[i], zs[j + 1])], away=(0, -6, -0.5))
-
-# boki: od krawędzi stoku łagodnie w dół i na zewnątrz, pod ziemię (teren bywa niższy niż działka)
-for sx in (-1, 1):
-    ground = lambda z: (sx * (W + FLARE + jit(z * 3, sx, 0.08)), GY, z)
-    mid = lambda z: (sx * (W + FLARE * 0.45 + jit(z * 2, sx * 2, 0.06)), top_pt(sx * W, z)[1] * 0.45 + jit(z, sx * 3, 0.06), z)
-    for j in range(len(zs) - 1):
-        za, zb = zs[j], zs[j + 1]
-        b.poly('shell', 'rock', [top_pt(sx * W, za), top_pt(sx * W, zb), mid(zb), mid(za)], away=(0, 1.0, -0.6))
-        b.poly('shell', 'rockDark' if j % 2 else 'rock', [mid(za), mid(zb), ground(zb), ground(za)], away=(0, 1.0, -0.6))
-    # róg: krawędź czoła (x = ±W) domknięta z przodem boku
-    b.poly('shell', 'rock', [face_pt(sx * W, GY), face_pt(sx * W, FY), mid(ZT), ground(ZT)], away=(0, 1.0, -0.6))
-    b.poly('shell', 'rockDark', [face_pt(sx * W, GY), ground(ZT), (sx * (W + FLARE), GY, ZF0)], away=(0, 1.0, -0.6))
-# tył w masywie: domknięcie pod ziemię (z gry go nie widać, ale bryła jest zamknięta)
-b.poly('shell', 'rockDark', [top_pt(xt[k], ZB) for k in range(len(xt))] + [(W + FLARE, GY, ZB), (-W - FLARE, GY, ZB)], away=(0, 1.0, 0.0))
+# Michał 9.11.2026: „nie taki kloc, tylko krata z drewnianym wejściem; to góra ma się dostosować do kraty, a nie ogromna
+# dobudówka”. Bez własnego zbocza: portal z kratą stoi przy samym tylnym skraju działki, tuż przy skale gór (osobna siatka
+# masywu w grze), a krótki wylot sztolni i grota chowają się w masywie. Wokół ramy kilka bloków skały z tej samej paczki
+# co góra (gra podmienia materiał), żeby rama siedziała w skale bez szpar.
+OX, OY = KX + 0.05, HK + 0.08                       # otwór sztolni
+zf = lambda y: 1.2                                  # lico skały przy portalu (pionowe)
+for k, (x, y, r, sy) in enumerate([(-0.78, 0.12, 0.34, 0.8), (0.8, 0.14, 0.36, 0.75), (-0.74, 0.62, 0.3, 1.1), (0.76, 0.66, 0.32, 1.0),
+                                    (-0.66, 1.08, 0.3, 0.9), (0.7, 1.1, 0.3, 0.9), (-0.32, 1.42, 0.3, 0.75), (0.3, 1.44, 0.32, 0.7),
+                                    (0.0, 1.5, 0.26, 0.7), (-1.08, 0.3, 0.3, 1.2), (1.1, 0.34, 0.3, 1.1)]):
+    b.crystal('base', 'rock' if k % 3 else 'rockDark', x, y - r * 0.5, 0.98, r, seed=k + 11, sx=1.1, sy=sy, sz=1.3)
 
 # ościeża otworu w skale (żeby przez szczelinę między czołem a korytarzem nie było widać świata)
 for sx in (-1, 1):
@@ -215,11 +165,20 @@ for z in [x * 0.3 - 0.3 for x in range(7)]:
 for sx in (-1, 1):
     b.box('interior', 'iron', 0.025, 0.03, KZ1 - (-0.45), sx * 0.17, P + 0.02, (KZ1 - 0.45) / 2)
     b.box('base', 'iron', 0.025, 0.03, 1.5 - KZ1 + 0.3, sx * 0.17, 0.02, (KZ1 + 1.5) / 2 - 0.15)
-# tor biegnie dalej przez plac przed portalem aż do skraju działki (kopalnia cofnięta w górę, plac jest dłuższy)
-for z in (1.62, 1.92, 2.22):
+# tor biegnie dalej przez plac przed portalem aż do skraju działki (portal stoi przy skale z tyłu, plac jest długi)
+for z in (1.62, 1.92, 2.22, 2.52, 2.82, 3.12, 3.42, 3.72):
     b.box('base', 'woodDark', 0.46, 0.025, 0.07, 0, 0, z)
 for sx in (-1, 1):
-    b.box('base', 'iron', 0.025, 0.03, 0.9, sx * 0.17, 0.02, 1.92)
+    b.box('base', 'iron', 0.025, 0.03, 2.4, sx * 0.17, 0.02, 2.67)
+# drugi wózek z urobkiem na torze przed portalem (jedzie do hałdy)
+CZ = 2.9
+b.box('base', 'woodDark', 0.3, 0.22, 0.42, 0, 0.1, CZ)
+for sx in (-1, 1):
+    for sz in (-1, 1):
+        b.wheel('base', sx * 0.17, 0.075, CZ + sz * 0.13, 0.065, t=0.03)
+for k, (ox, oz, r) in enumerate(((0.0, 0.0, 0.09), (0.06, -0.1, 0.07), (-0.05, 0.1, 0.07))):
+    b.crystal('base', 'magicOre' if k else 'stone', ox, 0.33, CZ + oz, r, seed=k + 21, sy=0.8)
+solid.append([-0.17, 0.17, CZ - 0.23 + DZ * 0, CZ + 0.23])
 # wózek na szynach, na przedsionku przed portalem (nie zastawia przejścia do środka: stoi z boku toru? nie — tor jest w osi,
 # więc wózek stoi w grocie pod lewą ścianą, zepchnięty z toru na bocznicę)
 WX, WZ = -0.78, -0.22
