@@ -137,3 +137,4 @@ Nad grą pracuje kilka czatów naraz, więc:
 - **Nie wypychamy od razu na `main`.** Zmiany testujemy lokalnie i wypychamy na `dev`; `main` (wydanie, wersja + „Co nowego”) tylko gdy Michał o to poprosi.
 - **Po pushu na `dev` nie sprawdzamy, czy już trafił** (bez `fetch`/`rev-parse`/`gh run list` — to nic nie wnosi).
 - **Nie zamykamy kart w Chrome Michała** (nadpisuje punkt 8 w „Testy”). Po sprawdzeniu wracamy w tej samej karcie do menu gry (adres gry bez `?test=1`), zamiast ją zamykać.
+- **Najpierw `tabs_context_mcp`: jeśli gra jest już otwarta w Chrome (localhost:5173 lub strona gry), przejmujemy tę kartę** (nawigacja w niej, `__test`), zamiast otwierać nową. Dwie gry naraz zjadają kartę graficzną; nową kartę otwieramy tylko, gdy żadnej gry nie ma.
