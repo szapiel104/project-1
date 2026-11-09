@@ -1,5 +1,12 @@
 # Dziennik zmian
 
+## 0.94.91 — 2026-11-09
+- Wydajność (pomiar w grze Michała, pustynia, ~200 budynków): syncRoads raz na 3 ticki; scene.updateMatrixWorld raz na klatkę (matrixWorldAutoUpdate wyłączone na czas rysowania); MaterialBatches nie przepisuje niezmienionych macierzy; mapa cieni co drugą klatkę (shadow.autoUpdate=false); palmy i rośliny pustyni w jednej puli na odmianę; zapasy z kilkoma materiałami, skrzydła drzwi, drabiny, koksowniki i kłody w MaterialBatches; zasięg mgły i camera.far zależny od jakości; kamera MAX_DIST 46, oddalona min. 22°; fizyka gruzu: rzadszy heightfield, max 60 ciał, max 2 kroki.
+- Diagnostyka: __prof (JS Self-Profiling, nagłówek Document-Policy w vite), __ab (A/B ustawień i kategorii, także w ruchu), przycisk raportu w F3; licznik wywołań rysowania na klatkę.
+- Kopalnia (tools/models/mine.py): portal z kratą przy skale, zbocze za kratą, skała podmieniana na rockMaterial (sahara/temperate), level(keepRock) nie obniża narożników przy skale; w sztolni bez efektu wody (underwater + indoor).
+- Strzelcy i magowie strzelają do wrogów na wieżach/murach bez linii wzroku (50% rozbija się); okno kopalni (prod-alts), oko tylko przy postaci, dachy pomijane w LOD (ROOF_PATTERNS).
+- Menu RPG, chorał gregoriański, napisy końcowe, „Jak grać” w Ustawieniach, rozkazy oddziału na dolnym pasku, tempo 1× po wczytaniu.
+
 ## 0.94.90 — 2026-11-09
 - `marketPanel.ts`: suwaki + pole liczby (max: sprzedaż = stan, kupno = szukanie połówkowe po `canTrade`), przyciski-ikony, krzyżyk zamyka zaznaczenie; okno budynku przewija się pod towarami.
 - `market.py`: szyld nad przejściem, kramy rozsunięte; `workers.ts` `marketVisit` (fazy ToMarket/Shopping 34/35, deterministycznie z id i godziny, tylko bez budów i gruzu).

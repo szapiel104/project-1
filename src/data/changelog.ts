@@ -9,6 +9,25 @@ export type { ChangeEntry } from './changelogTypes';
  * — tak jak CHANGELOG.md dla nas. `tests/changelog.test.ts` pilnuje, że najnowszy wpis ma wersję z package.json.
  */
 const NEW: ChangeEntry[] = [
+  { v: '0.94.91', date: '2026-11-09', pl: [
+    'Wydajność: pełna osada chodzi płynniej (u nas z ok. 30 do ok. 55–60 klatek): drogi nie są sprawdzane w każdej klatce, położenie budynków liczy się raz na klatkę, mapa cieni odświeża się co drugą klatkę, mniej osobnych rysowań palm, zapasów, drzwi i drabin.',
+    'Zawalenie budynku nie zatrzymuje już gry; kamera nie oddala się tak daleko, a z daleka nie kładzie się nad horyzontem.',
+    'Kopalnia to teraz wejście w skałę: drewniany portal z żelazną kratą w zboczu góry, przed nim tor z wózkiem urobku. W środku kopalni latarnie znów świecą ciepło, a nie na niebiesko.',
+    'Wrodzy łucznicy i magowie strzelają do obrońców na wieżach i murach także zza blanków (część strzał rozbija się na kamieniu).',
+    'Menu w klimacie klasztoru: kute przyciski z dębu i żelaza, tablica z logo, światło świec; „Jak grać” w Ustawieniach; pełne napisy końcowe z autorami grafiki i muzyki.',
+    'Śpiew mnichów: osiem nagrań chorału gregoriańskiego w menu, nocą i za dnia.',
+    'Rozkazy oddziału na dolnym pasku zamiast osobnego okna; po wczytaniu zapisu gra zawsze rusza w zwykłym tempie.',
+    'Dachy z daleka pozostają pełne, okno kopalni pokazuje równo wszystkie urobki, w oknie budynku nie ma już zbędnego oka.',
+  ], en: [
+    'Performance: a full settlement runs much more smoothly (for us from about 30 to about 55–60 frames): roads are no longer checked every frame, building positions are worked out once per frame, the shadow map refreshes every other frame, and palms, stores, doors and ladders are drawn in fewer batches.',
+    'A collapsing building no longer stalls the game; the camera no longer pulls back so far, nor lies flat over the horizon from afar.',
+    'The mine is now an entrance cut into the rock: a timber portal with an iron grate set in the mountainside, with a track and an ore cart before it. Inside the mine the lanterns glow warm again rather than blue.',
+    'Enemy archers and mages now shoot at defenders on towers and walls even over the battlements (some arrows break on the stone).',
+    'A menu in the spirit of a monastery: forged oak-and-iron buttons, a carved name board, candlelight; "How to play" moved to Settings; full credits for the art and music.',
+    'Monks\' chant: eight recordings of Gregorian chant in the menu, by night and by day.',
+    'Squad orders sit on the bottom bar instead of a separate window; loading a save always resumes at normal speed.',
+    'Roofs stay whole from afar, the mine window lists all its yields neatly, and the building window no longer shows a needless eye.',
+  ] },
   { v: '0.94.90', date: '2026-11-09', pl: [
     'Rynek: duże okno z suwakami „sprzedaj” (do tego, co masz) i „kup” (na ile starczy rudy i miejsca), ilość można też wpisać; trzy towary w rzędzie, pracownicy pod listą.',
     'Rynek ma szyld na środku i przejście między kramami, a wolni chłopi czasem przychodzą coś kupić.',
