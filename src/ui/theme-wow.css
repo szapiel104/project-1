@@ -1117,3 +1117,18 @@ html body .info .icon-act { background: linear-gradient(#3a2614, #24160c) !impor
 #ui .floaters .info.is-person :is(.power-row-box, .info-stock, .info-logi, .info-prod, .gate-box, .info-worker, .person-box) { background: none !important; border: 0 !important; box-shadow: none !important; }
 #ui .floaters .info.is-person .info-foot { margin: 0 !important; padding: 0 24px; background: none; }
 #ui .floaters .info.is-person .info-foot .actions { border: 0 !important; padding: 0 !important; }
+/* „Twój budynek”: jasna plakietka z ciemnozielonym napisem — czytelna z daleka */
+#ui#ui .floaters .info .info-owner-rel { padding: 3px 10px !important; background: rgba(255, 252, 238, .75) !important; border: 1px solid #2f6a28 !important; border-radius: 3px; color: #1f4d1a !important; font-size: 15px !important; font-weight: 700 !important; letter-spacing: 0 !important; text-transform: none !important; text-shadow: none !important; box-shadow: none !important; clip-path: none !important; }
+#ui#ui .floaters .info .info-owner[data-rel='ally'] .info-owner-rel { border-color: #1f5a8a !important; color: #174a73 !important; }
+#ui#ui .floaters .info .info-owner[data-rel='enemy'] .info-owner-rel { border-color: #a8281f !important; color: #8a1f14 !important; }
+/* receptura: większe sloty i ikony */
+#ui .info:not(.is-person):not(.army-mode) .prod-chip { grid-template-columns: 92px !important; grid-template-rows: 92px auto !important; }
+#ui .info:not(.is-person):not(.army-mode) .prod-chip .ico { width: 92px !important; height: 92px !important; }
+#ui .info:not(.is-person):not(.army-mode) .prod-chip .ico svg { width: 62px; height: 62px; }
+#ui .info:not(.is-person):not(.army-mode) .prod-chip strong { top: 66px; right: 7px; font-size: 18px !important; }
+#ui .info:not(.is-person):not(.army-mode) .prod-chip span:last-child { font-size: 14px !important; }
+#ui .info:not(.is-person):not(.army-mode) .prod-arrow { margin-bottom: 26px; }
+/* sloty zapasów też większe */
+#ui .info:not(.is-person):not(.army-mode) .stock-grid { grid-template-columns: repeat(auto-fill, 80px); }
+#ui .info:not(.is-person):not(.army-mode) .stock-item { width: 80px; height: 80px; }
+#ui .info:not(.is-person):not(.army-mode) .stock-item .ico svg { width: 50px; height: 50px; }
