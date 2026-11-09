@@ -6,6 +6,7 @@ import { avatarSvg } from './avatars';
 import { BUILD_GROUPS } from './buildGroups';
 import { createArmyControls } from './armyControls';
 import { createSpellBar, type SpellBar } from './spellBar';
+import { crewKey, PEASANT_FACE, renderCrew, type CrewInfo } from './crewPanel';
 import { renderLogistics, type StoreLogistics } from './storePanel';
 import { BUILDINGS, CATEGORIES, isTower, type BuildingDef, type CategoryId } from '../data/buildings';
 import { MAP_PRESETS, type MapPresetId } from '../data/maps';
@@ -111,7 +112,7 @@ export interface HudView {
 export interface StockInfo { kind: string; here: number; hereUsed: number; used: number; max: number; stores: number; items: { id: string; amount: number }[] }
 /** Skróty na dolnym pasku: koszary, skład, spichlerz */
 export type JumpKind = 'barracks' | 'stockpile' | 'granary' | 'market';
-export interface BuildingInfo { /** Czyj to budynek: imię gracza albo bota, wróg / sojusznik / twój, kolor drużyny */ owner?: { name: string; rel: 'own' | 'ally' | 'enemy'; color: number }; stock?: StockInfo[]; /** Magazyn: magazynierzy, towar pod drzwiami i czekające warsztaty (storePanel.ts) */ logistics?: StoreLogistics; id: number; def: BuildingDef; hasWorker: boolean; own: boolean; /** Ruina po zniszczeniu (rozbiórka = porzucenie, bez zwrotu) */ ruined?: boolean; /** Przenosiny za rudę: koszt i powód blokady (null = wolno) */ move?: { cost: number; why: string | null }; canTrain?: boolean; hp?: number; maxHp?: number; gate?: { open: boolean; shut: boolean }; power?: { on: boolean; worker: boolean }; /** Chata w czasie zarazy: zamknięta na kwarantannę i ilu chorych leży w środku */ quarantine?: { on: boolean; sick: number }; garrison?: number;
+export interface BuildingInfo { /** Czyj to budynek: imię gracza albo bota, wróg / sojusznik / twój, kolor drużyny */ owner?: { name: string; rel: 'own' | 'ally' | 'enemy'; color: number }; stock?: StockInfo[]; /** Magazyn: magazynierzy, towar pod drzwiami i czekające warsztaty (storePanel.ts) */ logistics?: StoreLogistics; id: number; def: BuildingDef; hasWorker: boolean; own: boolean; /** Ruina po zniszczeniu (rozbiórka = porzucenie, bez zwrotu) */ ruined?: boolean; /** Przenosiny za rudę: koszt i powód blokady (null = wolno) */ move?: { cost: number; why: string | null }; canTrain?: boolean; hp?: number; maxHp?: number; gate?: { open: boolean; shut: boolean }; power?: { on: boolean; worker: boolean }; /** Chata w czasie zarazy: zamknięta na kwarantannę i ilu chorych leży w środku */ quarantine?: { on: boolean; sick: number }; garrison?: number; /** Załoga: żołnierze na wieży albo pracownicy, z wolnymi miejscami (crewPanel.ts) */ crew?: CrewInfo;
   /** Twierdza: straż miejska (ilu jest, ilu ma być, ile sekund do końca szkolenia rekruta, czy werbunek stoi i dlaczego) */
   watch?: { have: number; want: number; training: number; note?: string; label?: string }; recruit?: RecruitUnit[]; area?: boolean;
   /** Twierdza w czasie buntu: ilu stoi pod bramą, ile porcji kosztuje rozdanie chleba, czy jest z czego, czy straż już rozgania tłum */
@@ -729,12 +730,7 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
     const sb = document.querySelector<HTMLElement>('.scribe');
     // kronika liczy się tylko, gdy stoi pod oknem (od 3.11.2026 jest w lewym górnym rogu — wtedy okno ścinało się do paska)
     if (sb && sb.offsetParent !== null) { const r = sb.getBoundingClientRect(), ir = info.getBoundingClientRect(); if (r.height && r.top > top + 40 * k && r.left < ir.right && r.right > ir.left) bottom = Math.min(bottom, r.top - 8 * k); }
-    // kronika (lewy górny róg) staje tuż obok otwartego okna, gdy okno stoi po lewej — nie pod nim i nie daleko
-    if (sb) {
-      const ir = info.getBoundingClientRect();
-      const x = ir.left < 240 * k ? `${Math.round(ir.right / k + 12)}px` : '';
-      for (const el2 of [sb, document.querySelector<HTMLElement>('.scribe-log')]) if (el2 && el2.style.left !== x) el2.style.left = x;
-    }
+    // kronika zostaje na swoim miejscu (Michał 9.11.2026: „interfejs przesuwa kronikę — nie chcę”)
     const want = `${Math.max(140, Math.floor((bottom - top) / k))}px`;
     if (info.style.maxHeight !== want) info.style.maxHeight = want;
     if (info.style.marginBottom) info.style.marginBottom = '';
@@ -951,6 +947,8 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
   siteBox.append(siteHead, siteBar, siteRows);
   const storeBox = el('div', 'info-stock');
   storeBox.hidden = true;
+  const crewBox = el('div', 'info-crew');
+  crewBox.hidden = true;
   const logiBox = el('div', 'info-logi');
   logiBox.hidden = true;
   // nagłówek okna jak w WoW: tytuł na ciemnym pasku, z prawej „i” (opis) i krzyżyk; za pasek okno się przeciąga
@@ -982,7 +980,7 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
   // stopka okna jak w grze: wytrzymałość z lewej, przyciski-ikony z prawej
   const infoFoot = el('div', 'info-foot');
   infoFoot.append(hpLine, infoActions);
-  info.append(infoHead, riotBox, gateBox, powerBox, quarBox, towerBox, watchState, walkBtn, mineBtn, recruit, armyPanel, roster, armyCtl.help, siteBox, prodBox, storeBox, logiBox, infoDesc, infoWorker, trainBtn, trainNote, infoFoot);
+  info.append(infoHead, riotBox, gateBox, powerBox, quarBox, towerBox, watchState, walkBtn, mineBtn, recruit, armyPanel, roster, armyCtl.help, siteBox, crewBox, prodBox, storeBox, logiBox, infoDesc, infoWorker, trainBtn, trainNote, infoFoot);
   let infoId = 0;
   let lastInfoId = -1;
   const demolishAsk = confirmBtn(demolish, () => events.onDemolish(infoId));
@@ -1455,7 +1453,7 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
       powerBox.hidden = true; infoPic.hidden = true; info.style.removeProperty('--info-art'); infoImg.removeAttribute('src'); ownerLine.hidden = true; powerBadge.hidden = true; powerBtn.hidden = true;
       quarBox.hidden = true;
       // resztki okna budynku (plac budowy, zapasy, zasięg strzału) nie mogą zostać na karcie człowieka
-      siteBox.hidden = true; prodBox.hidden = true; storeBox.hidden = true; logiBox.hidden = true; areaBtn.hidden = true; mineBtn.hidden = true; watchState.hidden = true; riotBox.hidden = true; infoDesc.hidden = false;
+      siteBox.hidden = true; crewBox.hidden = true; prodBox.hidden = true; storeBox.hidden = true; logiBox.hidden = true; areaBtn.hidden = true; mineBtn.hidden = true; watchState.hidden = true; riotBox.hidden = true; infoDesc.hidden = false;
       walkBtn.hidden = person.walk === false;
     },
     showArmy(army, ctl) {
@@ -1477,7 +1475,7 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
       gateBox.hidden = true;
       powerBox.hidden = true; infoPic.hidden = true; info.style.removeProperty('--info-art'); infoImg.removeAttribute('src'); ownerLine.hidden = true; powerBadge.hidden = true; powerBtn.hidden = true;
       quarBox.hidden = true;
-      siteBox.hidden = true; prodBox.hidden = true; storeBox.hidden = true; logiBox.hidden = true; areaBtn.hidden = true; mineBtn.hidden = true; watchState.hidden = true; riotBox.hidden = true;
+      siteBox.hidden = true; crewBox.hidden = true; prodBox.hidden = true; storeBox.hidden = true; logiBox.hidden = true; areaBtn.hidden = true; mineBtn.hidden = true; watchState.hidden = true; riotBox.hidden = true;
       walkBtn.hidden = true;
       // typy jednostek: przycisk na każdy typ z liczbą zaznaczonych
       const byKind = new Map<string, { name: string; n: number }>();
@@ -1701,7 +1699,7 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
       logiBox.hidden = !i.logistics;
       if (i.logistics) {
         const key = JSON.stringify(i.logistics);
-        if (logiBox.dataset.key !== key) { logiBox.dataset.key = key; logiBox.replaceChildren(...renderLogistics(i.logistics, icon, PORTRAIT, (id) => events.onPerson(id))); }
+        if (logiBox.dataset.key !== key) { logiBox.dataset.key = key; logiBox.replaceChildren(...renderLogistics(i.logistics, icon, PEASANT_FACE, (id) => events.onPerson(id))); }
       }
       riotBox.hidden = !(i.own && i.riot);
       if (i.riot) {
@@ -1741,6 +1739,8 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
       }
       powerBox.hidden = true;
       powerBtn.hidden = powerBadge.hidden = !(i.own && i.power);
+      crewBox.hidden = !i.crew;
+      if (i.crew) { const key = crewKey(i.crew); if (crewBox.dataset.key !== key) { crewBox.dataset.key = key; crewBox.replaceChildren(...renderCrew(i.crew, (k) => (k ? portraitOf(k) : PEASANT_FACE), (id) => events.onPerson(id))); } }
       if (i.power) {
         powerOn = i.power.on;
         setText(powerBadge, i.power.on ? tx('Budynek działa', 'Building at work') : tx('Budynek wyłączony', 'Building shut down'));

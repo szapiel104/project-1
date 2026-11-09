@@ -1065,3 +1065,30 @@ html body .info .icon-act { background: linear-gradient(#3a2614, #24160c) !impor
 #ui .info:not(.is-person):not(.army-mode) :is(.icon-act, .info-market) svg { width: 26px; height: 26px; }
 /* proste budynki (wieża, chata, studnia…) węższe; szerokie tylko te z zapasami, warsztatem albo magazynierami */
 #ui .floaters .info:not(.is-person):not(.army-mode):not(:has(> :is(.info-stock, .info-prod, .info-logi, .recruit, .info-site):not([hidden]))) { width: min(460px, calc(100vw / var(--ui, 1) - 32px)); }
+/* rama okna jak okładka księgi: złocona listwa, gruba skóra, ciemny brzeg (Michał 9.11.2026) */
+#ui .floaters .info:not(.is-person):not(.army-mode) { box-shadow: 0 0 0 2px #d8b25e, 0 0 0 4px #6e4a1e, 0 0 0 10px #3a2414, 0 0 0 11px #0b0704, inset 0 0 44px rgba(120, 78, 28, .32), 0 18px 34px rgba(0, 0, 0, .6) !important; margin: 11px; }
+/* portret budynku: równa, kwadratowa ramka, obrazek wyśrodkowany */
+#ui .info:not(.is-person):not(.army-mode) .info-pic { width: 80px; height: 80px; padding: 0; box-sizing: border-box; border: 2px solid #5a3d1c; border-radius: 3px; box-shadow: inset 0 0 0 2px #e8cf92, 0 2px 0 rgba(0, 0, 0, .25); }
+#ui .info:not(.is-person):not(.army-mode) .info-pic img { width: 100%; height: 100%; margin: 0; object-fit: contain; display: block; transform: scale(1.18); }
+#ui .info:not(.is-person):not(.army-mode) .info-head { align-items: center; }
+#ui .info:not(.is-person):not(.army-mode) .info-head :is(.info-ibtn, .info-x) { align-self: flex-start; }
+/* „Twój budynek” czytelnie */
+#ui .info:not(.is-person):not(.army-mode) .info-meta { gap: 14px; }
+#ui .info:not(.is-person):not(.army-mode) .info-owner::before { width: 18px; height: 22px; }
+#ui .info:not(.is-person):not(.army-mode) .info-owner-rel { padding: 4px 12px !important; font-size: 14px !important; font-weight: 700 !important; letter-spacing: .03em !important; text-transform: none !important; border-radius: 3px; box-shadow: inset 0 1px 0 rgba(255, 255, 255, .25), 0 1px 0 rgba(0, 0, 0, .3) !important; }
+#ui .info:not(.is-person):not(.army-mode) .power-badge { font-size: 14px; font-weight: 600; }
+/* receptura jak w ekwipunku: kwadratowe sloty z liczbą w rogu, nazwa pod spodem, strzałka między */
+#ui .info:not(.is-person):not(.army-mode) .prod-line { display: flex !important; justify-content: center; align-items: center; gap: 22px; }
+#ui .info:not(.is-person):not(.army-mode) .prod-chip { position: relative; display: grid !important; grid-template-columns: 72px !important; grid-template-rows: 72px auto !important; justify-items: center; row-gap: 6px; padding: 0 !important; background: none !important; border: 0 !important; box-shadow: none !important; }
+#ui .info:not(.is-person):not(.army-mode) .prod-chip .ico { grid-row: 1 !important; width: 72px !important; height: 72px !important; border-radius: 4px; background: radial-gradient(circle at 50% 40%, #5a3f2a, #2d1b0e 75%) !important; border: 1px solid #1a0f07 !important; box-shadow: inset 0 0 0 1px rgba(194, 154, 69, .35), 0 2px 0 rgba(0, 0, 0, .3); }
+#ui .info:not(.is-person):not(.army-mode) .prod-chip .ico svg { width: 42px; height: 42px; }
+#ui .info:not(.is-person):not(.army-mode) .prod-chip strong { position: absolute; top: 50px; right: 6px; font-size: 16px !important; font-weight: 700; color: #fff4dc !important; text-shadow: 0 1px 2px #000 !important; }
+#ui .info:not(.is-person):not(.army-mode) .prod-chip strong::before { content: '×'; font-size: 12px; margin-right: 1px; opacity: .8; }
+#ui .info:not(.is-person):not(.army-mode) .prod-chip span:last-child { grid-row: 2; font-size: 13px !important; font-weight: 600; color: var(--ink2) !important; text-shadow: none !important; }
+#ui .info:not(.is-person):not(.army-mode) .prod-arrow { margin-bottom: 22px; }
+#ui .info:not(.is-person):not(.army-mode) .prod-arrow i { width: 12px; height: 12px; border-width: 4px 4px 0 0; }
+#ui .info:not(.is-person):not(.army-mode) .prod-note { margin-top: -4px; font-size: 13px; color: var(--ink2) !important; }
+#ui .info:not(.is-person):not(.army-mode) .prod-note strong { font-size: 15px; }
+/* załoga pokazana kaflami — zdublowany wiersz „imię — co robi” w warsztacie znika, zostaje pasek postępu */
+#ui .info:not(.is-person):not(.army-mode):has(> .info-crew:not([hidden])) .prod-worker > .prod-head { display: none !important; }
+#ui .info:not(.is-person):not(.army-mode) .info-crew > .logi-head { margin-bottom: 10px; }

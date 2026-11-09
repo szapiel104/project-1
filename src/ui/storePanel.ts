@@ -1,6 +1,7 @@
 import { BUILDINGS } from '../data/buildings';
 import { RESOURCES, RESOURCE_DEFS, type ResourceId, type StoreKind } from '../data/resources';
 import { t, tx } from '../i18n';
+import { crewParty } from './crewPanel';
 import { Phase, storeCapacity, storeUsed, type Building, type GameState } from '../sim/state';
 
 /**
@@ -85,27 +86,7 @@ export function renderLogistics(s: StoreLogistics, icon: (id: string) => HTMLEle
   // drużyna jak w grze RPG: twarz każdego magazyniera (klik = zaznacz go i pokaż na mapie), wolne miejsca przerywaną ramką
   head.append(node('em', 'keeper-count', `${s.keepers.length} / ${s.want}`));
   crew.append(head);
-  const party = node('div', 'keeper-party');
-  for (let i = 0; i < Math.max(s.want, s.keepers.length); i++) {
-    const k = s.keepers[i];
-    if (!k) {
-      const free = node('div', 'keeper-card free');
-      free.innerHTML = '<span class="keeper-face"></span>';
-      free.append(node('span', 'keeper-name', tx('Wolne miejsce', 'Free post')));
-      free.title = tx('Magazynier przyjdzie, gdy przy ognisku będzie wolny chłop', 'A storekeeper will come once an idle peasant is free by the fire');
-      party.append(free);
-      continue;
-    }
-    const card = node('button', 'keeper-card');
-    card.type = 'button';
-    card.innerHTML = `<span class="keeper-face">${face}</span>`;
-    const txt = node('span', 'keeper-txt');
-    txt.append(node('strong', 'keeper-name', k.name), node('span', 'keeper-doing', k.doing));
-    card.append(txt);
-    card.title = tx(`${k.name} — pokaż na mapie`, `${k.name} — show on the map`);
-    if (pick) card.addEventListener('click', () => pick(k.id));
-    party.append(card);
-  }
+  const party = crewParty({ title: '', max: s.want, members: s.keepers, freeHint: tx('Magazynier przyjdzie, gdy przy ognisku będzie wolny chłop', 'A storekeeper will come once an idle peasant is free by the fire') }, () => face, pick);
   crew.append(party);
   out.push(crew);
   // towar pod drzwiami

@@ -10,6 +10,8 @@ import { RULES } from './data/rules';
 import { Terrain } from './data/terrain';
 import { RESOURCE_DEFS, RESOURCES, resIndex, type ResourceId, type StoreKind } from './data/resources';
 import { BANDITS, GUARD, MAGE_CAP, UNITS } from './data/units';
+import { crewOf, crewWanted } from './sim/systems/workers';
+import type { CrewInfo } from './ui/crewPanel';
 import { placeDen } from './sim/systems/bandits';
 import { MAP_PRESETS, type MapPresetId } from './data/maps';
 import { BYNAMES, FIRST_NAMES } from './data/names';
@@ -1090,7 +1092,24 @@ function buildingInfo(b: GameState['buildings'][number]): BuildingInfo {
     riot: def.id === 'keep' && b.owner === ME && p.revolt ? { count: rioters(game, ME), cost: doleCost(game, ME), food: foodTotal(p), guards: game.soldiers.filter((s) => s.owner === ME && s.kind === GUARD && !s.camp && s.hp > 0).length, quelling: !!p.quell } : undefined,
     watch: def.id === 'keep' ? watchInfo(game, b.owner) : def.id === 'minecamp' ? campWatch(game, b) : undefined,
     area: def.area || isTower(def.id) ? shownAreas.has(b.id) : undefined,
-    site: b.build ? siteInfo(game, b) : undefined };
+    site: b.build ? siteInfo(game, b) : undefined, crew: crewInfo(b) };
+}
+
+/** Załoga budynku do okna (crewPanel.ts): żołnierze na wieży albo pracownicy warsztatu, z wolnymi miejscami */
+function crewInfo(b: GameState['buildings'][number]): CrewInfo | undefined {
+  const def = BUILDINGS[b.type]!;
+  if (b.owner !== ME || b.build || b.ruined || def.keepers) return undefined;
+  const room = garrisonRoom(def.id);
+  if (room) {
+    const men = game.soldiers.filter((s) => towerOf(game, s) === b.id);
+    return { title: tx('Załoga', 'Garrison'), max: room, freeHint: tx('Zaznacz żołnierzy i kliknij budynek prawym przyciskiem — wejdą na górę', 'Select men and right-click the building — they will climb up'),
+      members: men.map((s) => ({ id: s.id, name: personCard(s.id)?.name ?? '', doing: t(UNITS[s.kind]!.name), kind: UNITS[s.kind]!.id })) };
+  }
+  if (!(def.production || def.staff) || def.id === 'keep') return undefined;
+  const ids = crewOf(b);
+  return { title: tx('Pracownicy', 'Workers'), max: Math.max(ids.length, crewWanted(def, game.units.reduce((n, u) => n + (u.owner === b.owner ? 1 : 0), 0))),
+    freeHint: b.off ? tx('Budynek wyłączony — włącz go, a przyjdzie wolny chłop', 'The building is shut — start it up and an idle peasant will come') : tx('Przyjdzie pierwszy wolny chłop spod ogniska', 'The first idle peasant by the fire will come'),
+    members: ids.map((id) => { const u = game.units.find((x) => x.id === id); return { id, name: personCard(id)?.name ?? '', doing: u ? t(`phase.${u.phase}`) : '' }; }) };
 }
 
 /** Skrót z paska: kamera do własnych koszar albo składu i okno budynku; kolejne kliknięcia idą po kolejnych */
