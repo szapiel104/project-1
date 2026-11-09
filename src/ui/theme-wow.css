@@ -1012,7 +1012,8 @@ html body .info .icon-act { background: linear-gradient(#3a2614, #24160c) !impor
 #ui .info:not(.is-person):not(.army-mode) .info-foot .hp-bar > span { background: linear-gradient(#86d064, #3f8f2a) !important; border-radius: 0 !important; box-shadow: inset 0 1px 0 rgba(255, 255, 255, .35); }
 #ui .info:not(.is-person):not(.army-mode) .info-foot .hp-bar > span[data-low='true'] { background: linear-gradient(#e0705a, #9a2a1a) !important; }
 #ui .info:not(.is-person):not(.army-mode) .info-foot .actions { flex: none; display: flex !important; gap: 8px; margin: 0 0 0 auto !important; padding: 0 !important; border: 0 !important; background: none !important; }
-#ui .info:not(.is-person):not(.army-mode) .info-foot .actions > * { width: auto !important; margin: 0 !important; }
+#ui .info:not(.is-person):not(.army-mode) .info-foot .actions > * { margin: 0 !important; }
+#ui .info:not(.is-person):not(.army-mode) .info-foot .actions > :not(.icon-act):not(.info-market) { width: auto !important; }
 #ui .info:not(.is-person):not(.army-mode) .info-foot:not(:has(.hp-line:not([hidden]))) .actions { margin-left: auto !important; }
 #ui .info:not(.is-person):not(.army-mode) :is(.icon-act, .info-market) { width: 46px !important; height: 46px; min-width: 0 !important; min-height: 0 !important; padding: 0 !important; display: inline-grid !important; place-items: center; border-radius: 4px;
   background: linear-gradient(var(--tile-a), var(--tile-b)) !important; border: 1px solid var(--tile-edge) !important; color: var(--tile-ink) !important;
@@ -1036,3 +1037,5 @@ html body .info .icon-act { background: linear-gradient(#3a2614, #24160c) !impor
 #ui .card-row > .card { border: 3px solid #5a3d1c !important; border-radius: 0 !important; margin: 0 0 0 -3px !important; box-shadow: inset 0 0 0 1px rgba(236, 208, 138, .45) !important; }
 #ui .card-row > .card:first-child { margin-left: 0 !important; }
 #ui .card-row > .card:hover, #ui .card-row > .card:focus-visible { position: relative; z-index: 1; border-color: #c29a45 !important; }
+/* statystyki warsztatu: długie wartości („1756 (na 878 cykli)”) zawijają się zamiast ucinać */
+#ui .info:not(.is-person):not(.army-mode) .prod-stat strong { white-space: normal !important; font-size: 16px; line-height: 1.2; overflow-wrap: anywhere; }
