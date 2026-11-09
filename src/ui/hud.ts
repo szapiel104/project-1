@@ -916,7 +916,9 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
   demolish.classList.add('icon-danger');
   iconBtn(tDown, ICON.down, tx('Zejdźcie z wieży', 'Come down from the tower'));
   close.hidden = true;
-  infoActions.append(marketBtn, areaBtn, moveBtn, demolish);
+  iconBtn(powerBtn, ICON.power, tx('Wyłącz budynek', 'Shut down the building'));
+  powerBtn.hidden = true; powerBadge.hidden = true;
+  infoActions.append(powerBtn, marketBtn, areaBtn, moveBtn, demolish);
   // plac budowy: pasek postępu, materiał (przyniesiony / potrzebny, w drodze), robotnicy i co się teraz dzieje
   // warsztat: przepis z ikonami, pracownik z postępem roboty, stan (co blokuje) i liczby
   const prodBox = el('div', 'info-prod');
@@ -965,9 +967,15 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
   xBtn.addEventListener('click', () => events.onCloseInfo());
   // właściciel w nagłówku, pod nazwą — jedna całość (Michał 9.11.2026)
   const infoTitle = el('div', 'info-title');
-  infoTitle.append(infoName, ownerLine);
+  // pod nazwą jeden wiersz: tarcza i właściciel, obok stan budynku (działa / wyłączony)
+  const infoMeta = el('div', 'info-meta');
+  infoMeta.append(ownerLine, powerBadge);
+  infoTitle.append(infoName, infoMeta);
   infoHead.append(infoTitle, descBtn, xBtn);
-  info.append(infoHead, hpLine, riotBox, gateBox, powerBox, quarBox, towerBox, watchState, walkBtn, mineBtn, recruit, armyPanel, roster, armyCtl.help, siteBox, prodBox, storeBox, logiBox, infoDesc, infoWorker, trainBtn, trainNote, infoActions);
+  // stopka okna jak w grze: wytrzymałość z lewej, przyciski-ikony z prawej
+  const infoFoot = el('div', 'info-foot');
+  infoFoot.append(hpLine, infoActions);
+  info.append(infoHead, riotBox, gateBox, powerBox, quarBox, towerBox, watchState, walkBtn, mineBtn, recruit, armyPanel, roster, armyCtl.help, siteBox, prodBox, storeBox, logiBox, infoDesc, infoWorker, trainBtn, trainNote, infoFoot);
   let infoId = 0;
   let lastInfoId = -1;
   const demolishAsk = confirmBtn(demolish, () => events.onDemolish(infoId));
@@ -1437,7 +1445,7 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
       recruit.hidden = true;
       towerBox.hidden = true;
       gateBox.hidden = true;
-      powerBox.hidden = true;
+      powerBox.hidden = true; ownerLine.hidden = true; powerBadge.hidden = true; powerBtn.hidden = true;
       quarBox.hidden = true;
       // resztki okna budynku (plac budowy, zapasy, zasięg strzału) nie mogą zostać na karcie człowieka
       siteBox.hidden = true; prodBox.hidden = true; storeBox.hidden = true; logiBox.hidden = true; areaBtn.hidden = true; mineBtn.hidden = true; watchState.hidden = true; riotBox.hidden = true; infoDesc.hidden = false;
@@ -1460,7 +1468,7 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
       recruit.hidden = true;
       towerBox.hidden = true;
       gateBox.hidden = true;
-      powerBox.hidden = true;
+      powerBox.hidden = true; ownerLine.hidden = true; powerBadge.hidden = true; powerBtn.hidden = true;
       quarBox.hidden = true;
       siteBox.hidden = true; prodBox.hidden = true; storeBox.hidden = true; logiBox.hidden = true; areaBtn.hidden = true; mineBtn.hidden = true; watchState.hidden = true; riotBox.hidden = true;
       walkBtn.hidden = true;
@@ -1721,14 +1729,16 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
           : tx(`Chorych w środku: ${i.quarantine.sick}. Zamknięcie chaty zatrzyma zarazę w środku — zdrowi domownicy pójdą spać gdzie indziej.`, `Sick inside: ${i.quarantine.sick}. Shutting the hovel keeps the plague within — the healthy will go to sleep elsewhere.`));
         quarState.dataset.shut = String(i.quarantine.on);
       }
-      powerBox.hidden = !(i.own && i.power);
+      powerBox.hidden = true;
+      powerBtn.hidden = powerBadge.hidden = !(i.own && i.power);
       if (i.power) {
         powerOn = i.power.on;
         setText(powerBadge, i.power.on ? tx('Budynek działa', 'Building at work') : tx('Budynek wyłączony', 'Building shut down'));
         powerBadge.dataset.shut = String(!i.power.on);
-        setText(powerBtn, i.power.on ? tx('Wyłącz', 'Shut down') : tx('Włącz', 'Start up'));
-        powerBtn.setAttribute('aria-label', i.power.on ? tx('Wyłącz budynek', 'Shut down the building') : tx('Włącz budynek', 'Start up the building'));
-        setText(powerState, i.power.on ? tx('Po wyłączeniu pracownik pójdzie do innej roboty.', 'Shut it down and the worker will go to other work.') : i.power.worker ? tx('Pracownik czeka, aż znów włączysz budynek.', 'The worker waits for you to start it up again.') : tx('Pracownik poszedł do innej roboty. Po włączeniu wróci pierwszy wolny chłop.', 'The worker has gone to other work. Start it up and the first idle peasant will come back.'));
+        setText(powerBadge, i.power.on ? tx('Działa', 'At work') : tx('Wyłączony', 'Shut down'));
+        powerBtn.setAttribute('aria-pressed', String(!i.power.on));
+        powerBtn.classList.toggle('is-off', !i.power.on);
+        setLabel(powerBtn, `${i.power.on ? tx('Wyłącz budynek', 'Shut down the building') : tx('Włącz budynek', 'Start up the building')}. ${i.power.on ? tx('Po wyłączeniu pracownik pójdzie do innej roboty.', 'Shut it down and the worker will go to other work.') : i.power.worker ? tx('Pracownik czeka, aż znów włączysz budynek.', 'The worker waits for you to start it up again.') : tx('Pracownik poszedł do innej roboty. Po włączeniu wróci pierwszy wolny chłop.', 'The worker has gone to other work. Start it up and the first idle peasant will come back.')}`);
       }
       gateBox.hidden = !(i.own && i.gate);
       if (i.gate) {
