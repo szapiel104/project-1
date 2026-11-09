@@ -1279,3 +1279,16 @@ html body .info .icon-act { background: linear-gradient(#3a2614, #24160c) !impor
 #ui#ui .floaters .info.army-mode > :is(.army-box, .roster) { margin: 0 20px !important; }
 #ui#ui .floaters .info.army-mode .army-box { padding: 12px !important; border-radius: 5px; background: rgba(90, 62, 28, .11) !important; }
 #ui#ui .floaters .info.army-mode .army-help, #ui#ui .floaters .info.army-mode .info-desc-btn, #ui#ui .floaters .info.army-mode .info-desc, #ui#ui .floaters .info.army-mode .info-foot { display: none !important; }
+/* ===== Pasek zasobów na górze ekranu (Michał 9.11.2026: „lepiej na górze”) ===== */
+#ui .status.status-top { position: fixed; top: 0; left: 50%; transform: translateX(-50%); z-index: 24; width: max-content; max-width: calc(100vw / var(--ui, 1) - 520px);
+  justify-content: center; gap: 10px; padding: 4px 14px 6px; border: 1px solid #9a7a2a; border-top: 0; border-radius: 0 0 8px 8px;
+  background: linear-gradient(#1a1008, #24170c); box-shadow: 0 0 0 1px #0b0704, 0 6px 18px rgba(0, 0, 0, .55), inset 0 -1px 0 rgba(255, 220, 160, .12); }
+#ui .status.status-top .res li, #ui .status.status-top .res-extra li, #ui .status.status-top :is(.clock, .people > div) { min-height: 38px; }
+/* dymki i rozwijane zapasy pod paskiem, nie nad nim */
+#ui .status.status-top .res-extra { bottom: auto; top: calc(100% + 8px); }
+#ui .status.status-top .res li[data-tip]:hover::after, #ui .status.status-top [data-tip]:hover::after { bottom: auto; top: calc(100% + 8px); }
+/* rzeczy, które stały u góry, schodzą pod pasek */
+.alarm { top: 66px; }
+.toast { top: 118px; }
+.report { bottom: auto; top: 70px; }
+body.menu-open #ui .status.status-top, body.walking #ui .status.status-top { display: none; }

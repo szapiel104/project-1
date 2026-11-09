@@ -1242,7 +1242,9 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
 
   floaters.append(drawer, info);
   const dock = el('div', 'dock');
-  dock.append(toolbar, bar);
+  // zasoby, zegar i stan osady na górze ekranu (tylko do zerkania), na dole zostaje budowanie i rozkazy (Michał 9.11.2026)
+  bar.classList.add('status-top');
+  dock.append(toolbar);
   // ---- pasek wojska nad menu: grupy pod cyframi i portrety zaznaczonych ----
   const armyBar = el('div', 'armybar');
   armyBar.hidden = true;
@@ -1288,7 +1290,7 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
   });
   let pickedKey = '';
   bottom.append(floaters, buildbar, armyBar, dock);
-  root.append(toast, bottom);
+  root.append(toast, bottom, bar);
   showCategory(null);
 
   return {
