@@ -2669,16 +2669,23 @@ if (SANDBOX) void import('./debug/tour');
 // porównanie A/B w grze (lokalnie): co kosztuje klatkę — `await __ab({ ao: 'off' })` mierzy 3 s z bieżącymi ustawieniami i 3 s
 // ze zmienionymi (po zmianie wraca), `await __ab(null, 'roślinność pustyni')` to samo z ukrytą kategorią sceny (userData.cat)
 if (import.meta.env.DEV || new URLSearchParams(location.search).has('perf')) {
+  let settle = 600, pan = false;
+  const key = (type: string, code: string): void => { window.dispatchEvent(new KeyboardEvent(type, { code, key: code })); };
   const frames = async (ms: number): Promise<{ fps: number; med: number; p95: number }> => {
-    await new Promise((ok) => setTimeout(ok, 600)); // chwila na przełączenie (kompilacja, nowe bufory)
+    await new Promise((ok) => setTimeout(ok, settle)); // chwila na przełączenie (kompilacja, nowe bufory)
     const ts: number[] = [];
+    // `pan`: kamera jedzie w prawo, potem z powrotem w lewo (pomiar w ruchu, jak przy przewijaniu mapy)
+    if (pan) { key('keydown', 'ArrowRight'); setTimeout(() => { key('keyup', 'ArrowRight'); key('keydown', 'ArrowLeft'); }, ms / 2); }
     await new Promise<void>((ok) => { const t0 = performance.now(); const f = (t: number): void => { ts.push(t); if (t - t0 < ms) requestAnimationFrame(f); else ok(); }; requestAnimationFrame(f); });
+    if (pan) key('keyup', 'ArrowLeft');
     const d = ts.slice(1).map((t, i) => t - ts[i]!).sort((a, b) => a - b);
     return { fps: Math.round((1000 * d.length) / Math.max(1, ts[ts.length - 1]! - ts[0]!)), med: +(d[d.length >> 1] ?? 0).toFixed(1), p95: +(d[Math.floor(d.length * 0.95)] ?? 0).toFixed(1) };
   };
   const sc = (renderer as unknown as { scene: Object3D }).scene;
-  (window as unknown as { __ab: unknown }).__ab = async (partial: Record<string, unknown> | null, hideCat?: string, ms = 3000): Promise<unknown> => {
+  (window as unknown as { __ab: unknown }).__ab = async (partial: Record<string, unknown> | null, hideCat?: string, ms = 3000, opts: { pan?: boolean; settle?: number } = {}): Promise<unknown> => {
+    pan = !!opts.pan; settle = 600;
     const base = await frames(ms);
+    settle = opts.settle ?? (partial ? 5000 : 600);
     const hidden: Object3D[] = [];
     if (partial) renderer.setGraphics({ ...gfx, grass: gfx.grass ?? 1, ...partial } as Parameters<typeof renderer.setGraphics>[0]);
     if (hideCat) sc.traverse((o) => { const c = o.userData?.cat as string | undefined; if (c && c.startsWith(hideCat) && o.visible) { o.visible = false; hidden.push(o); } });
