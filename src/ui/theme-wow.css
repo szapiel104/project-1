@@ -959,3 +959,27 @@ html body .info .icon-act { background: linear-gradient(#3a2614, #24160c) !impor
 .keeper-doing { font-size: 14px; }
 @media (prefers-reduced-motion: reduce) { .keeper-slot.on, .keeper-dot, #ui .info .info-owner[data-rel='enemy'] { animation: none; } }
 @media (max-width: 760px) { #ui .info:not(.is-person):not(.army-mode) { grid-template-columns: 1fr; } }
+
+/* warsztat na jasnym pergaminie: taśma przepisu, pracownik, kafle liczb (ciemny tusz, ikony w ciemnych płytkach) */
+#ui .info:not(.is-person):not(.army-mode) .prod-recipe { background: rgba(255, 255, 255, .4); border: 1px solid rgba(120, 88, 40, .55); }
+#ui .info:not(.is-person):not(.army-mode) .prod-chip { background: linear-gradient(#fbf1d6, #e6d3a3); border: 1px solid #8a6d3b; box-shadow: 0 2px 0 rgba(58, 42, 20, .35); grid-template-columns: 52px auto; padding: 8px 12px 8px 8px; }
+#ui .info:not(.is-person):not(.army-mode) .prod-chip .ico { grid-row: 1 / 3; width: 52px; height: 52px; display: grid; place-items: center; background: radial-gradient(circle at 50% 35%, #4b3a28, #1f160d); border: 2px solid #c9a24f; border-radius: 8px; }
+#ui .info:not(.is-person):not(.army-mode) .prod-chip .ico svg { width: 36px; height: 36px; }
+#ui .info:not(.is-person):not(.army-mode) .prod-chip strong { color: #2a1b0c !important; font-size: 26px; font-weight: 800; }
+#ui .info:not(.is-person):not(.army-mode) .prod-chip span:last-child { color: #5c4224 !important; font-size: 15px; font-weight: 600; }
+#ui .info:not(.is-person):not(.army-mode) .prod-arrow i { border-color: #8a5a14; }
+#ui .info:not(.is-person):not(.army-mode) .info-prod[data-active='true'] .prod-arrow i { animation-name: prodflowdark; }
+@keyframes prodflowdark { 0%, 100% { opacity: .3; border-color: #8a5a14; } 40% { opacity: 1; border-color: #e0a010; } }
+#ui .info:not(.is-person):not(.army-mode) .prod-note strong { color: #8a1f14 !important; font-size: 20px; }
+#ui .info:not(.is-person):not(.army-mode) .prod-worker { background: rgba(255, 255, 255, .4); border: 1px solid rgba(120, 88, 40, .5); }
+#ui .info:not(.is-person):not(.army-mode) .prod-bar { background: #3a2a14 !important; border-color: #2a1b0c !important; }
+#ui .info:not(.is-person):not(.army-mode) .prod-status { background: rgba(63, 143, 42, .16); border-left: 4px solid #3f8f2a; font-weight: 600; }
+#ui .info:not(.is-person):not(.army-mode) .prod-status[data-level='warn'] { background: rgba(224, 166, 58, .25); border-left-color: #c98a1f; }
+#ui .info:not(.is-person):not(.army-mode) .prod-status[data-level='bad'] { background: rgba(196, 58, 42, .18); border-left-color: #b02a1c; }
+#ui .info:not(.is-person):not(.army-mode) .prod-stat { background: linear-gradient(#fbf1d6, #e6d3a3); border: 1px solid #8a6d3b; box-shadow: 0 2px 0 rgba(58, 42, 20, .3); }
+#ui .info:not(.is-person):not(.army-mode) .prod-stat strong { color: #2a1b0c !important; font-size: 24px; font-weight: 800; }
+#ui .info:not(.is-person):not(.army-mode) .prod-stat strong.warn { color: #a3261b !important; }
+#ui .info:not(.is-person):not(.army-mode) .prod-stat span { color: #5c4224 !important; font-weight: 600; }
+#ui .info:not(.is-person):not(.army-mode) .prod-rows { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+#ui .info:not(.is-person):not(.army-mode) :is(.prod-who, .prod-status, .prod-note) { color: #2a1b0c !important; }
+#ui .info:not(.is-person):not(.army-mode) .prod-note span { color: #5c4224 !important; }
