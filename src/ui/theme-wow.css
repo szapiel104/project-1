@@ -730,3 +730,49 @@ html body .menu.in-game:not(.previewing) .menu-head > .menu-paused {
 .gpu-hint-later { background: transparent; color: #cdb98f; border: 1px solid rgba(233, 199, 102, .35); }
 .gpu-hint-ok { background: linear-gradient(#9c2a1c, #5e120b); color: #fff2d6; border: 1px solid #f0cf72; }
 .gpu-hint button:focus-visible { outline: 2px solid #e9c766; outline-offset: 2px; }
+
+/* ===== Okno budynku / postaci: ciemne, czytelne, równe odstępy, akcje jako ikony (Michał 9.11.2026: „rozjechane, ciasne, nieczytelne”) ===== */
+html body .floaters .info, html body .info {
+  --ink: #f1e3c4; --ink-soft: #c9b48a; --rubric: #e9c766;
+  background: linear-gradient(#211710, #160f0a) !important; color: #f1e3c4;
+  border: 1px solid #8a6a32; border-radius: 8px; box-shadow: 0 10px 30px rgba(0, 0, 0, .45);
+  gap: 10px; padding-bottom: 12px; }
+html body .info * { text-shadow: none; }
+html body .info p, html body .info .hint, html body .info .logi-note, html body .info .gate-state, html body .info .power-note { color: #e6d6b2; font-size: 14px; line-height: 1.45; margin: 0; }
+html body .info .info-head { background: linear-gradient(#2c2016, #1e150e); border-bottom: 1px solid rgba(233, 199, 102, .35); border-radius: 8px 8px 0 0; padding: 10px 10px 10px 14px; }
+html body .info .info-head .info-name { color: #e9c766; font-size: 20px; font-weight: 600; letter-spacing: .02em; }
+html body .info .info-ibtn { width: 30px; height: 30px; border-radius: 5px; background: rgba(255, 240, 210, .06); border: 1px solid rgba(233, 199, 102, .35); color: #e9c766; }
+html body .info .info-ibtn:hover { background: rgba(233, 199, 102, .18); }
+html body .info .info-x:hover { background: #8c1f18; color: #fff; border-color: #e9c766; }
+html body .info .info-owner { display: flex; align-items: center; gap: 8px; padding: 6px 10px; background: rgba(255, 240, 210, .05); border: 1px solid rgba(233, 199, 102, .2); border-radius: 6px; }
+/* sekcje jako jednakowe karty */
+html body .info :is(.power-row-box, .info-stock, .info-logi, .info-prod, .info-site, .gate-box, .army-box, .roster, .info-worker) {
+  background: rgba(255, 240, 210, .045); border: 1px solid rgba(233, 199, 102, .2); border-radius: 6px; padding: 10px 12px; margin: 0; gap: 8px; box-shadow: none; }
+html body .info :is(.stock-head, .logi-head, .prod-head, .stock-head2) { color: #e9c766; font-size: 15px; display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+html body .info .stock-item { background: rgba(0, 0, 0, .3); border: 1px solid rgba(233, 199, 102, .22); border-radius: 5px; }
+/* wytrzymałość: napis nad paskiem, pasek wyraźny */
+html body .info .hp-line { display: grid; gap: 5px; font-size: 13px; font-weight: 600; color: #c9b48a; letter-spacing: .03em; }
+html body .info .hp-bar { height: 10px; border-radius: 5px; background: rgba(0, 0, 0, .45); border: 1px solid rgba(233, 199, 102, .25); overflow: hidden; }
+html body .info .hp-bar > span { border-radius: 5px; }
+/* wieża / mur: stan po lewej, ikona „zejdźcie” po prawej */
+html body .info .gate-box:has(.icon-act) { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+html body .info .gate-box:has(.icon-act) .actions { border: 0; padding: 0; display: flex; }
+/* włącz / wyłącz w jednym rzędzie */
+html body .info .power-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+html body .info .power-btn { min-height: 34px; padding: 0 14px; border-radius: 5px; background: rgba(255, 240, 210, .06); border: 1px solid rgba(233, 199, 102, .35); color: #f1e3c4; font-size: 14px; }
+/* akcje: ikony w rzędzie od prawej */
+html body .info .actions { display: flex !important; justify-content: flex-end; gap: 8px; padding-top: 10px; border-top: 1px solid rgba(233, 199, 102, .25); }
+html body .info .actions button:last-child:not(:first-child) { display: inline-flex; }
+html body .info .actions button[hidden], html body .info .actions .btn-plain[hidden] { display: none !important; }
+html body .info .icon-act { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-width: 40px; height: 40px; min-height: 40px; padding: 0 9px;
+  border-radius: 6px; background: rgba(255, 240, 210, .06); border: 1px solid rgba(233, 199, 102, .4); color: #e9c766; box-shadow: none; cursor: pointer; }
+html body .info .icon-act svg { width: 22px; height: 22px; flex: none; }
+html body .info .icon-act:hover:not(:disabled) { background: rgba(233, 199, 102, .18); border-color: #e9c766; }
+html body .info .icon-act[aria-pressed="true"] { background: rgba(233, 199, 102, .25); border-color: #e9c766; }
+html body .info .icon-act:focus-visible { outline: 2px solid #e9c766; outline-offset: 2px; }
+html body .info .icon-act:disabled { opacity: .45; cursor: not-allowed; }
+html body .info .icon-act.icon-danger { color: #f0a08a; border-color: rgba(240, 120, 100, .45); }
+html body .info .icon-act.icon-danger:hover, html body .info .icon-act.armed { background: #8c1f18; color: #fff; border-color: #f0cf72; }
+html body .info .icon-act-q { font-size: 14px; font-weight: 600; white-space: nowrap; }
+/* główne przyciski w oknie (brama, przejdź się jego oczami, kopalnia) */
+html body .info :is(.walk-btn, .gate-btn, .btn-main) { min-height: 40px; border-radius: 6px; font-size: 15px; }

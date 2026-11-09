@@ -1,3 +1,4 @@
+import { confirmBtn, ICON, iconBtn, setLabel } from './iconBtn';
 import { createRecruitTiles } from './recruitTiles';
 import { hoverCard, refreshHoverCard } from './hoverCard';
 import { me, onAccount } from '../net/supa';
@@ -895,7 +896,14 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
   const mineBtn = el('button', 'btn-main walk-btn', tx('Wejdź do kopalni', 'Enter the mine')); mineBtn.type = 'button'; mineBtn.hidden = true;
   mineBtn.addEventListener('click', () => events.onEnterMine(infoId));
   areaBtn.addEventListener('click', () => events.onArea(infoId));
-  infoActions.append(areaBtn, moveBtn, demolish, close);
+  // dół okna: same ikony z dymkami; krzyżyk zamykania jest w nagłówku, więc „Zamknij” tu znika
+  iconBtn(areaBtn, ICON.area, tx('Pokaż teren pracy', 'Show work area'));
+  iconBtn(moveBtn, ICON.move, t('hud.relocate'));
+  iconBtn(demolish, ICON.trash, t('hud.demolish'));
+  demolish.classList.add('icon-danger');
+  iconBtn(tDown, ICON.down, tx('Zejdźcie z wieży', 'Come down from the tower'));
+  close.hidden = true;
+  infoActions.append(areaBtn, moveBtn, demolish);
   // plac budowy: pasek postępu, materiał (przyniesiony / potrzebny, w drodze), robotnicy i co się teraz dzieje
   // warsztat: przepis z ikonami, pracownik z postępem roboty, stan (co blokuje) i liczby
   const prodBox = el('div', 'info-prod');
@@ -945,7 +953,8 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
   infoHead.append(infoName, descBtn, xBtn);
   info.append(infoHead, ownerLine, hpLine, riotBox, gateBox, powerBox, quarBox, towerBox, watchState, walkBtn, mineBtn, recruit, armyPanel, roster, armyCtl.help, siteBox, prodBox, storeBox, logiBox, infoDesc, infoWorker, trainBtn, trainNote, infoActions);
   let infoId = 0;
-  demolish.addEventListener('click', () => events.onDemolish(infoId));
+  let lastInfoId = -1;
+  const demolishAsk = confirmBtn(demolish, () => events.onDemolish(infoId));
   moveBtn.addEventListener('click', () => events.onRelocate(infoId));
   close.addEventListener('click', () => events.onCloseInfo());
 
@@ -1679,15 +1688,16 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
       demolish.hidden = !i.own || !i.def.buildable;
       moveBtn.hidden = !(i.own && i.move);
       if (i.move) {
-        setText(moveBtn, `${t('hud.relocate')} (${i.move.cost} ${tx('rudy', 'ore')})`);
         moveBtn.disabled = !!i.move.why;
-        moveBtn.title = i.move.why ?? t('hud.relocateTip');
+        setLabel(moveBtn, i.move.why ?? `${t('hud.relocate')} (${i.move.cost} ${tx('rudy', 'ore')}) — ${t('hud.relocateTip')}`);
       }
-      setText(demolish, i.ruined ? tx('Porzuć ruinę', 'Abandon the ruins') : t('hud.demolish'));
+      setLabel(demolish, i.ruined ? tx('Porzuć ruinę', 'Abandon the ruins') : t('hud.demolish'));
+      if (i.id !== lastInfoId) { lastInfoId = i.id; demolishAsk.reset(); }
       areaBtn.hidden = i.area === undefined;
       mineBtn.hidden = !(i.own && i.def.id === 'oremine');
       const shot = isTower(i.def.id);
-      setText(areaBtn, shot ? (i.area ? tx('Ukryj zasięg strzału', 'Hide firing range') : tx('Pokaż zasięg strzału', 'Show firing range')) : i.area ? tx('Ukryj teren pracy', 'Hide work area') : tx('Pokaż teren pracy', 'Show work area'));
+      areaBtn.innerHTML = shot ? ICON.range : ICON.area;
+      setLabel(areaBtn, shot ? (i.area ? tx('Ukryj zasięg strzału', 'Hide firing range') : tx('Pokaż zasięg strzału', 'Show firing range')) : i.area ? tx('Ukryj teren pracy', 'Hide work area') : tx('Pokaż teren pracy', 'Show work area'));
       areaBtn.setAttribute('aria-pressed', String(!!i.area));
       trainBtn.hidden = true;
       trainNote.hidden = true;
