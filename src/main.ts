@@ -3179,7 +3179,39 @@ perfErrCopy.textContent = tx('Kopiuj dziennik błędów', 'Copy error log');
 perfErrCopy.addEventListener('click', () => {
   void navigator.clipboard?.writeText(errText()).then(() => { perfErrCopy.textContent = tx('Skopiowano', 'Copied'); setTimeout(() => { perfErrCopy.textContent = tx('Kopiuj dziennik błędów', 'Copy error log'); }, 1500); }, () => { /* bez schowka */ });
 });
-perfErr.append(perfErrList, perfErrCopy);
+// raport wydajności jednym przyciskiem (Michał 9.11.2026: „zrób w postaci przycisku i zbieraj w interfejsie”): liczniki,
+// spis rysowań klatki i 8 s próbkowania procesora (src/debug/prof.ts, lokalnie przez npx vite) — do schowka, do wklejenia w czacie
+const perfReport = document.createElement('button');
+perfReport.type = 'button';
+const PERF_LABEL = tx('Zmierz i kopiuj raport wydajności', 'Measure and copy performance report');
+perfReport.textContent = PERF_LABEL;
+perfReport.addEventListener('click', () => {
+  if (perfReport.disabled) return;
+  perfReport.disabled = true;
+  perfReport.textContent = tx('Mierzę 8 s — graj normalnie…', 'Measuring for 8 s — keep playing…');
+  const w = window as unknown as { __perf?: () => unknown; __drawStat?: () => Promise<unknown>; __prof?: (s: number) => Promise<unknown> };
+  const wasProfile = renderer.gpuProfile;
+  renderer.gpuProfile = false; // dokładne mierzenie przejść spowalnia co 15. klatkę — na czas raportu wyłączone
+  void (async () => {
+    let text = '';
+    try {
+      const { prof } = await import('./debug/prof');
+      const draws = await w.__drawStat?.();
+      const cpu = await prof(8);
+      text = JSON.stringify({ wydajność: w.__perf?.(), rysowania: draws, procesor: cpu });
+      await navigator.clipboard?.writeText(text);
+      perfReport.textContent = tx('Skopiowano — wklej w czacie', 'Copied — paste it in the chat');
+    } catch (e) {
+      console.warn('[raport wydajności]', e, text);
+      perfReport.textContent = tx('Nie udało się skopiować (raport w konsoli)', 'Copy failed (report in the console)');
+      if (text) console.info(text);
+    } finally {
+      renderer.gpuProfile = wasProfile && !perfBox.hidden;
+      setTimeout(() => { perfReport.textContent = PERF_LABEL; perfReport.disabled = false; }, 4000);
+    }
+  })();
+});
+perfErr.append(perfErrList, perfErrCopy, perfReport);
 perfBox.append(perfMain, perfGpu, perfErr);
 document.body.append(perfBox);
 // mały licznik FPS zawsze widoczny pod wersją; klik albo F3 rozwija pełne statystyki
