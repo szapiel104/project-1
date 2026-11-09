@@ -122,3 +122,6 @@ Z indeksu [open-game-sfx-index](https://github.com/Mcamento8/open-game-sfx-index
 - step-stone-0…4, step-dirt-0…4, step-wood-0…4 — Kenney „Impact Sounds” (footstep_concrete, footstep_grass, footstep_wood) (CC0)
 - step-stone-5, step-gravel-0, step-mud-0 — Kenney „OGA Footsteps” (stone01, gravel, mud02; nagrania TinyWorlds) (CC0)
 - Zmiany: mono 32 kHz, przycięte do jednego kroku, wyrównana głośność.
+
+## Chorał gregoriański (9.11.2026)
+Osiem nagrań śpiewu mnichów z Wikimedia Commons (`public/music/chant-*.ogg`): Schola Gregoriana ×4 (CC BY-SA 3.0), „Veni Creator Spiritus” (domena publiczna), Kevin MacLeod „Gregorian Chant” (CC BY 3.0), „Gloria” CyclePat (CC BY 3.0), „Tantum Ergo” (CC BY-SA 3.0). Szczegóły i adresy w CREDITS.md. Grają w menu, nocą i część za dnia (`src/audio/sfx.ts`, `MUSIC_TRACKS`).

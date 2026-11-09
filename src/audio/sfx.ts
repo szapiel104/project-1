@@ -885,6 +885,17 @@ export const MUSIC_TRACKS: { file: string; moods: Mood[] }[] = [
   { file: 'dowland-complaints.ogg', moods: ['night', 'menu'] },
   { file: 'another-path.ogg', moods: ['night'] },
   { file: 'royal-strings.ogg', moods: ['night'] },
+  // chorał gregoriański — śpiew mnichów (Michał 9.11.2026: „zdecydowanie więcej, także w menu”); Wikimedia Commons,
+  // autorzy i licencje w docs/zasoby.md, CREDITS.md i w Ustawienia → Dźwięk
+  { file: 'chant-kyrie.ogg', moods: ['menu', 'night', 'day'] },
+  { file: 'chant-deus-in-adjutorium.ogg', moods: ['menu', 'night'] },
+  { file: 'chant-magnificat.ogg', moods: ['menu', 'night'] },
+  { file: 'chant-ave-maria.ogg', moods: ['menu', 'night', 'day'] },
+  { file: 'chant-veni-creator.ogg', moods: ['menu', 'night', 'day'] },
+  { file: 'chant-macleod.ogg', moods: ['menu', 'night'] },
+  { file: 'chant-gloria.ogg', moods: ['menu', 'day'] },
+  { file: 'chant-tantum-ergo.ogg', moods: ['menu', 'night'] },
+  { file: 'wendale-abbey.ogg', moods: ['menu'] },
   // bitwa
   { file: 'battle.ogg', moods: ['battle'] },
   { file: 'war-theme.ogg', moods: ['battle'] },
