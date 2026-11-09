@@ -1315,3 +1315,40 @@ body .scribe-log { top: 112px; bottom: auto; }
 .report { z-index: 62; overflow-y: auto; }
 .stock-modal { z-index: 70 !important; }
 body.menu-open .report { display: none !important; }
+/* ===== Rynek na pergaminie jak okna budynków (Michał 9.11.2026) ===== */
+#ui .market-panel, .market-panel {
+  top: 60px; bottom: 70px; right: 13px; width: min(760px, calc(100vw - 40px)); padding: 0; gap: 0;
+  background-color: #eddcb5 !important; background-image: var(--parch-img) !important; background-size: 100% 100%, auto, 420px auto !important;
+  background-repeat: no-repeat, no-repeat, repeat !important; background-blend-mode: normal, normal, multiply !important;
+  border: 0 !important; border-radius: 4px !important; color: #2a1b0c;
+  box-shadow: 0 0 0 2px #d8b25e, 0 0 0 4px #6e4a1e, 0 0 0 12px #3a2414, 0 0 0 13px #0b0704, inset 0 0 40px rgba(120, 78, 28, .3), 0 18px 34px rgba(0, 0, 0, .6) !important; }
+.market-panel .market-head { padding: 14px 16px 12px 20px; gap: 12px; position: relative; }
+.market-panel .market-head::after { content: ''; position: absolute; left: 20px; right: 20px; bottom: 0; height: 1px; background: linear-gradient(90deg, transparent, rgba(120, 86, 40, .35) 12%, rgba(120, 86, 40, .35) 88%, transparent); }
+.market-panel .market-title { font-family: var(--text); font-size: 24px; font-weight: 700; letter-spacing: 0; color: #3b2512 !important; text-shadow: none !important; text-transform: none; }
+.market-panel .market-purse { font-size: 18px; font-weight: 700; padding: 4px 12px 4px 6px; border-radius: 4px; color: #fff4dc !important; background: linear-gradient(#4a3322, #2d1b0e) !important; border: 1px solid #1a0f07 !important; box-shadow: inset 0 1px 0 rgba(255, 236, 200, .22) !important; }
+.market-panel .market-close { width: 30px; height: 30px; min-width: 0; min-height: 0; padding: 0; display: grid; place-items: center; font-size: 15px; border-radius: 4px; color: #fff4dc; background: linear-gradient(#4a3322, #2d1b0e) !important; border: 1px solid #1a0f07 !important; }
+.market-panel .market-close:hover { background: #8a2a1c !important; }
+.market-panel .market-note { margin: 10px 20px 0; font-size: 13.5px; color: #5c4224 !important; text-shadow: none; }
+.market-panel .market-info { margin: 10px 20px 0; }
+.market-panel .market-info .panel.info { background: rgba(90, 62, 28, .11) !important; background-image: none !important; box-shadow: none !important; border: 0 !important; border-radius: 5px !important; width: auto !important; margin: 0 !important; padding: 0 !important; max-height: 200px !important; }
+.market-panel .market-info .panel.info::after { display: none; }
+.market-panel .market-info .info-head { display: none !important; }
+.market-panel .market-body { padding: 12px 14px 16px 20px; margin-right: 4px; scrollbar-color: #8a6d3b transparent; }
+.market-panel .market-group-title { font-family: var(--text); font-size: 15px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: #6e4a1e !important; text-shadow: none !important; margin: 14px 0 8px; }
+.market-panel .market-group-title::after { background: linear-gradient(90deg, rgba(120, 86, 40, .4), transparent); }
+.market-panel .market-grid { grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 8px; }
+.market-panel .market-tile { gap: 8px; padding: 10px 12px; border: 0; border-radius: 5px; background: rgba(90, 62, 28, .11); box-shadow: inset 0 1px 3px rgba(90, 58, 20, .18); }
+.market-panel .market-ico { width: 46px; height: 46px; border-radius: 4px; background: radial-gradient(circle at 50% 40%, #5a3f2a, #2d1b0e 75%); border: 1px solid #1a0f07; box-shadow: inset 0 0 0 1px rgba(194, 154, 69, .35); }
+.market-panel .market-ico svg { width: 30px; height: 30px; filter: drop-shadow(0 1px 1px #000); }
+.market-panel .market-name { font-size: 17px; font-weight: 700; color: #2a1b0c !important; text-shadow: none !important; }
+.market-panel .market-have { font-size: 20px; font-weight: 700; color: #3b2512 !important; text-shadow: none !important; }
+.market-panel .market-have small { font-size: 11.5px; color: #6e4a1e !important; }
+.market-panel .market-line { grid-template-columns: 66px 1fr 1fr; }
+.market-panel .market-line-label { font-size: 12px; font-weight: 700; color: #6e4a1e !important; text-shadow: none !important; }
+.market-panel .market-line .market-btn { min-height: 40px; border-radius: 4px; padding: 0 10px; border: 1px solid #1a0f07 !important; }
+.market-panel .market-line.sell .market-btn { background-image: linear-gradient(#4f7f2c, #2f5418) !important; box-shadow: inset 0 1px 0 rgba(220, 255, 180, .3), 0 2px 0 rgba(0, 0, 0, .3) !important; }
+.market-panel .market-line.buy .market-btn { background-image: linear-gradient(#9a3a22, #63200f) !important; box-shadow: inset 0 1px 0 rgba(255, 210, 180, .3), 0 2px 0 rgba(0, 0, 0, .3) !important; }
+.market-panel .market-line .market-btn:hover:not(:disabled) { filter: brightness(1.2); }
+.market-panel .market-btn .mb-n { color: #fff4dc !important; font-size: 14px; }
+.market-panel .market-line .mb-price { color: #fff4dc !important; font-size: 18px; text-shadow: 0 1px 1px #000; }
+.market-panel .market-line .market-btn:disabled { filter: grayscale(.6) brightness(.85); opacity: .55; }
