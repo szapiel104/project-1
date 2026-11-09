@@ -9,6 +9,19 @@ export type { ChangeEntry } from './changelogTypes';
  * — tak jak CHANGELOG.md dla nas. `tests/changelog.test.ts` pilnuje, że najnowszy wpis ma wersję z package.json.
  */
 const NEW: ChangeEntry[] = [
+  { v: '0.94.92', date: '2026-11-09', pl: [
+    'Płynniejsza kamera: lot myszą i klawiaturą nie zjada już klatek (podświetlenie pod kursorem liczone raz na klatkę), budynki poza ekranem i poza cieniami nie są rysowane, odbicie wody liczy się tylko z wodą w kadrze.',
+    'Kamera leci prosto na stałej wysokości, bez podskakiwania na pagórkach.',
+    'Zmiana ustawień grafiki nie psuje już cieni.',
+    'Okno „Zapisz grę”: zapis można nadpisać jednym przyciskiem „Nadpisz”.',
+    'Kopalnia: zbocze za kratą wchodzi w górę, wnętrze sztolni bez szachownicy, równe okno z urobkami.',
+  ], en: [
+    'A smoother camera: flying with mouse and keyboard no longer eats frames (the highlight under the cursor is worked out once per frame), buildings off screen and outside the shadows are not drawn, and water reflections are worked out only when water is in view.',
+    'The camera flies straight at a steady height, without bobbing over the hills.',
+    'Changing the graphics settings no longer breaks the shadows.',
+    'The "Save game" window: a save can be overwritten with a single "Overwrite" button.',
+    'The mine: the slope behind the grate runs into the mountain, the gallery inside has no chequerboard, and the yields window is laid out neatly.',
+  ] },
   { v: '0.94.91', date: '2026-11-09', pl: [
     'Wydajność: pełna osada chodzi płynniej (u nas z ok. 30 do ok. 55–60 klatek): drogi nie są sprawdzane w każdej klatce, położenie budynków liczy się raz na klatkę, mapa cieni odświeża się co drugą klatkę, mniej osobnych rysowań palm, zapasów, drzwi i drabin.',
     'Zawalenie budynku nie zatrzymuje już gry; kamera nie oddala się tak daleko, a z daleka nie kładzie się nad horyzontem.',

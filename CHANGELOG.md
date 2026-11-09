@@ -1,5 +1,10 @@
 # Dziennik zmian
 
+## 0.94.92 — 2026-11-09
+- Wydajność: hover (pickBuilding + pick terenu) raz na klatkę w flushHover, w ruchu co 3. klatkę, budynki odsiewane kulą (cullSphere); MaterialBatches chowa budynki poza kadrem i mapą cieni (setVisibleAt, stałe numery sztuk); stateHash raz na sekundę; lustro wody tylko z wodą w kadrze (reflectGate); macierze sceny raz na klatkę przed paczkami; szczegóły terenu w ruchu co 3. klatkę.
+- Kamera: stała wysokość lotu (gy z lookAt), wygładzona wysokość kamery; cienie: shadowForce po setGraphics (Destroyed texture ShadowDepthTexture), w ruchu kamery co klatkę.
+- Zapis: przycisk „Nadpisz” na zapisach ręcznych; kopalnia: zbocze w base, sztolnia i zbocze na rockMaterial, bez LOD; okno F3 przewijane.
+
 ## 0.94.91 — 2026-11-09
 - Wydajność (pomiar w grze Michała, pustynia, ~200 budynków): syncRoads raz na 3 ticki; scene.updateMatrixWorld raz na klatkę (matrixWorldAutoUpdate wyłączone na czas rysowania); MaterialBatches nie przepisuje niezmienionych macierzy; mapa cieni co drugą klatkę (shadow.autoUpdate=false); palmy i rośliny pustyni w jednej puli na odmianę; zapasy z kilkoma materiałami, skrzydła drzwi, drabiny, koksowniki i kłody w MaterialBatches; zasięg mgły i camera.far zależny od jakości; kamera MAX_DIST 46, oddalona min. 22°; fizyka gruzu: rzadszy heightfield, max 60 ciał, max 2 kroki.
 - Diagnostyka: __prof (JS Self-Profiling, nagłówek Document-Policy w vite), __ab (A/B ustawień i kategorii, także w ruchu), przycisk raportu w F3; licznik wywołań rysowania na klatkę.
