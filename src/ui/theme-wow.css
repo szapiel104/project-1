@@ -1532,3 +1532,31 @@ body .scribe-log { left: 10px !important; top: 108px !important; }
 .menu-scene .menu-shot:hover, .menu-scene .menu-shot:focus-visible { transform: translateY(-3px); filter: brightness(1.08); box-shadow: 0 0 0 2px #e9c766, 0 14px 30px rgba(0, 0, 0, .6); outline: none; }
 .menu-scene:not(.has-shot) .menu-shot { pointer-events: none; }
 @media (prefers-reduced-motion: reduce) { .menu-scene .menu-shot { transition: none; } .menu-scene .menu-shot:hover { transform: none; } }
+/* ===== Menu główne bardziej RPG (Michał 9.11.2026: „mało RPGowe”): kute tabliczki z ciemnego dębu i żelaza,
+   złote, rozstrzelone wersaliki na środku, podwójna złota listwa, romby po bokach zamiast strzałek ===== */
+html body .menu:not(.previewing) .menu-bar { gap: 10px !important; }
+html body .menu:not(.previewing) .menu-bar .bar-item, html body .menu:not(.previewing) .menu-bar .bar-item.bar-main {
+  position: relative; min-height: 56px !important; padding: 0 48px !important; justify-content: center !important; text-align: center;
+  font: 700 17px/1 var(--text) !important; letter-spacing: .16em !important; text-transform: uppercase;
+  color: #ecd18e !important; text-shadow: 0 1px 0 #000, 0 0 10px rgba(233, 199, 102, .25) !important;
+  background: radial-gradient(120% 140% at 50% 0%, #4a3020 0%, #2a190d 55%, #160c05 100%) !important; border: 1px solid #0b0704 !important; border-radius: 3px !important;
+  box-shadow: inset 0 0 0 1px #8a6a32, inset 0 0 0 3px #1a0f07, inset 0 0 0 4px rgba(194, 154, 69, .45), inset 0 10px 18px rgba(255, 220, 160, .06), 0 3px 0 rgba(0, 0, 0, .55), 0 6px 14px rgba(0, 0, 0, .45) !important; }
+html body .menu:not(.previewing) .menu-bar .bar-item .mi-mark { position: absolute; left: 16px; top: 50%; transform: translateY(-50%) !important; width: 22px; height: 22px;
+  background: none !important; border: 0 !important; box-shadow: none !important; color: #c9a457 !important; opacity: .9; }
+html body .menu:not(.previewing) .menu-bar .bar-item .mi-mark svg { width: 22px; height: 22px; }
+html body .menu:not(.previewing) .menu-bar .bar-item .mi-label { flex: none; }
+html body .menu:not(.previewing) .menu-bar .bar-item::after { content: '◆' !important; position: absolute !important; right: 18px; top: 50%; transform: translateY(-50%) !important; font-size: 10px !important; color: #a8823e !important; opacity: .9 !important; margin: 0 !important; }
+html body .menu:not(.previewing) .menu-bar .bar-item:hover, html body .menu:not(.previewing) .menu-bar .bar-item:focus-visible {
+  color: #fff3c8 !important; background: radial-gradient(120% 140% at 50% 0%, #5e3e26 0%, #352012 55%, #1c0f06 100%) !important;
+  box-shadow: inset 0 0 0 1px #e9c766, inset 0 0 0 3px #1a0f07, inset 0 0 0 4px rgba(233, 199, 102, .8), 0 0 18px rgba(233, 199, 102, .28), 0 3px 0 rgba(0, 0, 0, .55) !important; }
+html body .menu:not(.previewing) .menu-bar .bar-item:hover::after, html body .menu:not(.previewing) .menu-bar .bar-item:focus-visible::after { color: #ffe08a !important; }
+html body .menu:not(.previewing) .menu-bar .bar-item:hover .mi-mark { color: #ffe08a !important; }
+/* najważniejsza pozycja (Nowa gra / Wróć do gry): czerwone sukno w złotej oprawie, większa */
+html body .menu:not(.previewing) .menu-bar .bar-item.bar-main {
+  min-height: 66px !important; font-size: 20px !important; color: #fff1c8 !important;
+  background: radial-gradient(120% 140% at 50% 0%, #b8382a 0%, #7e1c12 55%, #4a0c06 100%) !important;
+  box-shadow: inset 0 0 0 1px #f0cf72, inset 0 0 0 3px #3a0a05, inset 0 0 0 4px rgba(240, 207, 114, .7), 0 0 22px rgba(200, 60, 30, .3), 0 3px 0 rgba(0, 0, 0, .6) !important; }
+html body .menu:not(.previewing) .menu-bar .bar-item.bar-main:hover { background: radial-gradient(120% 140% at 50% 0%, #d4473a 0%, #92241a 55%, #560f08 100%) !important; }
+html body .menu:not(.previewing) .menu-bar .bar-item.bar-main .mi-mark, html body .menu:not(.previewing) .menu-bar .bar-item.bar-main::after { color: #ffe3a0 !important; }
+html body .menu:not(.previewing) .menu-bar .bar-item:active { transform: translateY(2px); }
+@media (prefers-reduced-motion: reduce) { html body .menu:not(.previewing) .menu-bar .bar-item:active { transform: none; } }
