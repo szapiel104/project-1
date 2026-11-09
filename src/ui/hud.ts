@@ -1662,7 +1662,8 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
             grid.append(cell);
           }
           sec.append(grid);
-          const kv = (k: string, v: string, bad = false): HTMLElement => { const r = el('p', 'stock-total'); r.append(el('span', '', k), el('strong', '', v)); if (bad) r.dataset.over = 'true'; return r; };
+          const notes: string[] = [];
+          const kv = (k: string, v: string, bad = false): HTMLElement => { notes.push(`${k}: ${v}`); const r = el('p', 'stock-total'); r.append(el('span', '', k), el('strong', '', v)); if (bad) r.dataset.over = 'true'; return r; };
           for (const st of stocks) {
             const pre = multi ? `${labelOf(st.kind)}: ` : '';
             if (st.hereUsed > st.here) sec.append(kv(`${pre}${tx('ponad miejsce w tym budynku', 'beyond this building\'s room')}`.replace(/^./, (c) => c.toUpperCase()), num(st.hereUsed - st.here), true));
@@ -1670,6 +1671,7 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
             // zapas większy niż pojemność (np. łup, tryb testowy): ta część nie leży w żadnym magazynie
             if (st.used > st.max) sec.append(kv(`${pre}${tx('nie mieści się w żadnym magazynie', 'fits in no store at all')}`.replace(/^./, (c) => c.toUpperCase()), num(st.used - st.max), true));
           }
+          sec.title = notes.join('\n'); // szczegóły liczb w dymku zamiast wierszy pod siatką
           storeBox.replaceChildren(sec);
         }
       }
