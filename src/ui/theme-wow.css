@@ -1612,3 +1612,17 @@ html body .menu:not(.previewing) .menu-scene::after {
   animation: candlelight 5.5s ease-in-out infinite alternate; }
 @keyframes candlelight { 0% { filter: brightness(1); } 35% { filter: brightness(1.06); } 60% { filter: brightness(.97); } 100% { filter: brightness(1.04); } }
 @media (prefers-reduced-motion: reduce) { html body .menu:not(.previewing) .menu-scene::after { animation: none; } }
+/* otwarta pozycja menu (np. Ustawienia) świeci złotem, z czerwonym rombem po bokach — wiadomo, gdzie jesteś */
+html body .menu:not(.previewing) .menu-bar .bar-item[aria-current='page'] {
+  color: #fff3c8 !important; background: radial-gradient(120% 140% at 50% 0%, #6a4a26 0%, #3e2612 55%, #1f1006 100%) !important;
+  box-shadow: inset 0 0 0 1px #f0cf72, inset 0 0 0 3px #1a0f07, inset 0 0 0 4px #e9c766, 0 0 22px rgba(233, 199, 102, .45), 0 3px 0 rgba(0, 0, 0, .55) !important; }
+html body .menu:not(.previewing) .menu-bar .bar-item[aria-current='page']::after { content: '◆' !important; color: #e04a32 !important; font-size: 12px !important; }
+html body .menu:not(.previewing) .menu-bar .bar-item[aria-current='page'] .mi-mark { color: #ffe08a !important; }
+/* karta Autorów (i innych stron księgi): równe marginesy ze wszystkich stron */
+body .menu .help-pane { padding: 36px 44px !important; box-sizing: border-box; }
+/* lista muzyki w Autorach: tytuł, autor, licencja w równych kolumnach */
+body .menu .help-pane .credit-list { list-style: none; margin: 4px 0 8px; padding: 0; display: grid; gap: 0; font-size: 15px; }
+body .menu .help-pane .credit-list li { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr) 140px; gap: 12px; padding: 7px 0; border-bottom: 1px solid rgba(120, 86, 40, .22); align-items: baseline; }
+body .menu .help-pane .credit-t { color: var(--ink, #2a1b0c); font-style: italic; }
+body .menu .help-pane .credit-a { color: var(--ink, #2a1b0c); font-weight: 600; }
+body .menu .help-pane .credit-l { color: #7a4a1c; font-size: 13px; font-weight: 600; text-align: right; }

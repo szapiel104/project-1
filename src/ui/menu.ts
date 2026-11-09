@@ -765,7 +765,41 @@ export function createMenu(root: HTMLElement, events: MenuEvents): Menu {
         el('p', 'help-p', tx(
           'Na licencji CC0 (dziękujemy autorom): drzewa, trawa, krzaki, kosz, jabłko, chleb, beczka i strzecha — Poly Haven; tekstury — ambientCG; kruk — OpenGameArt; ryba — Khronos glTF Sample Assets (Microsoft); ciała postaci — MakeHuman / MPFB; ruch — CMU Graphics Lab Motion Capture Database.',
           'Under CC0 (with thanks to the authors): trees, grass, bushes, basket, apple, bread, barrel and thatch — Poly Haven; textures — ambientCG; raven — OpenGameArt; fish — Khronos glTF Sample Assets (Microsoft); character bodies — MakeHuman / MPFB; motion — CMU Graphics Lab Motion Capture Database.')),
-        el('p', 'hint', tx('Dźwięki i muzyka: zakładka Dźwięk.', 'Sounds and music: see the Sound tab.')),
+        el('h3', 'help-h', tx('Muzyka', 'Music')),
+        el('p', 'help-p', tx('Utwory z OpenGameArt i nagrania chorału gregoriańskiego z Wikimedia Commons; licencje CC0, CC BY, CC BY-SA i domena publiczna. Dziękujemy autorom.', 'Tracks from OpenGameArt and Gregorian chant recordings from Wikimedia Commons; CC0, CC BY, CC BY-SA and public domain. With thanks to the authors.')),
+        ((): HTMLElement => {
+          const ul = el('ul', 'credit-list');
+          for (const [title, who, lic] of [
+          ["Medieval: King's Feast, Minstrel Dance, The Old Tower Inn, Battle, Harvest Season, Market Day, Rejoicing, The Bard's Tale, Exploration, Victory Theme, Defeat Theme; Fantasy: Lament for a Warrior's Soul", "RandomMind", "CC0"],
+          ["Medievals 5, Medieval 12", "Tozan", "CC0"],
+          ["Peasant Theme", "nihilocrat", "CC0"],
+          ["The Lord's Court, A Knight's Challenge", "Umplix", "CC0"],
+          ["Merchants and Sea Salt", "NBJDLukasAbsolute", "CC0"],
+          ["Flutenist Dance 2, War Theme", "Spring Spring", "CC0"],
+          ["Lament of the War", "Cethiel", "CC0"],
+          ["Winter Courtyard", "Bobjt", "CC0"],
+          ["John Dowland (1597), If my Complaints Could Passions Move", "Of Far Different Nature", "CC0"],
+          ["Epic March Loop", "Eldritch Grim", "CC0"],
+          ["Medieval Rondo", "Marcelo Fernandez", "CC BY 3.0"],
+          ["Wendale Abbey, Mannin Fair, Middel Weie", "Yubatake", "CC BY 4.0"],
+          ["The Bard", "Pyerye", "CC BY 3.0"],
+          ["Death Is Just Another Path", "Otto Halmén", "CC BY 3.0"],
+          ["For the King", "Alexandr Zhelanov", "CC BY 4.0"],
+          ["War: Humans March (remiks „theme humans march” TridentKeep)", "Bobjt", "CC BY 3.0"],
+          ["Royal Strings", "jukeri12", "CC BY 3.0"],
+          ["Kyrie eleison, Deus in adjutorium meum intende, Antiphona et Magnificat, Ave Maria", "Schola Gregoriana (Wikimedia Commons)", "CC BY-SA 3.0"],
+          ["Veni Creator Spiritus", "Membeth (Wikimedia Commons)", "domena publiczna"],
+          ["Gregorian Chant", "Kevin MacLeod (Wikimedia Commons)", "CC BY 3.0"],
+          ["Gloria", "CyclePat (Wikimedia Commons)", "CC BY 3.0"],
+          ["Tantum Ergo", "Wikimedia Commons", "CC BY-SA 3.0"],
+          ] as const) {
+            const li = el('li');
+            li.append(el('span', 'credit-t', title), el('span', 'credit-a', who), el('span', 'credit-l', lic === 'domena publiczna' ? tx('domena publiczna', 'public domain') : lic));
+            ul.append(li);
+          }
+          return ul;
+        })(),
+        el('p', 'hint', tx('Dźwięki: zakładka Dźwięk. Pełna lista z adresami: CREDITS.md i docs/zasoby.md w repozytorium.', 'Sounds: see the Sound tab. Full list with links: CREDITS.md and docs/zasoby.md in the repository.')),
       ]],
     ];
 
