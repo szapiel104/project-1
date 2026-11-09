@@ -927,7 +927,6 @@ html body .info .icon-act { background: linear-gradient(#3a2614, #24160c) !impor
 #ui .info:not(.is-person):not(.army-mode) > * { grid-column: 1 / -1; }
 #ui .info:not(.is-person):not(.army-mode) > .info-owner:has(+ .hp-line:not([hidden])) { grid-column: 1; }
 #ui .info:not(.is-person):not(.army-mode) > .info-owner + .hp-line:not([hidden]) { grid-column: 2; align-self: center; }
-#ui .info:not(.is-person):not(.army-mode) > :is(.power-row-box, .gate-box, .info-worker, .info-logi, .logi-box) { grid-column: auto; }
 #ui .info:not(.is-person):not(.army-mode) > .info-desc { grid-column: 1 / -1; font-size: 15px; }
 #ui .info:not(.is-person):not(.army-mode) .info-head, #ui .info:not(.is-person):not(.army-mode) .actions { grid-column: 1 / -1; }
 #ui .info:not(.is-person):not(.army-mode) > :not(.info-head):not(.actions) { margin-left: 18px; margin-right: 18px; }
@@ -952,7 +951,8 @@ html body .info .icon-act { background: linear-gradient(#3a2614, #24160c) !impor
 .keeper-slot.on { border: 2px solid #c9a24f; color: #ffe9a8; background: radial-gradient(circle at 50% 35%, #4b3a28, #1f160d); box-shadow: 0 0 10px rgba(255, 210, 90, .55), inset 0 0 6px rgba(0, 0, 0, .7); animation: keeperglow 2.2s ease-in-out infinite; }
 @keyframes keeperglow { 50% { box-shadow: 0 0 16px rgba(255, 210, 90, .9), inset 0 0 6px rgba(0, 0, 0, .7); } }
 .keeper-count { font-style: normal; font-weight: 800; font-size: 18px; margin-left: 8px; }
-.logi-head { display: flex; align-items: center; gap: 8px; }
+.logi-head { display: flex; align-items: center; gap: 10px; flex-wrap: nowrap; }
+.logi-head strong { white-space: nowrap; }
 .logi-list { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 6px; }
 .logi-list li { display: grid; grid-template-columns: auto auto 1fr; align-items: center; gap: 8px; padding: 6px 10px; background: rgba(255, 255, 255, .4); border: 1px solid rgba(120, 88, 40, .4); border-radius: 6px; }
 .keeper-dot { width: 10px; height: 10px; border-radius: 50%; background: #3f8f2a; box-shadow: 0 0 6px #6fcf4a; animation: keeperglow 1.6s ease-in-out infinite; }
