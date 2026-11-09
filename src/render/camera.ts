@@ -103,6 +103,8 @@ export class StrategyCamera {
   }
 
   /** Cel = obecne położenie (po skoku kamery: lookAt, zapis, ujęcia filmowe) */
+  private gy: number | undefined;
+  private cy: number | undefined;
   private snap(): void { this.goal = { x: this.target.x, z: this.target.z, yaw: this.yaw, dist: this.dist, pitch: this.pitch }; }
 
   lookAt(x: number, z: number, dist = this.dist): void {
@@ -198,7 +200,12 @@ export class StrategyCamera {
 
   private apply(): void {
     // punkt na ziemi leży na wysokości terenu, żeby przy niskim kącie nie patrzeć w głąb pagórka
-    this.target.y = this.ground(this.target.x, this.target.z) + this.lift;
+    // wysokość terenu uśredniona z okolicy i wygładzona w czasie: kamera płynie nad pagórkami, zamiast podskakiwać
+    // na każdym garbie i krawędzi skały (Michał 9.11.2026: „lata w powietrzu, a czuje teren i skacze”)
+    const tx = this.target.x, tz = this.target.z, r = 2.5;
+    const want = (this.ground(tx, tz) * 2 + this.ground(tx + r, tz) + this.ground(tx - r, tz) + this.ground(tx, tz + r) + this.ground(tx, tz - r)) / 6;
+    if (this.gy === undefined || Math.abs(want - this.gy) > 6) this.gy = want; else this.gy += (want - this.gy) * 0.08;
+    this.target.y = this.gy + this.lift;
     // z bliska kamera sama się kładzie niżej (widok bardziej z boku, jak przy patrzeniu na oddział z konia)
     const close = Math.max(0, Math.min(1, (14 - this.dist) / 10));
     // oddalona kamera nie kładzie się nisko (do 22°): przy niskim kącie z daleka widać było cały horyzont i gra rysowała
@@ -215,6 +222,10 @@ export class StrategyCamera {
       const need = this.target.y + (this.ground(gx, gz) + clear - this.target.y) / k;
       if (y < need) y = need;
     }
+    // wysokość kamery też wygładzona; pod ziemię nie wejdzie (najniższa dozwolona `y` zostaje twardą granicą)
+    const minY = y;
+    if (this.cy === undefined || Math.abs(y - this.cy) > 8) this.cy = y; else this.cy += (y - this.cy) * 0.18;
+    y = Math.max(this.cy, minY - 0.6, this.ground(x, z) + clear);
     this.camera.position.set(x, y, z);
     // bliska płaszczyzna cięcia: z bliska mniejsza, żeby nie ucinało postaci tuż przed kamerą
     const near = Math.max(0.12, Math.min(0.5, this.dist * 0.04));
