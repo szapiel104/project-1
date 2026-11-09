@@ -874,7 +874,7 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
   quarBox.append(quarBtn, quarState);
   quarBox.hidden = true;
   // wieża: ilu łuczników stoi na pomoście, zaznacz ich albo każ zejść
-  const towerBox = el('div', 'gate-box');
+  const towerBox = el('div', 'gate-box tower-box');
   const towerState = el('p', 'gate-state');
   const towerBtns = el('div', 'actions');
   const tSel = el('button', 'btn-main', tx('Zaznacz stojących na wieży', 'Select the men on the tower')); tSel.type = 'button';
