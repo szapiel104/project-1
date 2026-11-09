@@ -1474,3 +1474,6 @@ body.hide-fps:not(.menu-open) .build { right: 126px !important; }
 .market-panel .market-purse, .market-panel .market-close { height: 34px; min-height: 0; box-sizing: border-box; display: inline-flex; align-items: center; }
 .market-panel .market-close { width: 34px; justify-content: center; }
 .market-panel .market-body .market-info { margin: 14px 0 0 !important; }
+/* rynek na całą szerokość ekranu (Michał 9.11.2026) */
+#ui .market-panel, .market-panel { left: 13px; right: 13px; width: auto; }
+.market-panel .market-tile { grid-template-columns: minmax(0, 1fr) minmax(170px, 260px) minmax(170px, 260px) !important; }

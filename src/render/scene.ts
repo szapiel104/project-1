@@ -120,6 +120,8 @@ import { MaterialBatches } from './buildingBatch';
 /** Nazwane grupy budynku rysowane razem z innymi budynkami tego samego rodzaju (syncBatches): pochodnia, dalekie wersje */
 // fill (zapasy w składach) i life (życie podwórka) też razem: same siatki z wspólnymi geometriami, w zapisie Michała ok. 46 osobnych rysowań (7.11.2026)
 const BATCH_ALSO = /^(torch|lod\d+|fill|grainfill|crop|life)$/;
+/** Siatki budynków cięższe od tego nie idą do wspólnego pakietu (scene.ts staticParts) */
+const HEAVY_TRIS = 40000;
 import { Precompiler } from './precompile';
 import { KEEP_MODEL, RAM_MODEL, SHRINE_SPOTS, CAMP_SEATS, KEEP_SOLID, KEEP_FLOOR, KEEP_WALL, KEEP_HALF, type WalkModel, WALK_MODELS, MINE_SPOTS, OREMINE_T, OREMINE_WALK, MINE_LEVEL, MINE_LEVEL_SPOTS, mineRoute, OREMINE_PROD, inRect, MINE_AT, TAVERN_SEATS, walkFoot, TAVERN_FLOOR } from './walkmodels';
 import { createRenderer } from './glcontext';
@@ -3040,7 +3042,12 @@ export class GameRenderer {
         const m = ch as THREE.Mesh;
         if (m.isMesh && !ch.name && !(m as THREE.InstancedMesh).isInstancedMesh && !Array.isArray(m.material)) {
           const mat = m.material as THREE.Material;
-          if (!mat.transparent && mat.visible !== false && m.geometry.getAttribute('position')) list!.push(m);
+          // ciężkie skany (np. 128 jabłek w sadzie = 900 tys. trójkątów) zostają osobno: wspólny pakiet rysuje się bez cięcia
+          // do kadru, więc sady i spiżarnie poza ekranem szły do karty w każdej klatce i w każdym cieniu (pełna wioska 27 FPS,
+          // Michał 9.11.2026); osobna siatka odpada sama, gdy jest poza kadrem — wygląd bez zmian
+          const g = m.geometry, tris = (g.index ? g.index.count : g.getAttribute('position')!.count) / 3;
+          if (tris > HEAVY_TRIS) continue;
+          if (!mat.transparent && mat.visible !== false && g.getAttribute('position')) list!.push(m);
         }
         walk(ch);
       }
