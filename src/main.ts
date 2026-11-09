@@ -353,6 +353,7 @@ const hud = createHud(document.getElementById('ui')!, {
     play('select');
   },
   onDismount: (id) => { pending.push({ type: 'dismount', player: ME, tower: id }); play('rotate'); },
+  onPerson: (id) => { const u = game.units.find((x) => x.id === id); if (!u) return; selectUnit(id); renderer.lookAt(u.px / 256, u.py / 256, 18); },
   onSelectGarrison: (id) => { chooseSoldiers(game.soldiers.filter((s) => s.owner === ME && towerOf(game, s) === id).map((s) => s.id), false); play('select'); },
   onGate: (id, open) => { pending.push({ type: 'gate', player: ME, id, open }); play('click'); },
   onPower: (id, on) => { pending.push({ type: 'power', player: ME, id, on }); play('click'); },

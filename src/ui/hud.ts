@@ -65,6 +65,8 @@ export interface HudEvents {
   onDole(): void;
   onQuell(): void;
   onSelectGarrison(building: number): void;
+  /** Kliknięcie w twarz magazyniera: zaznacz go i pokaż na mapie */
+  onPerson(unit: number): void;
   /** Skrót w dolnym pasku: kamera do koszar albo składu (kolejne kliknięcia przechodzą po kolejnych budynkach) */
   onJump(kind: JumpKind): void;
 }
@@ -961,8 +963,11 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
   xBtn.title = t('hud.close');
   xBtn.setAttribute('aria-label', t('hud.close'));
   xBtn.addEventListener('click', () => events.onCloseInfo());
-  infoHead.append(infoName, descBtn, xBtn);
-  info.append(infoHead, ownerLine, hpLine, riotBox, gateBox, powerBox, quarBox, towerBox, watchState, walkBtn, mineBtn, recruit, armyPanel, roster, armyCtl.help, siteBox, prodBox, storeBox, logiBox, infoDesc, infoWorker, trainBtn, trainNote, infoActions);
+  // właściciel w nagłówku, pod nazwą — jedna całość (Michał 9.11.2026)
+  const infoTitle = el('div', 'info-title');
+  infoTitle.append(infoName, ownerLine);
+  infoHead.append(infoTitle, descBtn, xBtn);
+  info.append(infoHead, hpLine, riotBox, gateBox, powerBox, quarBox, towerBox, watchState, walkBtn, mineBtn, recruit, armyPanel, roster, armyCtl.help, siteBox, prodBox, storeBox, logiBox, infoDesc, infoWorker, trainBtn, trainNote, infoActions);
   let infoId = 0;
   let lastInfoId = -1;
   const demolishAsk = confirmBtn(demolish, () => events.onDemolish(infoId));
@@ -1678,7 +1683,7 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
       logiBox.hidden = !i.logistics;
       if (i.logistics) {
         const key = JSON.stringify(i.logistics);
-        if (logiBox.dataset.key !== key) { logiBox.dataset.key = key; logiBox.replaceChildren(...renderLogistics(i.logistics, icon)); }
+        if (logiBox.dataset.key !== key) { logiBox.dataset.key = key; logiBox.replaceChildren(...renderLogistics(i.logistics, icon, PORTRAIT, (id) => events.onPerson(id))); }
       }
       riotBox.hidden = !(i.own && i.riot);
       if (i.riot) {

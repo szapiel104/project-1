@@ -1062,3 +1062,41 @@ html body .info .icon-act { background: linear-gradient(#3a2614, #24160c) !impor
 #ui .floaters .info:not(.is-person):not(.army-mode) :is(.stock-head, .logi-head, .prod-head, .stock-head2, .stock-title, .site-head) * { color: #3b2512 !important; }
 #ui .floaters .info:not(.is-person):not(.army-mode) :is(.stock-fill, .keeper-count, .prod-note strong) { color: #5c4224 !important; }
 #ui .floaters .info:not(.is-person):not(.army-mode) .stock-fill[data-over='true'] { color: #a8281f !important; }
+/* „Na wieży” wyskakiwało w stodole: ukryta sekcja zostaje ukryta */
+#ui .floaters .info .gate-box[hidden] { display: none !important; }
+/* nagłówek: nazwa, a pod nią właściciel jako jedna całość — tarcza w barwie drużyny, „Twoje · Ty” mocno */
+#ui .floaters .info:not(.is-person):not(.army-mode) .info-head { align-items: center; }
+#ui .floaters .info .info-title { flex: 1; min-width: 0; display: grid; gap: 4px; }
+#ui .floaters .info .info-title .info-owner { margin: 0 !important; padding: 0 !important; background: none !important; border: 0 !important; display: flex; align-items: center; gap: 8px; }
+#ui .floaters .info .info-title .info-owner[hidden] { display: none !important; }
+#ui .floaters .info .info-title .info-owner::before { content: ''; flex: none; width: 16px; height: 19px; background: var(--team, #8a6d3b); clip-path: polygon(0 0, 100% 0, 100% 55%, 50% 100%, 0 55%); }
+#ui .floaters .info .info-title .info-owner-rel { order: 1; clip-path: none !important; background: none !important; padding: 0 !important; font-size: 15px !important; font-weight: 700 !important; font-style: normal; text-transform: uppercase !important; letter-spacing: .08em !important; color: #2f6a28 !important; }
+#ui .floaters .info .info-title .info-owner-rel::before { content: none; }
+#ui .floaters .info .info-title .info-owner-name { order: 2; font-size: 15px; font-weight: 600; color: #3b2512 !important; }
+#ui .floaters .info .info-title .info-owner-name::before { content: '· '; color: #8a6d3b; }
+/* nagłówki grubo (Michał 9.11.2026) */
+#ui .floaters .info:not(.is-person):not(.army-mode) .info-head .info-name { font-weight: 700 !important; font-size: 28px; }
+#ui .floaters .info:not(.is-person):not(.army-mode) :is(.stock-title strong, .logi-head strong, .prod-head strong, .site-head strong) { font-weight: 700 !important; font-size: 19px; }
+/* magazynierzy jak drużyna: twarz, imię, co robi; klik prowadzi do niego */
+.keeper-party { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 8px; }
+.keeper-card { display: flex; align-items: center; gap: 10px; padding: 6px 10px 6px 6px; text-align: left; font: inherit; cursor: pointer;
+  background: linear-gradient(#4a3322, #2d1b0e); border: 1px solid #1a0f07; border-radius: 4px; box-shadow: inset 0 1px 0 rgba(255, 236, 200, .22), inset 0 0 0 2px rgba(194, 154, 69, .3), 0 2px 0 rgba(0, 0, 0, .35); transition: filter .12s, transform .08s; }
+.keeper-card:hover { filter: brightness(1.2); }
+.keeper-card:active { transform: translateY(1px); }
+.keeper-card:focus-visible { outline: 2px solid #8a1f14; outline-offset: 2px; }
+.keeper-face { flex: none; width: 46px; height: 46px; display: grid; place-items: center; overflow: hidden; border: 2px solid #c29a45; border-radius: 3px; background: #3b2716; box-shadow: 0 0 0 1px #1a0f07; }
+.keeper-face svg { width: 46px; height: 46px; display: block; }
+.keeper-txt { display: grid; gap: 2px; min-width: 0; }
+#ui .floaters .info .keeper-card :is(.keeper-name, .keeper-doing) { text-shadow: 0 1px 1px #000 !important; }
+#ui .floaters .info .keeper-card .keeper-name { font-size: 15px; font-weight: 600; color: #fff4dc !important; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#ui .floaters .info .keeper-card .keeper-doing { font-size: 13px; color: #d8c9a2 !important; }
+.keeper-card.free { cursor: default; background: rgba(110, 80, 40, .1); border: 1px dashed #8a6d3b; box-shadow: none; }
+.keeper-card.free:hover { filter: none; }
+.keeper-card.free .keeper-face { border: 1px dashed #8a6d3b; background: none; box-shadow: none; }
+#ui .floaters .info .keeper-card.free .keeper-name { color: #6e5226 !important; text-shadow: none !important; font-weight: 400; font-style: italic; }
+#ui .floaters .info .logi-head { display: flex; align-items: center; }
+#ui .floaters .info .logi-head .keeper-count { margin-left: auto; }
+/* menu budowy: zdecydowanie grubsza rama każdego kafla */
+#ui .card-row > .card { border: 3px solid #5a3d1c !important; margin-left: -3px !important; box-shadow: inset 0 0 0 1px rgba(236, 208, 138, .45) !important; }
+#ui .card-row > .card:first-child { margin-left: 0 !important; }
+#ui .card-row > .card:hover, #ui .card-row > .card:focus-visible { border-color: #c29a45 !important; }
