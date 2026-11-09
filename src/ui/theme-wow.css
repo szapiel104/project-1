@@ -1100,3 +1100,5 @@ html body .info .icon-act { background: linear-gradient(#3a2614, #24160c) !impor
 #ui .card-row > .card { border: 3px solid #5a3d1c !important; margin-left: -3px !important; box-shadow: inset 0 0 0 1px rgba(236, 208, 138, .45) !important; }
 #ui .card-row > .card:first-child { margin-left: 0 !important; }
 #ui .card-row > .card:hover, #ui .card-row > .card:focus-visible { border-color: #c29a45 !important; }
+/* ukryte sekcje (wieża, brama, kwarantanna…) zostają ukryte bez względu na wcześniejsze display:flex !important */
+#ui#ui .floaters .info [hidden] { display: none !important; }
