@@ -20,7 +20,7 @@ export class StrategyCamera {
   private static readonly MAX_PITCH = (89 * Math.PI) / 180;
   /** Najbliżej, jak da się podjechać kamerą (dawniej 12, potem 4): Michał 7.11.2026: „niech aż tak bardzo nie przybliża” */
   private static readonly MIN_DIST = 9;
-  private static readonly MAX_DIST = 58;
+  private static readonly MAX_DIST = 46; // było 58 (Michał 9.11.2026: za daleko)
   /** Wysokość terenu w punkcie świata; kamera nigdy nie zejdzie pod ziemię */
   ground: (x: number, z: number) => number = () => 0;
   private keys = new Set<string>();
@@ -201,7 +201,10 @@ export class StrategyCamera {
     this.target.y = this.ground(this.target.x, this.target.z) + this.lift;
     // z bliska kamera sama się kładzie niżej (widok bardziej z boku, jak przy patrzeniu na oddział z konia)
     const close = Math.max(0, Math.min(1, (14 - this.dist) / 10));
-    const pitch = Math.max(StrategyCamera.MIN_PITCH, this.pitch - close * close * 0.35);
+    // oddalona kamera nie kładzie się nisko (do 22°): przy niskim kącie z daleka widać było cały horyzont i gra rysowała
+    // pół mapy naraz (Michał 9.11.2026: „za daleko mogę odlecieć kamerą”, gra muli); z bliska nisko jak dawniej
+    const far = Math.max(0, Math.min(1, (this.dist - 14) / 16));
+    const pitch = Math.max(StrategyCamera.MIN_PITCH + far * ((16 * Math.PI) / 180), this.pitch - close * close * 0.35);
     const flat = Math.cos(pitch) * this.dist;
     const x = this.target.x + Math.sin(this.yaw) * flat, z = this.target.z + Math.cos(this.yaw) * flat;
     let y = this.target.y + Math.sin(pitch) * this.dist;
