@@ -82,6 +82,46 @@ for k, (x, y, r, sy) in enumerate([(-0.78, 0.12, 0.34, 0.8), (0.8, 0.14, 0.36, 0
                                     (0.0, 1.5, 0.26, 0.7), (-1.08, 0.3, 0.3, 1.2), (1.1, 0.34, 0.3, 1.1)]):
     b.crystal('base', 'rock' if k % 3 else 'rockDark', x, y - r * 0.5, 0.98, r, seed=k + 11, sx=1.1, sy=sy, sz=1.3)
 
+# zbocze za portalem (Michał 9.11.2026: „kopalnia nie dociągnęła góry z tyłu, a ma dociągnąć”): od lica przy kracie skała
+# wznosi się stromo w tył i wchodzi w masyw za działką; boki schodzą do ziemi. Ta sama skała co góra (gra podmienia
+# materiał na kamień z paczki gór), więc z daleka wygląda jak podnóże masywu, a nie dobudówka.
+FY, W, ZF0 = OY + 0.42, 1.55, 1.0                  # wysokość lica nad otworem, półszerokość, lico (tuż za kratą)
+ZB, RISE, FLARE, GY = -1.4, 0.95, 1.0, -0.45
+xs = sorted(set([-W, -OX, OX, W, -W + (W - OX) / 2, W - (W - OX) / 2, 0.0]))
+ys = [GY, 0.0, OY / 2, OY, FY]
+
+
+def face_pt(x, y):
+    edge = abs(abs(x) - OX) < 1e-6 or abs(abs(x) - W) < 1e-6 or y in (GY, FY) or (abs(x) < OX + 1e-6 and abs(y - OY) < 1e-6)
+    return (x, y, ZF0 + (0.0 if edge else jit(x * 3.1, y * 2.3, 0.06)))
+
+
+for i in range(len(xs) - 1):
+    for j in range(len(ys) - 1):
+        x0, x1, y0, y1 = xs[i], xs[i + 1], ys[j], ys[j + 1]
+        if -OX < (x0 + x1) / 2 < OX and (y0 + y1) / 2 < OY:
+            continue
+        b.poly('base', 'rockDark' if (i + j) % 3 == 0 else 'rock', [face_pt(x0, y0), face_pt(x1, y0), face_pt(x1, y1), face_pt(x0, y1)], away=(0, 0.9, -0.5))
+zs = [ZF0 + (ZB - ZF0) * k / 5 for k in range(6)]
+xt = [-W + 2 * W * k / 8 for k in range(9)]
+
+
+def top_pt(x, z):
+    edge = z == ZF0 or abs(abs(x) - W) < 1e-6
+    hy = FY + (ZF0 - z) * RISE + (0.0 if edge else jit(x * 2.7, z * 1.9, 0.14))
+    return (x, hy - 0.6 * (abs(x) / W) ** 2 * min(1.0, (ZF0 - z) / 1.0), z)
+
+
+for i in range(len(xt) - 1):
+    for j in range(len(zs) - 1):
+        b.poly('base', 'rockDark' if (i * 3 + j) % 4 == 0 else 'rock', [top_pt(xt[i], zs[j]), top_pt(xt[i + 1], zs[j]), top_pt(xt[i + 1], zs[j + 1]), top_pt(xt[i], zs[j + 1])], away=(0, -6, -0.5))
+for sx in (-1, 1):
+    gnd = lambda z: (sx * (W + FLARE + jit(z * 3, sx, 0.06)), GY, z)
+    for j in range(len(zs) - 1):
+        b.poly('base', 'rock' if j % 2 else 'rockDark', [top_pt(sx * W, zs[j]), top_pt(sx * W, zs[j + 1]), gnd(zs[j + 1]), gnd(zs[j])], away=(0, 1.0, -0.4))
+    b.poly('base', 'rock', [face_pt(sx * W, GY), face_pt(sx * W, FY), gnd(ZF0)], away=(0, 1.0, -0.4))
+b.poly('base', 'rockDark', [top_pt(xt[k], ZB) for k in range(len(xt))] + [(W + FLARE, GY, ZB), (-W - FLARE, GY, ZB)], away=(0, 1.0, 0.5))
+
 # ościeża otworu w skale (żeby przez szczelinę między czołem a korytarzem nie było widać świata)
 for sx in (-1, 1):
     b.poly('shell', 'rockDark', [(sx * OX, 0, zf(0)), (sx * OX, OY, zf(OY)), (sx * OX, OY, KZ1 - 0.3), (sx * OX, 0, KZ1 - 0.3)], away=(sx * 3, 0.5, 1.0))
