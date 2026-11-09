@@ -1452,6 +1452,7 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
       setText(infoName, person.name);
       info.classList.add('is-person');
       setText(infoDesc, person.lines[0] ?? '');
+      descBtn.hidden = true; // postać nie ma opisu do rozwinięcia — bez przycisku „i” (Michał 9.11.2026)
       infoWorker.hidden = person.lines.length < 2;
       infoWorker.textContent = '';
       // każda informacja w osobnym wierszu: etykieta (Cech, Teraz…) mocniej, wartość obok
@@ -1477,6 +1478,7 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
       walkBtn.hidden = person.walk === false;
     },
     showArmy(army, ctl) {
+      descBtn.hidden = true;
       info.hidden = army.length === 0;
       if (!army.length) { rosterKey = ''; hideArmy(); return; }
       info.classList.remove('is-store'); marketBtn.hidden = true;
@@ -1575,6 +1577,7 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
       hpLine.hidden = i.hp === undefined;
       if (i.hp !== undefined && i.maxHp) { setText(hpText, `${t('hud.hp')}: ${i.hp} / ${i.maxHp}`); hpFill.style.width = `${Math.max(0, (i.hp / i.maxHp) * 100)}%`; hpFill.dataset.low = String(i.hp < i.maxHp * 0.35); }
       setText(infoDesc, t(`d.${i.def.id}`));
+      descBtn.hidden = !infoDesc.textContent?.trim();
       infoWorker.hidden = !i.def.production || !!i.prod;
       prodBox.hidden = !i.prod;
       if (i.prod) {
