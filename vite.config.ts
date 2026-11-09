@@ -30,6 +30,20 @@ const versionInHtml = { name: 'version-in-html', transformIndexHtml: (html: stri
 /** version.json obok gry: menu porównuje go ze swoją wersją i podpowiada odświeżenie (src/ui/refresh.ts) */
 const versionFile = { name: 'version-file', generateBundle(this: { emitFile: (f: { type: 'asset'; fileName: string; source: string }) => void }) { this.emitFile({ type: 'asset', fileName: 'version.json', source: JSON.stringify({ version: pkg.version, build: BUILD }) }); } };
 
+/**
+ * Lokalnie (npx vite) zmiana kodu NIE przeładowuje gry (Michał 9.11.2026: „push resetuje mi grę, a ja testuję”).
+ * Style (.css) wchodzą na żywo, bez resetu; po zmianie TS/danych gra stoi dalej i pokazuje znaczek „Nowy kod gotowy — F5”.
+ */
+const noAutoReload = {
+  name: 'no-auto-reload',
+  apply: 'serve' as const,
+  handleHotUpdate(ctx: { file: string; server: { ws: { send: (p: unknown) => void } } }): unknown[] | undefined {
+    if (/\.css$/.test(ctx.file)) return undefined;
+    ctx.server.ws.send({ type: 'custom', event: 'p1:stale', data: {} });
+    return [];
+  },
+};
+
 export default defineConfig(({ mode }) => ({
   base: './',
   // godzina zbudowania trafia do gry, żeby było widać, czy przeglądarka pokazuje najnowszą wersję
@@ -37,7 +51,7 @@ export default defineConfig(({ mode }) => ({
   define: { __VERSION__: JSON.stringify(pkg.version), __BUILD__: JSON.stringify(BUILD), __THUMBS__: JSON.stringify(thumbsKey()) },
   // długie symulacje (bot, 10 000 ticków) potrzebują więcej czasu niż domyślne 5 s
   test: { testTimeout: 60000, setupFiles: ['tests/setup/lang.ts', 'tests/setup/models.ts'] },
-  plugins: mode === 'single' ? [versionInHtml, modelPacks(true), viteSingleFile()] : [versionInHtml, versionFile, modelPacks(false), preloadMain()],
+  plugins: mode === 'single' ? [versionInHtml, modelPacks(true), viteSingleFile()] : [versionInHtml, versionFile, modelPacks(false), preloadMain(), noAutoReload],
   build: {
     outDir: mode === 'single' ? 'dist-single' : 'dist',
     chunkSizeWarningLimit: 1200,

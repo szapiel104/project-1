@@ -3352,3 +3352,17 @@ renderer.onWalkAlert = (kind) => {
   else hud.toast(tx('To cudza kopalnia — jej wrota są dla Ciebie zamknięte.', 'This mine belongs to another lord — its gates are shut to you.'));
 };
 renderer.onWalkEnd = () => { document.body.classList.remove('walking'); walkHint.hidden = true; };
+
+// lokalnie (npx vite) kod nie przeładowuje się sam, żeby nie resetować testowanej gry: pokazujemy tylko znaczek (vite.config.ts → no-auto-reload)
+if (import.meta.hot) {
+  import.meta.hot.on('p1:stale', () => {
+    if (document.getElementById('p1-stale')) return;
+    const b = document.createElement('button');
+    b.id = 'p1-stale';
+    b.type = 'button';
+    b.textContent = tx('Nowy kod gotowy — kliknij, by odświeżyć (F5)', 'New code ready — click to reload (F5)');
+    b.style.cssText = 'position:fixed;left:50%;bottom:150px;transform:translateX(-50%);z-index:99999;padding:8px 16px;font:600 14px Inter,sans-serif;background:#2a1b10;color:#ffe9a8;border:1px solid #c9a24f;border-radius:6px;cursor:pointer;box-shadow:0 4px 16px rgba(0,0,0,.5)';
+    b.addEventListener('click', () => location.reload());
+    document.body.append(b);
+  });
+}
