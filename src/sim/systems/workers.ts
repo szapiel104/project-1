@@ -63,7 +63,7 @@ export const crewOf = (b: Building): number[] => (b.worker ? [b.worker, ...(b.cr
 const LONG_TRIPS = new Set<Phase>([Phase.ToRepair, Phase.ToFetch, Phase.Returning, Phase.ToSite]);
 const OFF_DUTY = new Set<Phase>([Phase.ToEvening, Phase.Evening, Phase.ToSleep, Phase.Sleeping]);
 /** Zajęcia, które chłop z pustymi rękami rzuca wieczorem (resztę kończy: niesie ładunek do składu, dokańcza wyrób) */
-const AFTER_HOURS = new Set<Phase>([Phase.Idle, Phase.Returning, Phase.ToInputStore, Phase.Repairing, Phase.ToRepair, Phase.ToFetch, Phase.Paving, Phase.ToPave, Phase.ToRoadFetch, Phase.ToRubble, Phase.ToRest, Phase.ToPlant, Phase.Stalled]);
+const AFTER_HOURS = new Set<Phase>([Phase.ToMarket, Phase.Shopping, Phase.Idle, Phase.Returning, Phase.ToInputStore, Phase.Repairing, Phase.ToRepair, Phase.ToFetch, Phase.Paving, Phase.ToPave, Phase.ToRoadFetch, Phase.ToRubble, Phase.ToRest, Phase.ToPlant, Phase.Stalled]);
 
 /** Do której godziny (po północy) chłop siedzi wieczorem przy ogniu albo w karczmie; 0 = idzie spać o zwykłej porze */
 export function nightOwl(u: { id: number }): number {
@@ -102,6 +102,22 @@ function rubbleFor(g: GameState, owner: number, res: number, site: Building | un
     if (d < bd) { bd = d; best = r; }
   }
   return best;
+}
+
+/**
+ * Zakupy na rynku (Michał 9.11.2026: „czasami ktoś podchodzi i niby coś kupuje”): wolny chłop bez zajęcia raz na jakiś
+ * czas idzie pod kramy swojego rynku i chwilę tam stoi. Tylko za dnia, tylko gdy nie ma budowy ani gruzu do wyniesienia
+ * (robota ma pierwszeństwo). Bez losowania: kto i kiedy wynika z id i godziny, więc gra przebiega tak samo na każdym komputerze.
+ */
+const SHOP_TICKS = 50;
+function marketVisit(g: GameState, u: Unit): boolean {
+  if (u.job || u.target || u.carryRes >= 0 || u.path.length || u.riot || u.enlist || u.bucket) return false;
+  if ((u.id * 7919 + Math.floor(g.tick / 200) * 104729) % 23 !== 0) return false;
+  const market = g.buildings.find((b) => b.owner === u.owner && b.door >= 0 && !b.build && !b.ruined && BUILDINGS[b.type]!.id === 'market');
+  if (!market) return false;
+  if (g.rubble.some((r) => r.owner === u.owner) || g.buildings.some((b) => b.owner === u.owner && b.build && !b.ruined)) return false;
+  u.target = market.id; u.phase = Phase.ToMarket; u.path = [];
+  return true;
 }
 
 /** Pora dnia dla rytmu ludzi: praca, wieczór przy ogniu, sen */
@@ -308,6 +324,10 @@ function goalFor(g: GameState, u: Unit, job: Building | undefined, prod: Product
       }
       const keep = playerKeep(g, u.owner);
       return keep && keep.door >= 0 ? (t) => t === keep.door : null;
+    }
+    case Phase.ToMarket: {
+      const m = buildingById(g, u.target);
+      return m && m.door >= 0 ? (t) => t === m.door : null;
     }
     case Phase.Returning:
       // wolny chłop z ciałem na ramieniu niesie je na cmentarz, a gdy go nie ma — na skraj lasu, gdzie je zakopie
@@ -661,6 +681,9 @@ function arrive(g: GameState, u: Unit, prod: ProductionDef | undefined): void {
     case Phase.ToSleep:
       u.phase = Phase.Sleeping;
       break;
+    case Phase.ToMarket:
+      u.phase = Phase.Shopping; u.timer = SHOP_TICKS;
+      break;
     case Phase.ToRest: {
       const here = tileOf(g, u);
       const restCamp = campOf(g, u.job ? buildingById(g, u.job) : undefined);
@@ -806,6 +829,11 @@ export function workerSystem(g: GameState): void {
       u.phase = u.job ? Phase.Returning : Phase.Idle; u.target = 0;
       continue;
     }
+    if (u.phase === Phase.Shopping) {
+      if (--u.timer <= 0) { u.target = 0; u.phase = Phase.Idle; }
+      continue;
+    }
+    if (u.phase === Phase.Idle && part === 'work' && marketVisit(g, u)) continue;
     if (u.phase === Phase.Resting) {
       if (--u.timer <= 0) { u.home = 0; u.phase = u.job ? Phase.Returning : Phase.Idle; }
       continue;
@@ -872,7 +900,7 @@ export function workerSystem(g: GameState): void {
         u.phase = u.phase === Phase.ToSleep ? Phase.Sleeping : Phase.Evening;
         continue;
       }
-      if (u.phase === Phase.ToRest || u.phase === Phase.ToLight || u.phase === Phase.ToRubble || u.phase === Phase.ToPile || u.phase === Phase.ToCorpse || u.phase === Phase.ToRepair || u.phase === Phase.ToPave || u.phase === Phase.ToPlant) {
+      if (u.phase === Phase.ToMarket || u.phase === Phase.ToRest || u.phase === Phase.ToLight || u.phase === Phase.ToRubble || u.phase === Phase.ToPile || u.phase === Phase.ToCorpse || u.phase === Phase.ToRepair || u.phase === Phase.ToPave || u.phase === Phase.ToPlant) {
         if (u.phase === Phase.ToRepair && u.carryRes >= 0) { u.carryRes = -1; u.carryAmt = 0; } // budowa skończona po drodze: materiał zostaje
         u.phase = u.job ? Phase.Returning : Phase.Idle; u.target = 0;
       }

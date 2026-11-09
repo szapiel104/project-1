@@ -817,3 +817,17 @@ describe('budowa bierze materiał z gruzu', () => {
     expect(fromRubble).toBe(true);
   });
 });
+
+describe('zakupy na rynku', () => {
+  it('wolny chłop czasem idzie pod kramy i chwilę tam stoi (Michał 9.11.2026)', () => {
+    const g = feed(createGame(5));
+    for (const p of g.players) p.res[resIndex('gold')] = 5000;
+    step(g, [build(g, 'market')]);
+    const m = g.buildings[g.buildings.length - 1]!;
+    for (let i = 0; i < 8000 && m.build; i++) step(g, []);
+    expect(m.build).toBe(0);
+    let shopped = false;
+    for (let i = 0; i < 6000 && !shopped; i++) { step(g, []); if (g.units.some((u) => u.owner === 0 && u.phase === Phase.Shopping)) shopped = true; }
+    expect(shopped).toBe(true);
+  });
+});

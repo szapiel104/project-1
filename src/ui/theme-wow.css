@@ -1436,3 +1436,24 @@ body.hide-fps:not(.menu-open) .build { right: 126px !important; }
 /* rynek szerszy: dwie kolumny towarów obok siebie (Michał 9.11.2026: „bardziej szeroki, żeby zmieściło się więcej”) */
 #ui .market-panel, .market-panel { width: min(1060px, calc(100vw - 40px)); }
 .market-panel .market-grid { grid-template-columns: repeat(auto-fill, minmax(500px, 1fr)); gap: 6px 10px; }
+/* dymek w stylu gry (gameTip.ts): pergaminowa karteczka z ciemną ramką przy kursorze */
+.game-tip { position: fixed; z-index: 10000; max-width: 320px; padding: 7px 11px; pointer-events: none; zoom: var(--ui, 1);
+  font: 500 14px/1.4 var(--text, Inter, sans-serif); color: #2a1b0c; text-shadow: none;
+  background: #f3e6c4 linear-gradient(#f6ecd2, #e8d6ac); border: 1px solid #3a2414; border-radius: 3px;
+  box-shadow: 0 0 0 1px #c29a45 inset, 0 6px 16px rgba(0, 0, 0, .55); white-space: pre-line; }
+.game-tip[hidden] { display: none; }
+
+/* rynek: trzy towary w rzędzie, małe przyciski-ikony z ceną (opis w dymku) */
+#ui .market-panel, .market-panel { width: min(1180px, calc(100vw - 40px)); }
+.market-panel .market-grid { grid-template-columns: repeat(auto-fill, minmax(350px, 1fr)) !important; gap: 6px 8px; }
+.market-panel .market-tile { grid-template-columns: minmax(0, 1fr) 96px 96px !important; column-gap: 8px; padding: 6px 8px 6px 6px; }
+.market-panel .market-ico { width: 42px; height: 42px; }
+.market-panel .market-ico svg { width: 26px; height: 26px; }
+.market-panel .market-name { font-size: 14px; }
+.market-panel .market-side { gap: 3px; }
+.market-panel .market-ctl { gap: 4px; }
+.market-panel .market-n { min-width: 26px; font-size: 12px; }
+.market-panel .market-side .market-btn { min-height: 28px; height: 28px; padding: 0 6px; gap: 4px; justify-content: center; }
+.market-panel .market-side .market-btn svg { width: 14px; height: 14px; flex: none; }
+.market-panel .market-side .market-btn b { font-size: 13px; font-weight: 700; color: #fff4dc; }
+.market-panel .market-info { margin: 0 20px 14px; }

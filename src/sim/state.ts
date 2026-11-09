@@ -308,6 +308,10 @@ export const enum Phase {
   Burying = 32,
   /** Pomaga nieść trumnę: idzie za niosącym ciało `target` (bearers.ts) */
   Bearing = 33,
+  /** Wolny chłop idzie na rynek coś kupić (`target` = rynek; workers.ts marketVisit) */
+  ToMarket = 34,
+  /** Stoi przy kramie i „kupuje” (`timer` = ile jeszcze) */
+  Shopping = 35,
 }
 
 export interface Unit {

@@ -56,7 +56,8 @@ export function createMarketPanel(onTrade: (res: number, amount: number) => void
   // zamiast dwóch (Michał 30.10.2026); po zamknięciu wraca na swoje miejsce
   const infoSlot = document.createElement('div');
   infoSlot.className = 'market-info';
-  root.append(head, note, infoSlot, body);
+  // towary na górze, pod nimi pracownicy i przyciski budynku (Michał 9.11.2026)
+  root.append(head, note, body, infoSlot);
   document.getElementById('ui')?.append(root) ?? document.body.append(root);
 
   // suwaki (Michał 9.11.2026): ile sprzedać — od 1 do tego, co masz; ile kupić — do tego, na co cię stać i co się zmieści
@@ -68,13 +69,15 @@ export function createMarketPanel(onTrade: (res: number, amount: number) => void
     const n = Number(sd.range.value) || 0;
     const price = n > 0 ? (sd.sell ? sellPrice(tile.id, n) : buyPrice(tile.id, n)) : 0;
     sd.label.textContent = `${n}`;
-    sd.btn.innerHTML = `<span class="mb-n">${sd.sell ? tx('Sprzedaj', 'Sell') : tx('Kup', 'Buy')} ${n}</span><span class="mb-price">${sd.sell ? '+' : '−'}${price}${icon('gold', 16)}</span>`;
-    sd.btn.setAttribute('aria-label', sd.sell ? tx(`Sprzedaj ${n} za ${price} rudy`, `Sell ${n} for ${price} ore`) : tx(`Kup ${n} za ${price} rudy`, `Buy ${n} for ${price} ore`));
+    // mały przycisk-ikona: moneta ze strzałką (sprzedaż: ruda przychodzi, kupno: ruda odchodzi); cena obok, opis w dymku
+    sd.btn.innerHTML = `${icon('gold', 16)}<b>${sd.sell ? '+' : '−'}${price}</b>`;
+    const say = sd.sell ? tx(`Sprzedaj ${n} za ${price} rudy`, `Sell ${n} for ${price} ore`) : tx(`Kup ${n} za ${price} rudy`, `Buy ${n} for ${price} ore`);
+    sd.btn.setAttribute('aria-label', say);
     const err = !lastG || n <= 0 ? 'trade.goods' : canTrade(lastG, lastMe, resIndex(tile.id), sd.sell ? -n : n);
     sd.btn.disabled = !!err;
     sd.btn.title = err === 'trade.have' ? tx('Nie masz tyle tego towaru', 'You haven’t that much of it')
       : err === 'trade.gold' ? tx('Za mało rudy', 'Not enough ore')
-      : err === 'trade.room' ? tx('Nie zmieści się w magazynach', 'No room left in your stores') : '';
+      : err === 'trade.room' ? tx('Nie zmieści się w magazynach', 'No room left in your stores') : say;
   };
   for (const grp of GROUPS) {
     const goods = MARKET_GOODS.filter((id) => (RESOURCE_DEFS[id].store ?? null) === grp.kind);
@@ -146,8 +149,10 @@ export function createMarketPanel(onTrade: (res: number, amount: number) => void
   let dismissed = 0;
   let shownFor = 0;
   let lastSel = 0;
-  close.addEventListener('click', () => { dismissed = shownFor; root.hidden = true; releaseInfo(); });
-  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !root.hidden) { dismissed = shownFor; root.hidden = true; releaseInfo(); } });
+  // krzyżyk zamyka całe zaznaczenie rynku — bez tego wracało małe okno budynku (Michał 9.11.2026: „pojawiła się ta mniejsza”)
+  const closeAll = (): void => { dismissed = shownFor; root.hidden = true; releaseInfo(); document.querySelector<HTMLButtonElement>('.panel.info .info-x')?.click(); };
+  close.addEventListener('click', closeAll);
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !root.hidden) closeAll(); });
   return {
     sync(g, me, selected) {
       // zamknięte krzyżykiem zostaje zamknięte, dopóki gracz nie kliknie rynku od nowa (inny wybór kasuje „zamknięte”)

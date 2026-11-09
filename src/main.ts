@@ -37,6 +37,7 @@ const FOOD_RES_ALL = RESOURCES.map((r, i) => (RESOURCE_DEFS[r].food ? i : -1)).f
 import { buildCost, canAfford, canPlace, doorTile, missingRequirement, maxHp, tileBuildable, ruin } from './sim/systems/placement';
 import { canRelocate, canRelocateTo, movable, relocateCost, type MoveError } from './sim/systems/relocate';
 import { createHud, tierNeedText, TIER_NAMES, type BuildingInfo, type HudView, type JumpKind, type RecruitUnit } from './ui/hud';
+import { initGameTips } from './ui/gameTip';
 import { createScribe, type ScribeAction } from './ui/scribe';
 import { storeLogistics } from './ui/storePanel';
 import { storeNotes } from './ui/storeNotes';
@@ -289,6 +290,7 @@ const savedThumbs = TEST ? null : cachedThumbs();
 const thumbs: Map<string, string> = TEST ? new Map() : savedThumbs ? new Map(savedThumbs) : new Map();
 // portrety żołnierzy do koszar (rysowane zawsze, także w trybie testowym: dwa szybkie ujęcia, niezależne od zapisanych miniatur budynków)
 for (const [k, v] of renderUnitPortraits(TEAM_COLORS[0]!)) thumbs.set(k, v);
+initGameTips();
 const hud = createHud(document.getElementById('ui')!, {
   onArmyKind: (kind, shift) => {
     const ids = game.soldiers.filter((x) => chosen.has(x.id) && (UNITS[x.kind]!.id === kind) !== shift).map((x) => x.id);
