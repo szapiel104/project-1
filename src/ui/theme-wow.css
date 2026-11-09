@@ -999,3 +999,27 @@ html body .info .icon-act { background: linear-gradient(#3a2614, #24160c) !impor
 @keyframes prodshine { from { transform: translateX(-100%); } to { transform: translateX(100%); } }
 @media (prefers-reduced-motion: reduce) { .keeper-dot, #ui .info .prod-arrow i, #ui .info .prod-bar > span::after { animation: none !important; } }
 @media (max-width: 760px) { #ui .info:not(.is-person):not(.army-mode) { grid-template-columns: 1fr; } }
+/* poprawki po zrzucie Michała 9.11.2026 („rozjechane”): stare złote nagłówki, jasne napisy, podwójne kreski, kosz na całą szerokość */
+#ui .floaters .info:not(.is-person):not(.army-mode) :is(.stock-head, .logi-head, .prod-head, .stock-head2, .stock-title, .site-head),
+#ui .floaters .info:not(.is-person):not(.army-mode) :is(.stock-head, .logi-head, .prod-head, .stock-head2, .stock-title, .site-head) * { color: #8a1f14 !important; text-shadow: none !important; }
+#ui .floaters .info:not(.is-person):not(.army-mode) :is(.stock-fill, .keeper-count) { color: #5c4224 !important; }
+#ui .floaters .info:not(.is-person):not(.army-mode) .stock-fill[data-over='true'] { color: #a8281f !important; }
+#ui .floaters .info:not(.is-person):not(.army-mode) :is(.logi-note, .power-row, .power-row *, .keeper-doing, .logi-list strong) { color: #2a1b0c !important; text-shadow: none !important; }
+#ui .floaters .info:not(.is-person):not(.army-mode) .logi-note { font-size: 14px; color: #5c4224 !important; font-style: italic; }
+#ui .floaters .info:not(.is-person):not(.army-mode) .power-badge { color: #2f6a28 !important; font-size: 16px; }
+#ui .floaters .info:not(.is-person):not(.army-mode) .power-badge[data-shut='true'] { color: #a8281f !important; }
+#ui .floaters .info:not(.is-person):not(.army-mode) .power-row :is(.power-btn, .power-btn *) { color: #fff4dc !important; }
+/* jedna kreska między sekcjami: wnętrza sekcji bez własnych ramek */
+#ui .floaters .info:not(.is-person):not(.army-mode) :is(.power-row-box, .info-stock, .info-logi, .info-prod, .info-site, .gate-box, .info-worker) { border: 0 !important; border-top: 1px solid rgba(138, 100, 50, .45) !important; border-bottom: 0 !important; background: none !important; padding: 14px 0 0 !important; }
+#ui .floaters .info:not(.is-person):not(.army-mode) :is(.info-stock, .info-logi, .info-prod) :is(.stock-sec, .logi-block, .prod-recipe, .prod-worker) { border: 0 !important; padding: 0 !important; }
+#ui .floaters .info:not(.is-person):not(.army-mode) :is(.power-row-box, .info-stock, .info-logi, .info-prod, .info-site, .gate-box, .info-worker)[hidden],
+#ui .floaters .info:not(.is-person):not(.army-mode) :is(.info-stock, .info-logi, .info-prod):empty { display: none !important; }
+/* przyciski na dole: płytki naturalnej szerokości, do prawej */
+#ui .floaters .info:not(.is-person):not(.army-mode) .actions { display: flex !important; justify-content: flex-end; flex-wrap: wrap; }
+#ui .floaters .info:not(.is-person):not(.army-mode) .actions > * { width: auto !important; flex: 0 0 auto !important; grid-column: auto !important; margin: 0 !important; }
+#ui .floaters .info:not(.is-person):not(.army-mode) .actions > [hidden] { display: none !important; }
+
+/* menu budowy: sam obrazek budynku, nazwa i reszta w karcie po najechaniu (Michał 9.11.2026) */
+#ui .card { padding: 4px; }
+#ui .card img { margin: -4px auto -4px; }
+#ui .card .build-name { position: absolute !important; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
