@@ -517,7 +517,19 @@ export function demolish(g: GameState, player: number, id: number, destroyed = f
   // Porzucona ruina nie zwraca nic (zostaje sam gruz) — inaczej ruina byłaby darmowym źródłem surowców.
   if (vanish) return true;
   const loads: [number, number][] = [];
-  if (!destroyed && !b.ruined) for (const [k, v] of Object.entries(def.cost)) {
+  // nieukończona budowa (Michał 9.11.2026: „rozebrałem budowę i nie zwróciło surowców”): co jeszcze leży w składzie,
+  // wraca od razu w całości, a co już doniesiono na plac — leży w gruzie w całości (nie połowa) i wraca ładunek po ładunku
+  if (!destroyed && !b.ruined && b.build) {
+    const p = g.players[b.owner];
+    const total = b.loads ?? 0, got = Math.min(total, b.delivered ?? 0);
+    const onSite = total > 0 ? got / total : 0;
+    for (const [k, v] of Object.entries(def.cost)) {
+      const r = resIndex(k as ResourceId);
+      let carried = Math.round(v * onSite);
+      if (p) p.res[r]! += v - carried;
+      while (carried > 0) { const n = Math.min(carried, RULES.rubbleLoad); loads.push([r, n]); carried -= n; }
+    }
+  } else if (!destroyed && !b.ruined) for (const [k, v] of Object.entries(def.cost)) {
     let left = Math.floor((v * RULES.refundPercent) / 100);
     while (left > 0) { const n = Math.min(left, RULES.rubbleLoad); loads.push([resIndex(k as ResourceId), n]); left -= n; }
   }

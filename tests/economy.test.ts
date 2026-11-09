@@ -111,6 +111,9 @@ describe('budowanie', () => {
     const g = createGame(5);
     run(g, 5, [build(g, 'house')]);
     const b = g.buildings.find((x) => BUILDINGS[x.type]!.id === 'house')!;
+    // gotowy budynek (nieukończona budowa zwraca więcej — osobny test niżej)
+    for (let i = 0; i < 6000 && b.build; i++) step(g, []);
+    expect(b.build).toBe(0);
     const w = g.map.width;
     step(g, [{ type: 'demolish', player: 1, id: b.id }]);
     expect(g.buildings.includes(b)).toBe(true); // cudzego budynku nie da się rozebrać
@@ -771,5 +774,20 @@ describe('komnata królowej', () => {
     }
     expect(keepEdge(3, 0, 4, 0)).toBe('door');
     expect(keepEdge(6, 0, 7, 0)).toBe('wall');
+  });
+});
+
+describe('rozbiórka nieukończonej budowy', () => {
+  it('zwraca od razu wszystko, czego jeszcze nie doniesiono na plac (Michał 9.11.2026)', () => {
+    const g = feed(createGame(5));
+    const wood = resIndex('wood');
+    const before = g.players[0]!.res[wood]!;
+    step(g, [build(g, 'house')]);
+    const site = g.buildings[g.buildings.length - 1]!;
+    expect(site.build).toBeGreaterThan(0);
+    const paid = before - g.players[0]!.res[wood]!;
+    step(g, [{ type: 'demolish', player: 0, id: site.id }]);
+    // nikt jeszcze nic nie doniósł: cały koszt wraca do składu od razu (bez połowy i bez czekania na gruz)
+    expect(g.players[0]!.res[wood]!).toBeGreaterThanOrEqual(before - paid + (BUILDINGS[site.type]!.cost.wood ?? 0));
   });
 });
