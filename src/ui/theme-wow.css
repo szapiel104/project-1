@@ -1498,3 +1498,9 @@ body.hide-fps:not(.menu-open) .build { right: 126px !important; }
 .market-panel .market-side .market-btn { flex: none; width: 54px !important; height: 34px !important; min-height: 0 !important; padding: 0 !important; display: inline-flex; flex-direction: row; justify-content: center; align-items: center; gap: 3px; }
 .market-panel .market-tile-top { flex-direction: column; align-items: center; gap: 4px; width: 84px; }
 .market-panel .market-name { text-align: center; font-size: 13.5px; }
+/* rynek: przycisk dopasowuje się do ceny (−1000 się mieści) */
+.market-panel .market-side .market-btn { width: auto !important; min-width: 54px; padding: 0 7px !important; white-space: nowrap; }
+/* grupy wojska: do lewej, w jednej linii z przyciskiem „Gość” */
+.army-groups { left: 8px !important; }
+/* kronika: rozwinięta lista pod przyciskiem, wyrównana do jego lewej krawędzi */
+body .scribe-log { left: 10px !important; top: 108px !important; }

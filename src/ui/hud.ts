@@ -1277,7 +1277,8 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
     slotsToggle.innerHTML = slotsOpen
       // grupy stoją w kolumnie od dołu do góry (Michał 9.11.2026), więc strzałka zwija w dół, a rozwija w górę
       ? '<svg viewBox="0 0 20 20" width="16" height="16" aria-hidden="true"><path d="M4 7.5l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2.4"/></svg>'
-      : `<span class="army-toggle-n">1–0</span><svg viewBox="0 0 20 20" width="14" height="14" aria-hidden="true"><path d="M4 12.5l6-6 6 6" fill="none" stroke="currentColor" stroke-width="2.4"/></svg>`;
+      // zwinięte: hełm żołnierza zamiast napisu „1–0” (Michał 9.11.2026)
+      : `<svg class="army-toggle-ico" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M4 13c0-5 3.6-8.5 8-8.5s8 3.5 8 8.5v2.5H4z" fill="currentColor" opacity=".9"/><path d="M12 4.5V2.5M4 15.5h16v2H4z" stroke="currentColor" stroke-width="1.6" fill="none"/><path d="M10 10h4v5.5h-4z" fill="#2d1b0e"/></svg><svg viewBox="0 0 20 20" width="12" height="12" aria-hidden="true"><path d="M4 12.5l6-6 6 6" fill="none" stroke="currentColor" stroke-width="2.4"/></svg>`;
   };
   slotsToggle.addEventListener('click', () => { slotsOpen = !slotsOpen; try { localStorage.setItem('project1.armyOpen', slotsOpen ? '1' : '0'); } catch { /* jw. */ } paintSlotsToggle(); });
   paintSlotsToggle();
