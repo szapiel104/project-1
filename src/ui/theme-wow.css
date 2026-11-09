@@ -1311,3 +1311,6 @@ body .scribe-log { top: 112px; bottom: auto; }
 #ui .toolbar .stepper .step-text strong { font-size: 16px; font-weight: 600; color: #ffe7a6; }
 #ui .toolbar .stepper .step-ico svg { width: 18px; height: 18px; }
 #ui .toolbar .wreck { min-height: 40px; border-radius: 4px; padding: 0 16px; }
+/* raport pod górnym paskiem: nad wersją i FPS, z przewijaniem, gdy długi; okno wszystkich zapasów nad wszystkim */
+.report { z-index: 62; overflow-y: auto; }
+.stock-modal { z-index: 70 !important; }

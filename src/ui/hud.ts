@@ -516,7 +516,7 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
     // pasek zasobów jest na górze: okienko wyskakuje pod przyciskiem (strzałka w górę); gdy przycisk jest nisko — nad nim
     const below = r.top < window.innerHeight / 2;
     report.classList.toggle('below', below);
-    if (below) { report.style.top = `${(r.bottom + 12) / k}px`; report.style.bottom = 'auto'; }
+    if (below) { report.style.top = `${(r.bottom + 12) / k}px`; report.style.bottom = 'auto'; report.style.maxHeight = `${(window.innerHeight - r.bottom - 120) / k}px`; }
     else { report.style.bottom = `${(window.innerHeight - r.top + 10) / k}px`; report.style.top = 'auto'; }
     report.style.left = `${left / k}px`;
     report.style.right = 'auto';
