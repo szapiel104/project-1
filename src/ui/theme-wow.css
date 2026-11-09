@@ -1504,3 +1504,11 @@ body.hide-fps:not(.menu-open) .build { right: 126px !important; }
 .army-groups { left: 8px !important; }
 /* kronika: rozwinięta lista pod przyciskiem, wyrównana do jego lewej krawędzi */
 body .scribe-log { left: 10px !important; top: 108px !important; }
+/* grupy wojska równo z „Gość” przy lewej krawędzi; zaznaczeni żołnierze stoją obok kolumny grup, nie pod nią */
+.army-groups { left: 8px !important; }
+.armybar { padding-left: 72px; }
+.army-toggle[aria-expanded="false"] { min-height: 42px; width: 50px; padding: 0; justify-content: center; }
+.army-toggle-ico { display: block; }
+/* rynek: przycisk mieści też czterocyfrowe ceny (−1000) */
+.market-panel .market-side .market-btn { width: auto !important; min-width: 58px; padding: 0 7px !important; }
+.market-panel .market-side .market-btn b { font-size: 12.5px; white-space: nowrap; }
