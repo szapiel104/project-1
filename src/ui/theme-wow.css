@@ -1371,3 +1371,5 @@ body .scribe { top: 58px; left: 0; }
 body .scribe .scribe-log-btn { border-top: 0; border-left: 0; border-radius: 0 0 6px 0; min-height: 38px; }
 .alarm { top: 58px; left: 150px; transform: none; border-top: 0 !important; border-radius: 0 0 6px 6px; padding: 7px 16px; }
 body .scribe-log { top: 100px; left: 0; }
+body .scribe .scribe-log-btn { min-width: 124px; height: 38px; box-sizing: border-box; justify-content: center; }
+.alarm { left: 124px; height: 38px; box-sizing: border-box; padding: 0 16px; align-items: center; border-left: 0 !important; border-radius: 0 0 6px 0; }
