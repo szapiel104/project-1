@@ -1376,3 +1376,9 @@ body .scribe .scribe-log-btn { min-width: 124px; height: 38px; box-sizing: borde
 /* licznik ataku ma powiększenie interfejsu, kronika nie — pozycję przeliczamy, żeby stykały się co do piksela */
 .alarm { left: calc(124px / var(--ui, 1)); height: calc(31px / var(--ui, 1)); }
 body .scribe .scribe-log-btn { height: 31px; min-height: 0; }
+/* prawy rząd pod paskiem: wersja · FPS · Deweloper jako sklejone zakładki przy prawej krawędzi, równej wysokości */
+.build, .fps-tag, .dev-open { top: 58px !important; height: 38px; min-height: 0 !important; box-sizing: border-box; display: inline-flex !important; align-items: center; justify-content: center; margin: 0; border-top: 0 !important; border-radius: 0 !important; line-height: 1 !important; padding-top: 0 !important; padding-bottom: 0 !important; }
+.dev-open { right: 0 !important; width: 108px; border-right: 0 !important; border-radius: 0 0 0 0 !important; }
+.fps-tag { right: 108px !important; width: 84px; border-right: 0 !important; }
+.build { right: 192px !important; border-right: 0 !important; border-radius: 0 0 0 6px !important; }
+body.hide-fps .build { right: 108px !important; }
