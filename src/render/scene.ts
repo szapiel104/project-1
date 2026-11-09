@@ -117,6 +117,7 @@ import { spearThrust, bowShot, deathKind, swordCombo, axeChop } from './combatan
 import { sadMaterial, sickMaterial, noWorkerMaterial } from './marks';
 import { MERGE_IN, BATCH_LAYER, mergeStatic } from './merge';
 import { MaterialBatches } from './buildingBatch';
+import { rockMaterial } from './rocks0ad';
 /** Nazwane grupy budynku rysowane razem z innymi budynkami tego samego rodzaju (syncBatches): pochodnia, dalekie wersje */
 // fill (zapasy w składach) i life (życie podwórka) też razem: same siatki z wspólnymi geometriami, w zapisie Michała ok. 46 osobnych rysowań (7.11.2026)
 // skrzydła drzwi i bram (leafL/leafR) i drabiny wież też razem: pakiet bierze macierz świata każdej części co klatkę,
@@ -3405,6 +3406,11 @@ export class GameRenderer {
         part.castShadow = true;
         part.receiveShadow = true;
       });
+      // kopalnia: skała zbocza z tej samej paczki co głazy i skałki wokół (na pustyni piaskowiec), żeby wejście zlało się z górą
+      if (def.id === 'oremine') {
+        const rock = rockMaterial(g.map.biome === 'desert' ? 'sahara' : 'temperate');
+        mesh.getObjectByName('shell')?.traverse((o) => { const m = o as THREE.Mesh; if (m.isMesh && !Array.isArray(m.material) && (m.material as THREE.Material).userData.pattern === 'rock') m.material = rock; });
+      }
       // daleka wersja: zapamiętujemy bryły teraz (dach na miejscu, nic nie zdjęte), liczymy ją dopiero, gdy będzie potrzebna
       const lod = prepareLod(mesh, def.id);
       if (lod) this.lods.set(b.id, lod);

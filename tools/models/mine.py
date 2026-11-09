@@ -55,32 +55,71 @@ def mound(group, cx, cz, rx, rz, h, seg=12, seed=0.0, mat='rock', dark='rockDark
         b.poly(group, mat, [last[k], last[(k + 1) % seg], top], away=away)
 
 
-mound('shell', 0.0, -0.45, 1.62, 1.28, 2.35, seg=14, seed=1.0)
-mound('shell', -1.12, 0.5, 0.58, 0.8, 1.55, seg=9, seed=2.0)
-mound('shell', 1.15, 0.55, 0.56, 0.78, 1.45, seg=9, seed=3.0, mat='rockDark', dark='rock')
-mound('shell', -1.3, -1.15, 0.5, 0.5, 1.0, seg=8, seed=4.0)
-mound('shell', 1.25, -1.2, 0.55, 0.45, 1.1, seg=8, seed=5.0, mat='rockDark', dark='rock')
+# Michał 9.11.2026: „nie taki kloc, tylko krata z drewnianym wejściem i idealnie wpasuje się w górę”. Zamiast kopców
+# jedno zbocze: skalne czoło z otworem sztolni, nad nim stok wznoszący się w tył (wchodzi w masyw za działką, gdzie znika
+# w terenie gór), boki schodzą łagodnie do ziemi. Gęsta siatka z nierównościami zamiast kilku wielkich ścian; materiał
+# skały gra podmienia na kamień z tej samej paczki co głazy wokół (pustynia: piaskowiec), żeby zlał się z górą.
+FY, W, OX, OY = 1.45, 1.55, KX + 0.05, HK + 0.08    # wysokość czoła, półszerokość zbocza, otwór sztolni
+ZF0, LEAN = 1.2, 0.25                               # czoło u dołu i jego pochylenie w tył na całej wysokości
+ZB, RISE, FLARE, GY = -2.7, 0.9, 1.25, -0.45        # tył (w masywie), wznios stoku, rozchylenie boków, spód pod ziemią
+zf = lambda y: ZF0 - LEAN * max(0.0, min(1.0, y / FY))
+ZT = zf(FY)
+AWAY_IN = (0, 0.9, -0.6)
+xs = sorted(set([-W, -OX, OX, W] + [-W + (W - OX) * k / 3 for k in (1, 2)] + [OX + (W - OX) * k / 3 for k in (1, 2)] + [-OX / 2, 0.0, OX / 2]))
+ys = [GY, 0.0, OY / 2, OY, (OY + FY) / 2, FY]
 
-# czoło skały z otworem sztolni: pochylona płaszczyzna od (z=1.2, y=0) do (z=0.55, y=1.8)
-FY, FX = 1.45, 0.9                                  # wysokość i półszerokość czoła (boki chowają się w kopcach po bokach)
-fz = lambda y: 1.2 - 0.52 * (y / FY)
-def fpt(x, y):
-    return (x, y, fz(y))
-AWAY_F = (0, 0.6, -0.5)
-OX, OY = KX + 0.05, HK + 0.08                       # otwór trochę większy niż korytarz (rama portalu go obejmuje)
-b.poly('shell', 'rock', [fpt(-FX, 0), fpt(-OX, 0), fpt(-OX, FY), fpt(-FX, FY)], away=AWAY_F)
-b.poly('shell', 'rock', [fpt(OX, 0), fpt(FX, 0), fpt(FX, FY), fpt(OX, FY)], away=AWAY_F)
-b.poly('shell', 'rockDark', [fpt(-OX, OY), fpt(OX, OY), fpt(OX, FY), fpt(-OX, FY)], away=AWAY_F)
-# nawis nad czołem: skalny daszek od górnej krawędzi czoła w górę i w tył, aż schowa się w kopcu; boki domknięte
-CAP = (0.05, 2.0)                                   # (z, y) tylnej krawędzi nawisu
-b.poly('shell', 'rockDark', [fpt(-FX, FY), fpt(FX, FY), (FX, CAP[1], CAP[0]), (-FX, CAP[1], CAP[0])], away=(0, -1, 0.6))
-b.poly('shell', 'rock', [fpt(-FX, FY), fpt(FX, FY), (FX * 0.9, CAP[1] + 0.06, CAP[0] + 0.02), (-FX * 0.9, CAP[1] + 0.06, CAP[0] + 0.02)], away=(0, 5, 0.6))
+
+def face_pt(x, y):
+    # brzegi otworu, krawędzie czoła i górny rząd (wspólny ze stokiem) bez nierówności — tam bryły muszą się stykać
+    edge = abs(abs(x) - OX) < 1e-6 or abs(abs(x) - W) < 1e-6 or y in (GY, FY) or (abs(x) < OX + 1e-6 and abs(y - OY) < 1e-6)
+    d = 0.0 if edge else jit(x * 3.1, y * 2.3, 0.07)
+    return (x, y, zf(y) + d)
+
+
+for i in range(len(xs) - 1):
+    for j in range(len(ys) - 1):
+        x0, x1, y0, y1 = xs[i], xs[i + 1], ys[j], ys[j + 1]
+        if (x0 + x1) / 2 > -OX and (x0 + x1) / 2 < OX and (y0 + y1) / 2 < OY:
+            continue  # otwór sztolni
+        m = 'rockDark' if (i + j) % 3 == 0 else 'rock'
+        b.poly('shell', m, [face_pt(x0, y0), face_pt(x1, y0), face_pt(x1, y1), face_pt(x0, y1)], away=AWAY_IN)
+
+# stok nad czołem: od górnej krawędzi czoła w tył i w górę, do masywu za działką
+zs = [ZT + (ZB - ZT) * k / 6 for k in range(7)]
+xt = [-W + 2 * W * k / 10 for k in range(11)]
+
+
+def top_pt(x, z):
+    edge = z == ZT or abs(abs(x) - W) < 1e-6
+    hy = FY + (ZT - z) * RISE + (0.0 if edge else jit(x * 2.7, z * 1.9, 0.16))
+    # boki stoku lekko opadają (zaokrąglony grzbiet zamiast płaskiej płyty)
+    hy -= 0.8 * (abs(x) / W) ** 2 * min(1.0, (ZT - z) / 1.2)
+    return (x, hy, z)
+
+
+for i in range(len(xt) - 1):
+    for j in range(len(zs) - 1):
+        m = 'rockDark' if (i * 3 + j) % 4 == 0 else 'rock'
+        b.poly('shell', m, [top_pt(xt[i], zs[j]), top_pt(xt[i + 1], zs[j]), top_pt(xt[i + 1], zs[j + 1]), top_pt(xt[i], zs[j + 1])], away=(0, -6, -0.5))
+
+# boki: od krawędzi stoku łagodnie w dół i na zewnątrz, pod ziemię (teren bywa niższy niż działka)
 for sx in (-1, 1):
-    b.poly('shell', 'rock', [(sx * FX, 0, fz(0)), fpt(sx * FX, FY), (sx * FX, CAP[1], CAP[0]), (sx * FX, 0, CAP[0])], away=(sx * 4, 0.8, 0.6))
+    ground = lambda z: (sx * (W + FLARE + jit(z * 3, sx, 0.08)), GY, z)
+    mid = lambda z: (sx * (W + FLARE * 0.45 + jit(z * 2, sx * 2, 0.06)), top_pt(sx * W, z)[1] * 0.45 + jit(z, sx * 3, 0.06), z)
+    for j in range(len(zs) - 1):
+        za, zb = zs[j], zs[j + 1]
+        b.poly('shell', 'rock', [top_pt(sx * W, za), top_pt(sx * W, zb), mid(zb), mid(za)], away=(0, 1.0, -0.6))
+        b.poly('shell', 'rockDark' if j % 2 else 'rock', [mid(za), mid(zb), ground(zb), ground(za)], away=(0, 1.0, -0.6))
+    # róg: krawędź czoła (x = ±W) domknięta z przodem boku
+    b.poly('shell', 'rock', [face_pt(sx * W, GY), face_pt(sx * W, FY), mid(ZT), ground(ZT)], away=(0, 1.0, -0.6))
+    b.poly('shell', 'rockDark', [face_pt(sx * W, GY), ground(ZT), (sx * (W + FLARE), GY, ZF0)], away=(0, 1.0, -0.6))
+# tył w masywie: domknięcie pod ziemię (z gry go nie widać, ale bryła jest zamknięta)
+b.poly('shell', 'rockDark', [top_pt(xt[k], ZB) for k in range(len(xt))] + [(W + FLARE, GY, ZB), (-W - FLARE, GY, ZB)], away=(0, 1.0, 0.0))
+
 # ościeża otworu w skale (żeby przez szczelinę między czołem a korytarzem nie było widać świata)
 for sx in (-1, 1):
-    b.poly('shell', 'rockDark', [fpt(sx * OX, 0), fpt(sx * OX, OY), (sx * OX, OY, KZ1 - 0.3), (sx * OX, 0, KZ1 - 0.3)], away=(sx * 3, 0.5, 1.0))
-b.poly('shell', 'rockDark', [fpt(-OX, OY), fpt(OX, OY), (OX, OY, KZ1 - 0.3), (-OX, OY, KZ1 - 0.3)], away=(0, 4, 1.0))
+    b.poly('shell', 'rockDark', [(sx * OX, 0, zf(0)), (sx * OX, OY, zf(OY)), (sx * OX, OY, KZ1 - 0.3), (sx * OX, 0, KZ1 - 0.3)], away=(sx * 3, 0.5, 1.0))
+b.poly('shell', 'rockDark', [(-OX, OY, zf(OY)), (OX, OY, zf(OY)), (OX, OY, KZ1 - 0.3), (-OX, OY, KZ1 - 0.3)], away=(0, 4, 1.0))
 # czeluść w otworze: z zewnątrz sztolnia ginie w mroku (jak wyjście widziane od środka), zamiast oświetlonej groty;
 # należy do garbu, więc znika razem z nim przy podglądzie wnętrza i w spacerze w środku
 b.box('shell', 'void', 2 * OX + 0.04, OY + 0.02, 0.03, 0, 0, KZ1 - 0.33)
@@ -91,6 +130,14 @@ for sx in (-1, 1):
     solid.append([sx * PX - 0.08, sx * PX + 0.08, PZ - 0.08, PZ + 0.08])
 b.box('base', 'woodDark', 2 * PX + 0.3, 0.14, 0.17, 0, HK + 0.1, PZ)
 b.box('base', 'woodDark', 2 * PX + 0.1, 0.08, 0.12, 0, HK + 0.24, PZ - 0.02)
+# krata w portalu: żelazna brona podciągnięta do połowy (pod nią przechodzą górnicy), kolce na dole
+GZ = PZ - 0.1
+for k in range(7):
+    x = -OX + 0.05 + (2 * OX - 0.1) * k / 6
+    b.box('base', 'iron', 0.028, OY - 0.62, 0.028, x, 0.62, GZ)
+    b.prism('base', 'iron', 0.0, 0.02, 0.06, x, 0.56, GZ, seg=4)
+for y in (0.7, 0.92, OY - 0.06):
+    b.box('base', 'iron', 2 * OX - 0.04, 0.03, 0.035, 0, y, GZ)
 # tabliczka nad wejściem (deska) i hak z latarnią
 b.box('base', 'plank', 0.5, 0.14, 0.03, 0, HK + 0.33, PZ + 0.08)
 b.box('base', 'iron', 0.02, 0.1, 0.02, PX + 0.02, HK - 0.02, PZ + 0.12)
