@@ -855,6 +855,7 @@ function enterGame(label: string, prep?: () => void): void {
 }
 /** Bieżące ustawienia (te same, które zmienia menu) i automat jakości grafiki */
 let gfx: Settings = loadSettings();
+let hashAt = -1e9;
 const autoQ = new AutoQuality(gfx.autoTier ?? TOP_TIER - 1);
 function applySettings(st: Settings): void {
   gfx = st;
@@ -2202,7 +2203,9 @@ function refresh(): void {
     report: buildReport(f, resTrend(p.res)),
     soldiers: game.soldiers.filter((s) => s.owner === ME).length,
   });
-  hud.setHash(stateHash(game));
+  // skrót stanu (do porównania gier przez sieć) liczony raz na sekundę, a nie w każdym odświeżeniu: przechodzi cały stan
+  // gry i zjadał 13 % czasu procesora (pomiar Michała 9.11.2026)
+  if (game.tick - hashAt >= TICKS_PER_SECOND || game.tick < hashAt) { hashAt = game.tick; hud.setHash(stateHash(game)); }
   if (chosen.size) showArmy();
   rockPanel.refresh(game, ME);
   marketPanel.sync(game, ME, selected);
