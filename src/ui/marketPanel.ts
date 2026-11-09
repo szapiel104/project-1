@@ -57,7 +57,8 @@ export function createMarketPanel(onTrade: (res: number, amount: number) => void
   const infoSlot = document.createElement('div');
   infoSlot.className = 'market-info';
   // towary na górze, pod nimi pracownicy i przyciski budynku (Michał 9.11.2026)
-  root.append(head, note, body, infoSlot);
+  // pracownicy i przyciski budynku na końcu listy towarów — przewijają się razem z nimi (Michał 9.11.2026)
+  root.append(head, note, body);
   document.getElementById('ui')?.append(root) ?? document.body.append(root);
 
   // suwaki (Michał 9.11.2026): ile sprzedać — od 1 do tego, co masz; ile kupić — do tego, na co cię stać i co się zmieści
@@ -144,6 +145,8 @@ export function createMarketPanel(onTrade: (res: number, amount: number) => void
     }
     body.append(h, grid);
   }
+
+  body.append(infoSlot);
 
   let infoHome: { parent: Node; next: Node | null } | null = null;
   const adoptInfo = (): void => {

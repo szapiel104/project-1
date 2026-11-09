@@ -1470,3 +1470,7 @@ body.hide-fps:not(.menu-open) .build { right: 126px !important; }
 .market-panel input.market-n { height: 24px !important; min-height: 0 !important; width: 52px !important; flex: none; line-height: 22px; box-sizing: border-box; }
 .market-panel .market-range { min-width: 60px; }
 @media (max-width: 1100px) { .market-panel .market-grid { grid-template-columns: 1fr !important; } }
+.market-panel .market-head { align-items: center; }
+.market-panel .market-purse, .market-panel .market-close { height: 34px; min-height: 0; box-sizing: border-box; display: inline-flex; align-items: center; }
+.market-panel .market-close { width: 34px; justify-content: center; }
+.market-panel .market-body .market-info { margin: 14px 0 0 !important; }
