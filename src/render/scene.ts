@@ -3595,7 +3595,14 @@ export class GameRenderer {
       this.sunWas.copy(tgt); this.sunDirWas.copy(this.sunDir);
       this.sun.target.position.copy(tgt);
       this.sun.position.copy(tgt).add(this.sunDir);
-      if (resized) { c.left = -half; c.right = half; c.top = half; c.bottom = -half; c.updateProjectionMatrix(); }
+      if (resized) {
+        c.left = -half; c.right = half; c.top = half; c.bottom = -half; c.updateProjectionMatrix();
+        // z daleka piksel mapy cieni jest większy (obszar 70 zamiast 46), a przesunięcie zostawało stare — na płaskim
+        // bruku wychodziły paski („z bliska cień, z daleka paski”, Michał 9.11.2026); przesunięcie rośnie z pikselem
+        const k = half / 46;
+        this.sun.shadow.normalBias = 0.25 * k;
+        this.sun.shadow.bias = -0.0006 * k;
+      }
     }
     // gdy nic się nie rusza, mapa i tak liczy się co drugą klatkę (ludzie chodzą wolno, cień nie odstaje)
     sm.needsUpdate = moved || this.calm || !this.sun.shadow.map || (this.shadowFrame++ & 1) === 0;
