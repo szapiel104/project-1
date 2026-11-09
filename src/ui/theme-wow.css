@@ -1366,3 +1366,8 @@ body.menu-open .report { display: none !important; }
 .minimap .minimap-title { font: 700 13px var(--text) !important; letter-spacing: .06em; }
 .minimap .minimap-hide { width: 24px; height: 24px; min-width: 0; min-height: 0; padding: 0; display: grid; place-items: center; line-height: 1; }
 .minimap canvas { margin: 0 auto; }
+/* kronika przy lewej krawędzi tuż pod paskiem, a obok niej, przyklejony, licznik ataku wroga (Michał 9.11.2026) */
+body .scribe { top: 58px; left: 0; }
+body .scribe .scribe-log-btn { border-top: 0; border-left: 0; border-radius: 0 0 6px 0; min-height: 38px; }
+.alarm { top: 58px; left: 150px; transform: none; border-top: 0 !important; border-radius: 0 0 6px 6px; padding: 7px 16px; }
+body .scribe-log { top: 100px; left: 0; }
