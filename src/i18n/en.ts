@@ -232,7 +232,7 @@ export const en: Record<TextKey, string> = {
   'res.ale': 'Ale',
   'res.ore': 'Ore',
   'res.sword': 'Swords',
-  'res.ladder': 'Scaling ladders',
+  'res.ladder': 'Ladders',
   'res.meat': 'Meat',
   'res.armor': 'Mail shirts',
   'b.keep': 'Keep',

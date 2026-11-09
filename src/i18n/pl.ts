@@ -227,7 +227,7 @@ export const pl = {
   'res.ore': 'Ruda (stara)',
   'res.sword': 'Miecze',
   'res.armor': 'Kolczugi',
-  'res.ladder': 'Drabiny szturmowe',
+  'res.ladder': 'Drabiny',
   'res.meat': 'Mięso',
   'b.keep': 'Twierdza',
   'b.house': 'Chata',
