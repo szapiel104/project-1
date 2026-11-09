@@ -1512,3 +1512,18 @@ body .scribe-log { left: 10px !important; top: 108px !important; }
 /* rynek: przycisk mieści też czterocyfrowe ceny (−1000) */
 .market-panel .market-side .market-btn { width: auto !important; min-width: 58px; padding: 0 7px !important; }
 .market-panel .market-side .market-btn b { font-size: 12.5px; white-space: nowrap; }
+/* rozkazy oddziału na dolnym pasku, obok portretów zaznaczonych (bez okna) */
+.armybar { align-items: flex-end; }
+.armybar .army-box:not([hidden]) { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin: 0; padding: 6px 10px;
+  background: linear-gradient(#3a2716, #22160c); border: 1px solid #8a6d3b; border-radius: 4px; box-shadow: 0 0 0 1px #0b0704, 0 4px 12px rgba(0, 0, 0, .5); }
+.armybar .army-kinds { display: flex; gap: 6px; }
+.armybar .army-kind { min-height: 40px; padding: 2px 10px 2px 2px; gap: 8px; border-radius: 4px; background: linear-gradient(#4a3322, #2d1b0e); border: 1px solid #1a0f07; color: #fff4dc; font-weight: 600; }
+.armybar .army-kind-pic { width: 34px; height: 34px; border: 1px solid #c29a45; border-radius: 3px; }
+.armybar .army-kind-n { background: #8a1f14; color: #fff; border-radius: 3px; padding: 1px 6px; }
+.armybar .army-icons { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.armybar .army-iseg { display: inline-flex; gap: 3px; }
+.armybar .army-ibtn { width: 38px; height: 38px; padding: 0; display: grid; place-items: center; border-radius: 4px; background: linear-gradient(#4a3322, #2d1b0e); border: 1px solid #1a0f07; color: #fff4dc; }
+.armybar .army-ibtn svg { width: 22px; height: 22px; }
+.armybar .army-ibtn[aria-pressed='true'] { background: linear-gradient(#b0382a, #7a1c12); box-shadow: inset 0 0 0 2px #e9c766; }
+.armybar .army-ibtn:hover { filter: brightness(1.2); }
+.armybar .army-help { display: none !important; }

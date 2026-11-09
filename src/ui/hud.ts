@@ -989,7 +989,7 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
   // stopka okna jak w grze: wytrzymałość z lewej, przyciski-ikony z prawej
   const infoFoot = el('div', 'info-foot');
   infoFoot.append(hpLine, infoActions);
-  info.append(infoHead, riotBox, gateBox, powerBox, quarBox, towerBox, watchState, mineBtn, recruit, armyPanel, roster, armyCtl.help, siteBox, crewBox, prodBox, storeBox, logiBox, infoDesc, infoWorker, trainBtn, trainNote, infoFoot);
+  info.append(infoHead, riotBox, gateBox, powerBox, quarBox, towerBox, watchState, mineBtn, recruit, roster, armyCtl.help, siteBox, crewBox, prodBox, storeBox, logiBox, infoDesc, infoWorker, trainBtn, trainNote, infoFoot);
   let infoId = 0;
   let lastInfoId = -1;
   const demolishAsk = confirmBtn(demolish, () => events.onDemolish(infoId));
@@ -1284,7 +1284,8 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
   paintSlotsToggle();
   const slotsBox = el('div', 'army-groups');
   slotsBox.append(slotsWrap, slotsToggle);
-  armyBar.append(slotsBox, pickedBox);
+  // rozkazy dla zaznaczonych (rodzaje, szyk, postawa) na dolnym pasku obok portretów — bez osobnego okna (Michał 9.11.2026)
+  armyBar.append(slotsBox, pickedBox, armyPanel);
   const slots = [1, 2, 3, 4, 5, 6, 7, 8, 9, 0].map((n) => {
     const b = el('button', 'army-slot');
     b.type = 'button';
@@ -1480,7 +1481,8 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
     },
     showArmy(army, ctl) {
       descBtn.hidden = true;
-      info.hidden = army.length === 0;
+      // okna oddziału nie ma: rozkazy są na dolnym pasku przy portretach zaznaczonych
+      info.hidden = true;
       if (!army.length) { rosterKey = ''; hideArmy(); return; }
       info.classList.remove('is-store'); marketBtn.hidden = true;
       infoId = 0;
