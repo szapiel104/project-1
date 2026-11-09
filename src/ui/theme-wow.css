@@ -1652,3 +1652,43 @@ body .menu .help-pane .credit-table { font-size: 13.5px; }
 body .menu .help-pane .credit-table td { vertical-align: top; padding: 7px 10px; line-height: 1.4; }
 body .menu .help-pane .credit-table td:first-child { font-weight: 700; }
 body .menu .help-pane .credit-table td:nth-child(4) { white-space: nowrap; font-weight: 600; color: #7a4a1c; }
+/* przyciski menu jak kute deski: prawdziwe drewno (tekstura desek), żelazne okucia na końcach z nitami,
+   złote wyryte litery; „Nowa gra” — czerwone sukno na drewnie (Michał 9.11.2026: „dalej mało RPGowe”) */
+html body .menu:not(.previewing) .menu-bar .bar-item {
+  background:
+    radial-gradient(circle at 11px 30%, #d8c08a 0 2px, #3a3a3e 2.5px 3.5px, transparent 4px),
+    radial-gradient(circle at 11px 70%, #d8c08a 0 2px, #3a3a3e 2.5px 3.5px, transparent 4px),
+    radial-gradient(circle at calc(100% - 11px) 30%, #d8c08a 0 2px, #3a3a3e 2.5px 3.5px, transparent 4px),
+    radial-gradient(circle at calc(100% - 11px) 70%, #d8c08a 0 2px, #3a3a3e 2.5px 3.5px, transparent 4px),
+    linear-gradient(90deg, #4c4c52 0, #2a2a2e 18px, #151517 22px, transparent 22px, transparent calc(100% - 22px), #151517 calc(100% - 22px), #2a2a2e calc(100% - 18px), #4c4c52 100%),
+    linear-gradient(180deg, rgba(255, 230, 180, .10), rgba(0, 0, 0, .35)),
+    url('/textures/cc0/planks.jpg') center / 260px auto,
+    #5a3a20 !important;
+  background-blend-mode: normal, normal, normal, normal, normal, normal, multiply, normal !important; }
+html body .menu:not(.previewing) .menu-bar .bar-item .mi-mark { left: 34px !important; }
+html body .menu:not(.previewing) .menu-bar .bar-item::after { right: 34px !important; }
+html body .menu:not(.previewing) .menu-bar .bar-item, html body .menu:not(.previewing) .menu-bar .bar-item .mi-label {
+  color: #f3d58a !important; text-shadow: 0 -1px 0 rgba(0, 0, 0, .9), 0 1px 0 rgba(255, 230, 170, .25), 0 0 12px rgba(0, 0, 0, .6) !important; }
+html body .menu:not(.previewing) .menu-bar .bar-item:hover, html body .menu:not(.previewing) .menu-bar .bar-item:focus-visible, html body .menu:not(.previewing) .menu-bar .bar-item[aria-current='page'] {
+  background:
+    radial-gradient(circle at 11px 30%, #ffe6a0 0 2px, #3a3a3e 2.5px 3.5px, transparent 4px),
+    radial-gradient(circle at 11px 70%, #ffe6a0 0 2px, #3a3a3e 2.5px 3.5px, transparent 4px),
+    radial-gradient(circle at calc(100% - 11px) 30%, #ffe6a0 0 2px, #3a3a3e 2.5px 3.5px, transparent 4px),
+    radial-gradient(circle at calc(100% - 11px) 70%, #ffe6a0 0 2px, #3a3a3e 2.5px 3.5px, transparent 4px),
+    linear-gradient(90deg, #5c5c62 0, #34343a 18px, #151517 22px, transparent 22px, transparent calc(100% - 22px), #151517 calc(100% - 22px), #34343a calc(100% - 18px), #5c5c62 100%),
+    radial-gradient(80% 120% at 50% 50%, rgba(255, 190, 90, .22), transparent 70%),
+    url('/textures/cc0/planks.jpg') center / 260px auto,
+    #7a5230 !important;
+  background-blend-mode: normal, normal, normal, normal, normal, screen, multiply, normal !important; }
+html body .menu:not(.previewing) .menu-bar .bar-item.bar-main {
+  background:
+    radial-gradient(circle at 11px 30%, #ffe6a0 0 2px, #3a3a3e 2.5px 3.5px, transparent 4px),
+    radial-gradient(circle at 11px 70%, #ffe6a0 0 2px, #3a3a3e 2.5px 3.5px, transparent 4px),
+    radial-gradient(circle at calc(100% - 11px) 30%, #ffe6a0 0 2px, #3a3a3e 2.5px 3.5px, transparent 4px),
+    radial-gradient(circle at calc(100% - 11px) 70%, #ffe6a0 0 2px, #3a3a3e 2.5px 3.5px, transparent 4px),
+    linear-gradient(90deg, #4c4c52 0, #2a2a2e 18px, #151517 22px, transparent 22px, transparent calc(100% - 22px), #151517 calc(100% - 22px), #2a2a2e calc(100% - 18px), #4c4c52 100%),
+    linear-gradient(180deg, rgba(255, 200, 160, .18), rgba(0, 0, 0, .3)),
+    url('/textures/cc0/burlap.jpg') center / 220px auto,
+    #9a2418 !important;
+  background-blend-mode: normal, normal, normal, normal, normal, normal, multiply, normal !important; }
+html body .menu:not(.previewing) .menu-bar .bar-item.bar-main .mi-label, html body .menu:not(.previewing) .menu-bar .bar-item.bar-main { color: #ffefc0 !important; }
