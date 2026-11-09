@@ -1360,10 +1360,9 @@ body.menu-open .report { display: none !important; }
 .army-toggle[aria-expanded="false"] { height: auto; min-height: 40px; }
 .army-slot { width: 48px; height: 42px; }
 
-/* minimapa w oprawie jak okna: równa ramka ze wszystkich stron, pergaminowy pasek tytułu, mapa na środku */
-.minimap { padding: 0 8px 8px !important; width: auto !important; line-height: 0; border: 0 !important; border-radius: 4px; background: #eddcb5 !important; background-image: var(--parch-img) !important; background-size: 100% 100%, auto, 420px auto !important; background-repeat: no-repeat, no-repeat, repeat !important; background-blend-mode: normal, normal, multiply !important;
-  box-shadow: 0 0 0 2px #d8b25e, 0 0 0 4px #6e4a1e, 0 0 0 10px #3a2414, 0 0 0 11px #0b0704, 0 12px 26px rgba(0, 0, 0, .55) !important; right: 21px; bottom: 82px; }
-.minimap .minimap-bar { height: 32px; padding: 0 0 0 2px; }
-.minimap .minimap-title { font: 700 13px var(--text) !important; letter-spacing: .06em; color: #3b2512 !important; text-shadow: none !important; }
-.minimap .minimap-hide { width: 24px; height: 24px; min-width: 0; min-height: 0; padding: 0; display: grid; place-items: center; line-height: 1; border-radius: 3px; color: #fff4dc !important; background: linear-gradient(#4a3322, #2d1b0e) !important; border: 1px solid #1a0f07 !important; box-shadow: none !important; }
-.minimap canvas { display: block; margin: 0 auto; border: 1px solid #3a2414 !important; border-radius: 2px; box-shadow: 0 0 0 1px #d8b25e !important; }
+/* minimapa: dawny ciemny wygląd, tylko równo — ta sama ramka z każdej strony, tytuł i przycisk w jednej linii, mapa na środku */
+.minimap { padding: 0 6px 6px !important; width: auto !important; }
+.minimap .minimap-bar { height: 30px; padding: 0 0 0 2px; }
+.minimap .minimap-title { font: 700 13px var(--text) !important; letter-spacing: .06em; }
+.minimap .minimap-hide { width: 24px; height: 24px; min-width: 0; min-height: 0; padding: 0; display: grid; place-items: center; line-height: 1; }
+.minimap canvas { margin: 0 auto; }
