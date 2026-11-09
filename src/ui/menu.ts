@@ -226,6 +226,15 @@ export function createMenu(root: HTMLElement, events: MenuEvents): Menu {
   // pejzaży wylosowany przy wejściu na stronę (świt / zmierzch / noc — sam filtr barwy na tym samym obrazie, bez kosztu FPS)
   const shot = el('div', 'menu-shot'); shot.setAttribute('aria-hidden', 'true'); shot.dataset.cap = tx('Twoja ostatnia osada', 'Your last settlement');
   scene.append(shot);
+  // obrazek ostatniej osady jest przyciskiem: klik wraca do tej gry, jak „Kontynuuj” (Michał 9.11.2026)
+  shot.removeAttribute('aria-hidden'); scene.removeAttribute('aria-hidden');
+  shot.setAttribute('role', 'button');
+  shot.tabIndex = 0;
+  shot.title = tx('Kliknij, by wrócić do tej osady', 'Click to return to this settlement');
+  shot.setAttribute('aria-label', shot.title);
+  const goShot = (): void => { if (inGame || canContinue) events.onContinue(); };
+  shot.addEventListener('click', goShot);
+  shot.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); goShot(); } });
   function backdrop(thumb?: string): void {
     shot.style.backgroundImage = thumb ? `url("${thumb}")` : '';
     scene.classList.toggle('has-shot', !!thumb);

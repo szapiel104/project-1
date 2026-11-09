@@ -1527,3 +1527,8 @@ body .scribe-log { left: 10px !important; top: 108px !important; }
 .armybar .army-ibtn[aria-pressed='true'] { background: linear-gradient(#b0382a, #7a1c12); box-shadow: inset 0 0 0 2px #e9c766; }
 .armybar .army-ibtn:hover { filter: brightness(1.2); }
 .armybar .army-help { display: none !important; }
+/* ostatnia osada w menu jest klikalna (wraca do gry) */
+.menu-scene .menu-shot { pointer-events: auto; cursor: pointer; transition: transform .15s ease, box-shadow .15s ease, filter .15s; }
+.menu-scene .menu-shot:hover, .menu-scene .menu-shot:focus-visible { transform: translateY(-3px); filter: brightness(1.08); box-shadow: 0 0 0 2px #e9c766, 0 14px 30px rgba(0, 0, 0, .6); outline: none; }
+.menu-scene:not(.has-shot) .menu-shot { pointer-events: none; }
+@media (prefers-reduced-motion: reduce) { .menu-scene .menu-shot { transition: none; } .menu-scene .menu-shot:hover { transform: none; } }
