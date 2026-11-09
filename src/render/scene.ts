@@ -2169,7 +2169,13 @@ export class GameRenderer {
     if (b.owner !== this.me) { this.foreign(); return; }
     if (!this.walk) { const w = g.map.width; this.startWalk((b.door % w) + 0.5, Math.floor(b.door / w) + 0.5); }
     if (!this.walk) return;
-    if (!this.mineLevel) { this.mineLevel = mineLevelModel(); this.mineLevel.position.copy(MINE_AT); this.scene.add(this.mineLevel); }
+    if (!this.mineLevel) {
+      this.mineLevel = mineLevelModel(); this.mineLevel.position.copy(MINE_AT); this.scene.add(this.mineLevel);
+      // ściany i strop sztolni jedną skałą z paczki gór (jak zbocze kopalni): jasne i ciemne płaty na przemian dawały
+      // szachownicę na stropie (Michał 9.11.2026: „czemu kopalnia ma takie kratki”)
+      const rock = rockMaterial(g.map.biome === 'desert' ? 'sahara' : 'temperate');
+      this.mineLevel.traverse((o) => { const m = o as THREE.Mesh; if (m.isMesh && !Array.isArray(m.material) && (m.material as THREE.Material).userData.pattern === 'rock') m.material = rock; });
+    }
     this.mineLevel.visible = true;
     const [ex, ez, yaw] = MINE_LEVEL.entry;
     this.inMine = { id, x: ex, z: ez, lvl: 0 };
@@ -3451,7 +3457,8 @@ export class GameRenderer {
         mesh.traverse((o) => { const m = o as THREE.Mesh; if (m.isMesh && !Array.isArray(m.material) && (m.material as THREE.Material).userData.pattern === 'rock') m.material = rock; });
       }
       // daleka wersja: zapamiętujemy bryły teraz (dach na miejscu, nic nie zdjęte), liczymy ją dopiero, gdy będzie potrzebna
-      const lod = prepareLod(mesh, def.id);
+      // kopalnia bez dalekiej wersji: zbocze ze skały gór upraszczało się do białej bryły (6 tys. trójkątów — nie warto)
+      const lod = def.id === 'oremine' ? null : prepareLod(mesh, def.id);
       if (lod) this.lods.set(b.id, lod);
       // pochodnia na słupie przy wejściu: przy budynkach z drzwiami (nie przy murach, bramach ani drogach)
       if (def.id !== 'torch' && !def.wall && !def.gate && !def.road && def.id !== 'keep' && !NO_TORCH.has(def.id)) {
