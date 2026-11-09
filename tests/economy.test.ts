@@ -791,3 +791,29 @@ describe('rozbiórka nieukończonej budowy', () => {
     expect(g.players[0]!.res[wood]!).toBeGreaterThanOrEqual(before - paid + (BUILDINGS[site.type]!.cost.wood ?? 0));
   });
 });
+
+describe('budowa bierze materiał z gruzu', () => {
+  it('budowlaniec idzie po drewno do pobliskiego gruzu, a gruz znika szybciej (Michał 9.11.2026)', () => {
+    const g = feed(createGame(5));
+    run(g, 5, [build(g, 'house')]);
+    const b = g.buildings.find((x) => BUILDINGS[x.type]!.id === 'house')!;
+    for (let i = 0; i < 6000 && b.build; i++) step(g, []);
+    step(g, [{ type: 'demolish', player: 0, id: b.id }]);
+    const rub = g.rubble[0]!;
+    // nikt nie wynosi gruzu, za to obok rośnie nowa chata
+    const haulers = RULES.rubbleHaulers;
+    (RULES as { rubbleHaulers: number }).rubbleHaulers = 0;
+    let fromRubble = false;
+    try {
+      step(g, [build(g, 'house')]);
+      for (let i = 0; i < 3000 && g.rubble.includes(rub); i++) {
+        step(g, []);
+        for (const u of g.units) if (u.phase === Phase.ToFetch && u.path.length) {
+          const w = g.map.width, t = u.path[u.path.length - 1]!, x = t % w, y = (t - x) / w;
+          if (x >= rub.x && x < rub.x + rub.w && y >= rub.y && y < rub.y + rub.h) fromRubble = true;
+        }
+      }
+    } finally { (RULES as { rubbleHaulers: number }).rubbleHaulers = haulers; }
+    expect(fromRubble).toBe(true);
+  });
+});

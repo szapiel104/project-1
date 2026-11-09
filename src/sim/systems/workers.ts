@@ -88,6 +88,22 @@ export function wakeBuilders(g: GameState, owner: number): void {
   }
 }
 
+/**
+ * Gruz z potrzebnym surowcem blisko budowy (Michał 9.11.2026: „budowlańcy niech biorą najbliżej z gruzów surowiec”):
+ * budowlaniec idzie po materiał do gruzu, a nie do dalekiego składu. Najwyżej 20 pól od placu.
+ */
+const RUBBLE_REACH = 20;
+function rubbleFor(g: GameState, owner: number, res: number, site: Building | undefined): GameState['rubble'][number] | undefined {
+  if (!site || res < 0) return undefined;
+  let best: GameState['rubble'][number] | undefined, bd = RUBBLE_REACH + 1;
+  for (const r of g.rubble) {
+    if (r.owner !== owner || r.to || !r.loads.some((l) => l[0] === res && l[1] > 0)) continue;
+    const d = Math.max(Math.abs(r.x - site.x), Math.abs(r.y - site.y));
+    if (d < bd) { bd = d; best = r; }
+  }
+  return best;
+}
+
 /** Pora dnia dla rytmu ludzi: praca, wieczór przy ogniu, sen */
 export function dayPart(tick: number): 'work' | 'evening' | 'sleep' {
   const { hour } = clockAt(tick);
@@ -366,6 +382,13 @@ function goalFor(g: GameState, u: Unit, job: Building | undefined, prod: Product
       if (!kind || !g.buildings.some((x) => x.id === u.target)) return null;
       // tylko do składu, w którym ten surowiec naprawdę leży — nie do bliższego, pustego (Michał 30.10.2026)
       const doors = new Set(fetchStores(g, u.owner, res).map((b) => b.door));
+      // albo do gruzu z tym surowcem niedaleko placu — wtedy idzie do bliższego z nich (A* wybiera najbliższy cel)
+      const rub = rubbleFor(g, u.owner, res, buildingById(g, u.target));
+      if (rub) {
+        const w = g.map.width;
+        const inRub = (t: number): boolean => { const x = t % w, y = (t - x) / w; return x >= rub.x && x < rub.x + rub.w && y >= rub.y && y < rub.y + rub.h; };
+        return (t) => doors.has(t) || inRub(t);
+      }
       // bez składu: do stosu desek z biedy przy pniaku (emergencywood.ts)
       if (!g.buildings.some((b) => b.owner === u.owner && b.door >= 0 && !b.build && BUILDINGS[b.type]!.stores?.includes(kind))) {
         const piles = heldTiles(g, u.owner, res);
@@ -584,7 +607,24 @@ function arrive(g: GameState, u: Unit, prod: ProductionDef | undefined): void {
       // bierze ładunek ze składu (zapłacony już przy stawianiu budynku) i niesie go na plac
       // (bez składu: ze stosu desek z biedy, który przy tym maleje)
       const site = buildingById(g, u.target);
+      const here = tileOf(g, u), w = g.map.width, hx = here % w, hy = (here - hx) / w;
+      const rub = site?.from ? undefined : g.rubble.find((r) => r.owner === u.owner && !r.to && hx >= r.x && hx < r.x + r.w && hy >= r.y && hy < r.y + r.h);
+      const li = rub ? rub.loads.findIndex((l) => l[0] === u.timer - 1 && l[1] > 0) : -1;
       if (site && takeFromStack(g, site)) { /* wziął ze stosu po starym budynku (relocate.ts) */ }
+      else if (rub && li >= 0) {
+        // wziął materiał z gruzu: na plac idzie jego część, a reszta ładunku gruzu od razu wraca do składu (jak po wyniesieniu)
+        const res = u.timer - 1, load = rub.loads[li]!;
+        for (const b of g.buildings) {
+          if (load[1] <= 0) break;
+          if (b.owner !== u.owner || b.build || b.door < 0) continue;
+          if (freeIn(g, b, res) > 0) load[1] -= depositAt(g, b, res, load[1]);
+        }
+        if (load[1] <= 0) rub.loads.splice(li, 1);
+        if (!rub.loads.length) {
+          for (let ty = rub.y; ty < rub.y + rub.h; ty++) for (let tx = rub.x; tx < rub.x + rub.w; tx++) g.reserved[ty * g.map.width + tx]!--;
+          g.rubble.splice(g.rubble.indexOf(rub), 1);
+        }
+      }
       else if (!storeAtDoor(g, u.owner, tileOf(g, u), u.timer - 1)) takeHeld(g, u.owner, tileOf(g, u), u.timer - 1, buildingById(g, u.target));
       u.carryRes = u.timer - 1; u.carryAmt = 1; u.timer = 0;
       u.phase = Phase.ToRepair;
