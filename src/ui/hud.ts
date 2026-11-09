@@ -698,7 +698,14 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
   try { const v = JSON.parse(localStorage.getItem(POS_KEY) ?? 'null') as { x: number; y: number } | null; if (v && Number.isFinite(v.x) && Number.isFinite(v.y)) infoPos = v; } catch { /* brak pamięci: domyślne miejsce */ }
   const uiK = (): number => parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--ui')) || 1;
   const placeInfo = (): void => {
-    if (!infoPos || info.closest('.market-info')) { info.style.left = ''; info.style.top = ''; return; }
+    if (info.closest('.market-info')) { info.style.left = ''; info.style.top = ''; return; }
+    // magazyn (stodoła, spichlerz, skład): duże okno pośrodku ekranu, żeby zapasy było dobrze widać
+    if (info.classList.contains('is-store')) {
+      const k = uiK(), w = info.offsetWidth || 760;
+      info.style.left = `${Math.max(0, (window.innerWidth / k - w) / 2)}px`; info.style.top = `${Math.max(56, Math.round(window.innerHeight / k * 0.08))}px`;
+      return;
+    }
+    if (!infoPos) { info.style.left = ''; info.style.top = ''; return; }
     const k = uiK(), w = info.offsetWidth || 320;
     const x = Math.max(0, Math.min(window.innerWidth / k - w - 4, infoPos.x));
     const y = Math.max(0, Math.min(window.innerHeight / k - 160, infoPos.y));
@@ -1533,8 +1540,10 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
           if (pd.recipe) {
             const r = pd.recipe;
             const chip = (id: string, n: number, name: string): HTMLElement => { const c = el('span', 'prod-chip'); c.title = name; c.append(icon(id), el('strong', '', `${n}`), el('span', '', name)); return c; };
+            // strzałka z trzema szewronami; gdy pracownik właśnie pracuje, płynie nią światło (CSS, `data-active` na oknie)
+            const flowArrow = (): HTMLElement => { const a = el('span', 'prod-arrow'); a.setAttribute('aria-hidden', 'true'); a.innerHTML = '<i></i><i></i><i></i>'; return a; };
             const line = el('div', 'prod-line');
-            if (r.input) line.append(chip(r.input.id, r.input.n, r.input.name), el('span', 'prod-arrow', '→'));
+            if (r.input) line.append(chip(r.input.id, r.input.n, r.input.name), flowArrow());
             // kopalnia: jeden kurs daje jedno z kilku (kamień, żelazo, ruda, kryształ) — pokazujemy wszystkie z szansą
             if (r.alts?.length) {
               line.classList.add('prod-alts');
@@ -1545,7 +1554,10 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
                 line.append(c);
               });
             } else line.append(chip(r.output.id, r.output.n, r.output.name));
-            prodRecipe.replaceChildren(line, el('p', 'prod-note', tx(`Robota: ${r.secs} s${r.place ? ` ${r.place}` : ''} (bez chodzenia po surowiec i do składu)`, `Work: ${r.secs} s${r.place ? ` ${r.place}` : ''} (not counting walks for materials and to the stockpile)`)));
+            const note = el('p', 'prod-note');
+            note.title = tx('Sam czas roboty, bez chodzenia po surowiec i do składu', 'Work time only, not counting walks for materials and to the stockpile');
+            note.append(el('strong', '', `${r.secs} s`), el('span', '', tx(`na kurs${r.place ? ` ${r.place}` : ''}`, `per run${r.place ? ` ${r.place}` : ''}`)));
+            prodRecipe.replaceChildren(line, note);
           }
         }
         prodWorker.hidden = !pd.worker;
@@ -1554,9 +1566,11 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
           prodBar.hidden = pd.worker.pct === undefined;
           prodFill.style.width = `${pd.worker.pct ?? 0}%`;
         }
+        // animacje (strzałka, pasek) tylko gdy warsztat naprawdę pracuje
+        prodBox.dataset.active = String(!!pd.worker && pd.worker.pct !== undefined && pd.status.level === 'ok');
         setText(prodStatus, pd.status.text);
         prodStatus.dataset.level = pd.status.level;
-        const row = (label: string, value: string, warn = false): HTMLElement => { const r = el('p', 'site-row'); r.append(el('span', '', label), el('strong', warn ? 'warn' : '', value)); return r; };
+        const row = (label: string, value: string, warn = false): HTMLElement => { const r = el('div', 'prod-stat'); r.append(el('strong', warn ? 'warn' : '', value), el('span', '', label)); return r; };
         const out = pd.recipe?.output.name ?? tx('towaru', 'goods');
         const rows: HTMLElement[] = [];
         if (pd.recipe) {
@@ -1591,6 +1605,7 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
         infoWorker.hidden = true;
       } else infoDesc.hidden = false;
       storeBox.hidden = !i.stock?.length;
+      info.classList.toggle('is-store', !!i.stock?.length && !i.site);
       if (i.stock?.length) {
         const key = JSON.stringify(i.stock);
         if (storeBox.dataset.key !== key) {

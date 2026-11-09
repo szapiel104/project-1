@@ -1789,7 +1789,14 @@ function* terrainSteps(map: GameMap, models: ModelFactory, waterLevel: number): 
     return mesh;
   };
   // [rodzaj][pień, korona] i ich barwy (jak w lesie z mapy)
-  const youngSets: [THREE.InstancedMesh, THREE.InstancedMesh][] = [
+  // pustynia (Michał 9.11.2026): leśniczy sadzi palmy daktylowe — ta sama bryła i materiał co palmy oaz, jedna siatka na drzewo
+  const palmP = DESERT ? desertPlants().find((p) => p.kind === 'palm') : undefined;
+  const palmMesh = palmP ? (() => {
+    const tx = palmP.tex[0]!, mat = plantMaterial(tx);
+    if (!mat.userData.wind) { mat.userData.wind = true; windCrown(mat, 0.012, `wind-oad-${tx}`, 1.6); }
+    return youngMesh(palmP.geo, mat, 'drzewa leśniczych: palmy');
+  })() : null;
+  const youngSets: [THREE.InstancedMesh, THREE.InstancedMesh][] = palmMesh ? [[palmMesh, palmMesh], [palmMesh, palmMesh]] : [
     [youngMesh(CONIFERS[0]!.trunk, CONIFERS[0]!.barkMat, 'drzewa leśniczych: pnie'), youngMesh(CONIFERS[0]!.cards, CONIFERS[0]!.cardMat, 'drzewa leśniczych: korony')],
     [youngMesh(LEAFS[0]!.trunk, LEAFS[0]!.barkMat, 'drzewa leśniczych: pnie'), youngMesh(LEAFS[0]!.cards, LEAFS[0]!.cardMat, 'drzewa leśniczych: korony')],
   ];
