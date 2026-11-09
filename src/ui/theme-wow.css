@@ -1693,7 +1693,7 @@ html body .menu:not(.previewing) .menu-bar .bar-item.bar-main {
   background-blend-mode: normal, normal, normal, normal, normal, normal, multiply, normal !important; }
 html body .menu:not(.previewing) .menu-bar .bar-item.bar-main .mi-label, html body .menu:not(.previewing) .menu-bar .bar-item.bar-main { color: #ffefc0 !important; }
 /* oko („przejdź się oczami”) w nagłówku: ten sam kwadrat co krzyżyk obok, równo w jednej linii (Michał 9.11.2026: „nierówne ikonki”) */
-#ui#ui .floaters .info .info-head .walk-btn.icon-act { flex: none; box-sizing: border-box; width: 32px !important; height: 32px !important; min-width: 0 !important; min-height: 0 !important; margin: 0 !important; padding: 0 !important;
+#ui#ui .floaters .info .info-head .walk-btn.icon-act:not([hidden]) { flex: none; box-sizing: border-box; width: 32px !important; height: 32px !important; min-width: 0 !important; min-height: 0 !important; margin: 0 !important; padding: 0 !important;
   display: grid !important; place-items: center; align-self: center !important; border-radius: 4px; background: linear-gradient(#4a3322, #2d1b0e) !important; border: 1px solid #1a0f07 !important; color: #fff4dc !important; box-shadow: inset 0 1px 0 rgba(255, 236, 200, .22) !important; }
 #ui#ui .floaters .info .info-head .walk-btn.icon-act svg { width: 18px !important; height: 18px !important; }
 #ui#ui .floaters .info .info-head :is(.info-ibtn, .info-x) { box-sizing: border-box; width: 32px !important; height: 32px !important; margin: 0 !important; align-self: center !important; }
@@ -1707,3 +1707,4 @@ html body .menu:not(.previewing) .menu-bar .bar-item.bar-main .mi-label, html bo
 #ui#ui .info .prod-line.prod-alts .prod-chip strong { bottom: auto !important; top: 44px !important; right: 2px !important; font-size: 13px !important; }
 #ui#ui .info .prod-line.prod-alts .prod-chip > span:last-of-type { grid-column: 1; max-width: 100px; text-align: center; color: #2a1b0c !important; font: 600 13.5px/1.2 var(--text) !important; text-shadow: none !important; white-space: normal; }
 #ui#ui .info .prod-line.prod-alts .prod-chip .prod-pct { grid-column: 1 !important; text-align: center; color: #6b4a22 !important; font-size: 12px !important; text-shadow: none !important; }
+#ui#ui .floaters .info .info-head .walk-btn[hidden] { display: none !important; }

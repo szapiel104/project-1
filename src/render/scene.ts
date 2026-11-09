@@ -2710,13 +2710,11 @@ export class GameRenderer {
     // mapa cieni co drugą klatkę (Michał 9.11.2026, pomiar: każde rysowanie obiektu kosztuje three.js ~30 µs procesora,
     // a mapa cieni to drugie tyle obiektów co obraz). Między odświeżeniami cień leży tam, gdzie był — słońce przesuwa się
     // wolno, a ludzie przez jedną klatkę o milimetry; macierz cienia zmienia się razem z mapą, więc nic się nie rozjeżdża.
-    // Przy szybkim ruchu kamery (obszar cieni jedzie za nią) odświeżamy w każdej klatce.
     if (this.gpu_) {
-      const cp = this.cam.camera.position, lc = this.shadowCamAt;
-      const moving = Math.abs(cp.x - lc.x) + Math.abs(cp.y - lc.y) + Math.abs(cp.z - lc.z) > 0.6;
-      lc.copy(cp);
+      // także w ruchu co drugą klatkę (pomiar 9.11.2026: przy przesuwaniu kamery mapa cieni co klatkę to ok. 7 ms —
+      // 45 zamiast 60 FPS); cień leży w świecie, więc przesunięty o klatkę obszar mapy nie przesuwa samych cieni
       this.sun.shadow.autoUpdate = false;
-      this.sun.shadow.needsUpdate = moving || (this.shadowTick++ & 1) === 0;
+      this.sun.shadow.needsUpdate = (this.shadowTick++ & 1) === 0;
     }
     this.updateSeason(dt);
     // cienie chmur: przy pogodzie z chmurami wyraźniejsze, nocą, w deszczu (pełne zachmurzenie) i we mgle znikają
@@ -3845,7 +3843,6 @@ export class GameRenderer {
 
   private roadTick = -1;
   private shadowTick = 0;
-  private shadowCamAt = new THREE.Vector3();
   private syncRoads(g: GameState, view: TerrainView): void {
     // sprawdzane raz na 3 ticki symulacji, a nie w każdej klatce, w której tick jest podzielny przez 3 (przy kilku klatkach
     // na tick dwa przebiegi po całej mapie szły co klatkę — 9 % czasu procesora w pomiarze Michała 9.11.2026)
