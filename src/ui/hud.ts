@@ -1172,7 +1172,8 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
   paintAcc();
   tabs.prepend(acc);
   const right = el('div', 'tools-right');
-  right.append(controls, wreck);
+  // bez przycisku „Wyburzanie” na belce (Michał 9.11.2026) — budynek rozbiera się koszem w jego oknie
+  right.append(controls);
   toolbar.append(tabs, cats, right);
   buildbar.append(cards, buildFoot);
 
