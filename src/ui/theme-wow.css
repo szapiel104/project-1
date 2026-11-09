@@ -1041,3 +1041,24 @@ html body .info .icon-act { background: linear-gradient(#3a2614, #24160c) !impor
 /* jedna kreska: przyciski w sekcji wieży/bramy bez własnej kreski */
 #ui .floaters .info:not(.is-person):not(.army-mode) :is(.gate-box, .power-row-box, .info-site) .actions { border-top: 0 !important; padding-top: 0 !important; }
 #ui .floaters .info:not(.is-person):not(.army-mode) .gate-box:has(.icon-act) { display: flex !important; align-items: center; justify-content: space-between; gap: 12px; }
+/* Michał 9.11.2026: wytrzymałość na dole, większy pasek; ładniejsze „Twoje”; nagłówki nie czerwone */
+#ui .floaters .info:not(.is-person):not(.army-mode) > .info-owner { grid-column: 1 / -1 !important; margin-right: 22px !important; }
+#ui .floaters .info:not(.is-person):not(.army-mode) > .hp-line:not([hidden]) { order: 50; grid-column: 1 / -1 !important; margin: 0 22px !important; display: grid !important; grid-template-columns: auto 1fr; align-items: center; gap: 12px; padding-top: 12px; border-top: 1px solid rgba(138, 100, 50, .45) !important; }
+#ui .floaters .info:not(.is-person):not(.army-mode) > .actions { order: 60; }
+#ui .floaters .info:not(.is-person):not(.army-mode) .hp-line > span:first-child { font-size: 14px; font-weight: 600; color: #3b2512 !important; white-space: nowrap; }
+#ui .floaters .info:not(.is-person):not(.army-mode) .hp-bar { height: 16px !important; border-radius: 3px !important; box-shadow: inset 0 2px 3px rgba(0, 0, 0, .6); }
+#ui .floaters .info:not(.is-person):not(.army-mode) .hp-bar > span { box-shadow: inset 0 1px 0 rgba(255, 255, 255, .35); border-radius: 2px !important; }
+/* właściciel: herbowa tarcza w barwie drużyny, imię, a „Twoje / Sojusznik / Wróg” małą kursywą obok */
+#ui .floaters .info:not(.is-person):not(.army-mode) .info-owner { background: none !important; border: 0 !important; padding: 0 !important; gap: 10px; }
+#ui .floaters .info:not(.is-person):not(.army-mode) .info-owner::before { content: ''; flex: none; width: 22px; height: 26px; background: var(--team, #8a6d3b); clip-path: polygon(0 0, 100% 0, 100% 55%, 50% 100%, 0 55%); box-shadow: inset 0 0 0 2px rgba(0, 0, 0, .35); filter: drop-shadow(0 1px 0 #1a0f07); }
+#ui .floaters .info:not(.is-person):not(.army-mode) .info-owner-name { order: 1; font-size: 17px; font-weight: 600; color: #2a1b0c !important; }
+#ui .floaters .info:not(.is-person):not(.army-mode) .info-owner-rel { order: 2; clip-path: none !important; background: none !important; padding: 0 !important; font-size: 14px !important; font-weight: 400 !important; font-style: italic; letter-spacing: 0 !important; text-transform: none !important; color: #2f6a28 !important; }
+#ui .floaters .info:not(.is-person):not(.army-mode) .info-owner[data-rel='ally'] .info-owner-rel { color: #1f5a8a !important; }
+#ui .floaters .info:not(.is-person):not(.army-mode) .info-owner[data-rel='enemy'] .info-owner-rel { color: #a8281f !important; }
+#ui .floaters .info:not(.is-person):not(.army-mode) .info-owner-rel::before { content: '— '; }
+/* nagłówki: ciemny brąz zamiast czerwieni */
+#ui .floaters .info:not(.is-person):not(.army-mode) .info-head .info-name,
+#ui .floaters .info:not(.is-person):not(.army-mode) :is(.stock-head, .logi-head, .prod-head, .stock-head2, .stock-title, .site-head),
+#ui .floaters .info:not(.is-person):not(.army-mode) :is(.stock-head, .logi-head, .prod-head, .stock-head2, .stock-title, .site-head) * { color: #3b2512 !important; }
+#ui .floaters .info:not(.is-person):not(.army-mode) :is(.stock-fill, .keeper-count, .prod-note strong) { color: #5c4224 !important; }
+#ui .floaters .info:not(.is-person):not(.army-mode) .stock-fill[data-over='true'] { color: #a8281f !important; }
