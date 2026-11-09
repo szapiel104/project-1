@@ -505,7 +505,7 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
     }
     if (reportKind === 'popularity') { list.append(el('dt', 'report-sum', tx('Razem', 'Total')), el('dd', `report-sum ${sum > 0 ? 'plus' : sum < 0 ? 'minus' : ''}`, `${sum > 0 ? '+' : ''}${sum}`)); }
     report.append(list);
-    // okienko wyskakuje tuż nad przyciskiem, który je otworzył
+    // okienko wyskakuje tuż przy przycisku, który je otworzył
     const anchor = reportKind === 'popularity' ? popularBox : reportKind === 'army' ? armyBox : reportKind === 'food' ? foodBox : reportKind === 'stock' ? stockBox : popBox;
     // okno ma powiększenie interfejsu (zoom: var(--ui)), więc jego left/bottom liczą się w pikselach powiększonych:
     // pozycję z ekranu dzielimy przez powiększenie, a szerokość okna mnożymy — inaczej wyjeżdża poza ekran
@@ -513,7 +513,11 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
     const k = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--ui')) || 1;
     const w = report.getBoundingClientRect().width || 340 * k;
     const left = Math.max(8, Math.min(window.innerWidth - w - 8, r.left + r.width / 2 - w / 2));
-    report.style.bottom = `${(window.innerHeight - r.top + 10) / k}px`;
+    // pasek zasobów jest na górze: okienko wyskakuje pod przyciskiem (strzałka w górę); gdy przycisk jest nisko — nad nim
+    const below = r.top < window.innerHeight / 2;
+    report.classList.toggle('below', below);
+    if (below) { report.style.top = `${(r.bottom + 12) / k}px`; report.style.bottom = 'auto'; }
+    else { report.style.bottom = `${(window.innerHeight - r.top + 10) / k}px`; report.style.top = 'auto'; }
     report.style.left = `${left / k}px`;
     report.style.right = 'auto';
     if (reportKind === 'food' && lastReport.foodHint) report.append(el('p', 'report-hint', lastReport.foodHint));
