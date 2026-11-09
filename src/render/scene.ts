@@ -1410,7 +1410,9 @@ export class GameRenderer {
 
   get stats(): { calls: number; triangles: number; geometries: number; textures: number } {
     const i = this.renderer.info;
-    return { calls: i.render.calls, triangles: i.render.triangles, geometries: i.memory.geometries, textures: i.memory.textures };
+    // WebGPU: render.calls liczy od startu gry, a drawCalls — w bieżącej klatce (zerujemy info co klatkę)
+    const r = i.render as typeof i.render & { drawCalls?: number };
+    return { calls: r.drawCalls ?? r.calls, triangles: i.render.triangles, geometries: i.memory.geometries, textures: i.memory.textures };
   }
 
   /** Kamera do zapisu i odtworzenia po odświeżeniu strony */
@@ -2798,10 +2800,11 @@ export class GameRenderer {
     const add = (k: string, v: number): void => { acc[k] = (acc[k] ?? 0) + v; };
     const seg = (name: string, fn: () => void): void => {
       gl.finish();
-      const t0 = performance.now(), c0 = info.calls, t0r = info.triangles;
+      const calls = (): number => (info as { drawCalls?: number }).drawCalls ?? info.calls;
+      const t0 = performance.now(), c0 = calls(), t0r = info.triangles;
       fn();
       gl.finish();
-      add(name, performance.now() - t0); add(name + '#w', info.calls - c0); add(name + '#t', info.triangles - t0r);
+      add(name, performance.now() - t0); add(name + '#w', calls() - c0); add(name + '#t', info.triangles - t0r);
     };
     const restore: (() => void)[] = [];
     const sm = r.shadowMap as unknown as { render: (...a: unknown[]) => void };
