@@ -2761,10 +2761,16 @@ export class GameRenderer {
     // i shadery kompilowały się drugi raz, już na żywo)
     if (this.pre.hasFresh() && tg - this.seasonPatchAt > 150) { this.seasonPatchAt = tg; for (const m of applySeason(this.scene)) this.pre.watch(m); }
     const restore = this.pre.beforeRender(this.cam.camera);
+    // macierze świata całej sceny liczone RAZ na klatkę: three.js przelicza je przy każdym render() — obraz, mapa cieni,
+    // odbicie w wodzie — a to przejście po tysiącach części budynków (pomiar w grze Michała 9.11.2026: updateMatrixWorld,
+    // compose i mnożenie macierzy to kilka ms klatki). W trakcie rysowania nic w scenie się nie przesuwa.
+    this.scene.updateMatrixWorld();
+    const autoMW = this.scene.matrixWorldAutoUpdate;
+    this.scene.matrixWorldAutoUpdate = false;
     try {
       if (!this.gpu_) this.view?.reflectWater(this.renderer, this.scene, this.cam.camera, this.bloom.enabled);
       this.present();
-    } finally { restore(); }
+    } finally { restore(); this.scene.matrixWorldAutoUpdate = autoMW; }
     const gpu = performance.now() - tg;
     this.timing['karta graficzna'] = (this.timing['karta graficzna'] ?? 0) + gpu;
     this.dynamicResolution(gpu);
