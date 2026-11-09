@@ -1314,3 +1314,4 @@ body .scribe-log { top: 112px; bottom: auto; }
 /* raport pod górnym paskiem: nad wersją i FPS, z przewijaniem, gdy długi; okno wszystkich zapasów nad wszystkim */
 .report { z-index: 62; overflow-y: auto; }
 .stock-modal { z-index: 70 !important; }
+body.menu-open .report { display: none !important; }
