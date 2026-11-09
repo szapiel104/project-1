@@ -1574,3 +1574,20 @@ html body .menu .menu-account .acc-guest .acc-btn { min-height: 46px; font: 700 
   background: radial-gradient(120% 140% at 50% 0%, #4a3020 0%, #2a190d 60%, #160c05 100%); border: 1px solid #0b0704; box-shadow: inset 0 0 0 1px #8a6a32, inset 0 0 0 3px #1a0f07, 0 3px 0 rgba(0, 0, 0, .5); }
 html body .menu .menu-account .acc-guest .acc-btn.acc-btn-main { color: #fff1c8; background: radial-gradient(120% 140% at 50% 0%, #b8382a 0%, #7e1c12 60%, #4a0c06 100%); box-shadow: inset 0 0 0 1px #f0cf72, inset 0 0 0 3px #3a0a05, 0 3px 0 rgba(0, 0, 0, .55); }
 html body .menu .menu-account .acc-guest .acc-btn:hover { filter: brightness(1.18); }
+/* logo w menu na dębowej tablicy w żelaznej oprawie, zawieszonej na dwóch łańcuszkach (Michał 9.11.2026) */
+html body .menu:not(.previewing) .menu-head > .menu-title.has-logo {
+  position: relative; box-sizing: border-box; padding: 16px 22px 14px !important; margin-top: 18px !important; border-radius: 4px;
+  background:
+    radial-gradient(circle at 12px 12px, #d8b25e 0 3px, #5a3d1c 3.5px 4.5px, transparent 5px),
+    radial-gradient(circle at calc(100% - 12px) 12px, #d8b25e 0 3px, #5a3d1c 3.5px 4.5px, transparent 5px),
+    radial-gradient(circle at 12px calc(100% - 12px), #d8b25e 0 3px, #5a3d1c 3.5px 4.5px, transparent 5px),
+    radial-gradient(circle at calc(100% - 12px) calc(100% - 12px), #d8b25e 0 3px, #5a3d1c 3.5px 4.5px, transparent 5px),
+    repeating-linear-gradient(90deg, rgba(0, 0, 0, .0) 0 38px, rgba(0, 0, 0, .18) 38px 40px),
+    radial-gradient(120% 160% at 50% 0%, #4a3020 0%, #2a190d 55%, #140b04 100%);
+  border: 1px solid #0b0704;
+  box-shadow: inset 0 0 0 2px #8a6a32, inset 0 0 0 5px #1a0f07, inset 0 0 0 6px rgba(194, 154, 69, .45), inset 0 14px 22px rgba(255, 220, 160, .07), 0 8px 22px rgba(0, 0, 0, .6) !important; }
+html body .menu:not(.previewing) .menu-head > .menu-title.has-logo::before, html body .menu:not(.previewing) .menu-head > .menu-title.has-logo::after {
+  content: ''; position: absolute; top: -20px; width: 4px; height: 20px; pointer-events: none;
+  background: repeating-linear-gradient(180deg, #c29a45 0 4px, #5a3d1c 4px 5px, #8a6a32 5px 8px, #2a1a0c 8px 9px); border-radius: 2px; }
+html body .menu:not(.previewing) .menu-head > .menu-title.has-logo::before { left: 22%; }
+html body .menu:not(.previewing) .menu-head > .menu-title.has-logo::after { right: 22%; left: auto; }
