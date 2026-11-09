@@ -22,7 +22,9 @@ P = 0.0  # kramy stoją wprost na trawie (bez placu z ziemi — Michał: „dziw
 
 # ---------------- kamienne płyty pod kramami ----------------
 for sx in (-1, 1):
-    b.box('base', 'castleDark', 1.3, 0.03, 0.98, sx * 0.72, 0.0, -0.25)   # płyty pod kramem
+    b.box('base', 'castleDark', 1.2, 0.03, 0.98, sx * 0.84, 0.0, -0.25)   # płyty pod kramem
+# środkiem rynku przejście z płyt od szyldu do kupców (Michał 9.11.2026: „żeby dało się wejść na rynek”)
+b.box('base', 'castle', 0.44, 0.025, 2.3, 0.0, 0.0, -0.05)
 
 
 def stall(cx, cz, stripe, goods):
@@ -99,11 +101,11 @@ def wares(cx, y, z):
         b.sack('base', cx + dx, P, z + 0.3, w=0.12, rot=dx * 4 + 0.5)
 
 
-stall(-0.72, -0.25, 'robeRed', food)
-stall(0.72, -0.25, 'robeBlue', wares)
+stall(-0.84, -0.25, 'robeRed', food)
+stall(0.84, -0.25, 'robeBlue', wares)
 
 # ---------------- tył placu: skrzynie i beczki kupców ----------------
-for (x, z, r, h) in ((-0.15, -1.15, 0.0, 0.26), (0.18, -1.2, 0.3, 0.22), (0.02, -1.18, 0.15, 0.2)):
+for (x, z, r, h) in ((-0.62, -1.15, 0.0, 0.26), (-0.32, -1.2, 0.3, 0.22), (-0.5, -1.18, 0.15, 0.2)):
     yb = P if h != 0.2 else P + 0.26
     b.box('base', 'wood', 0.3, h, 0.26, x, yb, z, rot=r)
     b.box('base', 'woodDark', 0.31, 0.02, 0.27, x, yb + h, z, rot=r)
@@ -114,15 +116,15 @@ for (x, z) in ((1.25, -1.15), (1.1, -0.85)):
     b.prism('base', 'woodDark', 0.1, 0.1, 0.01, x, P + 0.32, z, seg=14)
 
 # ---------------- przód: słup z szyldem (złota moneta na desce) ----------------
-SX, SZ = -0.15, 1.15
+SX, SZ = -0.3, 1.15   # deska szyldu na środku rynku, nad przejściem (Michał 9.11.2026: „tabliczka nie na środku”)
 log(b, 'base', 'woodDark', (SX, P, SZ), (SX, 0.86, SZ), r=0.035, seg=8)
-log(b, 'base', 'woodDark', (SX - 0.02, 0.8, SZ), (SX + 0.4, 0.8, SZ), r=0.022, seg=6)   # ramię
-for x in (SX + 0.15, SX + 0.33):
+log(b, 'base', 'woodDark', (SX - 0.02, 0.8, SZ), (SX + 0.48, 0.8, SZ), r=0.022, seg=6)   # ramię
+for x in (SX + 0.18, SX + 0.42):
     b.box('base', 'iron', 0.008, 0.06, 0.008, x, 0.73, SZ)                                  # łańcuszki
-b.box('base', 'plank', 0.28, 0.18, 0.03, SX + 0.25, 0.55, SZ)                               # deska szyldu
+b.box('base', 'plank', 0.3, 0.18, 0.03, SX + 0.3, 0.55, SZ)                               # deska szyldu
 # na desce bryła rudy (waluta gry, ten sam materiał co ruda w kopalni i na kapliczce), spłaszczona i przybita pionowo
 # do lica deski, a obok dwa mniejsze okruchy (Michał 30.10.2026: „ruda w szyldzie, ale pionowo”)
-CX, CY = SX + 0.25, 0.64
+CX, CY = SX + 0.3, 0.64
 b.crystal('base', 'magicOre', CX, CY, SZ + 0.03, 0.068, seed=2.3, sx=1.25, sy=1.05, sz=0.32, seg=7)
 b.crystal('base', 'magicOre', CX - 0.1, CY - 0.05, SZ + 0.026, 0.03, seed=5.1, sx=1.0, sy=0.9, sz=0.35, seg=6)
 b.crystal('base', 'magicOre', CX + 0.1, CY - 0.045, SZ + 0.026, 0.026, seed=7.7, sx=1.0, sy=1.1, sz=0.35, seg=6)
