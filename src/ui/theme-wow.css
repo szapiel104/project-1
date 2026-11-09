@@ -1477,3 +1477,14 @@ body.hide-fps:not(.menu-open) .build { right: 126px !important; }
 /* rynek na całą szerokość ekranu (Michał 9.11.2026) */
 #ui .market-panel, .market-panel { left: 13px; right: 13px; width: auto; }
 .market-panel .market-tile { grid-template-columns: minmax(0, 1fr) minmax(170px, 260px) minmax(170px, 260px) !important; }
+/* nagłówki kart grubsze i bardziej jak w RPG (Michał 9.11.2026): wersaliki z rozstrzeleniem, „wyryte” w pergaminie,
+   z romboidalnym ozdobnikiem i kreską do prawej krawędzi karty */
+#ui .info:not(.is-person):not(.army-mode) :is(.stock-title, .logi-head, .prod-head, .site-head) :is(strong, strong *),
+.market-panel .market-group-title {
+  font-size: 15px !important; font-weight: 800 !important; letter-spacing: .1em !important; text-transform: uppercase !important;
+  color: #4a2a10 !important; text-shadow: 0 1px 0 rgba(255, 248, 225, .8), 0 -1px 0 rgba(60, 30, 5, .25) !important; }
+#ui .info:not(.is-person):not(.army-mode) :is(.stock-head2, .logi-head) { position: relative; padding-bottom: 6px !important; margin-bottom: 10px !important; }
+#ui .info:not(.is-person):not(.army-mode) :is(.stock-head2, .logi-head)::after { content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 2px;
+  background: linear-gradient(90deg, #8a5a1c, rgba(138, 90, 28, .5) 60%, transparent); }
+#ui .info:not(.is-person):not(.army-mode) :is(.stock-title, .logi-head) > strong::before { content: '◆'; margin-right: 8px; font-size: 10px; vertical-align: 2px; color: #a8781e; }
+#ui .info:not(.is-person):not(.army-mode) .info-head .info-name, .market-panel .market-title { font-weight: 800 !important; letter-spacing: .02em; text-shadow: 0 1px 0 rgba(255, 248, 225, .8) !important; }
