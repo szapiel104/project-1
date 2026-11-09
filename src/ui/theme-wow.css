@@ -993,3 +993,4 @@ html body .info .icon-act { background: linear-gradient(#3a2614, #24160c) !impor
 #ui .info:not(.is-person):not(.army-mode) .prod-rows { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 #ui .info:not(.is-person):not(.army-mode) .prod-stat { grid-template-columns: auto 1fr; align-items: baseline; column-gap: 12px; }
 #ui .info:not(.is-person):not(.army-mode) .prod-stat strong { font-size: 22px; white-space: nowrap; }
+#ui .info:not(.is-person):not(.army-mode) .prod-stat { min-height: 50px; align-content: center; align-items: center; }
