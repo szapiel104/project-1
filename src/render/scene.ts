@@ -2121,6 +2121,7 @@ export class GameRenderer {
   private handTip = new THREE.Object3D();
   private handFlameTime = { value: 0 };
   private lodTick = 0;
+  private lodAt = { x: 1e9, z: 1e9, d: 0 };
   private torchOn = false;
   /** Ciepłe światło kominków i koszy z ogniem w salach zamku (włączone, gdy spacerowicz jest pod dachem) */
   private roomLight!: THREE.PointLight;
@@ -2691,7 +2692,12 @@ export class GameRenderer {
       T('animacje', () => { this.animate(g, this.calm ? 0 : dt); if (!this.calm) v.animate(this.time); });
       T('las', () => this.syncForest(g, v));
       { const f = this.focusPoint; v.updateGrass(f.x, f.z, this.calm ? 0 : this.time, this.walk ? 0 : this.cam.distance); }
-      if (this.lodTick++ % 10 === 0) { const f = this.focusPoint; v.lod(f.x, f.z, this.walk ? 0 : Math.max(0, this.cam.distance - 30) * 0.35, this.walk ? 1 : this.detail, !!this.walk); }
+      // szczegóły terenu (drobiazgi, dalekie drzewa) liczone co 10 klatek — ale gdy kamera się przesunęła albo zbliżyła,
+      // od razu: przy 30 FPS 10 klatek to 1/3 s, w której przy przesuwaniu widać, jak rzeczy „doczytują się” (Michał 9.11.2026)
+      const ff = this.focusPoint, fd = this.walk ? 0 : this.cam.distance;
+      const moved = Math.abs(ff.x - this.lodAt.x) + Math.abs(ff.z - this.lodAt.z) > 1.5 || Math.abs(fd - this.lodAt.d) > 1.5;
+      if (moved) { this.lodAt.x = ff.x; this.lodAt.z = ff.z; this.lodAt.d = fd; }
+      if (this.lodTick++ % 10 === 0 || moved) { const f = this.focusPoint; v.lod(f.x, f.z, this.walk ? 0 : Math.max(0, this.cam.distance - 30) * 0.35, this.walk ? 1 : this.detail, !!this.walk); }
       T('drogi', () => this.syncRoads(g, v));
       T('gruz', () => this.rubble.sync(g, v, dt));
       T('groby', () => this.graves.sync(g, v));

@@ -39,7 +39,7 @@ const WATERFALLS = false;
 import { buildRockGeometry, rockDisplacer } from './rockmesh';
 import { GroundDetail } from './groundDetail';
 import { rockMaterial, rocks0ad } from './rocks0ad';
-import { desertPlants, plantMaterial, type PlantKind } from './desert0ad';
+import { desertPlants, plantMaterial, type Plant, type PlantKind } from './desert0ad';
 
 const HEIGHT_SCALE = 0.03;
 const smoothstep = (a: number, b: number, x: number): number => { const t = Math.max(0, Math.min(1, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
@@ -1511,28 +1511,39 @@ function* terrainSteps(map: GameMap, models: ModelFactory, waterLevel: number): 
   const trees = new Map<number, { meshes: Inst[]; index: number; item: Item; kind?: TreeKind }[]>();
   const stumpItems: Item[] = [];
   const stumpOf = new Map<Item, number>();
-  const plant = (list: Item[], trunk: Inst | null, crown: Inst | null, stump = true, kind?: TreeKind): void => {
+  const plant = (list: Item[], trunk: Inst | null, crown: Inst | null, stump: boolean | Set<Item> = true, kind?: TreeKind): void => {
     list.forEach((item, index) => {
       const here = trees.get(item.tile) ?? [];
       here.push({ meshes: [trunk, crown].filter((x): x is Inst => !!x), index, item, kind });
       trees.set(item.tile, here);
-      if (stump) { stumpOf.set(item, stumpItems.length); stumpItems.push(item); }
+      if (stump === true || (stump instanceof Set && stump.has(item))) { stumpOf.set(item, stumpItems.length); stumpItems.push(item); }
     });
   };
   const trunkItems = new Set<Item>([...pines, ...leafy]);
-  /** Rośliny pustyni z 0 A.D.: odmiana (kształt i tekstura) stała dla miejsca; jedna pula na parę kształt+tekstura */
+  /**
+   * Rośliny pustyni z 0 A.D.: odmiana (kształt i tekstura) stała dla miejsca. Wszystkie wywołania zbierają rośliny
+   * do jednej puli na trójkę kształt+tekstura+cień, a rysujemy je dopiero w flushDesert() — wcześniej każda kopia
+   * odmiany na liście (palma ×6 dla częstości) i każde wywołanie (oazy, pojedyncze palmy) miały własną pulę, czyli
+   * osobne rysowanie tego samego: 73 rysowania palm na klatkę (Michał 9.11.2026: 30 FPS na pustyni)
+   */
+  const desertBins = new Map<string, { p: Plant; tx: string; shadow: boolean; items: Item[]; stumps: Set<Item> }>();
   const plantDesert = (list: Item[], kinds: PlantKind[], salt: number, shadow: boolean, stump: boolean): void => {
     if (!list.length) return;
     const all = desertPlants();
     const pool = kinds.flatMap((k) => all.filter((p) => p.kind === k).flatMap((p) => p.tex.map((tx) => ({ p, tx }))));
     if (!pool.length) return;
-    const split = new Map<number, Item[]>();
     for (const it of list) {
       const i = hash2(Math.round(it.pos.x * 10) + salt * 101, Math.round(it.pos.z * 10), 0xd35e) % pool.length;
-      (split.get(i) ?? split.set(i, []).get(i)!).push(it);
-    }
-    for (const [i, sub] of split) {
       const { p, tx } = pool[i]!;
+      const key = `${p.name}|${tx}|${shadow ? 1 : 0}`;
+      let bin = desertBins.get(key);
+      if (!bin) { bin = { p, tx, shadow, items: [], stumps: new Set() }; desertBins.set(key, bin); }
+      bin.items.push(it);
+      if (stump) bin.stumps.add(it);
+    }
+  };
+  const flushDesert = (): void => {
+    for (const { p, tx, shadow, items, stumps } of desertBins.values()) {
       const mat = plantMaterial(tx);
       if (!mat.userData.wind) {
         mat.userData.wind = true;
@@ -1541,8 +1552,9 @@ function* terrainSteps(map: GameMap, models: ModelFactory, waterLevel: number): 
         else windCrown(mat, 0.06, `wind-oad-${tx}`, 0.02);
       }
       label = p.kind === 'palm' || p.kind === 'deadpalm' ? 'drzewa: palmy' : 'roślinność pustyni';
-      plant(sub, instanced(p.geo, 0xffffff, sub, undefined, shadow, mat, undefined, 16), null, stump);
+      plant(items, instanced(p.geo, 0xffffff, items, undefined, shadow, mat, undefined, 16), null, stumps);
     }
+    desertBins.clear();
   };
   label = 'drzewa: pnie';
   /** drzewa jednej roli rozdzielone na odmiany: pień (bryła) i korona (karty), każda odmiana osobną pulą */
@@ -1719,6 +1731,7 @@ function* terrainSteps(map: GameMap, models: ModelFactory, waterLevel: number): 
     plantDesert(dBush, ['bush', 'drybush', 'desertplant'], 7, false, false);
     plantDesert(dGrass, ['grass', 'grass', 'drybush'], 8, false, false);
   }
+  if (DESERT) flushDesert();
   label = 'kępy trawy';
   plant(tufts, instanced(grassCards(), 0xffffff, tufts, undefined, false, grassMat, SMALL_LOD), null, false);
   {
