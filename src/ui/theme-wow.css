@@ -1414,3 +1414,5 @@ body.hide-fps:not(.menu-open) .build { right: 126px !important; }
 .market-panel .market-line .mb-price svg { width: 13px; height: 13px; }
 .market-panel .market-group-title { margin: 12px 0 6px; }
 .market-panel .market-purse b { font-size: 16px; }
+.market-panel .market-info .info :is(.logi-head, .logi-head *, .keeper-count, .hp-line > span:first-child) { color: #3b2512 !important; text-shadow: none !important; }
+.market-panel .market-info .info .info-crew { background: none !important; box-shadow: none !important; padding: 0 !important; }
