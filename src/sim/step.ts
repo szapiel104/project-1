@@ -24,7 +24,7 @@ import { decaySystem } from './systems/decay';
 import { storageSystem } from './systems/storage';
 import { syncStock } from './systems/stock';
 import { torchSystem } from './systems/torches';
-import { workerSystem } from './systems/workers';
+import { wakeBuilders, workerSystem } from './systems/workers';
 import { emergencyWoodSystem } from './systems/emergencywood';
 import { plagueSystem, setQuarantine } from './systems/plague';
 import { stormSystem } from './systems/storms';
@@ -113,7 +113,7 @@ function apply(g: GameState, c0: Command): void {
       break;
     }
     case 'build':
-      if (Number.isInteger(c.x) && Number.isInteger(c.y)) placeBuilding(g, c.player, buildingIndex(c.building), c.x, c.y, Number.isInteger(c.rot) ? ((c.rot! % 4) + 4) % 4 : 0);
+      if (Number.isInteger(c.x) && Number.isInteger(c.y) && placeBuilding(g, c.player, buildingIndex(c.building), c.x, c.y, Number.isInteger(c.rot) ? ((c.rot! % 4) + 4) % 4 : 0)) wakeBuilders(g, c.player);
       break;
     case 'demolish':
       demolish(g, c.player, c.id);

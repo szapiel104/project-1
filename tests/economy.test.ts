@@ -619,19 +619,26 @@ describe('rytm dnia', () => {
 
 describe('rytm dnia: poprawki', () => {
   const at = (g: GameState, h0: number, h1: number): void => { while (!(clockAt(g.tick).hour >= h0 && clockAt(g.tick).hour < h1)) step(g, []); };
-  it('nocą nikt nie buduje ani nie czeka pod pustym składem, rano budowa rusza dalej', () => {
+  it('budowa postawiona nocą: trzech wstaje i buduje, reszta śpi; po skończeniu wracają spać', () => {
     const g = feed(createGame(5));
-    at(g, 20, 21);
-    step(g, [build(g, 'house')]); // postawiona wieczorem: nikt jej nie zacznie przed rankiem
+    at(g, 23, 23.5);
+    step(g, [build(g, 'house')]); // postawiona nocą (Michał 9.11.2026): paru chłopów wstaje i buduje
     const site = g.buildings[g.buildings.length - 1]!;
     const work = site.build;
-    at(g, 4, 4.6);
-    // śpią albo (nocne marki) wracają spać — nikt nie pracuje
-    expect(g.units.filter((u) => u.owner === 0).every((u) => u.phase === Phase.Sleeping || u.phase === Phase.ToSleep || u.phase === Phase.Evening)).toBe(true);
-    at(g, 5, 5.4);
-    expect(site.build).toBe(work);
-    at(g, 10, 11);
+    const crew = g.units.filter((u) => u.owner === 0 && u.nightShift);
+    expect(crew.length).toBe(3);
+    at(g, 3, 3.5);
+    // budują tylko oni, reszta śpi albo (nocne marki) siedzi jeszcze przy ogniu
     expect(site.build).toBeLessThan(work);
+    const rest = g.units.filter((u) => u.owner === 0 && !crew.includes(u));
+    expect(rest.every((u) => u.phase === Phase.Sleeping || u.phase === Phase.ToSleep || u.phase === Phase.Evening || u.phase === Phase.ToEvening)).toBe(true);
+  });
+  it('wieczorem bez nowej budowy nikt nie buduje ani nie czeka pod pustym składem', () => {
+    const g = feed(createGame(5));
+    at(g, 10, 10.2);
+    step(g, [build(g, 'house')]); // postawiona za dnia: wieczorem robota staje, nikt nie zostaje na nocną zmianę
+    at(g, 4, 4.6);
+    expect(g.units.filter((u) => u.owner === 0).every((u) => !u.nightShift && (u.phase === Phase.Sleeping || u.phase === Phase.ToSleep || u.phase === Phase.Evening))).toBe(true);
   });
   it('nocą nikt nie je: zapasy jedzenia stoją od 22 do 5:30', () => {
     const g = feed(createGame(5));

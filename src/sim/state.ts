@@ -356,6 +356,8 @@ export interface Unit {
   chop?: number;
   /** Bunt głodowy: 1 = rzucił robotę i stoi pod twierdzą (jego budynek stoi bez rąk do pracy) */
   riot?: number;
+  /** Nocna zmiana: budowę postawiono nocą, więc ten chłop wstał i buduje do tego ticku (albo do końca budów) */
+  nightShift?: number;
   /** Długi bunt: buntownik idzie z tłumem na napad na ten budynek (skład albo spichlerz), potem wraca pod bramę */
   raid?: number;
   /** Zaraza: tick, w którym choroba minie (brak = zdrowy). Do `sickFrom` choroba się wylęga — chłop pracuje, ale już zaraża;

@@ -390,6 +390,8 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
   // kolejność: drewno, kamień, ruda, jedzenie razem, potem tyle kolejnych zapasów, ile zmieści się w pasku,
   // a reszta w wysuwanej listwie nad paskiem (przycisk „…”)
   for (const id of MAIN_RES) resList.append(resItems[RESOURCES.indexOf(id)]!);
+  // ruda pierwsza, kryształ zaraz za nią (Michał 9.11.2026)
+  { const ore = resItems[RESOURCES.indexOf('gold')]!, cr = resItems[RESOURCES.indexOf('crystal' as ResourceId)]; resList.prepend(ore); if (cr && cr.parentElement === resList) ore.after(cr); }
   resList.append(foodSum);
   const extra = el('ul', 'res res-extra');
   extra.setAttribute('aria-label', tx('Pozostałe zapasy', 'Other supplies'));

@@ -1619,10 +1619,10 @@ function repairSystem(g: GameState): void {
     }
     let crew = 0;
     for (const u of g.units) if (u.target === b.id && (u.phase === Phase.ToRepair || u.phase === Phase.Repairing || u.phase === Phase.ToFetch)) crew++;
-    // wieczorem i nocą nikt nie zaczyna budowy, rano wrócą
-    if (dayPart(g.tick) !== 'work') continue;
+    // wieczorem i nocą budują tylko ci z nocnej zmiany (budowa postawiona nocą — workers.ts wakeBuilders), rano wrócą wszyscy
+    const night = dayPart(g.tick) !== 'work';
     while (crew < 3) {
-      const u = g.units.find((x) => x.owner === b.owner && x.job === 0 && x.phase === Phase.Idle && x.carryRes < 0) ?? spareKeeper(g, b.owner);
+      const u = g.units.find((x) => x.owner === b.owner && x.job === 0 && x.phase === Phase.Idle && x.carryRes < 0 && (!night || (x.nightShift ?? 0) > g.tick)) ?? (night ? undefined : spareKeeper(g, b.owner));
       if (!u) break;
       // najpierw do składu po materiał (o ile jest jeszcze co nosić), potem na plac
       if (!sendForMaterial(g, u, b)) { u.target = b.id; u.phase = Phase.ToRepair; u.path = []; }

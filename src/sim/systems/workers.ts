@@ -70,6 +70,24 @@ export function nightOwl(u: { id: number }): number {
   return u.id % 7 === 3 ? 3 : u.id % 4 === 1 ? 1 : 0;
 }
 
+/**
+ * Budowa postawiona nocą (Michał 9.11.2026: „ktoś się budzi i buduje parę osób w nocy”): trzech wolnych chłopów
+ * wstaje z posłania albo od ogniska i idzie budować. Pracują do rana albo do końca wszystkich budów tego gracza.
+ * Bot stawia budowy tym samym rozkazem, więc u niego też ktoś wstaje.
+ */
+export const NIGHT_CREW = 3;
+export function wakeBuilders(g: GameState, owner: number): void {
+  if (dayPart(g.tick) === 'work') return;
+  const until = g.tick + Math.round(RULES.dayTicks / 4);
+  let have = g.units.filter((u) => u.owner === owner && (u.nightShift ?? 0) > g.tick).length;
+  for (const u of g.units) {
+    if (have >= NIGHT_CREW) break;
+    if (u.owner !== owner || u.job || u.sick || u.riot || u.enlist || u.bucket || (u.nightShift ?? 0) > g.tick) continue;
+    u.nightShift = until;
+    have++;
+  }
+}
+
 /** Pora dnia dla rytmu ludzi: praca, wieczór przy ogniu, sen */
 export function dayPart(tick: number): 'work' | 'evening' | 'sleep' {
   const { hour } = clockAt(tick);
@@ -693,6 +711,9 @@ export function workerSystem(g: GameState): void {
       if (wet) { p.cold = (p.cold ?? 0) + 1; u.hp = Math.max(10, (u.hp ?? 30) - 8); }
     }
   }
+  // nocna zmiana trwa, dopóki gracz ma choć jedną budowę
+  const building = new Set<number>();
+  if (part !== 'work') for (const b of g.buildings) if (b.build && !b.ruined) building.add(b.owner);
   for (const u of g.units) {
     // magowie (chatka maga, siedziby zakonów): prowadzi ich plagueSystem — chodzą do chorych, nie śpią i nie idą do ogniska
     if (u.job && !u.enlist && mageKindOf(byId.get(u.job)?.type ?? -1)) continue;
@@ -711,7 +732,9 @@ export function workerSystem(g: GameState): void {
       u.phase = Phase.ToSleep; u.path = []; u.timer = 0; u.target = 0; u.carryRes = -1; u.carryAmt = 0; u.foe = undefined; u.foeU = undefined;
       findBed(g, u);
     }
-    if (!bedridden && !u.path.length && routine(g, u, part) && (u.phase === Phase.Sleeping || u.phase === Phase.Evening)) continue;
+    if (u.nightShift && (u.nightShift <= g.tick || part === 'work' || !building.has(u.owner))) u.nightShift = undefined;
+    const upart = u.nightShift ? 'work' : part;
+    if (!bedridden && !u.path.length && routine(g, u, upart) && (u.phase === Phase.Sleeping || u.phase === Phase.Evening)) continue;
     if (u.phase === Phase.Evening || u.phase === Phase.Sleeping) continue;
     // rąbie z biedy (emergencywood.ts): w drodze krok robi zwykły move niżej
     if (u.chop && !u.job && chopStep(g, u)) continue;
