@@ -1,5 +1,14 @@
 # Dziennik zmian
 
+## 0.94.93 — 2026-11-10
+- Zbrojownia i koszary od nowa (`tools/models/stonehall.py`, `armory.py`, `barracks.py`): kamień muru ('castle'), dach na koronie muru (1,14), nierówne blanki, narożne wypusty, schody na dach, łuk wejścia jako ciągła bryła, komin; bez placu z ziemi (zasada w CLAUDE.md). Mechanika bez zmian (bot jak dotąd).
+- Wydajność: jeden materiał na wzór tekstury i jeden dla gładkich barw (`PLAIN_KEYS`, `patMat`, barwa w kolorach wierzchołków; `?gladkie=0` po staremu): 136 → 95 paczek budynków. Wnętrza w osobnych paczkach bez cienia i odbicia. Próba zlepiania wnętrz w kawałki mapy (`chunkMerge.ts`) wyłączona (`?kawalki=1`). Plan i pomiary: `docs/optymalizacja-budynkow.md`; `__bench()`, `__batches()`, `__debugDraw`.
+- Pustynia: roślinność i kamyki wg odległości od oazy (`greenDist`), głazy 1/420 pól.
+- Ogień: bryły 'ember' zastąpione żarem i znacznikami `lamps`/`campfires` (z wielkością) w keep/shrine/tavern/brewery.
+- Spacer: wnętrza zawsze widoczne, dach w spacerze zostaje (poza sufitem sali), lampy wnętrz w dzień; sad/ognisko/droga drewniana.
+- Nowa gra: lekka rozgrzewka shaderów podglądu (`warmup({light})`).
+- Podgląd modeli: edytor poprawek (`src/ui/modelEditor.ts`, `src/render/modelfix.ts`, tabela `model_fixes`, `tools/models/pull_fixes.mjs`, `src/data/modelFixes.json`) — tylko dla twórcy; WASD, zwijany panel. Lokalnie: druga linijka przy wersji (dev/main, `/__git.json`).
+
 ## 0.94.92 — 2026-11-09
 - Wydajność: hover (pickBuilding + pick terenu) raz na klatkę w flushHover, w ruchu co 3. klatkę, budynki odsiewane kulą (cullSphere); MaterialBatches chowa budynki poza kadrem i mapą cieni (setVisibleAt, stałe numery sztuk); stateHash raz na sekundę; lustro wody tylko z wodą w kadrze (reflectGate); macierze sceny raz na klatkę przed paczkami; szczegóły terenu w ruchu co 3. klatkę.
 - Kamera: stała wysokość lotu (gy z lookAt), wygładzona wysokość kamery; cienie: shadowForce po setGraphics (Destroyed texture ShadowDepthTexture), w ruchu kamery co klatkę.

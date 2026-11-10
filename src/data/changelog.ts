@@ -9,6 +9,25 @@ export type { ChangeEntry } from './changelogTypes';
  * — tak jak CHANGELOG.md dla nas. `tests/changelog.test.ts` pilnuje, że najnowszy wpis ma wersję z package.json.
  */
 const NEW: ChangeEntry[] = [
+  { v: '0.94.93', date: '2026-11-10', pl: [
+    'Nowa zbrojownia i koszary: kamienne jak mury obronne, z blankami i narożnymi wypustami na dachu, schodami na dach, łukowym wejściem z pochodniami i porządnym kominem; w środku stojaki z bronią, tarcze, prycze, stół i kominek.',
+    'Szybsza gra w dużej osadzie: budynki rysują się mniejszą liczbą materiałów (te same tekstury w różnych barwach są jednym materiałem), wnętrza nie rzucają już cienia ani odbicia w wodzie.',
+    'Pustynia: krzewy, trawy, patyki i kamienie gęsto tylko przy oazach, na gołym piachu z rzadka; mniej głazów.',
+    'Bez brył ognia w zamku, kaplicy, karczmie i browarze: w paleniskach żar z popiołem, płomienie i płomyki świec rysuje gra.',
+    'Chata: skrzynka z kwiatami z desek, ziemi, liści i płatków.',
+    'Spacer: wnętrza budynków widać zawsze (także z zewnątrz przez drzwi), dach zostaje na miejscu, światła palą się, zanim wejdziesz; w sadzie nie przycina, do ogniska da się podejść.',
+    'Podgląd mapy w Nowej grze nie zacina interfejsu.',
+    'Podgląd modeli: wnętrza widoczne, latanie kamerą WASD, zwijana lista modeli.',
+  ], en: [
+    'A new armoury and barracks: built of stone like the curtain walls, with crenellations and corner turrets on the roof, stairs up to the roof, an arched doorway lit by torches and a proper chimney; inside, weapon racks, shields, bunks, a table and a hearth.',
+    'Smoother play in a large settlement: buildings are drawn with far fewer materials (one texture in different shades is now a single material), and interiors no longer cast sun shadows or show in water reflections.',
+    'Desert: shrubs, grass, dead branches and pebbles grow thickly only around oases, sparse on open sand; fewer boulders.',
+    'No more solid flames in the keep, chapel, tavern and brewery: hearths hold glowing embers and ash, and the game draws the flames and candle lights.',
+    'Cottage: a window box of planks, soil, leaves and petals.',
+    'Walking: building interiors are always there (also seen from outside through the door), the roof stays on, lights are lit before you step in; no stutter in the orchard, and you can walk up to the campfire.',
+    'The map preview in New Game no longer freezes the interface.',
+    'Model viewer: interiors shown, WASD camera flight, a foldable model list.',
+  ] },
   { v: '0.94.92', date: '2026-11-09', pl: [
     'Płynniejsza kamera: lot myszą i klawiaturą nie zjada już klatek (podświetlenie pod kursorem liczone raz na klatkę), budynki poza ekranem i poza cieniami nie są rysowane, odbicie wody liczy się tylko z wodą w kadrze.',
     'Kamera leci prosto na stałej wysokości, bez podskakiwania na pagórkach.',
