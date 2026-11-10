@@ -52,7 +52,12 @@ Wynik wpisać pod partią (data, fps / med / wywołania / trójkąty).
   budynku i sklejone). Przeliczenie kawałka tylko, gdy zmieni się lista budynków w nim (postawiony, zburzony, ruina,
   plac budowy) — z opóźnieniem do następnej klatki i w kawałkach po jednym na klatkę. W `syncMatBatches` części wnętrz
   zlepionych budynków nie idą już do paczek. Sprawdzić: kliknięcie, spacer w izbie, budowa i burzenie (bez mrugania).
-- [ ] **3. (NOWY KIERUNEK, zamiast zlepiania) Mniej materiałów:** policzyć, ile różnych materiałów mają budynki
+- [~] **3. (NOWY KIERUNEK, zamiast zlepiania) Mniej materiałów:** 10.11.2026 krok 1: gładkie materiały z `M`
+  (żelazo, wosk, złoto, mięso…) → jeden biały materiał + barwa w kolorze wierzchołków (`PLAIN_KEYS`, `?gladkie=0`
+  po staremu). Paczek 133 → 122. Reszta „białych” paczek to rekwizyty ze skanów (jabłka, chleb, worki, beczki…)
+  w spiżarniach i wnętrzach — każdy ze swoją teksturą, po 1–18 sztuk; do scalenia potrzebny atlas / tablica tekstur
+  (następny krok). Dalej: te same tekstury z różną barwą (deski jasne/ciemne, kamień, płótno) → jeden materiał na wzór.
+  Opis: policzyć, ile różnych materiałów mają budynki
   w paczkach (dziś ~136 paczek, ~53 barwy) i skąd różnice (te same tekstury z inną barwą, warianty z cieniem i bez,
   różne układy atrybutów). Najpierw tanie scalenia: barwa materiału → kolor wierzchołków (jak w lod.ts), jeden wariant
   cienia, ujednolicone atrybuty. Potem ewentualnie wspólny materiał z tablicą tekstur.
