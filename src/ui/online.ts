@@ -2,7 +2,7 @@ import { MAP_PRESETS, type MapPresetId } from '../data/maps';
 import { TEAM_COLORS } from '../data/teams';
 import { Lockstep } from '../net/lockstep';
 import {
-  closeMyStaleRooms, createRoom, onInvite, onlinePlayers, onPresence, setStatus, deleteRoom, getRoom, listRooms, myAwards, myRecord, myResults, ranking, me, progress, levelsOf, knownLevel, restore, roomLink, isAdmin, reloadMe, setAvatar, setNick, setPassword, signIn, signOut, signUp, updateRoom, watchRooms,
+  closeMyStaleRooms, createRoom, onInvite, onlinePlayers, onPresence, setStatus, deleteRoom, getRoom, listRooms, myAwards, myRecord, myResults, ranking, me, progress, levelsOf, knownLevel, restore, roomLink, isAdmin, reloadMe, setAvatar, setNick, setPassword, sendReset, onPasswordRecovery, signIn, signOut, signUp, updateRoom, watchRooms,
   type Invite, type Member, type NetMsg, type Room, type RoomLink, type Slot,
 } from '../net/supa';
 import { avatarSvg, CHARGE_NAMES, CREST_CHARGES, crestPreview, decodeCrest, DIVISIONS, encodeCrest, TINCTURES, type Crest } from './avatars';
@@ -92,7 +92,9 @@ export function createOnline(ui: Ui): { showOnline(): void; showAccount(): void;
     const note = msg(info, !!info && !info.startsWith(tx('Konto', 'Account')));
     const go = el('button', 'menu-btn', register ? tx('Załóż konto', 'Create account') : tx('Zaloguj', 'Sign in')); go.type = 'submit';
     const swap = button(register ? tx('Mam już konto — zaloguj', 'I already have an account — sign in') : tx('Nie mam konta — zarejestruj', 'No account yet — register'), () => showLogin(!register, '', then), 'link-btn net-swap');
-    form.append(we, wp, wn, note, go, swap);
+    const forgot = button(tx('Nie pamiętam hasła', 'I forgot my password'), () => showForgot(email.value.trim()), 'link-btn net-swap');
+    forgot.hidden = register;
+    form.append(we, wp, wn, note, go, swap, forgot);
     form.addEventListener('submit', async (e) => {
       e.preventDefault(); go.disabled = true; note.textContent = tx('Chwila…', 'One moment…'); note.classList.remove('bad');
       const err = register ? await signUp(email.value.trim(), pass.value, nick.value) : await signIn(email.value.trim(), pass.value);
@@ -103,6 +105,46 @@ export function createOnline(ui: Ui): { showOnline(): void; showAccount(): void;
     });
     screen(register ? tx('Nowe konto', 'New account') : tx('Logowanie', 'Sign in'), false, form, back());
   }
+
+  /** Nie pamiętam hasła: mail z linkiem do ustawienia nowego */
+  function showForgot(prefill = ''): void {
+    cleanup();
+    const form = el('form', 'menu-form net-form');
+    const [we, email] = field('E-mail', 'email', 'email');
+    email.required = true; email.value = prefill;
+    const note = msg(tx('Wyślemy link do ustawienia nowego hasła.', 'We will send you a link to set a new password.'));
+    const go = el('button', 'menu-btn', tx('Wyślij link', 'Send link')); go.type = 'submit';
+    form.append(we, note, go);
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault(); go.disabled = true; note.textContent = tx('Chwila…', 'One moment…'); note.classList.remove('bad');
+      const err = await sendReset(email.value.trim());
+      go.disabled = false;
+      if (err) { note.textContent = err; note.classList.add('bad'); return; }
+      note.textContent = tx('Wysłane. Otwórz link z maila (sprawdź też spam) — wrócisz tu i ustawisz nowe hasło.', 'Sent. Open the link in the e-mail (check spam too) — you will come back here to set a new password.');
+    });
+    screen(tx('Nie pamiętam hasła', 'Forgotten password'), false, form, back(() => showLogin(false)));
+  }
+  /** Po kliknięciu linku z maila: nowe hasło */
+  function showNewPassword(): void {
+    cleanup();
+    const form = el('form', 'menu-form net-form');
+    const [wp, pass] = field(tx('Nowe hasło (min. 6 znaków)', 'New password (min. 6 characters)'), 'password', 'new-password');
+    pass.required = true;
+    const note = msg('');
+    const go = el('button', 'menu-btn', tx('Ustaw hasło', 'Set password')); go.type = 'submit';
+    form.append(wp, note, go);
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault(); go.disabled = true;
+      const err = await setPassword(pass.value);
+      go.disabled = false;
+      if (err) { note.textContent = err; note.classList.add('bad'); return; }
+      await restore();
+      note.textContent = tx('Hasło zmienione — jesteś zalogowany.', 'Password changed — you are signed in.');
+      setTimeout(() => ui.showMain(), 1200);
+    });
+    screen(tx('Nowe hasło', 'New password'), false, form, back());
+  }
+  onPasswordRecovery(() => showNewPassword());
 
   // ---------------- „Mój ród”: pan na zamku — wizytówka, cel, przegląd, kronika meczów i herb ----------------
   /** Małe ikony odznak (rysowane, bez emoji) */

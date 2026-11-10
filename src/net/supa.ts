@@ -204,6 +204,17 @@ export async function setNick(nick: string): Promise<string | null> {
   return null;
 }
 
+/** Reset hasła (Michał 10.11.2026: „nie ma przypomnij hasło”): mail z linkiem; po kliknięciu wraca do gry i pyta o nowe hasło */
+export async function sendReset(email: string): Promise<string | null> {
+  if (!/.+@.+\..+/.test(email)) return tx('Wpisz e-mail konta.', 'Enter your account e-mail.');
+  const { error } = await supa.auth.resetPasswordForEmail(email, { redirectTo: `${location.origin}${location.pathname}` });
+  return error ? plErr(error.message) : null;
+}
+/** Przyszło z linku resetu hasła z maila (Supabase: zdarzenie PASSWORD_RECOVERY) */
+export function onPasswordRecovery(f: () => void): void {
+  supa.auth.onAuthStateChange((ev, s) => { if (ev === 'PASSWORD_RECOVERY') { session = s; f(); } });
+}
+
 export async function setPassword(password: string): Promise<string | null> {
   if (password.length < 6) return tx('Hasło musi mieć co najmniej 6 znaków.', 'Password must be at least 6 characters.');
   const { error } = await supa.auth.updateUser({ password });
