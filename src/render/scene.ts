@@ -116,6 +116,7 @@ import { MaterialQuality, makeEnvironment, msaaSamples, sharpenPass, type AaMode
 import { spearThrust, bowShot, deathKind, swordCombo, axeChop } from './combatanim';
 import { sadMaterial, sickMaterial, noWorkerMaterial } from './marks';
 import { MERGE_IN, BATCH_LAYER, mergeStatic } from './merge';
+import { ChunkMerge, type MergeCandidate, type MergePart } from './chunkMerge';
 import { MaterialBatches } from './buildingBatch';
 import { rockMaterial } from './rocks0ad';
 /** Nazwane grupy budynku rysowane razem z innymi budynkami tego samego rodzaju (syncBatches): pochodnia, dalekie wersje */
@@ -1305,6 +1306,7 @@ export class GameRenderer {
     for (const b of this.batches.values()) { this.buildingLayer.remove(b.mesh); b.mesh.dispose(); }
     this.batches.clear();
     this.matBatches?.dispose();
+    this.innerChunks?.dispose();
     this.lods.clear();
     this.rubble.clear();
     this.graves.clear();
@@ -3149,6 +3151,14 @@ export class GameRenderer {
     return list;
   }
   private batchGroups = new Map<string, THREE.Mesh[]>();
+  /** wnętrza zlepione na kawałek mapy (chunkMerge.ts); ?kawalki=0 wyłącza */
+  private chunkOn = !/[?&]kawalki=0/.test(location.search);
+  private innerChunks?: ChunkMerge;
+  /** Część nadaje się do zlepienia: nieprzezroczysta, każdy materiał widoczny */
+  private mergeable(m: THREE.Mesh): boolean {
+    const mats = Array.isArray(m.material) ? m.material : [m.material];
+    return mats.every((mt) => mt && !mt.transparent && mt.visible !== false);
+  }
   /** części wnętrz w paczkach: w obrazie zawsze, bez cienia i odbicia (buildingBatch.ts, add(..., inner)) */
   private innerParts = new WeakSet<THREE.Object3D>();
   /** Budynki razem po materiale (buildingBatch.ts); ?batch=0 — dawne łączenie po parze bryła+materiał */
@@ -3158,7 +3168,7 @@ export class GameRenderer {
   private batchShadow = new THREE.Frustum();
   private batchSphere = new THREE.Sphere();
   /** Do pomiarów (lokalnie: __batches()) */
-  batchStats(): unknown { return this.matBatches?.stats() ?? []; }
+  batchStats(): unknown { return { paczki: this.matBatches?.stats() ?? [], kawałki: this.innerChunks?.size ?? 0 }; }
   private syncMatBatches(roots: Iterable<[number, THREE.Object3D]>, keepOff: boolean): void {
     const mb = (this.matBatches ??= new MaterialBatches(this.buildingLayer));
     mb.begin();
@@ -3181,12 +3191,42 @@ export class GameRenderer {
       sph.copy(r);
       return view.intersectsSphere(sph) || (!!shadowFr && shadowFr.intersectsSphere(sph));
     };
+    // partia 2 (docs/optymalizacja-budynkow.md): wnętrza zlepione na kawałek mapy — budynki z gotowego kawałka nie wysyłają
+    // swoich wnętrz do paczek. Najpierw lista i przeliczenie kawałków, potem paczki (żeby nic nie rysowało się dwa razy).
+    const chunks = this.chunkOn ? (this.innerChunks ??= new ChunkMerge(this.buildingLayer, { cast: false, reflect: false, label: 'budynki / wnętrza (kawałki)' })) : null;
+    if (chunks && !keepOff) {
+      const cands: MergeCandidate[] = [];
+      const visIn = (m: THREE.Object3D, root: THREE.Object3D): boolean => {
+        if (!m.visible) return false;
+        for (let q: THREE.Object3D | null = m.parent; q; q = q.parent) { if (!q.visible) return false; if (q === root) break; }
+        return true;
+      };
+      for (const [id, root] of roots) {
+        if (this.sites.sites.has(id) || !root.visible) continue;
+        const parts = this.staticParts(root);
+        let n = 0;
+        for (const m of parts) if (this.innerParts.has(m) && visIn(m, root) && this.mergeable(m)) n++;
+        if (!n) continue;
+        cands.push({ id, root, n, parts: () => {
+          const out: MergePart[] = [];
+          for (const m of parts) {
+            if (!this.innerParts.has(m) || !visIn(m, root) || !this.mergeable(m)) continue;
+            if (Array.isArray(m.material)) { const mats = m.material; for (const sg of groupGeos(m.geometry)) out.push({ geo: sg, mat: mats[sg.userData.materialIndex as number]!, matrix: m.matrixWorld, recv: m.receiveShadow }); }
+            else out.push({ geo: m.geometry, mat: m.material as THREE.Material, matrix: m.matrixWorld, recv: m.receiveShadow });
+          }
+          return out;
+        } });
+      }
+      chunks.update(cands);
+    }
     for (const [id, root] of roots) {
       const parts = this.staticParts(root);
       const own = this.sites.sites.has(id) || !root.visible;
       const hide = !own && !seen(root);
+      const merged = !own && !!chunks?.has(id);
       for (const m of parts) {
         if (own) { m.layers.set(0); continue; }
+        if (merged && this.innerParts.has(m) && this.mergeable(m)) { m.layers.set(BATCH_LAYER); continue; }
         let vis = m.visible;
         for (let q: THREE.Object3D | null = m.parent; vis && q; q = q.parent) { if (!q.visible) vis = false; if (q === root) break; }
         if (!vis) { m.layers.set(0); continue; }
