@@ -278,7 +278,7 @@ export function createModelEditor(ctx: Ctx): { onModel: () => void; guard: (go: 
   }
   /** miniatury modeli z paczek: tekstury wczytują się w tle, więc rysujemy je jeszcze raz, gdy dojdą (inaczej czarne sylwetki) */
   const redraw: (() => void)[] = [];
-  function assetTile(label: string, img: string, add: (at?: THREE.Vector3) => void, make?: () => THREE.Object3D): HTMLElement {
+  function assetTile(label: string, img: string, add: (at?: THREE.Vector3) => void, make?: () => THREE.Object3D, preview?: (at: THREE.Vector3) => THREE.Object3D | null): HTMLElement {
     const b = document.createElement('button');
     b.type = 'button'; b.draggable = true; b.title = label;
     b.style.cssText = 'display:flex;flex-direction:column;padding:0;border:1px solid #3e3626;background:#2e2b24;color:inherit;font:inherit;font-size:11px;cursor:grab';
@@ -287,10 +287,38 @@ export function createModelEditor(ctx: Ctx): { onModel: () => void; guard: (go: 
     b.append(im, cap);
     if (make) redraw.push(() => { try { im.src = thumb(make()); } catch { /* bez miniatury */ } });
     b.onclick = () => add();
-    b.ondragstart = (e) => { e.dataTransfer?.setData('application/x-asset', label); dragAsset = add; };
+    b.ondragstart = (e) => { e.dataTransfer?.setData('application/x-asset', label); dragAsset = add; dragPreview = preview ?? null; };
+    b.ondragend = () => clearPreview();
     return b;
   }
   let dragAsset: ((at?: THREE.Vector3) => void) | null = null;
+  // podgląd przy przeciąganiu zasobu nad modelem (Michał 10.11.2026: „niech pojawia się podgląd, gdzie przeciągam”)
+  let dragPreview: ((at: THREE.Vector3) => THREE.Object3D | null) | null = null;
+  let ghostObj: THREE.Object3D | null = null;
+  function clearPreview(): void { ghostObj?.removeFromParent(); ghostObj = null; }
+  /** punkt modelu pod kursorem (układ modelu) albo punkt na ziemi */
+  function dropPoint(cx: number, cy: number): THREE.Vector3 | null {
+    const c = ctx.current();
+    if (!c) return null;
+    const r = ctx.canvas.getBoundingClientRect();
+    ray.setFromCamera(new THREE.Vector2(((cx - r.left) / r.width) * 2 - 1, -((cy - r.top) / r.height) * 2 + 1), ctx.camera);
+    const h = ray.intersectObject(c, true).find((x) => (x.object as THREE.Mesh).isMesh && x.object.visible && x.object !== ghostObj && !x.object.userData.hiFor && !isGhost(x.object));
+    if (h) return c.worldToLocal(h.point.clone());
+    const g = c.localToWorld(new THREE.Vector3()).y, p = new THREE.Vector3();
+    return ray.ray.intersectPlane(new THREE.Plane(new THREE.Vector3(0, 1, 0), -g), p) ? c.worldToLocal(p) : null;
+  }
+  const isGhost = (o: THREE.Object3D): boolean => { for (let x: THREE.Object3D | null = o; x; x = x.parent) if (x === ghostObj) return true; return false; };
+  /** półprzezroczysta kopia do podglądu */
+  function ghostOf(o: THREE.Object3D): THREE.Object3D {
+    o.traverse((x) => {
+      const m = x as THREE.Mesh;
+      if (!m.isMesh) return;
+      const conv = (mm: THREE.Material): THREE.Material => { const c = mm.clone(); c.transparent = true; c.opacity = 0.6; c.depthWrite = false; return c; };
+      m.material = Array.isArray(m.material) ? m.material.map(conv) : conv(m.material);
+      m.castShadow = false; m.renderOrder = 998;
+    });
+    return o;
+  }
   function buildAssets(): void {
     if (assetsBuilt) return;
     assetsBuilt = true;
@@ -307,7 +335,11 @@ export function createModelEditor(ctx: Ctx): { onModel: () => void; guard: (go: 
         for (let k = 0; k < P.length; k++) p16[k] = Math.round(P[k]! * 2000);
         return partMesh(mat, new Uint8Array(p16.buffer), new Uint8Array(P.length / 3).fill(230), 2000);
       };
-      assets.append(assetTile(label, '', (at) => addShape(sh, mat, grpSel.value, at, size, rz ?? 0), make));
+      assets.append(assetTile(label, '', (at) => addShape(sh, mat, grpSel.value, at, size, rz ?? 0), make, () => {
+        const o = make(); const lift = rz ? size[0] / 2 : size[1] / 2;
+        o.userData.local = (a: THREE.Vector3) => new THREE.Matrix4().makeTranslation(a.x, a.y + lift, a.z);
+        return o;
+      }));
     }
     const shapeHead = document.createElement('div'); shapeHead.textContent = tx('Bryły (w wybranej teksturze)', 'Shapes (in the picked texture)');
     shapeHead.style.cssText = presetHead.style.cssText;
@@ -316,14 +348,22 @@ export function createModelEditor(ctx: Ctx): { onModel: () => void; guard: (go: 
     for (const sh of SHAPES) {
       const label = shapeLabel(sh, tx);
       const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(unitShape(sh)), 3)); geo.computeVertexNormals();
-      assets.append(assetTile(label, thumb(new THREE.Mesh(geo, stoneMat)), (at) => addShape(sh, picked, grpSel.value, at)));
+      assets.append(assetTile(label, thumb(new THREE.Mesh(geo, stoneMat)), (at) => addShape(sh, picked, grpSel.value, at), undefined, () => {
+        const o = new THREE.Mesh(geo, stoneMat);
+        o.userData.local = (a: THREE.Vector3) => new THREE.Matrix4().makeTranslation(a.x, a.y + 0.1, a.z).multiply(new THREE.Matrix4().makeScale(0.2, 0.2, 0.2));
+        return o;
+      }));
     }
     const maps: THREE.Texture[] = [];
     for (const [p, label] of ASSET_PROPS) {
       const make = (): THREE.Object3D => new THREE.Mesh(propGeometry(p), propMaterial(p));
       const m = propMaterial(p);
       if (m.map) maps.push(m.map);
-      assets.append(assetTile(label, '', (at) => addProp(p, grpSel.value, at), make));
+      assets.append(assetTile(label, '', (at) => addProp(p, grpSel.value, at), make, () => {
+        const o = make(); const sz = PROP_SIZE[p] ?? 0.2;
+        o.userData.local = (a: THREE.Vector3) => new THREE.Matrix4().makeTranslation(a.x, a.y, a.z).multiply(new THREE.Matrix4().makeScale(sz, sz, sz));
+        return o;
+      }));
     }
     // modele z Poly Haven (CC0): wczytują się po kolei przy otwarciu zakładki, miniatura rysuje się po wczytaniu
     const phHead = document.createElement('div'); phHead.textContent = tx('Modele z Poly Haven (CC0)', 'Poly Haven models (CC0)');
@@ -331,7 +371,13 @@ export function createModelEditor(ctx: Ctx): { onModel: () => void; guard: (go: 
     assets.append(phHead);
     const phTiles: [string, HTMLImageElement][] = [];
     for (const [id, pl, en] of PH_ASSETS) {
-      const tile = assetTile(tx(pl, en), '', (at) => void addPh(id, at));
+      const tile = assetTile(tx(pl, en), '', (at) => void addPh(id, at), undefined, () => {
+        const r = phLoaded(id);
+        if (!r) return null;
+        const o = new THREE.Mesh(r.geo, r.mats);
+        o.userData.local = (a: THREE.Vector3) => new THREE.Matrix4().makeTranslation(a.x, a.y, a.z);
+        return o;
+      });
       assets.append(tile);
       phTiles.push([id, tile.querySelector('img')!]);
     }
@@ -362,18 +408,27 @@ export function createModelEditor(ctx: Ctx): { onModel: () => void; guard: (go: 
   palHead.append(grpSel);
   insp.append(tr, pal);
   // upuszczenie tekstury na model: część pod kursorem (cały przedmiot) dostaje teksturę
-  ctx.canvas.addEventListener('dragover', (e) => { if (on) e.preventDefault(); });
+  ctx.canvas.addEventListener('dragover', (e) => {
+    if (!on) return;
+    e.preventDefault();
+    if (!dragPreview) return;
+    const at = dropPoint(e.clientX, e.clientY), c = ctx.current();
+    if (!at || !c) return;
+    if (!ghostObj) { const o = dragPreview(at); if (!o) return; ghostObj = ghostOf(o); ctx.scene.add(ghostObj); }
+    // obiekt podglądu ma położenie w układzie modelu jak dodawana rzecz — przenosimy je do świata
+    const local = (ghostObj.userData.local as ((a: THREE.Vector3) => THREE.Matrix4) | undefined)?.(at);
+    if (local) { const w = c.matrixWorld.clone().multiply(local); w.decompose(ghostObj.position, ghostObj.quaternion, ghostObj.scale); }
+  });
+  ctx.canvas.addEventListener('dragleave', () => clearPreview());
   ctx.canvas.addEventListener('drop', (e) => {
     if (!on) return;
     e.preventDefault();
     if (e.dataTransfer?.types.includes('application/x-asset') && dragAsset) {
-      // zasób upuszczony na model: stawiamy go w punkcie trafienia (albo w środku widoku)
-      const r = ctx.canvas.getBoundingClientRect();
-      ray.setFromCamera(new THREE.Vector2(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1), ctx.camera);
-      const cur = ctx.current();
-      const h = cur ? ray.intersectObject(cur, true).find((x) => (x.object as THREE.Mesh).isMesh && x.object.visible) : undefined;
-      dragAsset(h ? cur!.worldToLocal(h.point.clone()) : undefined);
-      dragAsset = null;
+      // zasób upuszczony na model: stawiamy go w punkcie trafienia (albo na ziemi pod kursorem)
+      const at = dropPoint(e.clientX, e.clientY);
+      clearPreview();
+      dragAsset(at ?? undefined);
+      dragAsset = null; dragPreview = null;
       return;
     }
     const mat = e.dataTransfer?.getData('text/plain');
@@ -404,6 +459,8 @@ export function createModelEditor(ctx: Ctx): { onModel: () => void; guard: (go: 
   const guides = createGuides(ctx.scene);
   let shiftHeld = false, snapCands: THREE.Box3[] = [], dragBox: THREE.Box3 | null = null, dragPos = new THREE.Vector3();
   window.addEventListener('keydown', (e) => { if (e.key === 'Shift') shiftHeld = true; });
+  // stan Shifta z ruchu myszy (puszczony poza oknem nie zostaje „wciśnięty” na zawsze i nie przykleja przedmiotów)
+  window.addEventListener('pointermove', (e) => { if (shiftHeld !== e.shiftKey) { shiftHeld = e.shiftKey; if (!shiftHeld) guides.hide(); } }, true);
   window.addEventListener('keyup', (e) => { if (e.key === 'Shift') { shiftHeld = false; guides.hide(); } });
   window.addEventListener('blur', () => { shiftHeld = false; });
   tc.addEventListener('dragging-changed', (e) => {
@@ -1446,18 +1503,21 @@ export function createModelEditor(ctx: Ctx): { onModel: () => void; guard: (go: 
   void (async () => {
     try {
       const { supa } = await import('../net/supa');
+      // tylko wylogowanie albo pewna odpowiedź „nie twórca” zabiera edycję; chwilowy błąd bazy przy odświeżaniu sesji
+      // (co kilkadziesiąt minut) nie wyłącza jej w trakcie pracy — „przez chwilę mogłem ustawiać, już nie mogę”
       const check = async (): Promise<void> => {
         const { data: s } = await supa.auth.getSession();
         let owner = false;
         if (s.session) {
-          const { data } = await supa.from('admins').select('owner').eq('user_id', s.session.user.id).maybeSingle();
+          const { data, error } = await supa.from('admins').select('owner').eq('user_id', s.session.user.id).maybeSingle();
+          if (error) return;
           owner = !!(data as { owner?: boolean } | null)?.owner;
         }
         editBtn.hidden = !owner;
         if (!owner && on) setOn(false);
       };
       await check();
-      supa.auth.onAuthStateChange(() => { void check(); });
+      supa.auth.onAuthStateChange((ev) => { if (ev !== 'TOKEN_REFRESHED') void check(); });
     } catch { /* bez bazy: bez edycji */ }
   })();
   // niezapisane zmiany: ostrzeżenie przy przejściu na inny model i przy zamykaniu karty (Michał 10.11.2026)
