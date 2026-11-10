@@ -964,6 +964,11 @@ export function partMesh(mat: string, pos: string | Uint8Array, ao: string | Uin
   }
   return new THREE.Mesh(blenderGeo(p, a, q, k), withAo(base));
 }
+/** Materiały budynków z wzorem i barwą (paleta tekstur w edytorze poprawek) */
+export const buildingMaterialInfo = (): { name: string; pattern: string | null; color: string }[] => buildingMaterialNames().map((name) => {
+  const m = (M as unknown as Record<string, THREE.MeshStandardMaterial>)[name]!;
+  return { name, pattern: (m.userData?.pattern as string | undefined) ?? null, color: '#' + (m.color?.getHexString() ?? 'ffffff') };
+});
 /** Nazwy materiałów budynków (do wyboru tekstury w edytorze poprawek) */
 export const buildingMaterialNames = (): string[] => Object.keys(M).filter((k) => !['trodden', 'smoke', 'ember', 'void', 'flameLight', 'flameCore', 'water'].includes(k)).sort();
 

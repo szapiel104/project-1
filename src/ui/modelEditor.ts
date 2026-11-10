@@ -10,7 +10,8 @@ import * as THREE from 'three';
 import { TransformControls } from 'three/examples/jsm/controls/TransformControls.js';
 import type { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { findIsland, islands, transformIsland, unitShape, type Fix, type Island } from '../render/modelfix';
-import { buildingMaterialNames, partMesh } from '../render/buildings';
+import { buildingMaterialInfo, partMesh } from '../render/buildings';
+import { photoUrlFor } from '../render/textures';
 import REPO_FIXES from '../data/modelFixes.json';
 import { tx } from '../i18n';
 
@@ -60,39 +61,32 @@ export function createModelEditor(ctx: Ctx): { onModel: () => void } {
   status.style.cssText = 'align-self:center;font-size:12px;color:#e6d6b4;padding:0 6px';
   const dupBtn = btn(tx('Kopiuj (Ctrl+D)', 'Duplicate (Ctrl+D)'), () => duplicateSel());
   const dblBtn = btn(tx('Widać z obu stron', 'Visible from both sides'), () => doubleSel(), tx('Ściana lub płachta widoczna też od tyłu (gra nie rysuje tylnych stron)', 'A wall or sheet visible from behind too (the game does not draw back faces)'));
-  // druga linia: tekstura, nowa bryła, dokładne liczby, przyciąganie
-  const row2 = document.createElement('div');
-  row2.style.cssText = 'display:flex;gap:4px;flex-wrap:wrap;width:100%;justify-content:flex-end;align-items:center;font-size:12px;color:#e6d6b4';
-  const selCss = 'font:inherit;font-size:12px;color:#e8e0cc;background:#2e2b24;border:1px solid #3a362d;min-height:30px;padding:2px 4px';
-  const matSel = document.createElement('select');
-  matSel.style.cssText = selCss; matSel.title = tx('Tekstura (materiał gry)', 'Texture (game material)');
-  for (const n of buildingMaterialNames()) { const o = document.createElement('option'); o.value = o.textContent = n; matSel.append(o); }
-  matSel.value = 'castle';
-  const texBtn = btn(tx('Nadaj teksturę', 'Apply texture'), () => retexture(matSel.value));
-  const shapeSel = document.createElement('select');
-  shapeSel.style.cssText = selCss;
-  for (const [v, l] of [['box', tx('prostopadłościan', 'box')], ['cyl', tx('walec', 'cylinder')], ['wedge', tx('klin', 'wedge')]] as const) { const o = document.createElement('option'); o.value = v; o.textContent = l; shapeSel.append(o); }
-  const grpSel = document.createElement('select');
-  grpSel.style.cssText = selCss;
-  for (const [v, l] of [['base', tx('bryła', 'body')], ['interior', tx('wnętrze', 'interior')], ['shell', tx('dach i mury', 'roof & walls')]] as const) { const o = document.createElement('option'); o.value = v; o.textContent = l; grpSel.append(o); }
-  const addBtn = btn(tx('Dodaj bryłę', 'Add shape'), () => addShape(shapeSel.value as 'box' | 'cyl' | 'wedge', matSel.value, grpSel.value));
-  const num = (ph: string, title: string): HTMLInputElement => { const i = document.createElement('input'); i.type = 'number'; i.placeholder = ph; i.title = title; i.style.cssText = selCss + ';width:56px'; return i; };
+  // ---------- inspektor na dole (jak w silnikach gier): położenie i obrót liczbami, paleta tekstur, nowe bryły ----------
+  const insp = document.createElement('div');
+  insp.className = 'edit-inspector';
+  insp.style.cssText = 'position:fixed;left:var(--insp-left,272px);right:254px;bottom:0;height:210px;background:rgba(24,21,17,.95);border-top:1px solid #5a4a2c;z-index:6;display:grid;grid-template-columns:auto 1fr auto;gap:12px;padding:8px 10px;font-size:12px;color:#e6d6b4';
+  document.body.append(insp);
+  const selCss = 'font:inherit;font-size:12px;color:#e8e0cc;background:#2e2b24;border:1px solid #3a362d;min-height:28px;padding:2px 4px';
+  const title = (t: string): HTMLElement => { const h = document.createElement('div'); h.textContent = t; h.style.cssText = 'font-weight:600;margin-bottom:4px;color:#e9c766'; return h; };
+  // 1) przekształcenie liczbami
+  const tr = document.createElement('div');
+  const num = (ph: string, ttl: string): HTMLInputElement => { const i = document.createElement('input'); i.type = 'number'; i.placeholder = ph; i.title = ttl; i.style.cssText = selCss + ';width:64px'; return i; };
   const nx = num('X cm', tx('Przesuń w X (cm)', 'Move X (cm)')), ny = num('Y cm', tx('Przesuń w górę (cm)', 'Move up (cm)')), nz = num('Z cm', tx('Przesuń w Z (cm)', 'Move Z (cm)'));
-  const rx = num('obr X°', tx('Obróć wokół X (°)', 'Rotate X (°)')), ry = num('obr Y°', tx('Obróć wokół pionu (°)', 'Rotate Y (°)')), rz = num('obr Z°', tx('Obróć wokół Z (°)', 'Rotate Z (°)'));
-  const ns = num('skala %', tx('Skala (%)', 'Scale (%)'));
-  const applyNum = btn(tx('Zastosuj liczby', 'Apply numbers'), () => {
+  const rx = num('X°', tx('Obróć wokół X (°)', 'Rotate X (°)')), ry = num('Y°', tx('Obróć wokół pionu (°)', 'Rotate Y (°)')), rz = num('Z°', tx('Obróć wokół Z (°)', 'Rotate Z (°)'));
+  const ns = num('%', tx('Skala (%)', 'Scale (%)'));
+  const line = (label: string, ...els: HTMLElement[]): HTMLElement => { const d = document.createElement('div'); d.style.cssText = 'display:flex;gap:4px;align-items:center;margin:3px 0'; const l = document.createElement('span'); l.textContent = label; l.style.cssText = 'width:62px'; d.append(l, ...els); return d; };
+  const applyNum = btn(tx('Zastosuj', 'Apply'), () => {
     if (!sel.length) { say(tx('Najpierw zaznacz część', 'Select a part first')); return; }
     const v = (i: HTMLInputElement): number => Number(i.value) || 0;
     proxy.position.add(new THREE.Vector3(v(nx), v(ny), v(nz)).multiplyScalar(0.01));
     proxy.rotation.set(THREE.MathUtils.degToRad(v(rx)), THREE.MathUtils.degToRad(v(ry)), THREE.MathUtils.degToRad(v(rz)));
-    const sc = ns.value ? Math.max(0.01, v(ns) / 100) : 1;
-    proxy.scale.setScalar(sc);
+    proxy.scale.setScalar(ns.value ? Math.max(0.01, v(ns) / 100) : 1);
     proxy.updateMatrixWorld();
     live(); commit();
     for (const i of [nx, ny, nz, rx, ry, rz, ns]) i.value = '';
   });
   const snapLab = document.createElement('label');
-  snapLab.style.cssText = 'display:flex;gap:4px;align-items:center;padding:0 4px';
+  snapLab.style.cssText = 'display:flex;gap:4px;align-items:center;margin-top:4px';
   const snap = document.createElement('input'); snap.type = 'checkbox';
   snap.onchange = () => {
     tc.setTranslationSnap(snap.checked ? 0.01 : null);
@@ -100,8 +94,70 @@ export function createModelEditor(ctx: Ctx): { onModel: () => void } {
     tc.setScaleSnap(snap.checked ? 0.05 : null);
   };
   snapLab.append(snap, document.createTextNode(tx('przyciąganie 1 cm / 5°', 'snap 1 cm / 5°')));
-  row2.append(matSel, texBtn, shapeSel, grpSel, addBtn, nx, ny, nz, rx, ry, rz, ns, applyNum, snapLab);
-  const tools = [...modeBtns, dupBtn, dblBtn, delBtn, undoBtn, saveBtn, fileBtn, status, row2];
+  const spaceLab = document.createElement('label');
+  spaceLab.style.cssText = 'display:flex;gap:4px;align-items:center';
+  const space = document.createElement('input'); space.type = 'checkbox';
+  space.onchange = () => tc.setSpace(space.checked ? 'local' : 'world');
+  spaceLab.append(space, document.createTextNode(tx('osie części (lokalnie)', 'part axes (local)')));
+  tr.append(title(tx('Przekształcenie zaznaczenia', 'Transform selection')), line(tx('Przesuń', 'Move'), nx, ny, nz), line(tx('Obróć', 'Rotate'), rx, ry, rz), line(tx('Skala', 'Scale'), ns, applyNum), snapLab, spaceLab);
+  // 2) paleta tekstur: podgląd zdjęcia w barwie materiału; klik — nadaj zaznaczonym, przeciągnij na model — nadaj temu, na co upuścisz
+  const pal = document.createElement('div');
+  pal.style.cssText = 'display:flex;flex-direction:column;min-width:0';
+  const palHead = document.createElement('div');
+  palHead.style.cssText = 'display:flex;gap:8px;align-items:center;margin-bottom:4px';
+  const find = document.createElement('input'); find.type = 'search'; find.placeholder = tx('szukaj tekstury…', 'search textures…'); find.style.cssText = selCss + ';width:150px';
+  const palTitle = title(tx('Tekstury — klik: zaznaczonym, przeciągnij: na część', 'Textures — click: selected, drag: onto a part'));
+  palTitle.style.margin = '0';
+  palHead.append(palTitle, find);
+  const grid = document.createElement('div');
+  grid.style.cssText = 'display:grid;grid-template-columns:repeat(auto-fill,minmax(74px,1fr));gap:5px;overflow:auto;padding-right:4px';
+  let picked = 'castle';
+  const swatches: HTMLElement[] = [];
+  for (const m of buildingMaterialInfo()) {
+    const url = m.pattern ? photoUrlFor(m.pattern) : null;
+    const sw = document.createElement('button');
+    sw.type = 'button'; sw.draggable = true; sw.title = `${m.name}${m.pattern ? ` (${m.pattern})` : ''}`;
+    sw.dataset.name = m.name;
+    sw.style.cssText = `display:flex;flex-direction:column;align-items:stretch;padding:0;border:1px solid #3e3626;background:#2e2b24;color:inherit;font:inherit;font-size:10.5px;cursor:grab`;
+    const img = document.createElement('span');
+    img.style.cssText = `display:block;height:44px;background-color:${m.color};${url ? `background-image:url(${url});background-size:cover;background-blend-mode:multiply;` : ''}`;
+    const cap = document.createElement('span'); cap.textContent = m.name; cap.style.cssText = 'padding:2px 3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis';
+    sw.append(img, cap);
+    sw.onclick = () => { picked = m.name; markSwatch(); if (sel.length) retexture(m.name); else say(tx(`Wybrana tekstura: ${m.name} (dla nowych brył)`, `Texture picked: ${m.name} (for new shapes)`)); };
+    sw.ondragstart = (e) => { e.dataTransfer?.setData('text/plain', m.name); picked = m.name; markSwatch(); };
+    swatches.push(sw);
+    grid.append(sw);
+  }
+  const markSwatch = (): void => { for (const sw of swatches) sw.style.borderColor = sw.dataset.name === picked ? '#e9c766' : '#3e3626'; };
+  markSwatch();
+  find.oninput = () => { const q = find.value.trim().toLowerCase(); for (const sw of swatches) sw.hidden = !!q && !sw.title.toLowerCase().includes(q); };
+  pal.append(palHead, grid);
+  // 3) nowa bryła w wybranej teksturze
+  const add = document.createElement('div');
+  const shapeSel = document.createElement('select');
+  shapeSel.style.cssText = selCss;
+  for (const [v, l] of [['box', tx('prostopadłościan', 'box')], ['cyl', tx('walec', 'cylinder')], ['wedge', tx('klin', 'wedge')]] as const) { const o = document.createElement('option'); o.value = v; o.textContent = l; shapeSel.append(o); }
+  const grpSel = document.createElement('select');
+  grpSel.style.cssText = selCss;
+  for (const [v, l] of [['base', tx('bryła', 'body')], ['interior', tx('wnętrze', 'interior')], ['shell', tx('dach i mury', 'roof & walls')]] as const) { const o = document.createElement('option'); o.value = v; o.textContent = l; grpSel.append(o); }
+  const addBtn = btn(tx('Dodaj bryłę', 'Add shape'), () => addShape(shapeSel.value as 'box' | 'cyl' | 'wedge', picked, grpSel.value));
+  const stack = (...els: HTMLElement[]): HTMLElement => { const d = document.createElement('div'); d.style.cssText = 'display:flex;flex-direction:column;gap:4px'; d.append(...els); return d; };
+  add.append(title(tx('Nowa bryła', 'New shape')), stack(shapeSel, grpSel, addBtn));
+  insp.append(tr, pal, add);
+  // upuszczenie tekstury na model: część pod kursorem (cały przedmiot) dostaje teksturę
+  ctx.canvas.addEventListener('dragover', (e) => { if (on) e.preventDefault(); });
+  ctx.canvas.addEventListener('drop', (e) => {
+    if (!on) return;
+    e.preventDefault();
+    const mat = e.dataTransfer?.getData('text/plain');
+    if (!mat) return;
+    const hit = pick(e.clientX, e.clientY);
+    if (!hit) { say(tx('Upuść teksturę na część modelu', 'Drop the texture onto a part of the model')); return; }
+    const o = !hit.mesh.userData.temp ? objOf.get(nodeKey(hit.mesh, hit.island)) : undefined;
+    if (o) selectObj(o, false); else toggle(hit.mesh, hit.island, false);
+    retexture(mat);
+  });
+  const tools = [...modeBtns, dupBtn, dblBtn, delBtn, undoBtn, saveBtn, fileBtn, status];
   wrap.append(editBtn, ...tools);
   ctx.bar.append(wrap);
 
@@ -129,6 +185,7 @@ export function createModelEditor(ctx: Ctx): { onModel: () => void } {
     editBtn.setAttribute('aria-pressed', String(on));
     for (const t of tools) (t as HTMLElement).hidden = !on;
     panel.hidden = !on;
+    insp.hidden = !on;
     if (!on) deselect();
     setMode((tc.mode as 'translate' | 'rotate' | 'scale') ?? 'translate');
     say(on ? tx('Kliknij część (Ctrl — kilka naraz)', 'Click a part (Ctrl — several at once)') : '');
@@ -508,7 +565,7 @@ export function createModelEditor(ctx: Ctx): { onModel: () => void } {
   // ---------- lista warstw po prawej: grupy (pokaż/ukryj) i siatki po materiale (klik zaznacza całą siatkę) ----------
   const panel = document.createElement('div');
   panel.className = 'edit-layers';
-  panel.style.cssText = 'position:fixed;right:12px;top:96px;bottom:44px;width:230px;overflow:auto;background:rgba(24,21,17,.92);border:1px solid #5a4a2c;padding:8px;font-size:12px;color:#e6d6b4;z-index:5';
+  panel.style.cssText = 'position:fixed;right:12px;top:96px;bottom:8px;width:230px;overflow:auto;background:rgba(24,21,17,.92);border:1px solid #5a4a2c;padding:8px;font-size:12px;color:#e6d6b4;z-index:5';
   document.body.append(panel);
   const GROUP_NAME: Record<string, string> = { base: tx('Bryła', 'Body'), shell: tx('Dach i mury', 'Roof and walls'), interior: tx('Wnętrze', 'Interior'), floor: tx('Posadzka', 'Floor'), ceiling: tx('Sufit sali', 'Hall ceiling') };
   const rows = new Map<THREE.Mesh, HTMLButtonElement>();
@@ -620,22 +677,28 @@ export function createModelEditor(ctx: Ctx): { onModel: () => void } {
 
   // ---------- klikanie w część ----------
   const ray = new THREE.Raycaster();
+  /** część modelu pod punktem ekranu (widoczna, zwykła albo dodana) */
+  function pick(cx: number, cy: number): { mesh: THREE.Mesh; island: Island } | null {
+    const r = ctx.canvas.getBoundingClientRect();
+    ray.setFromCamera(new THREE.Vector2(((cx - r.left) / r.width) * 2 - 1, -((cy - r.top) / r.height) * 2 + 1), ctx.camera);
+    const cur = ctx.current();
+    if (!cur) return null;
+    const hits = ray.intersectObject(cur, true).filter((h) => (h.object as THREE.Mesh).isMesh && (h.object.userData.fx || (h.object.userData.temp && !h.object.userData.locked)) && h.faceIndex != null);
+    const h = hits.find((x) => { for (let o: THREE.Object3D | null = x.object; o; o = o.parent) if (!o.visible) return false; return true; });
+    if (!h) return null;
+    const mesh = h.object as THREE.Mesh;
+    const { of, list } = isl(mesh.geometry);
+    return { mesh, island: list[of[h.faceIndex!]!]! };
+  }
   let down: [number, number] | null = null;
   ctx.canvas.addEventListener('pointerdown', (e) => { down = [e.clientX, e.clientY]; });
   ctx.canvas.addEventListener('pointerup', (e) => {
     if (!on || !down || (tc as unknown as { dragging: boolean }).dragging) return;
     if (Math.hypot(e.clientX - down[0], e.clientY - down[1]) > 4) return;
-    const r = ctx.canvas.getBoundingClientRect();
-    ray.setFromCamera(new THREE.Vector2(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1), ctx.camera);
-    const cur = ctx.current();
-    if (!cur) return;
     const multi = e.ctrlKey || e.metaKey || e.shiftKey;
-    const hits = ray.intersectObject(cur, true).filter((h) => (h.object as THREE.Mesh).isMesh && (h.object.userData.fx || (h.object.userData.temp && !h.object.userData.locked)) && h.faceIndex != null);
-    const h = hits.find((x) => { for (let o: THREE.Object3D | null = x.object; o; o = o.parent) if (!o.visible) return false; return true; });
-    if (!h) { if (!multi) { deselect(); say(tx('Kliknij część (Ctrl — kilka naraz)', 'Click a part (Ctrl — several at once)')); } return; }
-    const mesh = h.object as THREE.Mesh;
-    const { of, list } = isl(mesh.geometry);
-    const island = list[of[h.faceIndex!]!]!;
+    const hit = pick(e.clientX, e.clientY);
+    if (!hit) { if (!multi) { deselect(); say(tx('Kliknij część (Ctrl — kilka naraz)', 'Click a part (Ctrl — several at once)')); } return; }
+    const { mesh, island } = hit;
     // klik chwyta cały przedmiot (np. kłodę z korą i czołami), Alt+klik — tylko kliknięty kawałek
     const o = !e.altKey && !mesh.userData.temp ? objOf.get(nodeKey(mesh, island)) : undefined;
     if (o) selectObj(o, multi); else toggle(mesh, island, multi);

@@ -23,6 +23,7 @@
   .fold { position: fixed; left: 260px; top: 50%; transform: translateY(-50%); z-index: 6; width: 22px; min-height: 56px; font: inherit; color: var(--text); background: #2e2b24; border: 1px solid var(--line); border-left: 0; cursor: pointer; padding: 0; }
   .fold:hover { border-color: var(--gold); }
   body.folded aside { display: none; }
+  body.folded { --insp-left: 0px; }
   body.folded .fold { left: 0; }
   body.folded #c { inset: 0; width: 100%; }
   body.folded #info, body.folded #name { left: 30px; }
