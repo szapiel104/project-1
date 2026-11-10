@@ -75,6 +75,17 @@ export function createModelEditor(ctx: Ctx): { onModel: () => void; guard: (go: 
   const mirZBtn = ib('mirrorZ', tx('Odbij lustrzanie w osi Z', 'Mirror along Z'), () => mirror(2));
   const dropBtn = ib('drop', tx('Postaw na ziemi (spód na wysokości 0)', 'Drop to the ground (bottom at height 0)'), () => dropToGround());
   const focusBtn = ib('focus', tx('Pokaż zaznaczenie (F)', 'Frame selection (F)'), () => focusSel());
+  const redoBtn = ib('redo', tx('Ponów (Ctrl+Y)', 'Redo (Ctrl+Y)'), () => redoLast());
+  const groupBtn = ib('group', tx('Grupuj zaznaczenie w jeden obiekt (Ctrl+G)', 'Group selection into one object (Ctrl+G)'), () => groupSel());
+  const ungroupBtn = ib('ungroup', tx('Rozgrupuj (Ctrl+Shift+G)', 'Ungroup (Ctrl+Shift+G)'), () => ungroupSel());
+  const surfBtn = ib('surface', tx('Połóż na tym, co pod spodem — stół, podłoga, ziemia (End)', 'Drop onto what is below — table, floor, ground (End)'), () => dropToSurface());
+  const hideBtn = ib('hide', tx('Schowaj zaznaczone na czas pracy (H)', 'Hide selected while working (H)'), () => hideSel());
+  const showBtn = ib('show', tx('Pokaż wszystko schowane (Alt+H)', 'Show all hidden (Alt+H)'), () => unhideAll());
+  const gridBtn = ib('grid', tx('Siatka na ziemi (G)', 'Ground grid (G)'), () => toggleGrid());
+  const alignLBtn = ib('alignL', tx('Wyrównaj do lewej (oś X)', 'Align left (X axis)'), () => align('x', 'min'));
+  const alignCBtn = ib('alignC', tx('Wyrównaj do środka (oś X)', 'Align centre (X axis)'), () => align('x', 'mid'));
+  const alignRBtn = ib('alignR', tx('Wyrównaj do prawej (oś X)', 'Align right (X axis)'), () => align('x', 'max'));
+  const spreadBtn = ib('spread', tx('Rozstaw w równych odstępach (oś X)', 'Distribute evenly (X axis)'), () => distribute('x'));
   const status = document.createElement('span');
   status.style.cssText = 'align-self:center;font-size:12px;color:#e6d6b4;padding:0 6px';
   const dupBtn = ib('copy', tx('Kopiuj (Ctrl+D)', 'Duplicate (Ctrl+D)'), () => duplicateSel());
@@ -353,7 +364,7 @@ export function createModelEditor(ctx: Ctx): { onModel: () => void; guard: (go: 
     if (o) selectObj(o, false); else toggle(hit.mesh, hit.island, false);
     retexture(mat);
   });
-  const tools = [...modeBtns, sep(), dupBtn, mirXBtn, mirZBtn, dropBtn, dblBtn, delBtn, sep(), focusBtn, undoBtn, sep(), saveBtn, fileBtn, status];
+  const tools = [...modeBtns, sep(), undoBtn, redoBtn, sep(), dupBtn, groupBtn, ungroupBtn, mirXBtn, mirZBtn, dblBtn, delBtn, sep(), surfBtn, dropBtn, alignLBtn, alignCBtn, alignRBtn, spreadBtn, sep(), focusBtn, hideBtn, showBtn, gridBtn, sep(), saveBtn, fileBtn, status];
   wrap.append(editBtn, ...tools);
   ctx.bar.append(wrap);
 
@@ -491,9 +502,15 @@ export function createModelEditor(ctx: Ctx): { onModel: () => void; guard: (go: 
   function commit(): void {
     if (!sel.length) return;
     const step: (() => void)[] = [];
-    for (const p of sel) {
-      const L = deltaFor(p.mesh);
-      if (L.equals(new THREE.Matrix4())) continue;
+    for (const p of sel) commitPiece(p, deltaFor(p.mesh), step);
+    if (step.length) undo.push(step);
+    placeProxy();
+    say(tx(`Zmiany do zapisania: ${edits.length}`, `Unsaved changes: ${edits.length}`));
+  }
+  /** jedna część: geometria już przesunięta o L (układ siatki) — zapis poprawki i kroku cofania */
+  function commitPiece(p: Piece, L: THREE.Matrix4, step: (() => void)[]): void {
+    {
+      if (L.equals(new THREE.Matrix4())) return;
       const P0 = p.P, N0 = p.N, mesh = p.mesh, island = p.isl;
       const temp = mesh.userData.temp as Fix | undefined;
       if (temp) {
@@ -519,9 +536,188 @@ export function createModelEditor(ctx: Ctx): { onModel: () => void; guard: (go: 
       const snap = snapshot(mesh, island);
       p.P = snap.P; p.N = snap.N; p.c = centerOf(snap.P);
     }
+  }
+  /** przesunięcie każdej części osobno (wyrównywanie, kładzenie na powierzchni) — jeden krok cofania */
+  function movePieces(moves: [Piece, THREE.Vector3][]): void {
+    const step: (() => void)[] = [];
+    for (const [p, d] of moves) {
+      if (d.lengthSq() < 1e-12) continue;
+      p.mesh.updateMatrixWorld();
+      const W = p.mesh.matrixWorld, L = W.clone().invert().multiply(new THREE.Matrix4().makeTranslation(d.x, d.y, d.z)).multiply(W);
+      writeIsland(p.mesh, p.isl, p.P, p.N, L);
+      commitPiece(p, L, step);
+      refreshHi(p);
+    }
     if (step.length) undo.push(step);
     placeProxy();
     say(tx(`Zmiany do zapisania: ${edits.length}`, `Unsaved changes: ${edits.length}`));
+  }
+  /** pudełko jednej części w świecie */
+  function pieceBox(p: Piece): THREE.Box3 { p.mesh.updateMatrixWorld(); p.hi.geometry.computeBoundingBox(); return p.hi.geometry.boundingBox!.clone().applyMatrix4(p.mesh.matrixWorld); }
+  /** wyrównanie zaznaczonych części do lewej / środka / prawej krawędzi całego zaznaczenia */
+  function align(axis: 'x' | 'y' | 'z', how: 'min' | 'mid' | 'max'): void {
+    if (sel.length < 2) { say(tx('Zaznacz co najmniej dwie części (Ctrl+klik)', 'Select at least two parts (Ctrl+click)')); return; }
+    const all = selBox();
+    const target = how === 'min' ? all.min[axis] : how === 'max' ? all.max[axis] : (all.min[axis] + all.max[axis]) / 2;
+    movePieces(byObject().map(([ps, b]) => {
+      const v = how === 'min' ? b.min[axis] : how === 'max' ? b.max[axis] : (b.min[axis] + b.max[axis]) / 2;
+      const d = new THREE.Vector3(); d[axis] = target - v;
+      return ps.map((p) => [p, d.clone()] as [Piece, THREE.Vector3]);
+    }).flat());
+  }
+  /** równe odstępy między przedmiotami wzdłuż osi (pierwszy i ostatni zostają) */
+  function distribute(axis: 'x' | 'z'): void {
+    const objs = byObject();
+    if (objs.length < 3) { say(tx('Zaznacz co najmniej trzy przedmioty', 'Select at least three objects')); return; }
+    objs.sort((a, b) => (a[1].min[axis] + a[1].max[axis]) - (b[1].min[axis] + b[1].max[axis]));
+    const c0 = (objs[0]![1].min[axis] + objs[0]![1].max[axis]) / 2, c1 = (objs[objs.length - 1]![1].min[axis] + objs[objs.length - 1]![1].max[axis]) / 2;
+    movePieces(objs.map(([ps, b], k) => {
+      const d = new THREE.Vector3(); d[axis] = c0 + ((c1 - c0) * k) / (objs.length - 1) - (b.min[axis] + b.max[axis]) / 2;
+      return ps.map((p) => [p, d.clone()] as [Piece, THREE.Vector3]);
+    }).flat());
+  }
+  /** zaznaczone części zebrane w przedmioty (grupa albo przedmiot z listy warstw, inaczej pojedyncza część) z pudełkami */
+  function byObject(): [Piece[], THREE.Box3][] {
+    const out: [Piece[], THREE.Box3][] = [], used = new Set<Piece>();
+    for (const p of sel) {
+      if (used.has(p)) continue;
+      const k = pieceKey(p), gr = groups.find((g) => g.has(k));
+      const o = !gr && !p.mesh.userData.temp && !p.mesh.userData.fxProp ? objOf.get(k) : undefined;
+      const members = sel.filter((q) => !used.has(q) && (q === p || (gr ? gr.has(pieceKey(q)) : o ? objOf.get(pieceKey(q)) === o : false)));
+      const b = new THREE.Box3();
+      for (const q of members) { used.add(q); b.union(pieceBox(q)); }
+      out.push([members, b]);
+    }
+    return out;
+  }
+  /** kładzie każdy przedmiot na tym, co jest pod nim (stół, półka, podłoga), a gdy nic — na ziemi */
+  function dropToSurface(): void {
+    const c = cur();
+    if (!sel.length || !c) { say(tx('Najpierw zaznacz część', 'Select a part first')); return; }
+    const ground = c.localToWorld(new THREE.Vector3()).y;
+    const selMeshes = new Set(sel.map((p) => p.mesh));
+    const moves: [Piece, THREE.Vector3][] = [];
+    for (const [ps, b] of byObject()) {
+      let top = ground;
+      const ctr = b.getCenter(new THREE.Vector3());
+      // kilka promieni w dół spod przedmiotu (środek i rogi), najwyższe trafienie poniżej jego spodu
+      for (const [fx, fz] of [[0, 0], [-0.35, -0.35], [0.35, -0.35], [-0.35, 0.35], [0.35, 0.35]] as const) {
+        const o = new THREE.Vector3(ctr.x + (b.max.x - b.min.x) * fx, b.min.y - 0.002, ctr.z + (b.max.z - b.min.z) * fz);
+        ray.set(o, new THREE.Vector3(0, -1, 0));
+        ray.far = 50;
+        const h = ray.intersectObject(c, true).find((x) => (x.object as THREE.Mesh).isMesh && x.object.visible && !((x.object as THREE.Mesh).material as THREE.Material).transparent && !(selMeshes.has(x.object as THREE.Mesh) && (x.object.userData.temp || x.object.userData.fxProp)) && x.object.name !== 'lightSpot');
+        if (h && h.point.y > top) top = h.point.y;
+      }
+      ray.far = Infinity;
+      for (const p of ps) moves.push([p, new THREE.Vector3(0, top - b.min.y, 0)]);
+    }
+    movePieces(moves);
+    say(tx('Położone na powierzchni pod spodem', 'Dropped onto the surface below'));
+  }
+
+  // ---------- grupy (sesja edycji; Ctrl+G) ----------
+  const groups: Set<string>[] = [];
+  const pieceKey = (p: { mesh: THREE.Mesh; isl: Island }): string => nodeKey(p.mesh, p.isl);
+  function groupSel(): void {
+    if (sel.length < 2) { say(tx('Zaznacz kilka części (Ctrl+klik), potem Ctrl+G', 'Select several parts (Ctrl+click), then Ctrl+G')); return; }
+    const keys = new Set(sel.map(pieceKey));
+    for (let k = groups.length - 1; k >= 0; k--) if ([...groups[k]!].some((x) => keys.has(x))) { for (const x of groups[k]!) keys.add(x); groups.splice(k, 1); }
+    groups.push(keys);
+    say(tx(`Zgrupowano: ${keys.size} części — klik w jedną zaznacza całą grupę`, `Grouped: ${keys.size} parts — clicking one selects the whole group`));
+  }
+  function ungroupSel(): void {
+    const keys = new Set(sel.map(pieceKey));
+    const before = groups.length;
+    for (let k = groups.length - 1; k >= 0; k--) if ([...groups[k]!].some((x) => keys.has(x))) groups.splice(k, 1);
+    say(before > groups.length ? tx('Rozgrupowano', 'Ungrouped') : tx('Zaznaczenie nie jest w grupie', 'The selection is not in a group'));
+  }
+  /** po kliknięciu: dołącza resztę grup, do których należy zaznaczenie */
+  function expandGroups(): void {
+    if (!groups.length || !sel.length) return;
+    const keys = new Set(sel.map(pieceKey));
+    const want = new Set<string>();
+    for (const g of groups) if ([...g].some((x) => keys.has(x))) for (const x of g) if (!keys.has(x)) want.add(x);
+    if (!want.size) return;
+    ctx.current()?.traverse((o) => {
+      const m = o as THREE.Mesh;
+      if (!m.isMesh || m.userData.hiFor) return;
+      if (m.userData.temp || m.userData.fxProp) { const w = wholeOf(m); if (want.has(nodeKey(m, w))) addPiece(m, w); return; }
+      if (!m.userData.fx) return;
+      for (const island of isl(m.geometry).list) if (want.has(nodeKey(m, island))) addPiece(m, island);
+    });
+  }
+
+  // ---------- chowanie na czas pracy (H / Alt+H): część zgnieciona w punkt bez żadnej poprawki ----------
+  const hidden: { mesh: THREE.Mesh; isl: Island; P: Float32Array; N: Float32Array | null }[] = [];
+  function hideSel(): void {
+    if (!sel.length) { say(tx('Zaznacz, co schować', 'Select what to hide')); return; }
+    for (const p of sel) {
+      const c = new THREE.Vector3(...p.c);
+      hidden.push({ mesh: p.mesh, isl: p.isl, P: p.P, N: p.N });
+      writeIsland(p.mesh, p.isl, p.P, p.N, new THREE.Matrix4().makeTranslation(c.x, c.y, c.z).multiply(new THREE.Matrix4().makeScale(1e-5, 1e-5, 1e-5)).multiply(new THREE.Matrix4().makeTranslation(-c.x, -c.y, -c.z)));
+    }
+    deselect();
+    say(tx(`Schowane: ${hidden.length} — Alt+H pokazuje wszystko`, `Hidden: ${hidden.length} — Alt+H shows everything`));
+  }
+  function unhideAll(): void {
+    if (!hidden.length) return;
+    for (const h of hidden.splice(0)) writeIsland(h.mesh, h.isl, h.P, h.N, new THREE.Matrix4());
+    say(tx('Pokazano wszystko', 'Everything shown'));
+  }
+
+  // ---------- siatka na ziemi ----------
+  let groundGrid: THREE.GridHelper | null = null;
+  function toggleGrid(): void {
+    const c = cur();
+    if (groundGrid) { groundGrid.removeFromParent(); groundGrid = null; gridBtn.setAttribute('aria-pressed', 'false'); return; }
+    const span = c ? new THREE.Box3().setFromObject(c).getSize(new THREE.Vector3()) : new THREE.Vector3(1, 1, 1);
+    const size = Math.ceil(Math.max(span.x, span.z) * 1.6 * 10) / 10;
+    groundGrid = new THREE.GridHelper(size, Math.round(size / 0.05), 0xd8b25a, 0x6a5c40);
+    (groundGrid.material as THREE.Material).transparent = true; (groundGrid.material as THREE.Material).opacity = 0.55;
+    if (c) groundGrid.position.copy(c.localToWorld(new THREE.Vector3(0, 0.002, 0)));
+    ctx.scene.add(groundGrid);
+    gridBtn.setAttribute('aria-pressed', 'true');
+  }
+
+  // ---------- ponów (Ctrl+Y): przed każdym cofnięciem zdjęcie stanu edycji, ponowienie wraca do niego ----------
+  type Snap = { geo: [THREE.BufferAttribute, Float32Array][]; temps: [THREE.Mesh, THREE.Object3D][]; edits: Fix[]; fixM: [Fix, number[]][]; propM: [THREE.Matrix4, THREE.Matrix4][] };
+  const redo: Snap[] = [];
+  let undoLenAfter = -1;
+  function takeSnap(): Snap {
+    const geo: [THREE.BufferAttribute, Float32Array][] = [], temps: [THREE.Mesh, THREE.Object3D][] = [], propM: [THREE.Matrix4, THREE.Matrix4][] = [];
+    ctx.current()?.traverse((o) => {
+      const m = o as THREE.Mesh;
+      if (!m.isMesh || m.userData.hiFor) return;
+      if (!(m.userData.fx || m.userData.temp || m.userData.fxProp || m.geometry.userData.spots)) return;
+      for (const n of ['position', 'normal']) { const a = m.geometry.getAttribute(n) as THREE.BufferAttribute | undefined; if (a) geo.push([a, (a.array as Float32Array).slice()]); }
+      if (m.userData.temp && m.parent) temps.push([m, m.parent]);
+      if (m.userData.propM) propM.push([m.userData.propM as THREE.Matrix4, (m.userData.propM as THREE.Matrix4).clone()]);
+    });
+    return { geo, temps, edits: [...edits], fixM: edits.map((f) => [f, f.m.slice()]), propM };
+  }
+  function restoreSnap(sn: Snap): void {
+    for (const [a, v] of sn.geo) { (a.array as Float32Array).set(v); a.needsUpdate = true; }
+    const keep = new Set(sn.temps.map(([m]) => m));
+    ctx.current()?.traverse((o) => { const m = o as THREE.Mesh; if (m.isMesh && m.userData.temp && !keep.has(m)) (m.userData.dropLater ??= true); });
+    const drop: THREE.Mesh[] = [];
+    ctx.current()?.traverse((o) => { const m = o as THREE.Mesh; if (m.userData?.dropLater) { drop.push(m); delete m.userData.dropLater; } });
+    for (const m of drop) m.removeFromParent();
+    for (const [m, parent] of sn.temps) if (m.parent !== parent) parent.add(m);
+    edits = [...sn.edits];
+    for (const [f, mm] of sn.fixM) f.m = mm.slice();
+    for (const [pm, v] of sn.propM) pm.copy(v);
+    ctx.current()?.traverse((o) => { const m = o as THREE.Mesh; if (m.isMesh) { m.geometry.computeBoundingSphere(); m.geometry.computeBoundingBox(); } });
+  }
+  function redoLast(): void {
+    if (undo.length !== undoLenAfter) redo.length = 0;     // po cofnięciu była nowa zmiana — ponawiać nie ma czego
+    const sn = redo.pop();
+    if (!sn) { say(tx('Nie ma czego ponowić', 'Nothing to redo')); return; }
+    deselect();
+    const before = takeSnap();
+    restoreSnap(sn);
+    undo.push([() => restoreSnap(before)]);
+    undoLenAfter = undo.length;
+    say(tx(`Ponowiono. Zmiany do zapisania: ${edits.length}`, `Redone. Unsaved changes: ${edits.length}`));
   }
   type Spot = { i: number; t: number; n: number; grp: string; prop: string; m: number[] };
   function spotToProp(merged: THREE.Mesh, r: Spot): THREE.Mesh | undefined {
@@ -566,6 +762,7 @@ export function createModelEditor(ctx: Ctx): { onModel: () => void; guard: (go: 
     const snap = snapshot(mesh, island);
     const hi = new THREE.Mesh(islandGeo(mesh, island), hiMat);
     hi.renderOrder = 999;
+    hi.userData.hiFor = true;
     mesh.add(hi);
     sel.push({ mesh, isl: island, P: snap.P, N: snap.N, c: centerOf(snap.P), hi });
   }
@@ -575,6 +772,7 @@ export function createModelEditor(ctx: Ctx): { onModel: () => void; guard: (go: 
     if (!multi) { deselect(); addPiece(mesh, island); }
     else if (k >= 0) { const [p] = sel.splice(k, 1); p!.hi.removeFromParent(); p!.hi.geometry.dispose(); }
     else addPiece(mesh, island);
+    if (!multi || k < 0) expandGroups();
     placeProxy();
     const tris = sel.reduce((a, p) => a + p.isl.tris.length, 0);
     say(sel.length ? tx(`Zaznaczone części: ${sel.length} (${tris} trójkątów)`, `Selected parts: ${sel.length} (${tris} triangles)`) : tx('Kliknij część (Ctrl — kilka naraz)', 'Click a part (Ctrl — several at once)'));
@@ -625,10 +823,14 @@ export function createModelEditor(ctx: Ctx): { onModel: () => void; guard: (go: 
     say(tx(`Usunięto. Zmiany do zapisania: ${edits.length}`, `Removed. Unsaved changes: ${edits.length}`));
   }
   function undoLast(): void {
-    const step = undo.pop();
-    if (!step) return;
+    if (!undo.length) return;
+    if (undo.length !== undoLenAfter) redo.length = 0;
     deselect();
+    redo.push(takeSnap());
+    if (redo.length > 30) redo.shift();
+    const step = undo.pop()!;
     for (const f of step.reverse()) f();
+    undoLenAfter = undo.length;
     say(tx(`Cofnięto. Zmiany do zapisania: ${edits.length}`, `Undone. Unsaved changes: ${edits.length}`));
   }
 
@@ -676,33 +878,43 @@ export function createModelEditor(ctx: Ctx): { onModel: () => void; guard: (go: 
     src?.();
     return () => { parent.add(mesh); if (k >= 0) edits.splice(Math.min(k, edits.length), 0, fix); else edits.push(fix); mesh.userData.unsrc?.(); };
   }
-  const offset = (): THREE.Matrix4 => new THREE.Matrix4().makeTranslation(0.06, 0, 0.06);
   /** Ctrl+C / Ctrl+V (Michał 10.11.2026): schowek pamięta części, wklejenie robi ich kopię obok (jak Ctrl+D) */
   let clip: [THREE.Mesh, Island][] = [];
+  let pasteN = 0;
   function paste(): void {
     const alive = clip.filter(([m]) => m.parent);
     if (!alive.length) { say(tx('Schowek jest pusty — zaznacz część i naciśnij Ctrl+C', 'Clipboard is empty — select a part and press Ctrl+C')); return; }
     deselect();
-    for (const [m, i] of alive) addPiece(m, m.userData.temp ? wholeOf(m) : i);
-    duplicateSel();
+    for (const [m, i] of alive) addPiece(m, m.userData.temp || m.userData.fxProp ? wholeOf(m) : i);
+    // każde kolejne wklejenie trochę dalej, żeby kopie nie lądowały jedna w drugiej
+    pasteN++;
+    duplicateSel(pasteN);
   }
-  function duplicateSel(): void {
+  function duplicateSel(nth = 1): void {
     const made: THREE.Mesh[] = [], step: (() => void)[] = [];
+    // kopia w tym samym miejscu (jak w Unity) — Michał 10.11.2026: „czemu jak coś kopiuję, to trochę się przesuwa”; od razu chwycona uchwytem
+    void nth;
+    const offset = (): THREE.Matrix4 => new THREE.Matrix4();
     for (const p of sel) {
       const temp = p.mesh.userData.temp as Fix | undefined;
-      // model z paczki (dodany teraz albo zapisany wcześniej): kopia jako nowy model obok
-      if (temp?.k === 'prop' || p.mesh.userData.fxProp) {
+      // model z paczki (dodany teraz, wyjęty z modelu albo zapisany wcześniej): kopia jako nowy model obok
+      if (temp?.k === 'prop' || temp?.k === 'f2p' || p.mesh.userData.fxProp) {
         const name = (temp?.prop ?? (p.mesh.userData.fxProp as [string, number, string])[2]) as PropName;
         const g = temp?.g ?? (p.mesh.userData.fxProp as [string, number, string])[0];
         const base = temp ? new THREE.Matrix4().fromArray(temp.m) : (p.mesh.userData.propM as THREE.Matrix4).clone();
-        const mm = addProp(name, g, undefined, offset().multiply(base), true);
-        if (mm) made.push(mm);
+        const mm = addProp(name, g === 'floor' ? 'interior' : g, undefined, offset().multiply(base), true);
+        if (mm) { made.push(mm); step.push(...(undo.pop() ?? [])); }
         continue;
       }
-      if (temp && temp.k !== 'add') continue;      // kopia kopii: zapisz i przeładuj, potem kopiuj
       let fix: Fix, P: Float32Array;
       const m = offset();
-      if (temp) {
+      if (temp?.k === 'dup') {
+        // kopia kopii: ta sama część źródłowa, macierz przesunięta dalej
+        fix = { ...temp, m: m.clone().multiply(new THREE.Matrix4().fromArray(temp.m)).elements.map(r4) };
+        P = p.P.slice();
+        applyM(P, m.elements);
+      } else if (temp && temp.k !== 'add') continue;      // inne zmiany: zapisz i odśwież, potem kopiuj
+      else if (temp) {
         fix = { ...temp, m: m.clone().multiply(new THREE.Matrix4().fromArray(temp.m)).elements.map(r4) };
         P = new Float32Array(unitShape(temp.shape ?? 'box'));
         applyM(P, fix.m);
@@ -722,7 +934,7 @@ export function createModelEditor(ctx: Ctx): { onModel: () => void; guard: (go: 
     deselect();
     for (const mesh of made) addPiece(mesh, wholeOf(mesh));
     placeProxy(); markPanel();
-    say(tx(`Skopiowano: ${made.length}. Przesuń kopię uchwytem.`, `Copied: ${made.length}. Move the copy with the gizmo.`));
+    say(tx(`Skopiowano: ${made.length} — kopia leży w tym samym miejscu i jest zaznaczona, przesuń ją uchwytem`, `Copied: ${made.length} — the copy sits in the same place and is selected; move it with the gizmo`));
   }
   /** Część widoczna z obu stron: kopia z odwróconymi trójkątami (tył staje się przodem) */
   function doubleSel(): void {
@@ -887,7 +1099,7 @@ export function createModelEditor(ctx: Ctx): { onModel: () => void; guard: (go: 
     if (!multi) deselect();
     if (multi && all) {
       for (const nd of o.nodes) { const k = sel.findIndex((p) => p.mesh === nd.mesh && p.isl === nd.island); if (k >= 0) { const [p] = sel.splice(k, 1); p!.hi.removeFromParent(); p!.hi.geometry.dispose(); } }
-    } else for (const nd of o.nodes) if (!sel.some((p) => p.mesh === nd.mesh && p.isl === nd.island)) addPiece(nd.mesh, nd.island);
+    } else { for (const nd of o.nodes) if (!sel.some((p) => p.mesh === nd.mesh && p.isl === nd.island)) addPiece(nd.mesh, nd.island); expandGroups(); }
     placeProxy();
     say(sel.length ? tx(`Zaznaczone: ${sel.length} części (Alt+klik — pojedyncza część)`, `Selected: ${sel.length} parts (Alt+click — a single part)`) : tx('Kliknij część (Ctrl — kilka naraz)', 'Click a part (Ctrl — several at once)'));
     markPanel();
@@ -1062,7 +1274,7 @@ export function createModelEditor(ctx: Ctx): { onModel: () => void; guard: (go: 
   window.addEventListener('keydown', (e) => {
     if (!on || (e.target as HTMLElement)?.tagName === 'INPUT') return;
     const k = e.key.toLowerCase();
-    if (e.ctrlKey || e.metaKey) { if (k === 'z') { e.preventDefault(); undoLast(); } else if (k === 'd') { e.preventDefault(); duplicateSel(); } else if (k === 's') { e.preventDefault(); void save(); } else if (k === 'c') { if (sel.length) { e.preventDefault(); clip = sel.map((p) => [p.mesh, p.isl]); say(tx(`Skopiowano do schowka: ${clip.length}`, `Copied: ${clip.length}`)); } } else if (k === 'v') { e.preventDefault(); paste(); } return; }
+    if (e.ctrlKey || e.metaKey) { if (k === 'z') { e.preventDefault(); undoLast(); } else if (k === 'd') { e.preventDefault(); duplicateSel(); } else if (k === 's') { e.preventDefault(); void save(); } else if (k === 'y') { e.preventDefault(); redoLast(); } else if (k === 'g') { e.preventDefault(); if (e.shiftKey) ungroupSel(); else groupSel(); } else if (k === 'c') { if (sel.length) { e.preventDefault(); clip = sel.map((p) => [p.mesh, p.isl]); pasteN = 0; say(tx(`Skopiowano do schowka: ${clip.length}`, `Copied: ${clip.length}`)); } } else if (k === 'v') { e.preventDefault(); paste(); } return; }
     // 1/2/3 zamiast W/E/R: WASD lata kamerą (viewer.ts)
     if (k === '1') setMode('translate');
     else if (k === '2') setMode('rotate');
@@ -1070,6 +1282,9 @@ export function createModelEditor(ctx: Ctx): { onModel: () => void; guard: (go: 
     else if (k === 'delete' || k === 'backspace') removeSel();
     else if (k === 'escape') deselect();
     else if (k === 'f') focusSel();
+    else if (k === 'h') { if (e.altKey) unhideAll(); else hideSel(); }
+    else if (k === 'g') toggleGrid();
+    else if (k === 'end') dropToSurface();
   });
 
   // ---------- zapis ----------
@@ -1163,7 +1378,9 @@ export function createModelEditor(ctx: Ctx): { onModel: () => void; guard: (go: 
   })();
   // niezapisane zmiany: ostrzeżenie przy przejściu na inny model i przy zamykaniu karty (Michał 10.11.2026)
   window.addEventListener('beforeunload', (e) => { if (edits.length) { e.preventDefault(); e.returnValue = ''; } });
-  function guard(go: () => void): void {
+  function guard(go0: () => void): void {
+    // przed przejściem: schowane części wracają (bryły modeli są wspólne między pokazami), siatka znika
+    const go = (): void => { unhideAll(); if (groundGrid) toggleGrid(); groups.length = 0; redo.length = 0; go0(); };
     if (!edits.length) { go(); return; }
     const back = document.createElement('div');
     back.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:20;display:grid;place-items:center';
@@ -1207,8 +1424,9 @@ export function createModelEditor(ctx: Ctx): { onModel: () => void; guard: (go: 
       ],
       edit: [
         { label: tx('Cofnij', 'Undo'), key: 'Ctrl+Z', act: undoLast, enabled: () => on && undo.length > 0 },
+        { label: tx('Ponów', 'Redo'), key: 'Ctrl+Y', act: redoLast, enabled: () => on && redo.length > 0 && undo.length === undoLenAfter },
         { sep: true },
-        { label: tx('Kopiuj do schowka', 'Copy'), key: 'Ctrl+C', act: () => { clip = sel.map((p) => [p.mesh, p.isl]); }, enabled: hasSel },
+        { label: tx('Kopiuj do schowka', 'Copy'), key: 'Ctrl+C', act: () => { clip = sel.map((p) => [p.mesh, p.isl]); pasteN = 0; }, enabled: hasSel },
         { label: tx('Wklej', 'Paste'), key: 'Ctrl+V', act: paste, enabled: () => on && clip.length > 0 },
         { label: tx('Powiel', 'Duplicate'), key: 'Ctrl+D', act: duplicateSel, enabled: hasSel },
         { label: tx('Usuń', 'Delete'), key: 'Del', act: removeSel, enabled: hasSel },
@@ -1217,6 +1435,25 @@ export function createModelEditor(ctx: Ctx): { onModel: () => void; guard: (go: 
         { label: tx('Odbij lustrzanie w osi X', 'Mirror along X'), act: () => mirror(0), enabled: hasSel },
         { label: tx('Odbij lustrzanie w osi Z', 'Mirror along Z'), act: () => mirror(2), enabled: hasSel },
         { label: tx('Postaw na ziemi', 'Drop to the ground'), act: dropToGround, enabled: hasSel },
+        { label: tx('Połóż na tym, co pod spodem', 'Drop onto what is below'), key: 'End', act: dropToSurface, enabled: hasSel },
+        { label: tx('Wyrównaj', 'Align'), enabled: () => on && sel.length > 1, sub: () => [
+          { label: tx('do lewej (X)', 'left (X)'), act: () => align('x', 'min') },
+          { label: tx('do środka (X)', 'centre (X)'), act: () => align('x', 'mid') },
+          { label: tx('do prawej (X)', 'right (X)'), act: () => align('x', 'max') },
+          { sep: true },
+          { label: tx('do tyłu (Z)', 'back (Z)'), act: () => align('z', 'min') },
+          { label: tx('do środka (Z)', 'centre (Z)'), act: () => align('z', 'mid') },
+          { label: tx('do przodu (Z)', 'front (Z)'), act: () => align('z', 'max') },
+          { sep: true },
+          { label: tx('spody na jednej wysokości', 'bottoms level'), act: () => align('y', 'min') },
+          { label: tx('równe odstępy (X)', 'distribute (X)'), act: () => distribute('x') },
+          { label: tx('równe odstępy (Z)', 'distribute (Z)'), act: () => distribute('z') },
+        ] },
+        { sep: true },
+        { label: tx('Grupuj', 'Group'), key: 'Ctrl+G', act: groupSel, enabled: () => on && sel.length > 1 },
+        { label: tx('Rozgrupuj', 'Ungroup'), key: 'Ctrl+Shift+G', act: ungroupSel, enabled: hasSel },
+        { label: tx('Schowaj zaznaczone', 'Hide selected'), key: 'H', act: hideSel, enabled: hasSel },
+        { label: tx('Pokaż schowane', 'Show hidden'), key: 'Alt+H', act: unhideAll, enabled: () => on && hidden.length > 0 },
         { label: tx('Widać z obu stron', 'Visible from both sides'), act: doubleSel, enabled: hasSel },
       ],
       tools: [
@@ -1229,6 +1466,7 @@ export function createModelEditor(ctx: Ctx): { onModel: () => void; guard: (go: 
         { label: tx('Przyciąganie', 'Snap'), checked: () => snap.checked, act: () => { snap.checked = !snap.checked; applySnap(); }, enabled: isOn },
         { label: tx('Osie części (lokalnie)', 'Part axes (local)'), checked: () => space.checked, act: () => { space.checked = !space.checked; tc.setSpace(space.checked ? 'local' : 'world'); }, enabled: isOn },
         { label: tx('Pokaż zaznaczenie', 'Frame selection'), key: 'F', act: focusSel, enabled: hasSel },
+        { label: tx('Siatka na ziemi', 'Ground grid'), key: 'G', checked: () => !!groundGrid, act: toggleGrid, enabled: isOn },
       ],
       add: [
         { label: tx('Bryła', 'Shape'), enabled: isOn, sub: () => SHAPES.map((sh) => ({ label: shapeLabel(sh, tx), act: () => addShape(sh, picked, grpSel.value) })) },

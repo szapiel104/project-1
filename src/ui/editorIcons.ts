@@ -18,5 +18,22 @@ const P: Record<string, string> = {
 };
 
 export function icon(name: keyof typeof P | string): string {
+  if (!(name in P)) return icon2(name);
   return `<svg width="18" height="18" viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path fill="currentColor" d="${P[name] ?? ''}"/></svg>`;
+}
+const P2: Record<string, string> = {
+  redo: 'M12 4V1l6 5-6 5V8H8a4 4 0 0 0 0 8h5v2H8A6 6 0 0 1 8 6z',
+  group: 'M2 2h7v7H2zm2 2v3h3V4zm7-2h7v7h-7zm2 2v3h3V4zM2 11h7v7H2zm2 2v3h3v-3zm7-2h7v7h-7zm2 2v3h3v-3z',
+  ungroup: 'M1 1h6v6H1zm12 0h6v6h-6zM1 13h6v6H1zm12 0h6v6h-6zM8 9h4v2H8z',
+  grid: 'M2 2h16v16H2zm2 2v4h4V4zm6 0v4h4V4zM4 10v4h4v-4zm6 0v4h4v-4z',
+  hide: 'M10 4c4.5 0 7.5 4 8.5 6-.5 1-1.6 2.7-3.3 4l1.6 1.6-1.4 1.4L2.6 4.2 4 2.8l2 2C7.2 4.3 8.5 4 10 4zm-6 4.3l2.2 2.2A4 4 0 0 0 9.5 13.8l1.6 1.6c-.4.1-.7.1-1.1.1-4.5 0-7.5-4-8.5-6 .5-1 1.3-2.3 2.5-3.2z',
+  show: 'M10 4c4.5 0 7.5 4 8.5 6-1 2-4 6-8.5 6S2.5 12 1.5 10C2.5 8 5.5 4 10 4zm0 2.5a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7zm0 2a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3z',
+  alignL: 'M2 2h2v16H2zm4 3h10v4H6zm0 6h6v4H6z',
+  alignC: 'M9 2h2v3h5v4h-5v2h3v4h-3v3H9v-3H6v-4h3V9H4V5h5z',
+  alignR: 'M16 2h2v16h-2zM4 5h10v4H4zm4 6h6v4H8z',
+  spread: 'M1 3h2v14H1zm16 0h2v14h-2zM5 7h3v6H5zm7 0h3v6h-3z',
+  surface: 'M9 1h2v8.2l3.3-3.3 1.4 1.4L10 13 4.3 7.3l1.4-1.4L9 9.2zM1 15h18v4H1z',
+};
+export function icon2(name: string): string {
+  return `<svg width="18" height="18" viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path fill="currentColor" d="${P2[name] ?? ''}"/></svg>`;
 }

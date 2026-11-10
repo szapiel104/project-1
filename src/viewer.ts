@@ -602,8 +602,10 @@ renderer.setAnimationLoop(() => {
     if (held.has('e')) move.y += 1;
     if (held.has('q')) move.y -= 1;
     if (move.lengthSq()) {
-      const span = Math.max(size.x, size.y, size.z, 0.2);
-      move.normalize().multiplyScalar(span * (held.has('shift') ? 6 : 2) * dt);   // ok. 2 długości modelu na sekundę (0,55 było za wolno)
+      // prędkość od odległości do punktu, na który patrzy kamera: z bliska wolno i dokładnie, z daleka szybciej
+      // (Michał 10.11.2026: „za czuły jest WASD w budowaniu”); Shift — 3× szybciej
+      const span = Math.max(size.x, size.y, size.z, 0.2), dist = camera.position.distanceTo(controls.target);
+      move.normalize().multiplyScalar(Math.min(span * 1.2, Math.max(0.03, dist * 0.8)) * (held.has('shift') ? 3 : 1) * dt);
       camera.position.add(move); controls.target.add(move);
     }
   }
