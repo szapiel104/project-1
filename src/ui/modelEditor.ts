@@ -368,7 +368,8 @@ export function createModelEditor(ctx: Ctx): { onModel: () => void } {
     try {
       const { supa } = await import('../net/supa');
       const { data: s } = await supa.auth.getSession();
-      if (!s.session) { say(tx('Zapisano w przeglądarce (zaloguj się w grze, żeby wysłać do bazy)', 'Saved in the browser (log in to the game to send it to the database)')); return; }
+      if (!s.session) { say(tx('⚠ Zapisano TYLKO w tej przeglądarce — zaloguj się w grze (RebaZius), wtedy poprawki same polecą do bazy i trafią na produkcję', '⚠ Saved ONLY in this browser — log in to the game (owner account); the fixes will then go to the database and reach production')); status.style.color = '#ffb070'; return; }
+      status.style.color = '#e6d6b4';
       const { error } = await supa.from('model_fixes').upsert({ model: id, fixes: list, updated_at: new Date().toISOString(), updated_by: s.session.user.id });
       say(error ? tx(`Zapisano w przeglądarce; baza: ${error.message}`, `Saved in the browser; database: ${error.message}`) : tx(`Zapisano (${list.length} poprawek) — trafią do gry przy następnej wersji`, `Saved (${list.length} fixes) — they reach the game in the next version`));
     } catch (e) { say(tx(`Zapisano w przeglądarce; baza niedostępna (${String(e)})`, `Saved in the browser; database unavailable (${String(e)})`)); }
@@ -390,6 +391,15 @@ export function createModelEditor(ctx: Ctx): { onModel: () => void } {
       const { data } = await supa.from('model_fixes').select('fixes').eq('model', id).maybeSingle();
       const remote = (data as { fixes?: Fix[] } | null)?.fixes;
       if (Array.isArray(remote) && remote.length > list.length) list = remote;
+      // zapis z przeglądarki, którego nie ma w bazie (np. zapisany przed zalogowaniem albo przed założeniem tabeli):
+      // twórca zalogowany → wysyłamy go teraz, żeby nic z lokalnej pracy nie przepadło w drodze na produkcję
+      else if (list.length > (Array.isArray(remote) ? remote.length : 0) && list.length > base) {
+        const { data: s } = await supa.auth.getSession();
+        if (s.session) {
+          const { error } = await supa.from('model_fixes').upsert({ model: id, fixes: list, updated_at: new Date().toISOString(), updated_by: s.session.user.id });
+          if (!error) say(tx('Wysłano do bazy poprawki zapisane wcześniej w przeglądarce', 'Sent fixes saved earlier in the browser to the database'));
+        }
+      }
     } catch { /* bez bazy: tylko przeglądarka */ }
     const extra = list.slice(base);
     const cur = ctx.current();
