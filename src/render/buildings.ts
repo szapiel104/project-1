@@ -143,6 +143,9 @@ function tileBox(geo: THREE.BufferGeometry, w: number, h: number, d: number, k: 
     }
 }
 
+/** przełączniki do pomiarów (lokalnie: window.__debugDraw.noInterior = true chowa wszystkie wnętrza) */
+export const debugDraw = { noInterior: false };
+
 const M = {
   stone: mat(0xcfc7b3, 'bricks'), stoneDark: mat(0xa39b88, 'bricks'), wood: mat(0x85603a, 'planks'), woodDark: mat(0x5e4329, 'planks'),
   plaster: mat(0xf0e4c4, 'plaster'), thatch: mat(0xd1ad4c, 'thatch'), soil: mat(0x86633d, 'soil'), wheat: mat(0xd9b84a),
@@ -672,7 +675,7 @@ export function animateBuilding(model: THREE.Object3D, active: boolean, time: nu
     // ktoś pracuje w środku: zdejmujemy dach i ściany, żeby było go widać
     // wnętrze jest zawsze (Michał 10.11.2026: „po co ma znikać i się przeliczać — niech zawsze będzie wnętrze”); przez
     // drzwi i okna widać je z ulicy, a to, czego kamera nie widzi, odrzuca rysowanie (paczki budynków: kadr i cienie)
-    interior.visible = true;
+    interior.visible = !debugDraw.noInterior;
     // budynek bez wnętrza w modelu (np. siedziby magów ognia i wody): pusta grupa — dachu nie zdejmujemy,
     // bo pod nim nic nie ma i zostają same dziurawe mury
     // wyjątek: wieże (openTop w modelu) nie mają wnętrza, ale po zdjęciu dachu widać pomost z łucznikami i ich sprzętem
