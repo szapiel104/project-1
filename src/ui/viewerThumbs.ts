@@ -12,10 +12,10 @@ export function createThumbs(renderer: Renderer, scene: THREE.Scene, isolate: ()
   watch: (id: string, img: HTMLImageElement) => void;
   step: () => void;
 } {
-  const key = (id: string): string => `p1-thumb:${build}:${id}`;
+  const key = (id: string): string => `p1-thumb2:${build}:${id}`;   // 2: bez ciemnych miniatur z pierwszej wersji
   // stare miniatury z poprzednich buildów sprzątamy przy starcie
   try {
-    for (let k = localStorage.length - 1; k >= 0; k--) { const n = localStorage.key(k); if (n?.startsWith('p1-thumb:') && !n.startsWith(`p1-thumb:${build}:`)) localStorage.removeItem(n); }
+    for (let k = localStorage.length - 1; k >= 0; k--) { const n = localStorage.key(k); if ((n?.startsWith('p1-thumb:') || n?.startsWith('p1-thumb2:')) && !n.startsWith(`p1-thumb2:${build}:`)) localStorage.removeItem(n); }
   } catch { /* bez pamięci */ }
   const want = new Map<HTMLImageElement, string>();
   const io = new IntersectionObserver((es) => {
