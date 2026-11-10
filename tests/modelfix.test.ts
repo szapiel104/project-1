@@ -42,4 +42,11 @@ describe('poprawki modeli z edytora (modelfix.ts)', () => {
     applyModelFixes('test4', data, [{ k: 'prop', g: 'base', prop: 'apple', m: I }, { k: 'pm', g: 'base', i: 0, m: up }]);
     expect((data.props as { m: number[] }[])[0]!.m[13]).toBeCloseTo(0.5, 6);
   });
+  it('„f2p” wyjmuje jabłko z miejsc modelu i robi z niego model z paczki', () => {
+    const data: Record<string, unknown> = { q, foods: [['interior', 'apple', 0, 0, 0, 0.03, 0]] };
+    const I = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1];
+    applyModelFixes('test5', data, [{ k: 'f2p', list: 'foods', i: 0, g: 'interior', prop: 'apple', m: I }]);
+    expect((data.foods as number[][])[0]![5]).toBe(0);
+    expect((data.props as { prop: string }[])[0]!.prop).toBe('apple');
+  });
 });

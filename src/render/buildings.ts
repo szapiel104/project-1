@@ -875,16 +875,32 @@ function foodGeos(model: unknown, spots: FoodSpot[]): [string, FoodKind, THREE.B
   let out = foodCache.get(model);
   if (out) return out;
   const by = new Map<string, THREE.BufferGeometry[]>();
+  const idx = new Map<string, number[]>(), meta = new Map<number, { grp: string; prop: string; m: number[] }>();
   spots.forEach(([grp, kind, x, y, z, w, rot], i) => {
+    if (!(w > 0)) return;   // przeniesiony w edytorze do zwykłych modeli z paczki (poprawka 'f2p')
     const key = `${grp}|${kind}`;
-    let l = by.get(key); if (!l) { l = []; by.set(key, l); }
-    l.push(kind === 'apple' ? propAt('apple', x, y, z, w, rot) : kind === 'sack' ? propAt('sack', x, y, z, w, rot) : propAt((['bun1', 'bun2', 'bun3'] as const)[i % 3]!, x, y, z, w, rot));
+    let l = by.get(key); if (!l) { l = []; by.set(key, l); idx.set(key, []); }
+    l.push(propAt(foodProp(kind, i), x, y, z, w, rot));
+    idx.get(key)!.push(i);
+    meta.set(i, { grp, prop: foodProp(kind, i), m: new THREE.Matrix4().compose(new THREE.Vector3(x, y, z), new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), rot), new THREE.Vector3(w, w, w)).elements });
   });
-  out = [...by].map(([key, l]) => { const [grp, kind] = key.split('|') as [string, FoodKind]; return [grp, kind, mergeGeometries(l)!] as [string, FoodKind, THREE.BufferGeometry]; });
+  out = [...by].map(([key, l]) => {
+    const [grp, kind] = key.split('|') as [string, FoodKind];
+    const g = mergeGeometries(l)!;
+    // który trójkąt należy do którego miejsca (edytor w podglądzie modeli wyjmuje z tego pojedyncze jabłko czy worek)
+    let t = 0;
+    g.userData.spots = l.map((geo, k) => { const n = geo.getAttribute('position').count / 3, i = idx.get(key)![k]!; const r = { i, t, n, ...meta.get(i)! }; t += n; return r; });
+    g.userData.spotList = 'foods';
+    return [grp, kind, g] as [string, FoodKind, THREE.BufferGeometry];
+  });
   foodCache.set(model, out);
   return out;
 }
 
+/** stały obrót kosza z jego położenia (żeby kosze nie stały jak od linijki) */
+export const basketYaw = (x: number, z: number): number => (Math.abs(Math.sin(x * 127.1 + z * 311.7) * 43758.5) % 1) * Math.PI * 2;
+/** który skan pieczywa stoi w miejscu i (trzy bochenki na zmianę) */
+export const foodProp = (kind: string, i: number): PropName => kind === 'apple' ? 'apple' : kind === 'sack' ? 'sack' : (['bun1', 'bun2', 'bun3'] as const)[i % 3]!;
 /** Kosz w modelu budynku: [grupa, x, y dna, z, szerokość, wysokość] (tools/models/building.py) */
 type BasketSpot = [string, number, number, number, number, number];
 const basketCache = new Map<unknown, [string, THREE.BufferGeometry][]>();
@@ -893,12 +909,23 @@ function basketGeos(model: unknown, spots: BasketSpot[]): [string, THREE.BufferG
   let out = basketCache.get(model);
   if (out) return out;
   const by = new Map<string, THREE.BufferGeometry[]>();
-  for (const [grp, x, y, z, w, h] of spots) {
-    const yaw = (Math.abs(Math.sin(x * 127.1 + z * 311.7) * 43758.5) % 1) * Math.PI * 2;
-    let l = by.get(grp); if (!l) { l = []; by.set(grp, l); }
+  const idx = new Map<string, number[]>(), meta = new Map<number, { grp: string; prop: string; m: number[] }>();
+  const nativeH = model_<{ basketH: number }>('props').basketH;
+  spots.forEach(([grp, x, y, z, w, h], i) => {
+    if (!(w > 0)) return;   // przeniesiony w edytorze do zwykłych modeli z paczki (poprawka 'f2p')
+    const yaw = basketYaw(x, z);
+    let l = by.get(grp); if (!l) { l = []; by.set(grp, l); idx.set(grp, []); }
     l.push(basketAt(x, y, z, w, h, yaw));
-  }
-  out = [...by].map(([grp, l]) => [grp, mergeGeometries(l)!] as [string, THREE.BufferGeometry]);
+    idx.get(grp)!.push(i);
+    meta.set(i, { grp, prop: 'basket', m: new THREE.Matrix4().compose(new THREE.Vector3(x, y, z), new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), yaw), new THREE.Vector3(w, h / nativeH, w)).elements });
+  });
+  out = [...by].map(([grp, l]) => {
+    const g = mergeGeometries(l)!;
+    let t = 0;
+    g.userData.spots = l.map((geo, k) => { const n = geo.getAttribute('position').count / 3, i = idx.get(grp)![k]!; const r = { i, t, n, ...meta.get(i)! }; t += n; return r; });
+    g.userData.spotList = 'baskets';
+    return [grp, g] as [string, THREE.BufferGeometry];
+  });
   basketCache.set(model, out);
   return out;
 }

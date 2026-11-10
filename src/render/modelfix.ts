@@ -17,7 +17,9 @@ const bytes = (s: string | Uint8Array): Uint8Array => (typeof s === 'string' ? U
 
 export interface Fix {
   /** rodzaj: move (domyślnie), dup, mat, add */
-  k?: 'move' | 'dup' | 'mat' | 'add' | 'dbl' | 'prop' | 'pm';
+  k?: 'move' | 'dup' | 'mat' | 'add' | 'dbl' | 'prop' | 'pm' | 'f2p';
+  /** dla 'f2p': lista miejsc w modelu ('foods' — jabłka, chleb, worki; 'baskets' — kosze) */
+  list?: 'foods' | 'baskets';
   /** gotowy model z paczki dla 'prop' (beczka, worek, kosz…; render/props.ts) */
   prop?: string;
   /** grupa w modelu (base, shell, interior, floor, ceiling) */
@@ -165,6 +167,15 @@ export function applyModelFixes(name: string, data: Record<string, unknown>, fix
     if (kind === 'prop') {
       // gotowy model z paczki: dopisany do listy rekwizytów modelu (blenderModel w buildings.ts stawia go w grupie g)
       ((data.props ??= []) as { prop: string; g: string; m: number[] }[]).push({ prop: f.prop ?? 'barrel', g: f.g, m: f.m });
+      continue;
+    }
+    if (kind === 'f2p') {
+      // jabłko / bochenek / worek / kosz postawiony w modelu (building.py) staje się zwykłym modelem z paczki:
+      // znika z listy miejsc (szerokość 0), a w rekwizytach pojawia się z pełną macierzą (dalej jak 'prop' i 'pm')
+      const list = data[f.list ?? 'foods'] as number[][] | undefined, spot = list?.[f.i ?? -1];
+      if (!spot) { miss++; continue; }
+      spot[f.list === 'baskets' ? 4 : 5] = 0;
+      ((data.props ??= []) as { prop: string; g: string; m: number[] }[]).push({ prop: f.prop ?? 'apple', g: f.g, m: f.m });
       continue;
     }
     if (kind === 'pm') {

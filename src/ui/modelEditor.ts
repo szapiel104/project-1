@@ -227,6 +227,25 @@ export function createModelEditor(ctx: Ctx): { onModel: () => void; guard: (go: 
   /** rozmiar gotowego modelu w grze (modele z paczek mają szerokość 1) */
   const PROP_SIZE: Partial<Record<PropName, number>> = { barrel: 0.2, sack: 0.14, basket: 0.14, apple: 0.03, bun1: 0.06, bun2: 0.06, bun3: 0.06, fish: 0.12, torch: 0.4, sheaf: 0.3, ingots: 0.12, granite1: 0.3, granite2: 0.3, granite3: 0.3 };
   let assetsBuilt = false;
+  /** gotowe elementy: [nazwa, bryła, tekstura z gry, rozmiar x/y/z w polach mapy (1 = pole), obrót wokół Z] */
+  const PRESETS: [string, Shape, string, [number, number, number], number?][] = [
+    [tx('deska', 'plank'), 'bevel', 'plank', [0.5, 0.016, 0.08]],
+    [tx('belka', 'beam'), 'bevel', 'woodDark', [0.6, 0.06, 0.06]],
+    [tx('słup', 'post'), 'octa', 'wood', [0.06, 0.5, 0.06]],
+    [tx('kłoda', 'log'), 'cyl', 'bark', [0.09, 0.5, 0.09], Math.PI / 2],
+    [tx('kamień ciosany', 'dressed stone'), 'bevel', 'cut', [0.12, 0.07, 0.08]],
+    [tx('kamień polny', 'fieldstone'), 'sphere', 'rock', [0.11, 0.07, 0.09]],
+    [tx('mur kamienny', 'stone wall'), 'bevel', 'castle', [0.5, 0.3, 0.08]],
+    [tx('mur ciemny', 'dark wall'), 'bevel', 'castleDark', [0.5, 0.3, 0.08]],
+    [tx('ruda żelaza', 'iron ore'), 'sphere', 'ore', [0.07, 0.05, 0.06]],
+    [tx('skała z rudą', 'ore rock'), 'bevel', 'rockDark', [0.14, 0.1, 0.12]],
+    [tx('kryształ', 'crystal'), 'pyramid', 'magicOre', [0.04, 0.1, 0.04]],
+    [tx('dachówki', 'roof tiles'), 'box', 'roofTile', [0.4, 0.02, 0.3]],
+    [tx('strzecha', 'thatch'), 'prism', 'thatch', [0.5, 0.25, 0.5]],
+    [tx('płótno', 'canvas'), 'box', 'canvas', [0.3, 0.006, 0.2]],
+    [tx('siano', 'hay'), 'sphere', 'hay', [0.18, 0.1, 0.16]],
+    [tx('żelazna sztaba', 'iron bar'), 'bevel', 'iron', [0.3, 0.02, 0.02]],
+  ];
   function thumb(obj: THREE.Object3D): string {
     // jedna klatka modelu na pustej scenie, zrzut z płótna w tym samym zadaniu i przycięcie do kwadratu
     const sc = new THREE.Scene();
@@ -262,6 +281,24 @@ export function createModelEditor(ctx: Ctx): { onModel: () => void; guard: (go: 
   function buildAssets(): void {
     if (assetsBuilt) return;
     assetsBuilt = true;
+    // gotowe elementy budowlane: bryła w teksturze i rozmiarze z gry (deska, belka, kamień, ruda…) — Michał 10.11.2026
+    const presetHead = document.createElement('div'); presetHead.textContent = tx('Materiały budowlane', 'Building materials');
+    presetHead.style.cssText = 'grid-column:1/-1;color:#e9c766;font-weight:600;margin:2px 0';
+    assets.append(presetHead);
+    for (const [label, sh, mat, size, rz] of PRESETS) {
+      const make = (): THREE.Object3D => {
+        const P = new Float32Array(unitShape(sh));
+        const mm = new THREE.Matrix4().makeRotationZ(rz ?? 0).multiply(new THREE.Matrix4().makeScale(...size));
+        applyM(P, mm.elements);
+        const p16 = new Int16Array(P.length);
+        for (let k = 0; k < P.length; k++) p16[k] = Math.round(P[k]! * 2000);
+        return partMesh(mat, new Uint8Array(p16.buffer), new Uint8Array(P.length / 3).fill(230), 2000);
+      };
+      assets.append(assetTile(label, '', (at) => addShape(sh, mat, grpSel.value, at, size, rz ?? 0), make));
+    }
+    const shapeHead = document.createElement('div'); shapeHead.textContent = tx('Bryły (w wybranej teksturze)', 'Shapes (in the picked texture)');
+    shapeHead.style.cssText = presetHead.style.cssText;
+    assets.append(shapeHead);
     const stoneMat = new THREE.MeshStandardMaterial({ color: 0xb8ad96, roughness: 0.9 });
     for (const sh of SHAPES) {
       const label = shapeLabel(sh, tx);
@@ -485,6 +522,24 @@ export function createModelEditor(ctx: Ctx): { onModel: () => void; guard: (go: 
     if (step.length) undo.push(step);
     placeProxy();
     say(tx(`Zmiany do zapisania: ${edits.length}`, `Unsaved changes: ${edits.length}`));
+  }
+  type Spot = { i: number; t: number; n: number; grp: string; prop: string; m: number[] };
+  function spotToProp(merged: THREE.Mesh, r: Spot): THREE.Mesh | undefined {
+    const list = merged.geometry.userData.spotList as 'foods' | 'baskets';
+    const mesh = addProp(r.prop as PropName, r.grp === 'floor' ? 'interior' : r.grp, undefined, new THREE.Matrix4().fromArray(r.m), true);
+    if (!mesh) return;
+    const fix = mesh.userData.temp as Fix;
+    fix.k = 'f2p'; fix.list = list; fix.i = r.i;
+    // w sklejonej siatce ten kawałek znika (własna kopia geometrii — wspólna pamięć podręczna gry zostaje nietknięta)
+    if (!merged.userData.ownGeo) { const sp = merged.geometry.userData.spots; merged.geometry = merged.geometry.clone(); merged.geometry.userData.spots = sp; merged.geometry.userData.spotList = list; merged.userData.ownGeo = true; }
+    const pos = merged.geometry.getAttribute('position') as THREE.BufferAttribute;
+    const old = (pos.array as Float32Array).slice(r.t * 9, (r.t + r.n) * 9);
+    for (let v = r.t * 3; v < (r.t + r.n) * 3; v++) pos.setXYZ(v, old[0]!, old[1]!, old[2]!);
+    pos.needsUpdate = true;
+    const step = undo.pop() ?? [];
+    undo.push([...step, () => { (pos.array as Float32Array).set(old, r.t * 9); pos.needsUpdate = true; }]);
+    say(tx('Wyjęte jako osobny model — przesuń, obróć, skopiuj albo usuń', 'Taken out as a separate model — move, rotate, copy or delete'));
+    return mesh;
   }
   /**
    * Model z paczki zapisany wcześniej (rekwizyt w budynku): dzieli bryłę z innymi, więc przed edycją dostaje własną kopię
@@ -728,11 +783,13 @@ export function createModelEditor(ctx: Ctx): { onModel: () => void; guard: (go: 
     placeProxy(); markPanel();
     say(tx(`Nowa tekstura: ${mat} (${made.length})`, `New texture: ${mat} (${made.length})`));
   }
-  function addShape(shape: Shape, mat: string, g: string, where?: THREE.Vector3): void {
+  function addShape(shape: Shape, mat: string, g: string, where?: THREE.Vector3, size: [number, number, number] = [0.2, 0.2, 0.2], rotZ = 0): void {
     const cur = ctx.current();
     if (!cur) return;
     const at = where ?? cur.worldToLocal(ctx.orbit.target.clone());
-    const m = new THREE.Matrix4().makeTranslation(at.x, where ? at.y + 0.1 : Math.max(0.1, at.y), at.z).multiply(new THREE.Matrix4().makeScale(0.2, 0.2, 0.2));
+    const lift = rotZ ? size[0] / 2 : size[1] / 2;
+    const m = new THREE.Matrix4().makeTranslation(at.x, where ? at.y + lift : Math.max(lift, at.y), at.z)
+      .multiply(new THREE.Matrix4().makeRotationZ(rotZ)).multiply(new THREE.Matrix4().makeScale(...size));
     const fix: Fix = { k: 'add', g, to: mat, shape, m: m.elements.map(r4) };
     edits.push(fix);
     const P = new Float32Array(unitShape(shape)); applyM(P, fix.m);
@@ -965,11 +1022,18 @@ export function createModelEditor(ctx: Ctx): { onModel: () => void; guard: (go: 
     ray.setFromCamera(new THREE.Vector2(((cx - r.left) / r.width) * 2 - 1, -((cy - r.top) / r.height) * 2 + 1), ctx.camera);
     const cur = ctx.current();
     if (!cur) return null;
-    const hits = ray.intersectObject(cur, true).filter((h) => (h.object as THREE.Mesh).isMesh && (h.object.userData.fx || h.object.userData.fxProp || (h.object.userData.temp && !h.object.userData.locked)) && h.faceIndex != null);
+    const hits = ray.intersectObject(cur, true).filter((h) => (h.object as THREE.Mesh).isMesh && (h.object.userData.fx || h.object.userData.fxProp || (h.object as THREE.Mesh).geometry?.userData?.spots || (h.object.userData.temp && !h.object.userData.locked)) && h.faceIndex != null);
     const h = hits.find((x) => { for (let o: THREE.Object3D | null = x.object; o; o = o.parent) if (!o.visible) return false; return true; });
     if (!h) return null;
     const mesh = h.object as THREE.Mesh;
     if (mesh.userData.fxProp) { bakeProp(mesh); return { mesh, island: wholeOf(mesh) }; }
+    const spots = mesh.geometry.userData.spots as Spot[] | undefined;
+    if (spots) {
+      // jabłko / chleb / worek / kosz postawiony w modelu: wyjmujemy go jako osobny model z paczki (poprawka 'f2p')
+      const r = spots.find((x) => h.faceIndex! >= x.t && h.faceIndex! < x.t + x.n);
+      const t = r ? spotToProp(mesh, r) : undefined;
+      return t ? { mesh: t, island: wholeOf(t) } : null;
+    }
     const { of, list } = isl(mesh.geometry);
     return { mesh, island: list[of[h.faceIndex!]!]! };
   }
