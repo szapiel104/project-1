@@ -1942,6 +1942,15 @@ export class GameRenderer {
     const warmRoots = this.warmBuildingModels();
     try {
       await drain(40000, true);
+      // Modele rozgrzewki znikają dopiero, gdy karta skończy składać ich potoki (zwłaszcza cieni, w tle): usunięte
+      // w trakcie niszczyły bufory obiektów używane przez składany potok — „Async render pipeline creation failed …
+      // used in submit while destroyed”, ok. 200 błędów na starcie gry (Michał 10.11.2026). Najpierw je chowamy
+      // (nie dochodzą nowe potoki), czekamy na resztę, najwyżej 8 s, i dopiero wtedy usuwamy.
+      for (const m of warmRoots.values()) m.visible = false;
+      {
+        const w0 = performance.now();
+        while (gpuPending() > 0 && performance.now() - w0 < 8000) { this.present(); await new Promise<void>((ok) => requestAnimationFrame(() => ok())); }
+      }
       this.dropWarmModels(warmRoots);
       // Michał 7.11.2026: przy pierwszym okrążeniu kamery klatki stały 0,5–1,4 s, bo shadery tego, co było poza kadrem
       // albo w innej wersji z odległości, kompilowały się dopiero wtedy. Dokładamy po jednej klatce z innych stron i
