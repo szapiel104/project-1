@@ -35,7 +35,16 @@ Wynik wpisać pod partią (data, fps / med / wywołania / trójkąty).
 - [x] **0. Wnętrza bez cienia i odbicia** (10.11.2026) — części wnętrz w osobnych paczkach (`add(..., inner)`),
   `castShadow = false`, `noReflect`. W obrazie zawsze. Zysk mały (szacunek 1–2 ms).
 - [x] **1. Stały pomiar** (10.11.2026) — `__bench()` i ten plan.
-- [ ] **2. Wnętrza zlepione na kawałek mapy.** Najprostsze: nie mają dalekiej wersji, nie chowają się, nie ruszają.
+  Punkt wyjścia (10.11, po partii 0, okno 1718×1214, Ultra): 106 FPS, ok. 1410–1630 wywołań, 4,5 mln trójkątów —
+  ale tego samego dnia ta sama scena dawała też 49–55 FPS (Michał pracował na komputerze, Chrome raz przykryty).
+  **Pomiary mają sens tylko przy bezczynnym komputerze** — kolejne partie mierzyć parami (z/bez, `?kawalki=0`) od razu po sobie.
+- [~] **2. Wnętrza zlepione na kawałek mapy** (10.11.2026, włączone; `?kawalki=0` wyłącza). Pomiar parami:
+  z kawałkami 1175–1185 wywołań, 55–59 FPS; bez 1408–1422 wywołań, 49–55 FPS (szum duży). Uwaga: kawałek 16×16
+  dawał 185 osobnych siatek (wnętrza mają ~50 różnych materiałów) i był gorszy — teraz 48×48, wciąż ~158 siatek.
+  Wniosek do sprawdzenia: koszt rośnie z liczbą obiektów do narysowania (materiał × kawałek × przejście), nie tylko
+  z liczbą sztuk. Następny krok: kawałek = cała mapa dla wnętrz (≈50 siatek) i pomiar przy bezczynnym komputerze;
+  jeśli zysk mały — kierunek „mniej materiałów” (wspólny materiał z tablicą tekstur i numerem materiału w wierzchołku).
+  Opis pierwotny: Najprostsze: nie mają dalekiej wersji, nie chowają się, nie ruszają.
   Moduł `src/render/chunkMerge.ts`: kawałek 16×16 pól × materiał → jedna siatka (bryły przemnożone przez macierz
   budynku i sklejone). Przeliczenie kawałka tylko, gdy zmieni się lista budynków w nim (postawiony, zburzony, ruina,
   plac budowy) — z opóźnieniem do następnej klatki i w kawałkach po jednym na klatkę. W `syncMatBatches` części wnętrz
