@@ -670,7 +670,9 @@ export function animateBuilding(model: THREE.Object3D, active: boolean, time: nu
   const interior = named(model, 'interior');
   if (interior) {
     // ktoś pracuje w środku: zdejmujemy dach i ściany, żeby było go widać
-    interior.visible = active;
+    // wnętrze jest zawsze (Michał 10.11.2026: „po co ma znikać i się przeliczać — niech zawsze będzie wnętrze”); przez
+    // drzwi i okna widać je z ulicy, a to, czego kamera nie widzi, odrzuca rysowanie (paczki budynków: kadr i cienie)
+    interior.visible = true;
     // budynek bez wnętrza w modelu (np. siedziby magów ognia i wody): pusta grupa — dachu nie zdejmujemy,
     // bo pod nim nic nie ma i zostają same dziurawe mury
     // wyjątek: wieże (openTop w modelu) nie mają wnętrza, ale po zdjęciu dachu widać pomost z łucznikami i ich sprzętem
@@ -915,7 +917,6 @@ function blenderModel(g: THREE.Group, model: BlenderBuilding, flag: THREE.Materi
   // wnętrze: pierwsza jest podłoga sypialni (na niej gra kładzie posłania śpiących)
   const interior = new THREE.Group();
   interior.name = 'interior';
-  interior.visible = false;
   for (const m of [...meshes('floor'), ...meshes('interior')]) interior.add(m);
   g.add(interior);
   // sufit sali: tylko gdy ktoś chodzi po niej oczami mieszkańca

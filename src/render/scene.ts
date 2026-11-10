@@ -122,7 +122,7 @@ import { rockMaterial } from './rocks0ad';
 // fill (zapasy w składach) i life (życie podwórka) też razem: same siatki z wspólnymi geometriami, w zapisie Michała ok. 46 osobnych rysowań (7.11.2026)
 // skrzydła drzwi i bram (leafL/leafR) i drabiny wież też razem: pakiet bierze macierz świata każdej części co klatkę,
 // więc otwierane drzwi dalej się ruszają, a schowana drabina znika (widoczność sprawdzana co klatkę) — Michał 9.11.2026
-const BATCH_ALSO = /^(torch|lod\d+|fill|grainfill|crop|life|leafL|leafR|ladder|warBrazier|yardlog)$/; // koksowniki i kłody na podwórku: nieruchome, tylko pokazywane i chowane
+const BATCH_ALSO = /^(torch|lod\d+|fill|grainfill|crop|life|leafL|leafR|ladder|warBrazier|yardlog|interior|foodfill|armsfill)$/; // wnętrza zawsze widoczne (10.11.2026): też razem // koksowniki i kłody na podwórku: nieruchome, tylko pokazywane i chowane
 /**
  * Część z kilkoma materiałami (np. zapasy w składzie: towar + skrzynka) dzielimy na kawałki po grupach geometrii —
  * każdy kawałek idzie do pakietu swojego materiału. Wcześniej takie części rysowały się osobno (38 rysowań zapasów
@@ -4025,7 +4025,10 @@ export class GameRenderer {
       const open = id === this.selectedId || id === this.ghostOpen || (working.has(id) && steep);
       // spacerem dach zostaje zawsze, także w środku (Michał 10.11.2026: „niech nie usuwa dachu jak z trzeciej osoby”);
       // w salach zamku od spodu jest sufit ('ceiling'), a połacie i ściany oglądane od środka i tak są niewidoczne
-      animateBuilding(mesh, this.walk ? false : open || inHall, this.time, dt);
+      // Wyjątek: sale zamku — tam bryła donżonu zasłaniałaby wnętrze sal, więc zdejmujemy ją, ale od środka i tak tego nie
+      // widać, bo nad salą kładziemy sufit ('ceiling'); bez tego w zamku znikały sprzęty sal (Michał 10.11.2026)
+      const hallCeil = inHall && !!named(mesh, 'ceiling');
+      animateBuilding(mesh, this.walk ? hallCeil : open || inHall, this.time, dt);
       if (this.walk && busy && !inHall) {
         const inn = named(mesh, 'interior'); if (inn) inn.visible = true;
         const fl = named(mesh, 'flame'); if (fl) fl.visible = true;
@@ -4033,7 +4036,7 @@ export class GameRenderer {
       const ceil = named(mesh, 'ceiling');
       if (ceil) ceil.visible = inHall;
       // spacerem przy zamku: przez drzwi widać wnętrza sal, choć dachy zostają na miejscu
-      if (this.walk && (id === this.walkNear || this.walkInView.has(id)) && !inHall) { const inn = named(mesh, 'interior'); if (inn) inn.visible = true; }
+      if (this.walk && (id === this.walkNear || id === this.walkHall || this.walkInView.has(id))) { const inn = named(mesh, 'interior'); if (inn) inn.visible = true; }
     }
     // budynek bez pracownika: nad dachem kołysze się mały znak przekreślonego człowieka
     for (const b of g.buildings) {
