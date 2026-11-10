@@ -9,6 +9,15 @@ export type { ChangeEntry } from './changelogTypes';
  * — tak jak CHANGELOG.md dla nas. `tests/changelog.test.ts` pilnuje, że najnowszy wpis ma wersję z package.json.
  */
 const NEW: ChangeEntry[] = [
+  { v: '0.94.96', date: '2026-11-10', pl: [
+    'Edytor modeli: przeciąganie tekstur i przedmiotów działa pewnie, z podglądem w miejscu upuszczenia i zielonym podświetleniem części, która dostanie teksturę.',
+    'Edytor modeli: edycja nie wyłącza się sama w trakcie pracy, wyszukiwarka tekstur filtruje, przyciąganie z Shiftem nie „przykleja” przedmiotów.',
+    'Nowe poprawki budynków z edytora twórcy.',
+  ], en: [
+    'Model editor: dragging textures and objects works reliably, with a preview where you drop and a green highlight on the part that will get the texture.',
+    'Model editor: editing no longer switches itself off mid-work, the texture search filters, and Shift snapping no longer makes objects stick.',
+    'New building improvements from the creator’s editor.',
+  ] },
   { v: '0.94.95', date: '2026-11-10', pl: [
     'Zapis gry: w oknie „Zapisz grę” każdy zapis da się nadpisać — także autozapis (staje się wtedy zwykłym zapisem).',
     'Ulepszenia budynków zrobione w edytorze twórcy trafiają do gry: przestawione i dodane sprzęty, beczki, kosze, jedzenie i pochodnie (świecą nocą).',
