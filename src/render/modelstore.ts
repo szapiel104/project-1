@@ -17,6 +17,8 @@
 import PACKS from 'virtual:model-packs';
 import { tx } from '../i18n';
 import { unpackModel } from './modelpack';
+import { applyModelFixes, type Fix } from './modelfix';
+import FIXES from '../data/modelFixes.json';
 
 /** nazwa modelu → adres spakowanego pliku .bin */
 const URLS: Record<string, string> = PACKS;
@@ -53,7 +55,10 @@ export function loadModels(onProgress?: (done: number, total: number) => void): 
     if (!store.has(name)) {
       const res = await fetch(url);
       if (!res.ok) throw new Error(tx(`Nie udało się pobrać modelu ${name} (${res.status})`, `Could not download model ${name} (${res.status})`));
-      store.set(name, await unpackModel(await res.arrayBuffer()));
+      const data = await unpackModel(await res.arrayBuffer());
+      // poprawki z edytora w podglądzie modeli (modelfix.ts)
+      applyModelFixes(name, data as Record<string, unknown>, (FIXES as Record<string, Fix[]>)[name]);
+      store.set(name, data);
     }
     done++;
     onProgress?.(done, entries.length);

@@ -950,7 +950,13 @@ const PLAIN_ON = typeof location === 'undefined' || !/[?&]gladkie=0/.test(locati
 
 function blenderModel(g: THREE.Group, model: BlenderBuilding, flag: THREE.Material): void {
   const mats = M as unknown as Record<string, THREE.Material>;
-  const meshes = (name: string): THREE.Mesh[] => ((model[name] as { mat: string; pos: string; ao: string }[] | undefined) ?? []).map((m) => {
+  // każda siatka zna swoją grupę i numer w niej (edytor poprawek w podglądzie modeli, modelfix.ts)
+  const meshes = (name: string): THREE.Mesh[] => ((model[name] as { mat: string; pos: string; ao: string }[] | undefined) ?? []).map((m, idx) => {
+    const mesh = meshOf(name, m);
+    mesh.userData.fx = [name, idx];
+    return mesh;
+  });
+  const meshOf = (_name: string, m: { mat: string; pos: string; ao: string }): THREE.Mesh => {
     const base = m.mat === 'flag' ? flag : mats[m.mat] ?? M.wood;
     const k = (base.userData.tile as number) || 1;
     if (PLAIN_ON && PLAIN_KEYS.has(m.mat)) return new THREE.Mesh(tinted(blenderGeo(m.pos, m.ao, model.q, k), (base as THREE.MeshStandardMaterial).color), withAo(PLAIN));
@@ -961,7 +967,7 @@ function blenderModel(g: THREE.Group, model: BlenderBuilding, flag: THREE.Materi
       return new THREE.Mesh(tinted(blenderGeo(m.pos, m.ao, model.q, k), base.color), withAo(patMat(tex, wet)));
     }
     return new THREE.Mesh(blenderGeo(m.pos, m.ao, model.q, k), withAo(base));
-  });
+  };
   for (const m of meshes('base')) g.add(m);
   // wieże: dach zdejmuje się po kliknięciu, choć nie mają grupy wnętrza (pod dachem jest pomost)
   if ((model as unknown as { openTop?: boolean }).openTop) g.userData.openTop = true;

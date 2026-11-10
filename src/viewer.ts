@@ -36,6 +36,7 @@ import { watchRenderer } from './debug/errlog';
 import { streamWaterMaterial, waterfallModel } from './render/streams';
 import { mistNoise } from './render/highmist';
 import { createRenderer } from './render/glcontext';
+import { createModelEditor } from './ui/modelEditor';
 const RAM_MODEL = model('ram');
 
 const RED = 0xa32a22;
@@ -449,6 +450,7 @@ function show(id: string): void {
   history.replaceState(null, '', url());
   document.querySelectorAll<HTMLButtonElement>('#groups button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.id === state.id)));
   applyLook();
+  editor.onModel();
 }
 
 // ---------- panel ----------
@@ -489,6 +491,9 @@ function syncBar(): void {
   farBtn.textContent = state.far ? tx(`Z daleka ${state.far}/3`, `Far ${state.far}/3`) : tx('Z daleka', 'Far');
   farBtn.hidden = !lod;
 }
+
+// edytor poprawek (Michał 10.11.2026): „Edytuj” → klik w część, uchwyt do przesuwania i obracania, „Zapisz”
+const editor = createModelEditor({ scene, camera, canvas, orbit: controls, bar: barEl, current: () => current, id: () => state.id });
 
 function resize(): void {
   const w = canvas.clientWidth, h = canvas.clientHeight;
