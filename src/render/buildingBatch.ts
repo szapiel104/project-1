@@ -87,6 +87,16 @@ export class MaterialBatches {
     this.entries.clear();
   }
 
+  /** Do pomiarów: każda paczka — materiał, cienie, układ atrybutów, sztuki widoczne/wszystkie, bryły */
+  stats(): { key: string; mat: string; vis: number; inst: number; geos: number; on: boolean }[] {
+    return [...this.entries.entries()].map(([key, e]) => {
+      let vis = 0;
+      for (let i = 0; i < e.used; i++) if (e.mesh.getVisibleAt(e.inst[i]!)) vis++;
+      const m = e.mesh.material as THREE.Material & { map?: { userData?: { name?: string } } | null; color?: THREE.Color };
+      return { key: key.slice(36), mat: `${m.name || m.type}${m.color ? ' #' + m.color.getHexString() : ''}`, vis, inst: e.used, geos: e.geoIds.size, on: e.mesh.visible };
+    });
+  }
+
   /** Liczba wspólnych siatek (do okna wydajności) */
   get size(): number { let n = 0; for (const e of this.entries.values()) if (e.mesh.visible) n++; return n; }
 
