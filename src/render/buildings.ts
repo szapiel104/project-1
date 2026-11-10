@@ -1023,13 +1023,16 @@ function blenderModel(g: THREE.Group, model: BlenderBuilding, flag: THREE.Materi
   // nazwa pliku modelu (modelstore.ts) — edytor w podglądzie modeli zapisuje poprawki pod nią
   g.userData.modelName = modelNameOf(model);
   // każda siatka zna swoją grupę i numer w niej (edytor poprawek w podglądzie modeli, modelfix.ts)
-  const meshes = (name: string): THREE.Mesh[] => ((model[name] as { mat: string; pos: string; ao: string }[] | undefined) ?? []).map((m, idx) => {
+  // pusta siatka (wszystkie części przeniesione poprawkami do innego materiału) — bez niej: bufor zerowej długości
+  // wywracał potok cieni WebGPU („Async render pipeline creation failed … Buffer”, Michał 10.11.2026)
+  const meshes = (name: string): THREE.Mesh[] => ((model[name] as { mat: string; pos: string; ao: string }[] | undefined) ?? []).flatMap((m, idx) => {
+    if (!(typeof m.pos === 'string' ? m.pos.length : (m.pos as unknown as Uint8Array).byteLength)) return [];
     const mesh = meshOf(name, m);
     mesh.userData.fx = [name, idx, m.mat];
     // granice kawałków dopisanych poprawkami (modelfix.ts → islands): edytor liczy wyspy tak samo jak gra
     const segs = (m as { segs?: number[] }).segs;
     if (segs) mesh.geometry.userData.segs = segs;
-    return mesh;
+    return [mesh];
   });
   const meshOf = (_name: string, m: { mat: string; pos: string; ao: string }): THREE.Mesh => partMesh(m.mat, m.pos, m.ao, model.q, flag);
   for (const m of meshes('base')) g.add(m);
@@ -1056,7 +1059,7 @@ function blenderModel(g: THREE.Group, model: BlenderBuilding, flag: THREE.Materi
     // modele z Poly Haven ('ph:<id>', phAssets.ts) — wczytane zawczasu przez modelstore; gdyby nie, dochodzą chwilę później
     const ph = p.prop.startsWith('ph:') ? p.prop.slice(3) : null, phm = ph ? phLoaded(ph) : null;
     const mesh = ph
-      ? new THREE.Mesh(phm?.geo ?? new THREE.BufferGeometry(), phm?.mats ?? [])
+      ? new THREE.Mesh(phm?.geo ?? new THREE.BoxGeometry(0.001, 0.001, 0.001), phm?.mats ?? new THREE.MeshBasicMaterial({ visible: false }))
       : new THREE.Mesh(propGeometry(p.prop as PropName), propMaterial(p.prop as PropName));
     if (ph && !phm) void loadPh(ph).then((r) => { if (r) { mesh.geometry = r.geo; mesh.material = r.mats; } });
     mesh.userData.fxProp = [p.g, pi, p.prop];   // edytor w podglądzie modeli może go potem przesunąć albo usunąć
