@@ -1531,7 +1531,9 @@ const BUILDERS: Record<string, Builder> = {
       const b = box(g, M.roadWood, 0.9 + ((k * 5) % 3) * 0.04, 0.045, 0.14, ((k * 7) % 3 - 1) * 0.02, 0.02, z);
       b.rotation.y = ((k * 3) % 5 - 2) * 0.015;
     }
-    for (const x of [-0.3, 0.3]) box(g, M.woodDark, 0.08, 0.04, 0.96, x, 0, 0);
+    // legary pod balami: wierzch 8 mm pod spodem bali (wcześniej wchodziły w bale na 2 cm i ich wierzch walczył z balami
+    // o piksele — droga mrugała przy ruchu kamery, Michał 10.11.2026)
+    for (const x of [-0.3, 0.3]) box(g, M.woodDark, 0.08, 0.035, 0.96, x, -0.023, 0);
   },
   roadStone(g) {
     box(g, M.pathCobble, 0.96, 0.05, 0.96);

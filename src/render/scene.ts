@@ -2380,9 +2380,17 @@ export class GameRenderer {
           if (!m.isMesh || (m as unknown as THREE.InstancedMesh).isInstancedMesh || !m.geometry.getAttribute('position')) return;
           const mat = m.material as THREE.Material;
           if (!mat || Array.isArray(mat) || mat.transparent || (mat as THREE.MeshBasicMaterial).isMeshBasicMaterial) return;
+          // liście i owoce drzew oraz jedzenie ze skanów nie zatrzymują spacerowicza: to setki tysięcy trójkątów (sad: 128
+          // jabłek), a drzewo BVH i szukanie najbliższego punktu na nich co klatkę zatrzymywało grę przy spacerze po sadzie
+          // (Michał 10.11.2026). Pień i drewno dalej zatrzymują.
+          if (mat.userData.season === 'leaf' || mat.userData.prop) return;
           const geo = m.geometry as THREE.BufferGeometry & { boundsTree?: MeshBVH };
           if (!geo.boundingBox) geo.computeBoundingBox();
-          list!.push({ mesh: m, box: geo.boundingBox!.clone().applyMatrix4(m.matrixWorld), root: grp, low });
+          const box = geo.boundingBox!.clone().applyMatrix4(m.matrixWorld);
+          // rzeczy przy samej ziemi (popiół, kamienie wokół ogniska, płaskie kamienie) nie są przeszkodą — przez nie
+          // nie dało się podejść do ogniska w obozowisku („dziwna kolizja dookoła”)
+          if (box.max.y - box.min.y < 0.12) return;
+          list!.push({ mesh: m, box, root: grp, low });
         });
         this.walkCache.set(grp, list);
       }

@@ -12,10 +12,14 @@ describe('modele z paczek: oryginalne siatki', () => {
     // skład (tools/models/stock_import.py, Sketchfab): skan granitu w trzech częściach, snopek, trzy sztaby żelaza
     granite1: 31375, granite2: 32014, granite3: 26336, sheaf: 4998, ingots: 1392 };
 
-  it('każdy model ma wszystkie trójkąty oryginału, z bliska i z daleka', () => {
+  const FAR_LIGHT: Partial<Record<PropName, number>> = { apple: 0.1, basket: 0.2 };
+  it('każdy model ma wszystkie trójkąty oryginału z bliska (z daleka też, poza uproszczonymi)', () => {
     for (const [n, t] of Object.entries(ORIGINAL) as [PropName, number][]) {
       expect(tris(propGeometry(n)), n).toBe(t);
-      expect(tris(propGeometry(n, true)), `${n} z daleka`).toBe(t);
+      // wersja z daleka uproszczona tylko tam, gdzie był widoczny spadek FPS (tools/models/props_far.mjs: jabłka w sadzie,
+      // kosze) — i nadal z tymi samymi wierzchołkami; reszta z daleka = oryginał
+      if (FAR_LIGHT[n]) expect(tris(propGeometry(n, true)), `${n} z daleka`).toBeLessThan(t * FAR_LIGHT[n]!);
+      else expect(tris(propGeometry(n, true)), `${n} z daleka`).toBe(t);
       expect(propGeometry(n).getAttribute('uv').count).toBe(propGeometry(n).getAttribute('position').count);
     }
   });

@@ -102,6 +102,8 @@ export function propMaterial(name: PropName): THREE.MeshStandardMaterial {
   if (m) return m;
   const [roughness, metalness] = SURFACE[name] ?? [0.85, 0];
   m = new THREE.MeshStandardMaterial({ vertexColors: true, roughness, metalness, side: THREE.DoubleSide });
+  // jabłka, chleb i ryby ze skanów: bez kolizji przy spacerze (scene.ts → gatherWalkHits); beczki i kosze dalej zatrzymują
+  if (name === 'apple' || name === 'fish' || name.startsWith('bun')) m.userData.prop = name;
   const tex = TEX_OF[name] ?? name;
   if (typeof document !== 'undefined') {
     const tl = new THREE.TextureLoader();
