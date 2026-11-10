@@ -450,7 +450,8 @@ export function createModelEditor(ctx: Ctx): { onModel: () => void; guard: (go: 
   ctx.canvas.addEventListener('drop', (e) => {
     if (!on) return;
     e.preventDefault();
-    if (e.dataTransfer?.types.includes('application/x-asset') && dragAsset) {
+    // dane przeciągania czasem docierają puste (Chrome na Windows, Michał 10.11.2026) — źródło znamy z dragstart
+    if (dragAsset && !texDrag) {
       // zasób upuszczony na model: stawiamy go w punkcie trafienia (albo na ziemi pod kursorem)
       const at = dropPoint(e.clientX, e.clientY);
       clearPreview();
@@ -458,8 +459,8 @@ export function createModelEditor(ctx: Ctx): { onModel: () => void; guard: (go: 
       dragAsset = null; dragPreview = null;
       return;
     }
+    const mat = texDrag || e.dataTransfer?.getData('text/plain');
     clearPreview(); clearTexHover(); texDrag = null;
-    const mat = e.dataTransfer?.getData('text/plain');
     if (!mat) return;
     const hit = pick(e.clientX, e.clientY);
     if (hit && (hit.mesh.userData.fxProp || (hit.mesh.userData.temp as Fix | undefined)?.k === 'prop' || (hit.mesh.userData.temp as Fix | undefined)?.k === 'f2p')) { say(tx('Gotowe modele z paczek mają własne tekstury — upuść na część budynku albo dodaną bryłę', 'Ready-made models keep their own textures — drop onto a building part or an added shape')); return; }
