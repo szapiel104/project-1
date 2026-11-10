@@ -24,4 +24,15 @@ describe('poprawki modeli z edytora (modelfix.ts)', () => {
     applyModelFixes('test2', data, [{ g: 'base', i: 0, c: [5, 5, 5], n: 1, m: [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 1, 1, 1, 1] }]);
     expect(unpack((data.base as { pos: Uint8Array }[])[0]!.pos)).toEqual(before);
   });
+  it('„widać z obu stron” dokłada odwróconą kopię części, a zasób trafia do rekwizytów', () => {
+    const data: Record<string, unknown> = { q, base: [{ mat: 'wood', pos: pack(tri(0)), ao: '' }] };
+    const c = [0.1 / 3, 0.1 / 3, 0] as [number, number, number];
+    const I = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1];
+    applyModelFixes('test3', data, [{ k: 'dbl', g: 'base', i: 0, c, n: 1, m: I }, { k: 'prop', g: 'base', prop: 'barrel', m: I }]);
+    const out = unpack((data.base as { pos: Uint8Array }[])[0]!.pos);
+    expect(out.length).toBe(18);
+    expect(out.slice(9, 12)).toEqual(out.slice(0, 3));   // pierwszy wierzchołek ten sam, dwa pozostałe zamienione
+    expect(out.slice(12, 15)).toEqual(out.slice(6, 9));
+    expect((data.props as unknown[]).length).toBe(1);
+  });
 });

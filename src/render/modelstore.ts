@@ -24,8 +24,12 @@ import FIXES from '../data/modelFixes.json';
  * Poprawki modelu: z repozytorium (src/data/modelFixes.json), a lokalnie (localhost) te zapisane w edytorze podglądu modeli
  * w tej samej przeglądarce — żeby zmiana z edytora była od razu widać w grze (Michał 10.11.2026), zanim trafi do repozytorium.
  */
+let live: Record<string, Fix[]> = {};
+/** Poprawki „na żywo” dla podglądu modeli (baza + ta przeglądarka) — ustawiane przed loadModels() w viewerboot.ts */
+export function setLiveFixes(map: Record<string, Fix[]>): void { live = map; }
 function fixesFor(name: string): Fix[] | undefined {
-  const repo = (FIXES as Record<string, Fix[]>)[name];
+  const repo0 = (FIXES as Record<string, Fix[]>)[name], l = live[name];
+  const repo = l && l.length >= (repo0?.length ?? 0) ? l : repo0;
   try {
     if (typeof location === 'undefined' || !['localhost', '127.0.0.1', '[::1]'].includes(location.hostname)) return repo;
     const local = JSON.parse(localStorage.getItem(`p1-model-fixes:${name}`) ?? 'null') as Fix[] | null;

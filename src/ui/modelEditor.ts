@@ -9,7 +9,7 @@
 import * as THREE from 'three';
 import { TransformControls } from 'three/examples/jsm/controls/TransformControls.js';
 import type { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
-import { findIsland, islands, transformIsland, unitShape, type Fix, type Island } from '../render/modelfix';
+import { islands, unitShape, type Fix, type Island } from '../render/modelfix';
 import { buildingMaterialInfo, partMesh } from '../render/buildings';
 import { photoUrlFor } from '../render/textures';
 import { propGeometry, propMaterial, type PropName } from '../render/props';
@@ -37,7 +37,7 @@ export function createModelEditor(ctx: Ctx): { onModel: () => void; guard: (go: 
   let edits: Fix[] = [];
   /** cofanie: każdy krok to lista funkcji przywracających stan sprzed niego */
   const undo: (() => void)[][] = [];
-  const pendingDone = new WeakSet<THREE.BufferGeometry>();
+  const savedNow = new Set<string>();   // modele zapisane w tej sesji (ich wczytane dane są sprzed zapisu)
   const islandCache = new WeakMap<THREE.BufferGeometry, { of: Int32Array; list: Island[] }>();
   const isl = (g: THREE.BufferGeometry): { of: Int32Array; list: Island[] } => {
     let v = islandCache.get(g);
@@ -820,6 +820,7 @@ export function createModelEditor(ctx: Ctx): { onModel: () => void; guard: (go: 
     if (!edits.length) { say(tx('Nie ma zmian do zapisania', 'Nothing to save')); return; }
     const id = ctx.id(), list = all();
     try { localStorage.setItem(LS(id), JSON.stringify(list)); } catch { /* prywatne okno */ }
+    savedNow.add(id);
     edits = [];
     undo.length = 0;
     say(tx('Zapisano w przeglądarce, wysyłam do bazy…', 'Saved in the browser, sending to the database…'));
@@ -859,28 +860,8 @@ export function createModelEditor(ctx: Ctx): { onModel: () => void; guard: (go: 
         }
       }
     } catch { /* bez bazy: tylko przeglądarka */ }
-    const extra = list.slice(base);
-    const cur = ctx.current();
-    if (!extra.length || !cur || id !== ctx.id()) return;
-    const byKey = new Map<string, THREE.Mesh>();
-    cur.traverse((o) => { const m = o as THREE.Mesh; const fx = m.userData?.fx as [string, number] | undefined; if (m.isMesh && fx) byKey.set(`${fx[0]}:${fx[1]}`, m); });
-    let miss = 0;
-    const touched: THREE.BufferGeometry[] = [];
-    for (const f of extra) {
-      const mesh = byKey.get(`${f.g}:${f.i}`);
-      if (!mesh) { miss++; continue; }
-      if (pendingDone.has(mesh.geometry)) continue; // ten model był już pokazany w tej sesji — poprawki już są
-      if (!touched.includes(mesh.geometry)) touched.push(mesh.geometry);
-      const P = (mesh.geometry.getAttribute('position') as THREE.BufferAttribute).array as Float32Array;
-      const { list: isls } = islands(P);
-      const island = findIsland(isls, f);
-      if (!island) { miss++; continue; }
-      transformIsland(P, island, f.m);
-      (mesh.geometry.getAttribute('position') as THREE.BufferAttribute).needsUpdate = true;
-      islandCache.delete(mesh.geometry);
-    }
-    for (const g of touched) pendingDone.add(g);
-    say(tx(`Poprawki spoza gry: ${extra.length - miss}${miss ? `, nie pasuje: ${miss}` : ''}`, `Fixes not yet in the game: ${extra.length - miss}${miss ? `, not matching: ${miss}` : ''}`));
+    // poprawki z bazy i przeglądarki są już w modelu (viewerboot.ts → setLiveFixes); zapisane w tej sesji pokażą się po odświeżeniu
+    if (savedNow.has(id)) say(tx('Zapisane zmiany tego modelu pokażą się po odświeżeniu strony (F5)', 'Saved changes to this model will show after a page refresh (F5)'));
   }
 
   // do sprawdzania z konsoli / testów
