@@ -12,7 +12,7 @@ import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js
  */
 // Duże kawałki: każda zlepiona siatka to osobny obiekt do narysowania (a każdy kosztuje procesor ~20 µs w każdym przejściu),
 // więc kawałek 16×16 dawał więcej obiektów niż oszczędzał (pomiar 10.11.2026: 185 siatek). 48×48 = osada w 1–4 kawałkach.
-export const CELL = 48;
+export const CELL = Number(/[?&]kawal=(\d+)/.exec(typeof location === 'undefined' ? '' : location.search)?.[1] ?? 48);
 
 export interface MergePart {
   geo: THREE.BufferGeometry;
@@ -50,6 +50,9 @@ export class ChunkMerge {
 
   /** Liczba zlepionych siatek (do pomiarów) */
   get size(): number { let n = 0; for (const c of this.chunks.values()) n += c.meshes.length; return n; }
+  /** Czas ostatniego przeliczenia kawałka i najdłuższy (ms) — żeby wiedzieć, czy budowa nie przycina */
+  lastMs = 0;
+  maxMs = 0;
 
   /**
    * Co klatkę: lista budynków z częściami do zlepienia. Liczy podpis każdego kawałka; kawałek z innym podpisem niż
@@ -80,7 +83,9 @@ export class ChunkMerge {
       if (ch) for (const m of ch.meshes) m.visible = false;
       if (rebuilt) continue; // ten kawałek w następnej klatce; jego budynki na razie w paczkach
       rebuilt = true;
+      const t0 = performance.now();
       this.build(key, sig, cands);
+      this.lastMs = performance.now() - t0; this.maxMs = Math.max(this.maxMs, this.lastMs);
       for (const c of cands) this.covered.add(c.id);
     }
     // kawałki, w których nie został żaden budynek

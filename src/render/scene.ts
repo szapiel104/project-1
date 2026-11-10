@@ -3168,7 +3168,7 @@ export class GameRenderer {
   private batchShadow = new THREE.Frustum();
   private batchSphere = new THREE.Sphere();
   /** Do pomiarów (lokalnie: __batches()) */
-  batchStats(): unknown { return { paczki: this.matBatches?.stats() ?? [], kawałki: this.innerChunks?.size ?? 0 }; }
+  batchStats(): unknown { return { paczki: this.matBatches?.stats() ?? [], kawałki: this.innerChunks?.size ?? 0, ms: this.innerChunks ? [+this.innerChunks.lastMs.toFixed(1), +this.innerChunks.maxMs.toFixed(1)] : null }; }
   private syncMatBatches(roots: Iterable<[number, THREE.Object3D]>, keepOff: boolean): void {
     const mb = (this.matBatches ??= new MaterialBatches(this.buildingLayer));
     mb.begin();
