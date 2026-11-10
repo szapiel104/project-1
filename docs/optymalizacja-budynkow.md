@@ -57,6 +57,14 @@ Wynik wpisać pod partią (data, fps / med / wywołania / trójkąty).
   po staremu). Paczek 133 → 122. Reszta „białych” paczek to rekwizyty ze skanów (jabłka, chleb, worki, beczki…)
   w spiżarniach i wnętrzach — każdy ze swoją teksturą, po 1–18 sztuk; do scalenia potrzebny atlas / tablica tekstur
   (następny krok). Dalej: te same tekstury z różną barwą (deski jasne/ciemne, kamień, płótno) → jeden materiał na wzór.
+  10.11.2026 krok 2: ta sama tekstura w różnych barwach → jeden materiał na wzór (`patMat`, osobno moknące; bez
+  skały — kopalnie ją podmieniają, bez okien, liści, łąki sadu). Wygląd sprawdzony w podglądzie modeli (karczma, z i bez
+  `?gladkie=0` — te same barwy). **Paczek 136 → 95; pomiar parami: po staremu 31–33 FPS (rysowanie 20–25 ms), nowe
+  40–56 FPS (rysowanie ~13 ms).** Pierwszy wyraźny zysk.
+  Zostało (95 paczek): 33 rekwizyty ze skanów (każdy z własną teksturą), a każdy wzór ma po 3 odmiany: z cieniem /
+  bez cienia / wnętrze (bez cienia i odbicia) oraz wersję z przesunięciem głębi (detale). Następne kroki:
+  (a) odmiany cienia — sprawdzić, czemu tyle części ma `castShadow = false` i czy da się je ujednolicić;
+  (b) rekwizyty — atlas / tablica tekstur.
   Opis: policzyć, ile różnych materiałów mają budynki
   w paczkach (dziś ~136 paczek, ~53 barwy) i skąd różnice (te same tekstury z inną barwą, warianty z cieniem i bez,
   różne układy atrybutów). Najpierw tanie scalenia: barwa materiału → kolor wierzchołków (jak w lod.ts), jeden wariant
