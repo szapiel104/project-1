@@ -2,6 +2,12 @@
 
 
 
+
+## 0.94.97 — 2026-11-10
+- Edytor: zapis scala listę z bazą (`model_fixes`) + poprawki tylko z tej przeglądarki + zmiany sesji, zamiast nadpisywać.
+- `blenderModel`: puste siatki (po `mat` wszystkich części) pomijane — bufor zerowej długości psuł potok cieni WebGPU.
+- Poprawki modeli z bazy (`pull_fixes.mjs`).
+
 ## 0.94.96 — 2026-11-10
 - Edytor: przeciąganie bez polegania na `dataTransfer` (u Michała puste przy upuszczeniu), podgląd zasobu i podświetlenie części przy przeciąganiu tekstury, sprawdzanie twórcy odporne na błąd przy odświeżaniu sesji, Shift z ruchu myszy, wyszukiwarka tekstur (`display` zamiast `hidden`).
 - Poprawki modeli z bazy (`pull_fixes.mjs`).

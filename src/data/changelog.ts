@@ -9,6 +9,13 @@ export type { ChangeEntry } from './changelogTypes';
  * — tak jak CHANGELOG.md dla nas. `tests/changelog.test.ts` pilnuje, że najnowszy wpis ma wersję z package.json.
  */
 const NEW: ChangeEntry[] = [
+  { v: '0.94.97', date: '2026-11-10', pl: [
+    'Edytor modeli: zapis łączy poprawki z różnych komputerów i przeglądarek zamiast nadpisywać wcześniejsze.',
+    'Naprawa błędów cieni przy budynkach, w których wszystkie części jednego materiału dostały inną teksturę.',
+  ], en: [
+    'Model editor: saving merges fixes made on different computers and browsers instead of overwriting earlier ones.',
+    'Fixed shadow errors on buildings where every part of one material was given another texture.',
+  ] },
   { v: '0.94.96', date: '2026-11-10', pl: [
     'Edytor modeli: przeciąganie tekstur i przedmiotów działa pewnie, z podglądem w miejscu upuszczenia i zielonym podświetleniem części, która dostanie teksturę.',
     'Edytor modeli: edycja nie wyłącza się sama w trakcie pracy, wyszukiwarka tekstur filtruje, przyciąganie z Shiftem nie „przykleja” przedmiotów.',
