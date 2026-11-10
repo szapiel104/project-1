@@ -9,7 +9,9 @@
 import * as THREE from 'three';
 import { TransformControls } from 'three/examples/jsm/controls/TransformControls.js';
 import type { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
-import { islands, unitShape, type Fix, type Island } from '../render/modelfix';
+import { applyFix, islands, unitShape, type Fix, type Island } from '../render/modelfix';
+import { SHAPES, shapeLabel, type Shape } from '../render/shapes';
+import { icon } from './editorIcons';
 import { buildingMaterialInfo, partMesh } from '../render/buildings';
 import { photoUrlFor } from '../render/textures';
 import { propGeometry, propMaterial, type PropName } from '../render/props';
@@ -52,17 +54,30 @@ export function createModelEditor(ctx: Ctx): { onModel: () => void; guard: (go: 
   const btn = (label: string, f: () => void, title = ''): HTMLButtonElement => {
     const b = document.createElement('button'); b.type = 'button'; b.textContent = label; b.title = title; b.onclick = f; return b;
   };
+  /** przycisk z ikoną i podpowiedzią (pasek narzędzi jak w programach graficznych) */
+  const ib = (ico: string, label: string, f: () => void): HTMLButtonElement => {
+    const b = btn('', f, label);
+    b.innerHTML = icon(ico);
+    b.setAttribute('aria-label', label);
+    b.classList.add('ico');
+    return b;
+  };
+  const sep = (): HTMLElement => { const d = document.createElement('span'); d.className = 'ico-sep'; d.setAttribute('aria-hidden', 'true'); return d; };
   const editBtn = btn(tx('Edytuj', 'Edit'), () => setOn(!on), tx('Kliknij część modelu, żeby ją przesunąć, obrócić albo usunąć', 'Click a part of the model to move, rotate or remove it'));
-  const modeBtns = ([['translate', tx('Przesuń (1)', 'Move (1)')], ['rotate', tx('Obróć (2)', 'Rotate (2)')], ['scale', tx('Skaluj (3)', 'Scale (3)')]] as const)
-    .map(([m, l]) => { const b = btn(l, () => setMode(m)); b.dataset.mode = m; return b; });
-  const delBtn = btn(tx('Usuń część (Del)', 'Remove part (Del)'), () => removeSel());
-  const undoBtn = btn(tx('Cofnij (Ctrl+Z)', 'Undo (Ctrl+Z)'), () => undoLast());
-  const saveBtn = btn(tx('Zapisz', 'Save'), () => void save());
-  const fileBtn = btn(tx('Pobierz plik poprawek', 'Download fixes file'), () => download());
+  const modeBtns = ([['translate', 'move', tx('Przesuń (1)', 'Move (1)')], ['rotate', 'rotate', tx('Obróć (2)', 'Rotate (2)')], ['scale', 'scale', tx('Skaluj (3)', 'Scale (3)')]] as const)
+    .map(([m, ico, l]) => { const b = ib(ico, l, () => setMode(m)); b.dataset.mode = m; return b; });
+  const delBtn = ib('del', tx('Usuń część (Del)', 'Remove part (Del)'), () => removeSel());
+  const undoBtn = ib('undo', tx('Cofnij (Ctrl+Z)', 'Undo (Ctrl+Z)'), () => undoLast());
+  const saveBtn = ib('save', tx('Zapisz (Ctrl+S)', 'Save (Ctrl+S)'), () => void save());
+  const fileBtn = ib('file', tx('Pobierz plik poprawek', 'Download fixes file'), () => download());
+  const mirXBtn = ib('mirrorX', tx('Odbij lustrzanie w osi X', 'Mirror along X'), () => mirror(0));
+  const mirZBtn = ib('mirrorZ', tx('Odbij lustrzanie w osi Z', 'Mirror along Z'), () => mirror(2));
+  const dropBtn = ib('drop', tx('Postaw na ziemi (spód na wysokości 0)', 'Drop to the ground (bottom at height 0)'), () => dropToGround());
+  const focusBtn = ib('focus', tx('Pokaż zaznaczenie (F)', 'Frame selection (F)'), () => focusSel());
   const status = document.createElement('span');
   status.style.cssText = 'align-self:center;font-size:12px;color:#e6d6b4;padding:0 6px';
-  const dupBtn = btn(tx('Kopiuj (Ctrl+D)', 'Duplicate (Ctrl+D)'), () => duplicateSel());
-  const dblBtn = btn(tx('Widać z obu stron', 'Visible from both sides'), () => doubleSel(), tx('Ściana lub płachta widoczna też od tyłu (gra nie rysuje tylnych stron)', 'A wall or sheet visible from behind too (the game does not draw back faces)'));
+  const dupBtn = ib('copy', tx('Kopiuj (Ctrl+D)', 'Duplicate (Ctrl+D)'), () => duplicateSel());
+  const dblBtn = ib('both', tx('Widać z obu stron — ściana lub płachta widoczna też od tyłu', 'Visible from both sides — a wall or sheet seen from behind too'), () => doubleSel());
   // ---------- inspektor na dole (jak w silnikach gier): położenie i obrót liczbami, paleta tekstur, nowe bryły ----------
   const insp = document.createElement('div');
   insp.className = 'edit-inspector';
@@ -70,38 +85,96 @@ export function createModelEditor(ctx: Ctx): { onModel: () => void; guard: (go: 
   document.body.append(insp);
   const selCss = 'font:inherit;font-size:12px;color:#e8e0cc;background:#2e2b24;border:1px solid #3a362d;min-height:28px;padding:2px 4px';
   const title = (t: string): HTMLElement => { const h = document.createElement('div'); h.textContent = t; h.style.cssText = 'font-weight:600;margin-bottom:4px;color:#e9c766'; return h; };
-  // 1) przekształcenie liczbami
+  // 1) przekształcenie liczbami, jak w inspektorze silników gier: położenie środka (cm), obrót (°) i skala (%) osobno w osiach
   const tr = document.createElement('div');
-  const num = (ph: string, ttl: string): HTMLInputElement => { const i = document.createElement('input'); i.type = 'number'; i.placeholder = ph; i.title = ttl; i.style.cssText = selCss + ';width:64px'; return i; };
-  const nx = num('X cm', tx('Przesuń w X (cm)', 'Move X (cm)')), ny = num('Y cm', tx('Przesuń w górę (cm)', 'Move up (cm)')), nz = num('Z cm', tx('Przesuń w Z (cm)', 'Move Z (cm)'));
-  const rx = num('X°', tx('Obróć wokół X (°)', 'Rotate X (°)')), ry = num('Y°', tx('Obróć wokół pionu (°)', 'Rotate Y (°)')), rz = num('Z°', tx('Obróć wokół Z (°)', 'Rotate Z (°)'));
-  const ns = num('%', tx('Skala (%)', 'Scale (%)'));
-  const line = (label: string, ...els: HTMLElement[]): HTMLElement => { const d = document.createElement('div'); d.style.cssText = 'display:flex;gap:4px;align-items:center;margin:3px 0'; const l = document.createElement('span'); l.textContent = label; l.style.cssText = 'width:62px'; d.append(l, ...els); return d; };
-  const applyNum = btn(tx('Zastosuj', 'Apply'), () => {
-    if (!sel.length) { say(tx('Najpierw zaznacz część', 'Select a part first')); return; }
-    const v = (i: HTMLInputElement): number => Number(i.value) || 0;
-    proxy.position.add(new THREE.Vector3(v(nx), v(ny), v(nz)).multiplyScalar(0.01));
-    proxy.rotation.set(THREE.MathUtils.degToRad(v(rx)), THREE.MathUtils.degToRad(v(ry)), THREE.MathUtils.degToRad(v(rz)));
-    proxy.scale.setScalar(ns.value ? Math.max(0.01, v(ns) / 100) : 1);
+  tr.style.cssText = 'overflow-y:auto;min-height:0;padding-right:4px';
+  const num = (ttl: string, step: number): HTMLInputElement => { const i = document.createElement('input'); i.type = 'number'; i.step = String(step); i.title = ttl; i.setAttribute('aria-label', ttl); i.style.cssText = selCss + ';width:66px'; return i; };
+  const axisLab = (a: string, col: string): HTMLElement => { const l = document.createElement('span'); l.textContent = a; l.style.cssText = `color:${col};font-weight:600;width:10px;text-align:right`; return l; };
+  const AX = [['X', '#e8746a'], ['Y', '#8fd16a'], ['Z', '#6aa8e8']] as const;
+  const posIn = AX.map(([a]) => num(tx(`Położenie ${a} (cm)`, `Position ${a} (cm)`), 1));
+  const rotIn = AX.map(([a]) => num(tx(`Obrót ${a} (°)`, `Rotation ${a} (°)`), 5));
+  const sclIn = AX.map(([a]) => num(tx(`Skala ${a} (%)`, `Scale ${a} (%)`), 5));
+  const row3 = (label: string, ins: HTMLInputElement[], extra?: HTMLElement): HTMLElement => {
+    const d = document.createElement('div'); d.style.cssText = 'display:flex;gap:3px;align-items:center;margin:3px 0';
+    const l = document.createElement('span'); l.textContent = label; l.style.cssText = 'width:58px';
+    d.append(l); ins.forEach((inp, k) => d.append(axisLab(AX[k]![0], AX[k]![1]), inp));
+    if (extra) d.append(extra);
+    return d;
+  };
+  const uniLab = document.createElement('label');
+  uniLab.title = tx('Skaluj jednakowo we wszystkich osiach', 'Scale uniformly on all axes');
+  uniLab.style.cssText = 'display:flex;gap:3px;align-items:center;margin-left:4px';
+  const uni = document.createElement('input'); uni.type = 'checkbox'; uni.checked = true;
+  uniLab.append(uni, document.createTextNode('🔗'));
+  const info = document.createElement('div');
+  info.style.cssText = 'color:#bfb294;margin:2px 0 4px;font-size:11.5px';
+  const cur = (): THREE.Object3D | null => ctx.current();
+  /** inspektor ← uchwyt */
+  function syncFields(): void {
+    const c = cur();
+    const dis = !sel.length || !c;
+    for (const i of [...posIn, ...rotIn, ...sclIn]) i.disabled = dis;
+    if (dis) { for (const i of [...posIn, ...rotIn, ...sclIn]) i.value = ''; info.textContent = tx('Nic nie zaznaczono', 'Nothing selected'); return; }
+    const lp = c!.worldToLocal(proxy.position.clone());
+    [lp.x, lp.y, lp.z].forEach((v, k) => { if (document.activeElement !== posIn[k]) posIn[k]!.value = String(Math.round(v * 1000) / 10); });
+    const r = proxy.rotation;
+    [r.x, r.y, r.z].forEach((v, k) => { if (document.activeElement !== rotIn[k]) rotIn[k]!.value = String(Math.round(THREE.MathUtils.radToDeg(v) * 10) / 10); });
+    const sc = proxy.scale;
+    [sc.x, sc.y, sc.z].forEach((v, k) => { if (document.activeElement !== sclIn[k]) sclIn[k]!.value = String(Math.round(v * 1000) / 10); });
+    const b = selBox();
+    const sz = b.getSize(new THREE.Vector3());
+    const tris = sel.reduce((a, p) => a + p.isl.tris.length, 0);
+    info.textContent = tx(`Zaznaczone: ${sel.length} · ${tris} trójkątów · wymiary ${Math.round(sz.x * 100)} × ${Math.round(sz.y * 100)} × ${Math.round(sz.z * 100)} cm`,
+      `Selected: ${sel.length} · ${tris} triangles · size ${Math.round(sz.x * 100)} × ${Math.round(sz.y * 100)} × ${Math.round(sz.z * 100)} cm`);
+  }
+  /** uchwyt ← inspektor (po Enterze albo zmianie pola) */
+  function fromFields(changed?: HTMLInputElement): void {
+    const c = cur();
+    if (!sel.length || !c) return;
+    const n = (i: HTMLInputElement, d: number): number => { const v = Number(i.value); return i.value === '' || !Number.isFinite(v) ? d : v; };
+    const lp = c.worldToLocal(proxy.position.clone());
+    proxy.position.copy(c.localToWorld(new THREE.Vector3(n(posIn[0]!, lp.x * 100) / 100, n(posIn[1]!, lp.y * 100) / 100, n(posIn[2]!, lp.z * 100) / 100)));
+    proxy.rotation.set(...rotIn.map((i) => THREE.MathUtils.degToRad(n(i, 0))) as [number, number, number]);
+    if (uni.checked && changed && sclIn.includes(changed)) { const v = n(changed, 100); for (const i of sclIn) i.value = String(v); }
+    const sv = sclIn.map((i) => { const v = n(i, 100) / 100; return Math.abs(v) < 0.001 ? 0.001 : v; });
+    proxy.scale.set(sv[0]!, sv[1]!, sv[2]!);
     proxy.updateMatrixWorld();
     live(); commit();
-    for (const i of [nx, ny, nz, rx, ry, rz, ns]) i.value = '';
-  });
-  const snapLab = document.createElement('label');
-  snapLab.style.cssText = 'display:flex;gap:4px;align-items:center;margin-top:4px';
-  const snap = document.createElement('input'); snap.type = 'checkbox';
-  snap.onchange = () => {
-    tc.setTranslationSnap(snap.checked ? 0.01 : null);
-    tc.setRotationSnap(snap.checked ? THREE.MathUtils.degToRad(5) : null);
-    tc.setScaleSnap(snap.checked ? 0.05 : null);
+  }
+  for (const i of [...posIn, ...rotIn, ...sclIn]) {
+    i.addEventListener('change', () => fromFields(i));
+    i.addEventListener('keydown', (e) => { e.stopPropagation(); if (e.key === 'Enter') i.blur(); });   // bez skrótów edytora i lotu WASD przy pisaniu
+  }
+  const stepSel = (opts: [string, string][], f: (v: number) => void): HTMLSelectElement => {
+    const s = document.createElement('select'); s.style.cssText = selCss;
+    for (const [v, l] of opts) { const o = document.createElement('option'); o.value = v; o.textContent = l; s.append(o); }
+    s.onchange = () => f(Number(s.value));
+    return s;
   };
-  snapLab.append(snap, document.createTextNode(tx('przyciąganie 1 cm / 5°', 'snap 1 cm / 5°')));
+  let snapMove = 0.01, snapRot = 5;
+  const snapLab = document.createElement('label');
+  snapLab.style.cssText = 'display:flex;gap:4px;align-items:center';
+  const snap = document.createElement('input'); snap.type = 'checkbox';
+  const applySnap = (): void => {
+    tc.setTranslationSnap(snap.checked ? snapMove : null);
+    tc.setRotationSnap(snap.checked ? THREE.MathUtils.degToRad(snapRot) : null);
+    tc.setScaleSnap(snap.checked ? 0.05 : null);
+    for (const i of posIn) i.step = String(snap.checked ? snapMove * 100 : 1);
+    for (const i of rotIn) i.step = String(snap.checked ? snapRot : 5);
+  };
+  snap.onchange = applySnap;
+  snapLab.append(snap, document.createTextNode(tx('przyciąganie', 'snap')));
+  const moveStep = stepSel([['0.01', '1 cm'], ['0.05', '5 cm'], ['0.1', '10 cm'], ['0.25', '25 cm'], ['0.5', '50 cm']], (v) => { snapMove = v; applySnap(); });
+  const rotStep = stepSel([['5', '5°'], ['15', '15°'], ['45', '45°'], ['90', '90°']], (v) => { snapRot = v; applySnap(); });
+  moveStep.title = tx('Krok przesuwania', 'Move step'); rotStep.title = tx('Krok obrotu', 'Rotation step');
   const spaceLab = document.createElement('label');
   spaceLab.style.cssText = 'display:flex;gap:4px;align-items:center';
   const space = document.createElement('input'); space.type = 'checkbox';
   space.onchange = () => tc.setSpace(space.checked ? 'local' : 'world');
-  spaceLab.append(space, document.createTextNode(tx('osie części (lokalnie)', 'part axes (local)')));
-  tr.append(title(tx('Przekształcenie zaznaczenia', 'Transform selection')), line(tx('Przesuń', 'Move'), nx, ny, nz), line(tx('Obróć', 'Rotate'), rx, ry, rz), line(tx('Skala', 'Scale'), ns, applyNum), snapLab, spaceLab);
+  spaceLab.append(space, document.createTextNode(tx('osie części', 'part axes')));
+  const opts = document.createElement('div'); opts.style.cssText = 'display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:4px';
+  opts.append(snapLab, moveStep, rotStep, spaceLab);
+  tr.append(title(tx('Przekształcenie', 'Transform')), info, row3(tx('Położenie', 'Position'), posIn), row3(tx('Obrót', 'Rotation'), rotIn), row3(tx('Skala %', 'Scale %'), sclIn, uniLab), opts);
   // 2) paleta tekstur: podgląd zdjęcia w barwie materiału; klik — nadaj zaznaczonym, przeciągnij na model — nadaj temu, na co upuścisz
   const pal = document.createElement('div');
   pal.style.cssText = 'display:flex;flex-direction:column;min-width:0;min-height:0;overflow:hidden';
@@ -188,9 +261,9 @@ export function createModelEditor(ctx: Ctx): { onModel: () => void; guard: (go: 
   function buildAssets(): void {
     if (assetsBuilt) return;
     assetsBuilt = true;
-    const shapes: ['box' | 'cyl' | 'wedge', string][] = [['box', tx('prostopadłościan', 'box')], ['cyl', tx('walec', 'cylinder')], ['wedge', tx('klin', 'wedge')]];
     const stoneMat = new THREE.MeshStandardMaterial({ color: 0xb8ad96, roughness: 0.9 });
-    for (const [sh, label] of shapes) {
+    for (const sh of SHAPES) {
+      const label = shapeLabel(sh, tx);
       const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(unitShape(sh)), 3)); geo.computeVertexNormals();
       assets.append(assetTile(label, thumb(new THREE.Mesh(geo, stoneMat)), (at) => addShape(sh, picked, grpSel.value, at)));
     }
@@ -214,11 +287,11 @@ export function createModelEditor(ctx: Ctx): { onModel: () => void; guard: (go: 
   const add = document.createElement('div');
   const shapeSel = document.createElement('select');
   shapeSel.style.cssText = selCss;
-  for (const [v, l] of [['box', tx('prostopadłościan', 'box')], ['cyl', tx('walec', 'cylinder')], ['wedge', tx('klin', 'wedge')]] as const) { const o = document.createElement('option'); o.value = v; o.textContent = l; shapeSel.append(o); }
+  for (const v of SHAPES) { const o = document.createElement('option'); o.value = v; o.textContent = shapeLabel(v, tx); shapeSel.append(o); }
   const grpSel = document.createElement('select');
   grpSel.style.cssText = selCss;
   for (const [v, l] of [['base', tx('bryła', 'body')], ['interior', tx('wnętrze', 'interior')], ['shell', tx('dach i mury', 'roof & walls')]] as const) { const o = document.createElement('option'); o.value = v; o.textContent = l; grpSel.append(o); }
-  const addBtn = btn(tx('Dodaj bryłę', 'Add shape'), () => addShape(shapeSel.value as 'box' | 'cyl' | 'wedge', picked, grpSel.value));
+  const addBtn = btn(tx('Dodaj bryłę', 'Add shape'), () => addShape(shapeSel.value as Shape, picked, grpSel.value));
   const stack = (...els: HTMLElement[]): HTMLElement => { const d = document.createElement('div'); d.style.cssText = 'display:flex;flex-direction:column;gap:4px'; d.append(...els); return d; };
   add.append(title(tx('Nowa bryła', 'New shape')), stack(shapeSel, grpSel, addBtn));
   insp.append(tr, pal, add);
@@ -245,7 +318,7 @@ export function createModelEditor(ctx: Ctx): { onModel: () => void; guard: (go: 
     if (o) selectObj(o, false); else toggle(hit.mesh, hit.island, false);
     retexture(mat);
   });
-  const tools = [...modeBtns, dupBtn, dblBtn, delBtn, undoBtn, saveBtn, fileBtn, status];
+  const tools = [...modeBtns, sep(), dupBtn, mirXBtn, mirZBtn, dropBtn, dblBtn, delBtn, sep(), focusBtn, undoBtn, sep(), saveBtn, fileBtn, status];
   wrap.append(editBtn, ...tools);
   ctx.bar.append(wrap);
 
@@ -266,7 +339,7 @@ export function createModelEditor(ctx: Ctx): { onModel: () => void; guard: (go: 
     ctx.orbit.enabled = !v;
     if (!v) commit();
   });
-  tc.addEventListener('objectChange', () => live());
+  tc.addEventListener('objectChange', () => { live(); syncFields(); });
 
   function setOn(v: boolean): void {
     on = v;
@@ -297,9 +370,11 @@ export function createModelEditor(ctx: Ctx): { onModel: () => void; guard: (go: 
     const pos = mesh.geometry.getAttribute('position') as THREE.BufferAttribute;
     const nor = mesh.geometry.getAttribute('normal') as THREE.BufferAttribute | undefined;
     const e = L.elements, nm = new THREE.Matrix3().getNormalMatrix(L), v = new THREE.Vector3();
+    // odbicie lustrzane: 2. i 3. wierzchołek zamieniają się miejscami, żeby przód trójkąta został na zewnątrz
+    const ord = L.determinant() < 0 ? [0, 2, 1] : [0, 1, 2];
     let k = 0;
     for (const t of island.tris) for (let j = 0; j < 3; j++, k++) {
-      const vi = t * 3 + j, x = P0[k * 3]!, y = P0[k * 3 + 1]!, z = P0[k * 3 + 2]!;
+      const vi = t * 3 + ord[j]!, x = P0[k * 3]!, y = P0[k * 3 + 1]!, z = P0[k * 3 + 2]!;
       pos.setXYZ(vi, e[0]! * x + e[4]! * y + e[8]! * z + e[12]!, e[1]! * x + e[5]! * y + e[9]! * z + e[13]!, e[2]! * x + e[6]! * y + e[10]! * z + e[14]!);
       if (nor && N0) { v.set(N0[k * 3]!, N0[k * 3 + 1]!, N0[k * 3 + 2]!).applyMatrix3(nm).normalize(); nor.setXYZ(vi, v.x, v.y, v.z); }
     }
@@ -346,6 +421,36 @@ export function createModelEditor(ctx: Ctx): { onModel: () => void; guard: (go: 
     proxy.updateMatrixWorld();
     start = proxy.matrixWorld.clone();
     tc.attach(proxy);
+    syncFields();
+  }
+  /** pudełko zaznaczenia w świecie */
+  function selBox(): THREE.Box3 {
+    const b = new THREE.Box3();
+    for (const p of sel) { p.mesh.updateMatrixWorld(); p.hi.geometry.computeBoundingBox(); b.union(p.hi.geometry.boundingBox!.clone().applyMatrix4(p.mesh.matrixWorld)); }
+    return b;
+  }
+  function mirror(axis: 0 | 1 | 2): void {
+    if (!sel.length) { say(tx('Najpierw zaznacz część', 'Select a part first')); return; }
+    proxy.scale.setComponent(axis, -proxy.scale.getComponent(axis));
+    proxy.updateMatrixWorld();
+    live(); commit();
+    say(tx('Odbito lustrzanie', 'Mirrored'));
+  }
+  function dropToGround(): void {
+    const c = cur();
+    if (!sel.length || !c) { say(tx('Najpierw zaznacz część', 'Select a part first')); return; }
+    const ground = c.localToWorld(new THREE.Vector3()).y;
+    proxy.position.y -= selBox().min.y - ground;
+    proxy.updateMatrixWorld();
+    live(); commit();
+  }
+  function focusSel(): void {
+    if (!sel.length) return;
+    const b = selBox(), c = b.getCenter(new THREE.Vector3()), r = Math.max(0.15, b.getSize(new THREE.Vector3()).length());
+    const dir = ctx.camera.position.clone().sub(ctx.orbit.target).normalize();
+    ctx.orbit.target.copy(c);
+    ctx.camera.position.copy(c).addScaledVector(dir, r * 1.8);
+    ctx.orbit.update();
   }
   /** Koniec ruchu: po jednej poprawce na część (macierz od stanu z chwili zaznaczenia), nowy punkt startu */
   function commit(): void {
@@ -404,6 +509,7 @@ export function createModelEditor(ctx: Ctx): { onModel: () => void; guard: (go: 
     for (const p of sel) { p.hi.removeFromParent(); p.hi.geometry.dispose(); }
     sel = [];
     markPanel();
+    syncFields();
   }
   function removeSel(): void {
     if (!sel.length) return;
@@ -524,12 +630,8 @@ export function createModelEditor(ctx: Ctx): { onModel: () => void; guard: (go: 
     undo.push(step);
     say(tx(`Widać z obu stron: ${step.length}`, `Visible from both sides: ${step.length}`));
   }
-  function applyM(P: Float32Array, m: number[]): void {
-    for (let v = 0; v < P.length; v += 3) {
-      const x = P[v]!, y = P[v + 1]!, z = P[v + 2]!;
-      P[v] = m[0]! * x + m[4]! * y + m[8]! * z + m[12]!; P[v + 1] = m[1]! * x + m[5]! * y + m[9]! * z + m[13]!; P[v + 2] = m[2]! * x + m[6]! * y + m[10]! * z + m[14]!;
-    }
-  }
+  /** przekształcenie wierzchołków z naprawą kolejności przy odbiciu (tak samo jak w grze) */
+  function applyM(P: Float32Array, m: number[]): void { applyFix(m, P); }
   function retexture(mat: string): void {
     if (!sel.length) { say(tx('Zaznacz części, którym zmienić teksturę', 'Select parts to retexture')); return; }
     const step: (() => void)[] = [], made: THREE.Mesh[] = [];
@@ -569,7 +671,7 @@ export function createModelEditor(ctx: Ctx): { onModel: () => void; guard: (go: 
     placeProxy(); markPanel();
     say(tx(`Nowa tekstura: ${mat} (${made.length})`, `New texture: ${mat} (${made.length})`));
   }
-  function addShape(shape: 'box' | 'cyl' | 'wedge', mat: string, g: string, where?: THREE.Vector3): void {
+  function addShape(shape: Shape, mat: string, g: string, where?: THREE.Vector3): void {
     const cur = ctx.current();
     if (!cur) return;
     const at = where ?? cur.worldToLocal(ctx.orbit.target.clone());
@@ -816,13 +918,14 @@ export function createModelEditor(ctx: Ctx): { onModel: () => void; guard: (go: 
   window.addEventListener('keydown', (e) => {
     if (!on || (e.target as HTMLElement)?.tagName === 'INPUT') return;
     const k = e.key.toLowerCase();
-    if (e.ctrlKey || e.metaKey) { if (k === 'z') { e.preventDefault(); undoLast(); } else if (k === 'd') { e.preventDefault(); duplicateSel(); } return; }
+    if (e.ctrlKey || e.metaKey) { if (k === 'z') { e.preventDefault(); undoLast(); } else if (k === 'd') { e.preventDefault(); duplicateSel(); } else if (k === 's') { e.preventDefault(); void save(); } return; }
     // 1/2/3 zamiast W/E/R: WASD lata kamerą (viewer.ts)
     if (k === '1') setMode('translate');
     else if (k === '2') setMode('rotate');
     else if (k === '3') setMode('scale');
     else if (k === 'delete' || k === 'backspace') removeSel();
     else if (k === 'escape') deselect();
+    else if (k === 'f') focusSel();
   });
 
   // ---------- zapis ----------

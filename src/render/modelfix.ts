@@ -1,3 +1,4 @@
+import { unitShape, type Shape } from './shapes';
 /**
  * Poprawki modeli z edytora w podglądzie modeli (Michał 10.11.2026: „przesuwać w podglądzie modeli niektóre rzeczy,
  * poprawiać model i zapisać”). Modele z Blendera są sklejone po materiale, więc część (belka, beczka, kłoda) to
@@ -30,7 +31,7 @@ export interface Fix {
   /** materiał docelowy ('mat', 'add') */
   to?: string;
   /** bryła dla 'add' */
-  shape?: 'box' | 'cyl' | 'wedge';
+  shape?: Shape;
   /** macierz 4×4 (kolumnami, jak three.js) */
   m: number[];
 }
@@ -79,51 +80,34 @@ export function findIsland(list: Island[], f: Fix): Island | null {
 }
 
 /** Przekształca wierzchołki wyspy macierzą (w miejscu) */
-export function transformIsland(P: { [i: number]: number }, isl: Island, m: number[]): void {
+export function transformIsland(P: { [i: number]: number }, isl: Island, m: number[], A?: number[]): void {
   for (const t of isl.tris) for (let j = 0; j < 3; j++) {
     const v = (t * 3 + j) * 3, x = P[v]!, y = P[v + 1]!, z = P[v + 2]!;
     P[v] = m[0]! * x + m[4]! * y + m[8]! * z + m[12]!;
     P[v + 1] = m[1]! * x + m[5]! * y + m[9]! * z + m[13]!;
     P[v + 2] = m[2]! * x + m[6]! * y + m[10]! * z + m[14]!;
   }
+  // odbicie lustrzane odwraca kolejność wierzchołków — przywracamy ją, żeby przód został przodem
+  if (det3(m) < 0) for (const t of isl.tris) swapTri(P, A, t);
+}
+/** wyznacznik części obrotowo-skalującej macierzy 4×4 (ujemny = odbicie lustrzane) */
+export const det3 = (m: number[]): number =>
+  m[0]! * (m[5]! * m[10]! - m[6]! * m[9]!) - m[4]! * (m[1]! * m[10]! - m[2]! * m[9]!) + m[8]! * (m[1]! * m[6]! - m[2]! * m[5]!);
+/** zamiana 2. i 3. wierzchołka trójkąta t (pozycje i jasność) */
+function swapTri(P: { [i: number]: number }, A: number[] | undefined, t: number): void {
+  for (let j = 0; j < 3; j++) { const a = t * 9 + 3 + j, b = t * 9 + 6 + j; const v = P[a]!; P[a] = P[b]!; P[b] = v; }
+  if (A) { const a = t * 3 + 1, b = t * 3 + 2; const v = A[a]!; A[a] = A[b]!; A[b] = v; }
+}
+/** przekształcenie listy trójkątów z naprawą kolejności przy odbiciu */
+export function applyFix(m: number[], P: number[] | Float32Array, A?: number[]): void {
+  apply(m, P);
+  if (det3(m) < 0) for (let t = 0; t < P.length / 9; t++) swapTri(P as unknown as { [i: number]: number }, A, t);
 }
 
 /** Liczba poprawek, które nie trafiły w żadną wyspę (bryła zmieniona w Blenderze) — do podglądu modeli */
 export const missedFixes = new Map<string, number>();
 
-/** Bryła jednostkowa (środek w zerze, bok 1) jako trójkąty bez indeksów: prostopadłościan, walec (12 boków), klin */
-export function unitShape(shape: 'box' | 'cyl' | 'wedge'): number[] {
-  const out: number[] = [];
-  const quad = (a: number[], b: number[], c: number[], d: number[]): void => { out.push(...a, ...b, ...c, ...a, ...c, ...d); };
-  if (shape === 'cyl') {
-    const n = 12, r = 0.5;
-    for (let k = 0; k < n; k++) {
-      const a0 = (k / n) * Math.PI * 2, a1 = ((k + 1) / n) * Math.PI * 2;
-      const p0 = [Math.cos(a0) * r, Math.sin(a0) * r], p1 = [Math.cos(a1) * r, Math.sin(a1) * r];
-      quad([p0[0]!, -0.5, p0[1]!], [p0[0]!, 0.5, p0[1]!], [p1[0]!, 0.5, p1[1]!], [p1[0]!, -0.5, p1[1]!]);
-      out.push(0, 0.5, 0, p1[0]!, 0.5, p1[1]!, p0[0]!, 0.5, p0[1]!);
-      out.push(0, -0.5, 0, p0[0]!, -0.5, p0[1]!, p1[0]!, -0.5, p1[1]!);
-    }
-    return out;
-  }
-  const h = 0.5;
-  if (shape === 'wedge') {
-    // klin: spód pełny, skos od tylnej krawędzi u góry do przedniej na dole
-    quad([-h, -h, h], [h, -h, h], [h, -h, -h], [-h, -h, -h]);
-    quad([-h, -h, -h], [h, -h, -h], [h, h, -h], [-h, h, -h]);
-    quad([-h, h, -h], [h, h, -h], [h, -h, h], [-h, -h, h]);
-    out.push(-h, -h, h, -h, -h, -h, -h, h, -h);
-    out.push(h, -h, h, h, h, -h, h, -h, -h);
-    return out;
-  }
-  quad([-h, -h, h], [h, -h, h], [h, h, h], [-h, h, h]);
-  quad([h, -h, -h], [-h, -h, -h], [-h, h, -h], [h, h, -h]);
-  quad([h, -h, h], [h, -h, -h], [h, h, -h], [h, h, h]);
-  quad([-h, -h, -h], [-h, -h, h], [-h, h, h], [-h, h, -h]);
-  quad([-h, h, h], [h, h, h], [h, h, -h], [-h, h, -h]);
-  quad([-h, -h, -h], [h, -h, -h], [h, -h, h], [-h, -h, h]);
-  return out;
-}
+export { unitShape };
 
 const apply = (m: number[], P: number[] | Float32Array, from = 0, to = P.length): void => {
   for (let v = from; v < to; v += 3) {
@@ -180,7 +164,7 @@ export function applyModelFixes(name: string, data: Record<string, unknown>, fix
     if (kind === 'add') {
       const d = get(target(f.g, f.to ?? 'wood'));
       const P = unitShape(f.shape ?? 'box');
-      apply(f.m, P);
+      applyFix(f.m, P);
       d.P.push(...P); for (let k = 0; k < P.length / 3; k++) d.A.push(235);
       d.list = null; d.dirty = true;
       continue;
@@ -191,7 +175,7 @@ export function applyModelFixes(name: string, data: Record<string, unknown>, fix
     const isl = findIsland(islandsOf(d), f);
     if (!isl) { miss++; continue; }
     if (kind === 'move') {
-      transformIsland(d.P as unknown as { [i: number]: number }, isl, f.m);
+      transformIsland(d.P as unknown as { [i: number]: number }, isl, f.m, d.A);
       let x = 0, y = 0, z = 0;
       for (const t of isl.tris) for (let j = 0; j < 3; j++) { const v = (t * 3 + j) * 3; x += d.P[v]!; y += d.P[v + 1]!; z += d.P[v + 2]!; }
       const nv = isl.tris.length * 3;
@@ -208,13 +192,13 @@ export function applyModelFixes(name: string, data: Record<string, unknown>, fix
       d.list = null; d.dirty = true;
     } else if (kind === 'dup') {
       const c = cut(d, isl);
-      apply(f.m, c.P);
+      applyFix(f.m, c.P, c.A);
       const td = f.to && f.to !== entry.mat ? get(target(f.g, f.to)) : d;
       td.P.push(...c.P); td.A.push(...c.A);
       td.list = null; td.dirty = true;
     } else if (kind === 'mat') {
       const c = cut(d, isl);
-      apply(f.m, c.P);
+      applyFix(f.m, c.P, c.A);
       // wycięcie trójkątów wyspy ze źródła
       const drop = new Set(isl.tris);
       const P: number[] = [], A: number[] = [];
