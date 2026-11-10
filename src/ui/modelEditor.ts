@@ -12,10 +12,12 @@ import type { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js
 import { findIsland, islands, transformIsland, unitShape, type Fix, type Island } from '../render/modelfix';
 import { buildingMaterialInfo, partMesh } from '../render/buildings';
 import { photoUrlFor } from '../render/textures';
+import { propGeometry, propMaterial, type PropName } from '../render/props';
 import REPO_FIXES from '../data/modelFixes.json';
 import { tx } from '../i18n';
 
 interface Ctx {
+  renderer: { render: (s: THREE.Object3D, c: THREE.Camera) => void; domElement: HTMLCanvasElement };
   scene: THREE.Scene;
   camera: THREE.PerspectiveCamera;
   canvas: HTMLCanvasElement;
@@ -29,7 +31,7 @@ const LS = (id: string): string => `p1-model-fixes:${id}`;
 const repo = (id: string): Fix[] => (REPO_FIXES as Record<string, Fix[]>)[id] ?? [];
 const r4 = (v: number): number => Math.round(v * 1e4) / 1e4;
 
-export function createModelEditor(ctx: Ctx): { onModel: () => void } {
+export function createModelEditor(ctx: Ctx): { onModel: () => void; guard: (go: () => void) => void } {
   let on = false;
   /** Poprawki tej sesji (dla bieżącego modelu), po poprawkach z repozytorium */
   let edits: Fix[] = [];
@@ -64,7 +66,7 @@ export function createModelEditor(ctx: Ctx): { onModel: () => void } {
   // ---------- inspektor na dole (jak w silnikach gier): położenie i obrót liczbami, paleta tekstur, nowe bryły ----------
   const insp = document.createElement('div');
   insp.className = 'edit-inspector';
-  insp.style.cssText = 'position:fixed;left:var(--insp-left,272px);right:254px;bottom:0;height:210px;background:rgba(24,21,17,.95);border-top:1px solid #5a4a2c;z-index:6;display:grid;grid-template-columns:auto 1fr auto;gap:12px;padding:8px 10px;font-size:12px;color:#e6d6b4';
+  insp.style.cssText = 'position:fixed;left:var(--insp-left,272px);right:254px;bottom:0;height:var(--insp-h,230px);grid-template-rows:minmax(0,1fr);background:rgba(24,21,17,.95);border-top:1px solid #5a4a2c;z-index:6;display:grid;grid-template-columns:auto 1fr auto;gap:12px;padding:8px 10px;font-size:12px;color:#e6d6b4';
   document.body.append(insp);
   const selCss = 'font:inherit;font-size:12px;color:#e8e0cc;background:#2e2b24;border:1px solid #3a362d;min-height:28px;padding:2px 4px';
   const title = (t: string): HTMLElement => { const h = document.createElement('div'); h.textContent = t; h.style.cssText = 'font-weight:600;margin-bottom:4px;color:#e9c766'; return h; };
@@ -102,15 +104,19 @@ export function createModelEditor(ctx: Ctx): { onModel: () => void } {
   tr.append(title(tx('Przekształcenie zaznaczenia', 'Transform selection')), line(tx('Przesuń', 'Move'), nx, ny, nz), line(tx('Obróć', 'Rotate'), rx, ry, rz), line(tx('Skala', 'Scale'), ns, applyNum), snapLab, spaceLab);
   // 2) paleta tekstur: podgląd zdjęcia w barwie materiału; klik — nadaj zaznaczonym, przeciągnij na model — nadaj temu, na co upuścisz
   const pal = document.createElement('div');
-  pal.style.cssText = 'display:flex;flex-direction:column;min-width:0';
+  pal.style.cssText = 'display:flex;flex-direction:column;min-width:0;min-height:0;overflow:hidden';
   const palHead = document.createElement('div');
   palHead.style.cssText = 'display:flex;gap:8px;align-items:center;margin-bottom:4px';
   const find = document.createElement('input'); find.type = 'search'; find.placeholder = tx('szukaj tekstury…', 'search textures…'); find.style.cssText = selCss + ';width:150px';
   const palTitle = title(tx('Tekstury — klik: zaznaczonym, przeciągnij: na część', 'Textures — click: selected, drag: onto a part'));
   palTitle.style.margin = '0';
-  palHead.append(palTitle, find);
+  // zakładki: Tekstury | Zasoby (bryły i gotowe modele z paczek, jak okno zasobów w silnikach gier)
+  const tabBtn = (label: string, f: () => void): HTMLButtonElement => { const b = btn(label, f); b.style.cssText = 'font:inherit;font-size:12px;padding:3px 10px;min-height:26px;color:#e8e0cc;background:#2e2b24;border:1px solid #3a362d;cursor:pointer'; return b; };
+  const tabTex = tabBtn(tx('Tekstury', 'Textures'), () => showTab('tex'));
+  const tabAssets = tabBtn(tx('Zasoby', 'Assets'), () => showTab('assets'));
+  palHead.append(tabTex, tabAssets, palTitle, find);
   const grid = document.createElement('div');
-  grid.style.cssText = 'display:grid;grid-template-columns:repeat(auto-fill,minmax(74px,1fr));gap:5px;overflow:auto;padding-right:4px';
+  grid.style.cssText = 'display:grid;grid-template-columns:repeat(auto-fill,minmax(74px,1fr));gap:5px;overflow-y:auto;padding-right:4px;flex:1;min-height:0;align-content:start';
   let picked = 'castle';
   const swatches: HTMLElement[] = [];
   for (const m of buildingMaterialInfo()) {
@@ -131,7 +137,65 @@ export function createModelEditor(ctx: Ctx): { onModel: () => void } {
   const markSwatch = (): void => { for (const sw of swatches) sw.style.borderColor = sw.dataset.name === picked ? '#e9c766' : '#3e3626'; };
   markSwatch();
   find.oninput = () => { const q = find.value.trim().toLowerCase(); for (const sw of swatches) sw.hidden = !!q && !sw.title.toLowerCase().includes(q); };
-  pal.append(palHead, grid);
+  const assets = document.createElement('div');
+  assets.style.cssText = grid.style.cssText + ';grid-template-columns:repeat(auto-fill,minmax(92px,1fr))';
+  assets.hidden = true;
+  pal.append(palHead, grid, assets);
+  function showTab(t: 'tex' | 'assets'): void {
+    grid.hidden = t !== 'tex'; assets.hidden = t !== 'assets'; find.hidden = t !== 'tex';
+    palTitle.textContent = t === 'tex' ? tx('klik: zaznaczonym, przeciągnij: na część', 'click: selected, drag: onto a part') : tx('klik albo przeciągnij na model — dodaje w środku widoku / w miejscu upuszczenia', 'click or drag onto the model — adds at the view centre / where dropped');
+    for (const [b, on] of [[tabTex, t === 'tex'], [tabAssets, t === 'assets']] as const) { b.style.borderColor = on ? '#e9c766' : '#3a362d'; b.style.background = on ? '#4a3e22' : '#2e2b24'; }
+    if (t === 'assets') buildAssets();
+  }
+  // zasoby: bryły (w wybranej teksturze) i gotowe modele z paczek; miniatury rysuje ta sama karta (jedna klatka na model)
+  const ASSET_PROPS: [PropName, string][] = [['barrel', tx('beczka', 'barrel')], ['sack', tx('worek', 'sack')], ['basket', tx('kosz', 'basket')], ['apple', tx('jabłko', 'apple')], ['bun1', tx('chleb', 'bread')], ['bun2', tx('bułka', 'bun')], ['bun3', tx('bochenek', 'loaf')], ['fish', tx('ryba', 'fish')], ['torch', tx('pochodnia', 'torch')], ['sheaf', tx('snopek', 'sheaf')], ['ingots', tx('sztaby', 'ingots')], ['granite1', tx('głaz 1', 'boulder 1')], ['granite2', tx('głaz 2', 'boulder 2')], ['granite3', tx('głaz 3', 'boulder 3')]];
+  /** rozmiar gotowego modelu w grze (modele z paczek mają szerokość 1) */
+  const PROP_SIZE: Partial<Record<PropName, number>> = { barrel: 0.2, sack: 0.14, basket: 0.14, apple: 0.03, bun1: 0.06, bun2: 0.06, bun3: 0.06, fish: 0.12, torch: 0.4, sheaf: 0.3, ingots: 0.12, granite1: 0.3, granite2: 0.3, granite3: 0.3 };
+  let assetsBuilt = false;
+  function thumb(obj: THREE.Object3D): string {
+    // jedna klatka modelu na pustej scenie, zrzut z płótna w tym samym zadaniu i przycięcie do kwadratu
+    const sc = new THREE.Scene();
+    sc.background = new THREE.Color(0x2e2b24);
+    sc.add(new THREE.HemisphereLight(0xffffff, 0x554433, 1.6));
+    const sun = new THREE.DirectionalLight(0xffffff, 2.2); sun.position.set(2, 3, 2); sc.add(sun);
+    sc.add(obj);
+    const box = new THREE.Box3().setFromObject(obj), c = box.getCenter(new THREE.Vector3()), r = box.getSize(new THREE.Vector3()).length() * 0.5 || 0.5;
+    const cv = ctx.renderer.domElement, cam = new THREE.PerspectiveCamera(30, cv.width / Math.max(1, cv.height), r * 0.05, r * 20);
+    cam.position.copy(c).add(new THREE.Vector3(1, 0.8, 1.2).normalize().multiplyScalar(r * 3.4)); cam.lookAt(c);
+    ctx.renderer.render(sc, cam);
+    const out = document.createElement('canvas'); out.width = out.height = 96;
+    const side = Math.min(cv.width, cv.height);
+    out.getContext('2d')!.drawImage(cv, (cv.width - side) / 2, (cv.height - side) / 2, side, side, 0, 0, 96, 96);
+    sc.remove(obj);
+    return out.toDataURL('image/jpeg', 0.85);
+  }
+  function assetTile(label: string, img: string, add: (at?: THREE.Vector3) => void): HTMLElement {
+    const b = document.createElement('button');
+    b.type = 'button'; b.draggable = true; b.title = label;
+    b.style.cssText = 'display:flex;flex-direction:column;padding:0;border:1px solid #3e3626;background:#2e2b24;color:inherit;font:inherit;font-size:11px;cursor:grab';
+    const im = document.createElement('img'); im.src = img; im.alt = ''; im.style.cssText = 'width:100%;aspect-ratio:1;object-fit:cover;display:block';
+    const cap = document.createElement('span'); cap.textContent = label; cap.style.cssText = 'padding:2px 4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis';
+    b.append(im, cap);
+    b.onclick = () => add();
+    b.ondragstart = (e) => { e.dataTransfer?.setData('application/x-asset', label); dragAsset = add; };
+    return b;
+  }
+  let dragAsset: ((at?: THREE.Vector3) => void) | null = null;
+  function buildAssets(): void {
+    if (assetsBuilt) return;
+    assetsBuilt = true;
+    const shapes: ['box' | 'cyl' | 'wedge', string][] = [['box', tx('prostopadłościan', 'box')], ['cyl', tx('walec', 'cylinder')], ['wedge', tx('klin', 'wedge')]];
+    const stoneMat = new THREE.MeshStandardMaterial({ color: 0xb8ad96, roughness: 0.9 });
+    for (const [sh, label] of shapes) {
+      const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(unitShape(sh)), 3)); geo.computeVertexNormals();
+      assets.append(assetTile(label, thumb(new THREE.Mesh(geo, stoneMat)), (at) => addShape(sh, picked, grpSel.value, at)));
+    }
+    for (const [p, label] of ASSET_PROPS) {
+      let img = '';
+      try { img = thumb(new THREE.Mesh(propGeometry(p), propMaterial(p))); } catch { /* bez miniatury */ }
+      assets.append(assetTile(label, img, (at) => addProp(p, grpSel.value, at)));
+    }
+  }
   // 3) nowa bryła w wybranej teksturze
   const add = document.createElement('div');
   const shapeSel = document.createElement('select');
@@ -149,6 +213,16 @@ export function createModelEditor(ctx: Ctx): { onModel: () => void } {
   ctx.canvas.addEventListener('drop', (e) => {
     if (!on) return;
     e.preventDefault();
+    if (e.dataTransfer?.types.includes('application/x-asset') && dragAsset) {
+      // zasób upuszczony na model: stawiamy go w punkcie trafienia (albo w środku widoku)
+      const r = ctx.canvas.getBoundingClientRect();
+      ray.setFromCamera(new THREE.Vector2(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1), ctx.camera);
+      const cur = ctx.current();
+      const h = cur ? ray.intersectObject(cur, true).find((x) => (x.object as THREE.Mesh).isMesh && x.object.visible) : undefined;
+      dragAsset(h ? cur!.worldToLocal(h.point.clone()) : undefined);
+      dragAsset = null;
+      return;
+    }
     const mat = e.dataTransfer?.getData('text/plain');
     if (!mat) return;
     const hit = pick(e.clientX, e.clientY);
@@ -447,6 +521,7 @@ export function createModelEditor(ctx: Ctx): { onModel: () => void } {
     const step: (() => void)[] = [], made: THREE.Mesh[] = [];
     for (const p of sel) {
       const temp = p.mesh.userData.temp as Fix | undefined;
+      if (temp?.k === 'prop') continue;               // gotowe modele z paczek mają własną teksturę
       if (temp) {
         // tymczasowa część: nowa siatka z tym samym kształtem i nowym materiałem
         const old = p.mesh, parent = old.parent!, prevTo = temp.to;
@@ -480,11 +555,11 @@ export function createModelEditor(ctx: Ctx): { onModel: () => void } {
     placeProxy(); markPanel();
     say(tx(`Nowa tekstura: ${mat} (${made.length})`, `New texture: ${mat} (${made.length})`));
   }
-  function addShape(shape: 'box' | 'cyl' | 'wedge', mat: string, g: string): void {
+  function addShape(shape: 'box' | 'cyl' | 'wedge', mat: string, g: string, where?: THREE.Vector3): void {
     const cur = ctx.current();
     if (!cur) return;
-    const at = cur.worldToLocal(ctx.orbit.target.clone());
-    const m = new THREE.Matrix4().makeTranslation(at.x, Math.max(0.1, at.y), at.z).multiply(new THREE.Matrix4().makeScale(0.2, 0.2, 0.2));
+    const at = where ?? cur.worldToLocal(ctx.orbit.target.clone());
+    const m = new THREE.Matrix4().makeTranslation(at.x, where ? at.y + 0.1 : Math.max(0.1, at.y), at.z).multiply(new THREE.Matrix4().makeScale(0.2, 0.2, 0.2));
     const fix: Fix = { k: 'add', g, to: mat, shape, m: m.elements.map(r4) };
     edits.push(fix);
     const P = new Float32Array(unitShape(shape)); applyM(P, fix.m);
@@ -493,6 +568,27 @@ export function createModelEditor(ctx: Ctx): { onModel: () => void } {
     deselect();
     addPiece(mesh, wholeOf(mesh)); placeProxy(); markPanel();
     say(tx('Dodano bryłę — ustaw ją uchwytem (1/2/3)', 'Shape added — place it with the gizmo (1/2/3)'));
+  }
+
+  /** gotowy model z paczki (beczka, worek…): w podglądzie osobna siatka z kopią bryły, w grze dopisany do rekwizytów modelu */
+  function addProp(name: PropName, g: string, where?: THREE.Vector3): void {
+    const cur = ctx.current();
+    if (!cur) return;
+    const at = where ?? cur.worldToLocal(ctx.orbit.target.clone());
+    const s = PROP_SIZE[name] ?? 0.2;
+    const m = new THREE.Matrix4().makeTranslation(at.x, where ? at.y : Math.max(0, at.y - 0.2), at.z).multiply(new THREE.Matrix4().makeScale(s, s, s));
+    const fix: Fix = { k: 'prop', g, prop: name, m: m.elements.map(r4) };
+    edits.push(fix);
+    const geo = propGeometry(name).clone().toNonIndexed();
+    geo.applyMatrix4(m);
+    const mesh = new THREE.Mesh(geo, propMaterial(name));
+    mesh.userData.temp = fix;
+    mesh.castShadow = mesh.receiveShadow = true;
+    groupFor(g).add(mesh);
+    undo.push([() => { mesh.removeFromParent(); dropEdit(fix); }]);
+    deselect();
+    addPiece(mesh, wholeOf(mesh)); placeProxy(); markPanel();
+    say(tx('Dodano — ustaw uchwytem (1/2/3)', 'Added — place it with the gizmo (1/2/3)'));
   }
 
   // ---------- przedmioty: części z różnych materiałów, które się stykają (kłoda = kora + dwa czoła), chwytane razem ----------
@@ -809,8 +905,44 @@ export function createModelEditor(ctx: Ctx): { onModel: () => void } {
       supa.auth.onAuthStateChange(() => { void check(); });
     } catch { /* bez bazy: bez edycji */ }
   })();
+  // niezapisane zmiany: ostrzeżenie przy przejściu na inny model i przy zamykaniu karty (Michał 10.11.2026)
+  window.addEventListener('beforeunload', (e) => { if (edits.length) { e.preventDefault(); e.returnValue = ''; } });
+  function guard(go: () => void): void {
+    if (!edits.length) { go(); return; }
+    const back = document.createElement('div');
+    back.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:20;display:grid;place-items:center';
+    const box = document.createElement('div');
+    box.setAttribute('role', 'dialog'); box.setAttribute('aria-modal', 'true');
+    box.style.cssText = 'background:#24221d;border:1px solid #d8b25a;padding:18px 20px;max-width:420px;color:#e8e0cc;font-size:14px';
+    const p = document.createElement('p'); p.style.margin = '0 0 14px';
+    p.textContent = tx(`Masz niezapisane zmiany (${edits.length}). Jeśli wyjdziesz bez zapisu, przepadną.`, `You have unsaved changes (${edits.length}). If you leave without saving, they will be lost.`);
+    const row = document.createElement('div'); row.style.cssText = 'display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end';
+    const close = (): void => back.remove();
+    const b1 = btn(tx('Zapisz i przejdź', 'Save and continue'), () => { close(); void save().then(go); });
+    const b2 = btn(tx('Porzuć zmiany', 'Discard changes'), () => { close(); edits = []; undo.length = 0; go(); });
+    const b3 = btn(tx('Zostań', 'Stay'), close);
+    for (const b of [b1, b2, b3]) b.style.cssText = 'font:inherit;font-size:13px;padding:6px 10px;color:#e8e0cc;background:#2e2b24;border:1px solid #3a362d;cursor:pointer';
+    b1.style.borderColor = '#d8b25a';
+    row.append(b1, b2, b3); box.append(p, row); back.append(box); document.body.append(back);
+    b3.focus();
+  }
+  // uchwyt do zmiany wysokości inspektora (przeciągnij górną krawędź)
+  const grip = document.createElement('div');
+  grip.title = tx('Przeciągnij, żeby zmienić wysokość', 'Drag to resize');
+  grip.style.cssText = 'position:absolute;left:0;right:0;top:-5px;height:9px;cursor:ns-resize';
+  insp.append(grip);
+  try { const h = Number(localStorage.getItem('p1-insp-h')); if (h > 100) document.body.style.setProperty('--insp-h', `${h}px`); } catch { /* bez pamięci */ }
+  grip.addEventListener('pointerdown', (e) => {
+    grip.setPointerCapture(e.pointerId);
+    const move = (ev: PointerEvent): void => { const h = Math.max(120, Math.min(window.innerHeight - 160, window.innerHeight - ev.clientY)); document.body.style.setProperty('--insp-h', `${h}px`); };
+    const up = (): void => { grip.removeEventListener('pointermove', move); try { localStorage.setItem('p1-insp-h', String(parseInt(getComputedStyle(document.body).getPropertyValue('--insp-h')) || 230)); } catch { /* bez pamięci */ } };
+    grip.addEventListener('pointermove', move);
+    grip.addEventListener('pointerup', up, { once: true });
+  });
+  showTab('tex');
   setOn(false);
   return {
+    guard,
     onModel: () => { deselect(); edits = []; undo.length = 0; void applyPending(); if (on) buildPanel(); },
   };
 }

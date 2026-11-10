@@ -16,7 +16,9 @@ const bytes = (s: string | Uint8Array): Uint8Array => (typeof s === 'string' ? U
 
 export interface Fix {
   /** rodzaj: move (domyślnie), dup, mat, add */
-  k?: 'move' | 'dup' | 'mat' | 'add' | 'dbl';
+  k?: 'move' | 'dup' | 'mat' | 'add' | 'dbl' | 'prop';
+  /** gotowy model z paczki dla 'prop' (beczka, worek, kosz…; render/props.ts) */
+  prop?: string;
   /** grupa w modelu (base, shell, interior, floor, ceiling) */
   g: string;
   /** numer siatki w grupie (nie dla 'add') */
@@ -170,6 +172,11 @@ export function applyModelFixes(name: string, data: Record<string, unknown>, fix
   let miss = 0;
   for (const f of fixes) {
     const kind = f.k ?? 'move';
+    if (kind === 'prop') {
+      // gotowy model z paczki: dopisany do listy rekwizytów modelu (blenderModel w buildings.ts stawia go w grupie g)
+      ((data.props ??= []) as { prop: string; g: string; m: number[] }[]).push({ prop: f.prop ?? 'barrel', g: f.g, m: f.m });
+      continue;
+    }
     if (kind === 'add') {
       const d = get(target(f.g, f.to ?? 'wood'));
       const P = unitShape(f.shape ?? 'box');

@@ -475,7 +475,7 @@ for (const [title, list] of GROUPS) {
   for (const [id, label] of list) {
     const b = document.createElement('button');
     b.type = 'button'; b.textContent = label; b.dataset.id = id; b.setAttribute('aria-pressed', 'false');
-    b.onclick = () => show(id);
+    b.onclick = () => editor.guard(() => show(id));
     box.append(b);
   }
   groupsEl.append(box);
@@ -507,7 +507,7 @@ function syncBar(): void {
 }
 
 // edytor poprawek (Michał 10.11.2026): „Edytuj” → klik w część, uchwyt do przesuwania i obracania, „Zapisz”
-const editor = createModelEditor({ scene, camera, canvas, orbit: controls, bar: barEl, current: () => current, id: () => state.id });
+const editor = createModelEditor({ renderer, scene, camera, canvas, orbit: controls, bar: barEl, current: () => current, id: () => state.id });
 
 function resize(): void {
   const w = canvas.clientWidth, h = canvas.clientHeight;

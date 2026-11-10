@@ -1,7 +1,7 @@
 import { cloneMaterial } from './matclone';
 import { named } from './named';
 import * as THREE from 'three';
-import { basketAt, propAt, propGeometryFlat, propMaterial, type PropName } from './props';
+import { basketAt, propAt, propGeometry, propGeometryFlat, propMaterial, type PropName } from './props';
 import { assetModel } from './assets';
 import { BUILDINGS } from '../data/buildings';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
@@ -999,6 +999,13 @@ function blenderModel(g: THREE.Group, model: BlenderBuilding, flag: THREE.Materi
   for (const m of meshes('ceiling')) ceiling.add(m);
   g.add(ceiling);
   // skrzydła wrót (brama): zapisane zamknięte, obracają się wokół zawiasów x = ±hinge; startują otwarte
+  // rekwizyty z paczek dodane w edytorze poprawek (modelfix.ts, rodzaj 'prop'): beczki, worki, kosze… w swojej grupie
+  for (const p of (model as unknown as { props?: { prop: string; g: string; m: number[] }[] }).props ?? []) {
+    const mesh = new THREE.Mesh(propGeometry(p.prop as PropName), propMaterial(p.prop as PropName));
+    new THREE.Matrix4().fromArray(p.m).decompose(mesh.position, mesh.quaternion, mesh.scale);
+    mesh.castShadow = mesh.receiveShadow = true;
+    (p.g === 'interior' ? interior : p.g === 'shell' ? shell : g).add(mesh);
+  }
   const hinge = (model as unknown as { hinge?: number }).hinge;
   if (hinge) for (const [name, side] of [['leafL', -1], ['leafR', 1]] as const) {
     const leaf = new THREE.Group();
