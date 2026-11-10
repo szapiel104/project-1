@@ -9,6 +9,11 @@ export type { ChangeEntry } from './changelogTypes';
  * — tak jak CHANGELOG.md dla nas. `tests/changelog.test.ts` pilnuje, że najnowszy wpis ma wersję z package.json.
  */
 const NEW: ChangeEntry[] = [
+  { v: '0.94.94', date: '2026-11-10', pl: [
+    'Logowanie: „Nie pamiętam hasła” — link na e-mail i ustawienie nowego hasła po powrocie do gry.',
+  ], en: [
+    'Sign in: “I forgot my password” — an e-mailed link lets you set a new password when you return to the game.',
+  ] },
   { v: '0.94.93', date: '2026-11-10', pl: [
     'Nowa zbrojownia i koszary: kamienne jak mury obronne, z blankami i narożnymi wypustami na dachu, schodami na dach, łukowym wejściem z pochodniami i porządnym kominem; w środku stojaki z bronią, tarcze, prycze, stół i kominek.',
     'Szybsza gra w dużej osadzie: budynki rysują się mniejszą liczbą materiałów (te same tekstury w różnych barwach są jednym materiałem), wnętrza nie rzucają już cienia ani odbicia w wodzie.',

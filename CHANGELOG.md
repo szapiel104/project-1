@@ -1,5 +1,8 @@
 # Dziennik zmian
 
+## 0.94.94 — 2026-11-10
+- Reset hasła: `sendReset`, `onPasswordRecovery` (supa.ts), ekrany „Nie pamiętam hasła” i „Nowe hasło” (online.ts).
+
 ## 0.94.93 — 2026-11-10
 - Zbrojownia i koszary od nowa (`tools/models/stonehall.py`, `armory.py`, `barracks.py`): kamień muru ('castle'), dach na koronie muru (1,14), nierówne blanki, narożne wypusty, schody na dach, łuk wejścia jako ciągła bryła, komin; bez placu z ziemi (zasada w CLAUDE.md). Mechanika bez zmian (bot jak dotąd).
 - Wydajność: jeden materiał na wzór tekstury i jeden dla gładkich barw (`PLAIN_KEYS`, `patMat`, barwa w kolorach wierzchołków; `?gladkie=0` po staremu): 136 → 95 paczek budynków. Wnętrza w osobnych paczkach bez cienia i odbicia. Próba zlepiania wnętrz w kawałki mapy (`chunkMerge.ts`) wyłączona (`?kawalki=1`). Plan i pomiary: `docs/optymalizacja-budynkow.md`; `__bench()`, `__batches()`, `__debugDraw`.
