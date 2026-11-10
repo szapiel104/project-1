@@ -393,7 +393,7 @@ function applyLook(): void {
   if (current) {
     current.traverse((o) => {
       if (['shell', 'roof', 'chimney', 'spin', 'flagpole'].includes(o.name)) o.visible = state.roof;
-      if (o.name === 'interior') o.visible = !state.roof;
+      if (o.name === 'interior') o.visible = true; // wnętrze zawsze, jak w grze (Michał 10.11.2026); „Bez dachu” zdejmuje tylko dach i ściany
       const m = (o as THREE.Mesh).material as THREE.MeshStandardMaterial | THREE.MeshStandardMaterial[] | undefined;
       if (m) for (const mm of Array.isArray(m) ? m : [m]) if ('wireframe' in mm) mm.wireframe = state.wire;
     });
