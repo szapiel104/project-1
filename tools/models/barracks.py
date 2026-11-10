@@ -88,11 +88,11 @@ for s in (-1, 1):
     b.crystal('base', 'dark', x, FY + 0.69, Z1 + 0.075, 0.018, seed=s + 5, sy=0.9, seg=6)
     LAMPS.append([round(x, 3), round(FY + 0.73, 3), round(Z1 + 0.075, 3)])
 # sztandar pana na drzewcu wystającym ze ściany nad łukiem (płachtę rysuje gra: banners.ts, rodzaj 1)
-FPY = TOP - 0.06
+FPY = TOP - 0.03
 log(b, 'base', 'woodDark', (DX - 0.22, FPY, Z1 + 0.01), (DX + 0.22, FPY, Z1 + 0.01), r=0.012, seg=6, ends='wood')
 for s in (-1, 1):
     b.box('base', 'iron', 0.02, 0.05, 0.03, DX + s * 0.2, FPY - 0.025, Z1 - 0.005)
-BANNERS = [[round(DX, 3), round(FPY - 0.01, 3), round(Z1 + 0.03, 3), 0, 0.4, 0.38, 1, 'base']]
+BANNERS = [[round(DX, 3), round(FPY - 0.01, 3), round(Z1 + 0.03, 3), 0, 0.42, 0.17, 1, 'base']]   # krótka płachta nad łukiem (dłuższa zasłaniała wejście)
 
 # ---------------- schody na dach (po lewej, szerokie) i podest ----------------
 stairs(b, t, SX, SW, Z1 + 0.66, Z0 + 0.48, TOP, side=-1, steps=13)
