@@ -12,6 +12,7 @@ import type { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js
 import { applyFix, islands, unitShape, type Fix, type Island } from '../render/modelfix';
 import { SHAPES, shapeLabel, type Shape } from '../render/shapes';
 import { icon } from './editorIcons';
+import { createGuides, snapBox } from './editorSnap';
 import type { MenuItem } from './menuBar';
 import { buildingMaterialInfo, partMesh } from '../render/buildings';
 import { photoUrlFor } from '../render/textures';
@@ -380,12 +381,55 @@ export function createModelEditor(ctx: Ctx): { onModel: () => void; guard: (go: 
   interface Piece { mesh: THREE.Mesh; isl: Island; P: Float32Array; N: Float32Array | null; c: [number, number, number]; hi: THREE.Mesh }
   let sel: Piece[] = [];
   let start = new THREE.Matrix4();
+  // Shift przy przesuwaniu: przyciąganie do krawędzi i środków przedmiotów obok, z kreskami (editorSnap.ts)
+  const guides = createGuides(ctx.scene);
+  let shiftHeld = false, snapCands: THREE.Box3[] = [], dragBox: THREE.Box3 | null = null, dragPos = new THREE.Vector3();
+  window.addEventListener('keydown', (e) => { if (e.key === 'Shift') shiftHeld = true; });
+  window.addEventListener('keyup', (e) => { if (e.key === 'Shift') { shiftHeld = false; guides.hide(); } });
+  window.addEventListener('blur', () => { shiftHeld = false; });
   tc.addEventListener('dragging-changed', (e) => {
     const v = (e as unknown as { value: boolean }).value;
     ctx.orbit.enabled = !v;
-    if (!v) commit();
+    if (v && tc.mode === 'translate') { snapCands = candidateBoxes(); dragBox = selBox(); dragPos = proxy.position.clone(); }
+    if (!v) { guides.hide(); dragBox = null; commit(); }
   });
-  tc.addEventListener('objectChange', () => { live(); syncFields(); });
+  tc.addEventListener('objectChange', () => {
+    if (dragBox && tc.mode === 'translate') {
+      if (shiftHeld) {
+        const moved = dragBox.clone().translate(proxy.position.clone().sub(dragPos));
+        const thr = Math.max(0.004, ctx.camera.position.distanceTo(proxy.position) * 0.012);
+        const c0 = ctx.current();
+        const { corr, hits } = snapBox(moved, snapCands, thr, c0 ? c0.localToWorld(new THREE.Vector3()).y : undefined);
+        proxy.position.add(corr); proxy.updateMatrixWorld();
+        guides.show(moved.translate(corr), hits);
+      } else guides.hide();
+    }
+    live(); syncFields();
+  });
+  /** pudełka (świat) wszystkich przedmiotów poza zaznaczonymi: części z listy warstw, dodane bryły i modele z paczki */
+  function candidateBoxes(): THREE.Box3[] {
+    const out: THREE.Box3[] = [];
+    const selKeys = new Set(sel.map((p) => nodeKey(p.mesh, p.isl)));
+    const v = new THREE.Vector3();
+    for (const o of objs) {
+      if (o.nodes.some((nd) => selKeys.has(nodeKey(nd.mesh, nd.island)))) continue;
+      const b = new THREE.Box3();
+      for (const nd of o.nodes) {
+        const pos = nd.mesh.geometry.getAttribute('position') as THREE.BufferAttribute;
+        nd.mesh.updateMatrixWorld();
+        for (const t of nd.island.tris) for (let j = 0; j < 3; j++) b.expandByPoint(v.fromBufferAttribute(pos, t * 3 + j).applyMatrix4(nd.mesh.matrixWorld));
+      }
+      if (!b.isEmpty() && b.getSize(v).length() > 0.002) out.push(b);
+    }
+    ctx.current()?.traverse((o) => {
+      const m = o as THREE.Mesh;
+      if (!m.isMesh || m.userData.hiFor || !(m.userData.temp || m.userData.fxProp)) return;
+      if (sel.some((p) => p.mesh === m)) return;
+      const b = new THREE.Box3().setFromObject(m);
+      if (!b.isEmpty() && b.getSize(v).length() > 0.002) out.push(b);
+    });
+    return out;
+  }
 
   function setOn(v: boolean): void {
     on = v;
