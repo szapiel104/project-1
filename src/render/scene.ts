@@ -2988,7 +2988,7 @@ export class GameRenderer {
         for (let p: THREE.Object3D | null = o.parent; p && p !== mesh; p = p.parent) if (!p.visible) { shown = false; break; }
         if (!shown) continue;
         o.getWorldPosition(w);
-        if (o.name === 'campfire') { F.add(w, 0.42, 0.3, (o.id * 0.311) % 1, glow); F.add(w.set(w.x + 0.04, w.y, w.z - 0.03), 0.3, 0.2, (o.id * 0.731) % 1, 0); if (!this.calm) loop3d(`camp${o.id}`, 'campfire', w.x, w.y, w.z); }
+        if (o.name === 'campfire') { const k = (o.userData.size as number | undefined) ?? 1; F.add(w, 0.42 * k, 0.3 * k, (o.id * 0.311) % 1, glow); F.add(w.set(w.x + 0.04 * k, w.y, w.z - 0.03 * k), 0.3 * k, 0.2 * k, (o.id * 0.731) % 1, 0); if (!this.calm) loop3d(`camp${o.id}`, 'campfire', w.x, w.y, w.z); }
         else F.add(w, 0.11, 0.06, (o.id * 0.419) % 1, glow * 0.5, 0.35); // świeczka, kaganek, latarnia w izbie: mały płomyk i ledwie łuna
       }
       const camp = named(mesh, 'flame');

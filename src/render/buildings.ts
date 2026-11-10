@@ -1020,10 +1020,12 @@ function blenderModel(g: THREE.Group, model: BlenderBuilding, flag: THREE.Materi
     (grp === 'interior' ? interior : g).add(o);
   }
   // ognisko przed budynkiem (barak górników): pali się cały czas, rysuje je system płomieni jak w obozowisku
-  for (const [x, y, z] of (model as unknown as { campfires?: [number, number, number][] }).campfires ?? []) {
+  // czwarta liczba = wielkość płomienia (kominek w komnacie mniejszy niż ognisko); domyślnie 1
+  for (const [x, y, z, size] of (model as unknown as { campfires?: [number, number, number, number?][] }).campfires ?? []) {
     const o = new THREE.Object3D();
     o.name = 'campfire';
     o.position.set(x, y, z);
+    if (size) o.userData.size = size;
     g.add(o);
   }
   for (const [x, y, z] of marks.flames ?? []) {

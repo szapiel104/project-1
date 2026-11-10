@@ -36,6 +36,7 @@ cx = lambda dx: dx - H + 0.5   # środek pola w układzie modelu
 cz = lambda dy: dy - H + 0.5
 
 b = Building()
+lamps, campfires = [], []   # świece (mały płomyk) i paleniska: ogień rysuje gra w tych punktach
 lights = []         # pochodnie na ścianach: tu gra nocą zapala światło
 braziers = []       # kosze ogniowe: tu gra po zmroku rysuje żywy płomień (system ognia)
 solid = []          # przeszkody spacerowicza: x0, x1, z0, z1, od wysokości y0 do y1
@@ -481,12 +482,15 @@ b.box('interior', 'stoneDark', 0.56, 0.025, FD + 0.1, FX, QF, QZ0 + (FD + 0.1) /
 b.box('interior', 'castle', 0.36, QY2 - QF - 0.44, 0.12, FX, QF + 0.44, QZ0 + 0.06)   # występ komina
 for rot in (0.45, -0.45):                                                          # polana na krzyż
     b.box('interior', 'woodDark', 0.2, 0.032, 0.032, FX, QF + 0.03, QZ0 + 0.11, rot)
-b.box('interior', 'ember', 0.2, 0.012, 0.1, FX, QF + 0.026, QZ0 + 0.11)            # żar
-for ox, oz, hh in ((0.0, 0.0, 0.15), (-0.06, 0.02, 0.1), (0.055, -0.015, 0.11)):  # płomienie
-    b.prism('interior', 'ember', 0.03, 0.0, hh, FX + ox, QF + 0.05, QZ0 + 0.11 + oz, seg=6)
+# żar: popiół i bryłki węgla między polanami; płomień rysuje gra w znaczniku 'campfires' (zakaz brył ognia, 6.11.2026)
+b.crystal('interior', 'ash', FX, QF + 0.02, QZ0 + 0.11, 0.1, seed=2.1, sx=1.0, sy=0.08, sz=0.5, seg=9)
+for k in range(6):
+    b.crystal('interior', 'ember' if k % 2 else 'dark', FX - 0.07 + k * 0.028, QF + 0.03, QZ0 + 0.09 + (k % 3) * 0.02, 0.012, seed=k + 5, sy=0.6)
+campfires.append([FX, round(QF + 0.04, 3), round(QZ0 + 0.11, 3), 0.4])
 for k, ox in enumerate((-0.22, 0.2)):                                              # świece na gzymsie
     b.prism('interior', 'white', 0.012, 0.012, 0.05, FX + ox, QF + 0.44, QZ0 + 0.12, seg=6)
-    b.prism('interior', 'ember', 0.008, 0.0, 0.025, FX + ox, QF + 0.49, QZ0 + 0.12, seg=5)
+    b.prism('interior', 'dark', 0.002, 0.002, 0.01, FX + ox, QF + 0.49, QZ0 + 0.12, seg=4)   # knot
+    lamps.append([round(FX + ox, 3), round(QF + 0.5, 3), round(QZ0 + 0.12, 3), 'interior'])
 block(FX - 0.3, FX + 0.3, QZ0, QZ0 + 0.3, WALK - 0.1, 9)
 # toaletka z lustrem i stołkiem między kominkiem a łożem
 TX = -0.25
@@ -814,7 +818,8 @@ for zz in (tz0 + 1.25, tz1 - 0.55):
         a2 = k * math.pi / 3
         x, z = tmx + math.sin(a2) * 0.3, zz + math.cos(a2) * 0.3
         b.prism('ceiling', 'white', 0.016, 0.016, 0.06, x, G + 1.025, z, seg=5)
-        b.prism('ceiling', 'ember', 0.012, 0.0, 0.035, x, G + 1.085, z, seg=5)
+        b.prism('ceiling', 'dark', 0.003, 0.003, 0.012, x, G + 1.085, z, seg=4)   # knot
+        lamps.append([round(x, 3), round(G + 1.095, 3), round(z, 3)])
 for s in (-1, 1):
     # długie stoły z ławami po bokach sali, na nich chleb i jabłka
     x = tmx + s * 1.55
@@ -846,9 +851,11 @@ b.box('interior', 'stone', 0.8, 0.33, 0.42, HX, G + 0.42, kz0 + 0.21)           
 b.box('interior', 'stoneDark', 0.8, 0.02, 0.36, HX, G, kz0 + 0.24)                # dno paleniska
 for rot in (0.4, -0.4, 0.05):                                                      # polana
     b.box('interior', 'woodDark', 0.34, 0.04, 0.04, HX, G + 0.025, kz0 + 0.26, rot)
-b.box('interior', 'ember', 0.5, 0.014, 0.2, HX, G + 0.022, kz0 + 0.26)            # żar
-for ox, oz, hh in ((-0.2, 0.0, 0.16), (-0.12, 0.05, 0.11), (0.14, 0.02, 0.15), (0.22, -0.04, 0.1)):
-    b.prism('interior', 'ember', 0.04, 0.0, hh, HX + ox, G + 0.05, kz0 + 0.26 + oz, seg=6)
+b.crystal('interior', 'ash', HX, G + 0.02, kz0 + 0.26, 0.24, seed=4.2, sx=1.0, sy=0.06, sz=0.4, seg=10)   # popiół
+for k in range(10):                                                                # bryłki żaru
+    b.crystal('interior', 'ember' if k % 3 else 'dark', HX - 0.2 + k * 0.045, G + 0.032, kz0 + 0.22 + (k * 7 % 5) * 0.02, 0.016, seed=k + 9, sy=0.6)
+campfires.append([HX - 0.16, round(G + 0.05, 3), round(kz0 + 0.26, 3), 0.55])     # płomienie rysuje gra
+campfires.append([HX + 0.17, round(G + 0.05, 3), round(kz0 + 0.27, 3), 0.5])
 b.prism('interior', 'iron', 0.13, 0.15, 0.16, HX, G + 0.1, kz0 + 0.26, seg=10)     # kocioł
 for k in range(3):                                                                 # trójnóg pod kotłem
     a = k * 2.094
@@ -977,7 +984,8 @@ b.box('interior', 'canvas', 0.12, 0.025, 0.09, DX - 0.15, G + 0.345, DZ + 0.03, 
 b.prism('interior', 'dark', 0.018, 0.014, 0.03, DX + 0.13, G + 0.34, DZ + 0.08, seg=8)                   # kałamarz
 b.box('interior', 'white', 0.004, 0.08, 0.004, DX + 0.135, G + 0.36, DZ + 0.08, roll=0.4)                # pióro
 b.prism('interior', 'white', 0.015, 0.015, 0.05, DX + 0.16, G + 0.34, DZ - 0.08, seg=6)
-b.prism('interior', 'ember', 0.01, 0.0, 0.03, DX + 0.16, G + 0.39, DZ - 0.08, seg=5)
+b.prism('interior', 'dark', 0.002, 0.002, 0.01, DX + 0.16, G + 0.39, DZ - 0.08, seg=4)   # knot
+lamps.append([round(DX + 0.16, 3), round(G + 0.4, 3), round(DZ - 0.08, 3), 'interior'])
 CHZ = DZ - 0.3
 b.box('interior', 'woodDark', 0.2, 0.03, 0.2, DX, G + 0.17, CHZ)
 for sx in (-1, 1):
@@ -1165,4 +1173,4 @@ VIEWS = [
     ['donżon od pola', [0, 1.6, -9.0], [0, 2.6, -5.5], OUT, 22],
     ['dach donżonu', [2.5, 6.5, -8.0], [0, 3.9, -5.2], OUT, 20],
 ]
-b.save('keep', maxe=0.45, rays=16, reach=0.5, extra={'lights': lights, 'braziers': braziers, 'solid': solid, 'floorY': G, 'wallY': WALK, 'portLift': 0.86, 'views': VIEWS, 'banners': BANNERS, 'fishSpots': FISH_SPOTS})
+b.save('keep', maxe=0.45, rays=16, reach=0.5, extra={'lights': lights, 'lamps': lamps, 'campfires': campfires, 'braziers': braziers, 'solid': solid, 'floorY': G, 'wallY': WALK, 'portLift': 0.86, 'views': VIEWS, 'banners': BANNERS, 'fishSpots': FISH_SPOTS})

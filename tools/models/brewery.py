@@ -110,7 +110,8 @@ chimneys.append([CX, round(H + RISE * 0.6 + 0.57, 3), CZ])
 PX, PZ = 0.5, -0.45
 b.box('interior', 'stoneDark', 0.5, 0.26, 0.48, PX, P, PZ)
 b.box('interior', 'dark', 0.16, 0.12, 0.02, PX, P + 0.03, PZ + 0.245)
-b.prism('interior', 'ember', 0.05, 0.0, 0.05, PX, P + 0.03, PZ + 0.2, seg=6)
+for k in range(5):                                                         # żar w palenisku; płomień rysuje gra ('flames')
+    b.crystal('interior', 'ember' if k % 2 else 'dark', PX - 0.05 + k * 0.025, P + 0.04, PZ + 0.2 + (k % 2) * 0.015, 0.014, seed=k + 3, sy=0.6)
 flames.append([PX, round(P + 0.03, 3), round(PZ + 0.19, 3)])
 b.box('interior', 'stoneDark', 0.26, 0.48, 0.2, PX, P + 0.26, PZ - 0.17)   # przewód do komina przy ścianie
 # kocioł z miedzi: brzuchaty, z obręczą i pokrywą uchyloną

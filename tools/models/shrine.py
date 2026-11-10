@@ -18,7 +18,7 @@ from logs import log  # noqa: E402
 
 reset()
 b = Building()
-lights, flames = [], []
+lights, flames, lamps = [], [], []
 
 SZ = -0.42          # oś posągu (głębiej w działce, z przodu miejsce na modlących)
 P = 0.06            # wierzch płyty
@@ -225,8 +225,7 @@ def candle(x, y, z, h, r=0.02, lit=True):
         b.prism('base', 'white', 0.006, 0.003, h * 0.5, x + math.sin(a) * r * 0.95, y + h * 0.45, z + math.cos(a) * r * 0.95, seg=5)
     b.prism('base', 'dark', 0.003, 0.003, 0.012, x, y + h, z, seg=4)          # knot
     if lit:
-        b.prism('base', 'flameLight', 0.011, 0.0, 0.04, x, y + h + 0.008, z, seg=6)
-        b.prism('base', 'flameCore', 0.006, 0.0, 0.022, x, y + h + 0.009, z, seg=6)
+        lamps.append([round(x, 3), round(y + h + 0.012, 3), round(z, 3)])   # płomyk rysuje gra (bez bryły ognia)
 
 
 for sx in (-1, 1):
@@ -266,4 +265,4 @@ VIEWS = [
     ['przy klęczniku', [0.15, 0.35, 0.55], [0, 0.75, SZ], ['base'], 26],
     ['z boku', [1.4, 0.6, 0.2], [0, 0.6, SZ], ['base'], 28],
 ]
-b.save('shrine', maxe=0.12, rays=16, reach=0.2, extra={'views': VIEWS, 'flames': flames, 'lights': lights})
+b.save('shrine', maxe=0.12, rays=16, reach=0.2, extra={'views': VIEWS, 'flames': flames, 'lights': lights, 'lamps': lamps})

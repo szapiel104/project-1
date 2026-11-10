@@ -16,7 +16,7 @@ from building import Building  # noqa: E402
 
 b = Building()
 solid, open_ = [], []
-windows, chimneys, flames, seats = [], [], [], []
+windows, chimneys, flames, seats, lamps = [], [], [], [], []
 def block(x0, x1, z0, z1, y0=0.0, y1=9.0):
     solid.append([round(min(x0, x1), 3), round(max(x0, x1), 3), round(min(z0, z1), 3), round(max(z0, z1), 3), round(y0, 3), round(y1, 3)])
 def boxs(group, mat, w, h, d, x, y, z, rot=0.0, **kw):
@@ -204,7 +204,8 @@ for tx, tz in TABLES:
         b.prism('interior', 'woodDark', 0.022, 0.02, 0.06, tx + ox, P + 0.275, tz + oz, seg=6)
     b.bun('interior', tx - 0.02, P + 0.275, tz - 0.02, w=0.085, rot=0.3 + tx)   # bochenek ze skanu na stole
     b.prism('interior', 'white', 0.012, 0.012, 0.05, tx + 0.12, P + 0.275, tz + 0.06, seg=5)
-    b.prism('interior', 'ember', 0.009, 0.0, 0.025, tx + 0.12, P + 0.325, tz + 0.06, seg=5)
+    b.prism('interior', 'dark', 0.002, 0.002, 0.01, tx + 0.12, P + 0.325, tz + 0.06, seg=4)   # knot
+    lamps.append([round(tx + 0.12, 3), round(P + 0.335, 3), round(tz + 0.06, 3), 'interior'])
     seats.append([round(tx - 0.12, 3), round(tz - 0.27, 3), 0.0])
     seats.append([round(tx + 0.12, 3), round(tz + 0.27, 3), round(math.pi, 3)])
 # drabina na piętro w rogu
@@ -262,7 +263,8 @@ for sx in (-1, 1):
     x = DM + sx * 0.32
     b.box('base', 'iron', 0.02, 0.02, 0.08, x, P + 0.6, Z1 + 0.04)
     b.prism('base', 'iron', 0.035, 0.035, 0.08, x, P + 0.52, Z1 + 0.08, seg=6, top=True)
-    b.prism('base', 'ember', 0.02, 0.0, 0.05, x, P + 0.53, Z1 + 0.08, seg=5)
+    b.prism('base', 'white', 0.008, 0.008, 0.03, x, P + 0.53, Z1 + 0.08, seg=5)   # świeca w latarni
+    lamps.append([round(x, 3), round(P + 0.57, 3), round(Z1 + 0.08, 3)])
 open_.append([X0, X1, GZ0 - 0.02, GZ1 + 0.4])
 
 E = P + 0.46
@@ -276,5 +278,5 @@ VIEWS = [
     ['z izby na ganek', [0.3, E, -1.1], [0.5, 0.4, 1.4], ROOM, 16],
 ]
 b.save('tavern', maxe=0.3, rays=16, reach=0.4, extra={
-    'solid': solid, 'open': open_, 'floorY': P, 'windows': windows, 'chimneys': chimneys, 'flames': flames,
+    'solid': solid, 'open': open_, 'floorY': P, 'windows': windows, 'chimneys': chimneys, 'flames': flames, 'lamps': lamps,
     'seats': seats, 'pennant': [-2.0, round(H2 + RISE - 0.15, 3), -0.35], 'views': VIEWS})
