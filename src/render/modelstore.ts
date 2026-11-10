@@ -20,6 +20,19 @@ import { unpackModel } from './modelpack';
 import { applyModelFixes, type Fix } from './modelfix';
 import FIXES from '../data/modelFixes.json';
 
+/**
+ * Poprawki modelu: z repozytorium (src/data/modelFixes.json), a lokalnie (localhost) te zapisane w edytorze podglądu modeli
+ * w tej samej przeglądarce — żeby zmiana z edytora była od razu widać w grze (Michał 10.11.2026), zanim trafi do repozytorium.
+ */
+function fixesFor(name: string): Fix[] | undefined {
+  const repo = (FIXES as Record<string, Fix[]>)[name];
+  try {
+    if (typeof location === 'undefined' || !['localhost', '127.0.0.1', '[::1]'].includes(location.hostname)) return repo;
+    const local = JSON.parse(localStorage.getItem(`p1-model-fixes:${name}`) ?? 'null') as Fix[] | null;
+    return Array.isArray(local) && local.length >= (repo?.length ?? 0) ? local : repo;
+  } catch { return repo; }
+}
+
 /** nazwa modelu → adres spakowanego pliku .bin */
 const URLS: Record<string, string> = PACKS;
 
@@ -57,7 +70,7 @@ export function loadModels(onProgress?: (done: number, total: number) => void): 
       if (!res.ok) throw new Error(tx(`Nie udało się pobrać modelu ${name} (${res.status})`, `Could not download model ${name} (${res.status})`));
       const data = await unpackModel(await res.arrayBuffer());
       // poprawki z edytora w podglądzie modeli (modelfix.ts)
-      applyModelFixes(name, data as Record<string, unknown>, (FIXES as Record<string, Fix[]>)[name]);
+      applyModelFixes(name, data as Record<string, unknown>, fixesFor(name));
       store.set(name, data);
     }
     done++;
