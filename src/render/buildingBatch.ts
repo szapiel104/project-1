@@ -96,7 +96,7 @@ export class MaterialBatches {
       let vis = 0;
       for (let i = 0; i < e.used; i++) if (e.mesh.getVisibleAt(e.inst[i]!)) vis++;
       const m = e.mesh.material as THREE.Material & { map?: { userData?: { name?: string } } | null; color?: THREE.Color };
-      return { key: key.slice(36), mat: `${m.name || m.type}${m.color ? ' #' + m.color.getHexString() : ''}`, vis, inst: e.used, geos: e.geoIds.size, on: e.mesh.visible };
+      return { key: key.slice(36), mat: `${m.name || m.type}${m.color ? ' #' + m.color.getHexString() : ''} ${(m.userData.pattern as string) ?? ''}${(m as unknown as { polygonOffset?: boolean }).polygonOffset ? ' po' : ''}${(m as unknown as { vertexColors?: boolean }).vertexColors ? ' vc' : ''}`, vis, inst: e.used, geos: e.geoIds.size, on: e.mesh.visible };
     });
   }
 
