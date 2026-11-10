@@ -138,11 +138,12 @@ export function createModelEditor(ctx: Ctx): { onModel: () => void; guard: (go: 
   markSwatch();
   find.oninput = () => { const q = find.value.trim().toLowerCase(); for (const sw of swatches) sw.hidden = !!q && !sw.title.toLowerCase().includes(q); };
   const assets = document.createElement('div');
-  assets.style.cssText = grid.style.cssText + ';grid-template-columns:repeat(auto-fill,minmax(92px,1fr))';
-  assets.hidden = true;
+  assets.style.cssText = grid.style.cssText + ';grid-template-columns:repeat(auto-fill,minmax(84px,1fr));padding-bottom:6px';
+  assets.style.display = 'none';
   pal.append(palHead, grid, assets);
   function showTab(t: 'tex' | 'assets'): void {
-    grid.hidden = t !== 'tex'; assets.hidden = t !== 'assets'; find.hidden = t !== 'tex';
+    // style.display, nie hidden — inline display:grid przykrywa atrybut hidden (obie siatki naraz, Michał 10.11.2026)
+    grid.style.display = t === 'tex' ? 'grid' : 'none'; assets.style.display = t === 'assets' ? 'grid' : 'none'; find.style.display = t === 'tex' ? '' : 'none';
     palTitle.textContent = t === 'tex' ? tx('klik: zaznaczonym, przeciągnij: na część', 'click: selected, drag: onto a part') : tx('klik albo przeciągnij na model — dodaje w środku widoku / w miejscu upuszczenia', 'click or drag onto the model — adds at the view centre / where dropped');
     for (const [b, on] of [[tabTex, t === 'tex'], [tabAssets, t === 'assets']] as const) { b.style.borderColor = on ? '#e9c766' : '#3a362d'; b.style.background = on ? '#4a3e22' : '#2e2b24'; }
     if (t === 'assets') buildAssets();
@@ -169,13 +170,16 @@ export function createModelEditor(ctx: Ctx): { onModel: () => void; guard: (go: 
     sc.remove(obj);
     return out.toDataURL('image/jpeg', 0.85);
   }
-  function assetTile(label: string, img: string, add: (at?: THREE.Vector3) => void): HTMLElement {
+  /** miniatury modeli z paczek: tekstury wczytują się w tle, więc rysujemy je jeszcze raz, gdy dojdą (inaczej czarne sylwetki) */
+  const redraw: (() => void)[] = [];
+  function assetTile(label: string, img: string, add: (at?: THREE.Vector3) => void, make?: () => THREE.Object3D): HTMLElement {
     const b = document.createElement('button');
     b.type = 'button'; b.draggable = true; b.title = label;
     b.style.cssText = 'display:flex;flex-direction:column;padding:0;border:1px solid #3e3626;background:#2e2b24;color:inherit;font:inherit;font-size:11px;cursor:grab';
     const im = document.createElement('img'); im.src = img; im.alt = ''; im.style.cssText = 'width:100%;aspect-ratio:1;object-fit:cover;display:block';
     const cap = document.createElement('span'); cap.textContent = label; cap.style.cssText = 'padding:2px 4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis';
     b.append(im, cap);
+    if (make) redraw.push(() => { try { im.src = thumb(make()); } catch { /* bez miniatury */ } });
     b.onclick = () => add();
     b.ondragstart = (e) => { e.dataTransfer?.setData('application/x-asset', label); dragAsset = add; };
     return b;
@@ -190,11 +194,21 @@ export function createModelEditor(ctx: Ctx): { onModel: () => void; guard: (go: 
       const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(unitShape(sh)), 3)); geo.computeVertexNormals();
       assets.append(assetTile(label, thumb(new THREE.Mesh(geo, stoneMat)), (at) => addShape(sh, picked, grpSel.value, at)));
     }
+    const maps: THREE.Texture[] = [];
     for (const [p, label] of ASSET_PROPS) {
-      let img = '';
-      try { img = thumb(new THREE.Mesh(propGeometry(p), propMaterial(p))); } catch { /* bez miniatury */ }
-      assets.append(assetTile(label, img, (at) => addProp(p, grpSel.value, at)));
+      const make = (): THREE.Object3D => new THREE.Mesh(propGeometry(p), propMaterial(p));
+      const m = propMaterial(p);
+      if (m.map) maps.push(m.map);
+      assets.append(assetTile(label, '', (at) => addProp(p, grpSel.value, at), make));
     }
+    // czekamy na zdjęcia tekstur (do 8 s), potem rysujemy wszystkie miniatury
+    const t0 = performance.now();
+    const wait = (): void => {
+      const ready = maps.every((t) => (t.image as HTMLImageElement | undefined)?.complete && (t.image as HTMLImageElement).naturalWidth > 0);
+      if (ready || performance.now() - t0 > 8000) { requestAnimationFrame(() => { for (const r of redraw) r(); }); return; }
+      setTimeout(wait, 150);
+    };
+    wait();
   }
   // 3) nowa bryła w wybranej teksturze
   const add = document.createElement('div');
