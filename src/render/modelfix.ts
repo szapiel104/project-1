@@ -9,13 +9,14 @@
  * Plik: src/data/modelFixes.json — { "<model>": [ { g, i, c:[x,y,z], n, m:[16] }, ... ] }
  * Rodzaje (k): 'move' (domyślnie) — przekształca część; 'dup' — dokłada przekształconą kopię części; 'mat' — przenosi
  * część do siatki z innym materiałem (to), po drodze przekształcając ją macierzą; 'add' — nowa bryła (shape) z materiałem
- * (to) przekształcona macierzą z bryły jednostkowej.
+ * (to) przekształcona macierzą z bryły jednostkowej; 'dbl' — część widoczna z obu stron (dokłada kopię z odwróconymi
+ * trójkątami, bo gra nie rysuje tylnych stron ścian).
  */
 const bytes = (s: string | Uint8Array): Uint8Array => (typeof s === 'string' ? Uint8Array.from(atob(s), (c) => c.charCodeAt(0)) : s.slice());
 
 export interface Fix {
   /** rodzaj: move (domyślnie), dup, mat, add */
-  k?: 'move' | 'dup' | 'mat' | 'add';
+  k?: 'move' | 'dup' | 'mat' | 'add' | 'dbl';
   /** grupa w modelu (base, shell, interior, floor, ceiling) */
   g: string;
   /** numer siatki w grupie (nie dla 'add') */
@@ -189,11 +190,21 @@ export function applyModelFixes(name: string, data: Record<string, unknown>, fix
       const nv = isl.tris.length * 3;
       isl.c = [x / nv, y / nv, z / nv];
       d.dirty = true;
+    } else if (kind === 'dbl') {
+      const c = cut(d, isl);
+      // odwrócona kolejność wierzchołków w każdym trójkącie = tył staje się przodem
+      for (let t = 0; t < c.P.length / 9; t++) {
+        for (let j = 0; j < 3; j++) { const a = t * 9 + 3 + j, b = t * 9 + 6 + j; const v = c.P[a]!; c.P[a] = c.P[b]!; c.P[b] = v; }
+        const a = t * 3 + 1, b = t * 3 + 2; const v = c.A[a]!; c.A[a] = c.A[b]!; c.A[b] = v;
+      }
+      d.P.push(...c.P); d.A.push(...c.A);
+      d.list = null; d.dirty = true;
     } else if (kind === 'dup') {
       const c = cut(d, isl);
       apply(f.m, c.P);
-      d.P.push(...c.P); d.A.push(...c.A);
-      d.list = null; d.dirty = true;
+      const td = f.to && f.to !== entry.mat ? get(target(f.g, f.to)) : d;
+      td.P.push(...c.P); td.A.push(...c.A);
+      td.list = null; td.dirty = true;
     } else if (kind === 'mat') {
       const c = cut(d, isl);
       apply(f.m, c.P);

@@ -9,7 +9,8 @@
 import * as THREE from 'three';
 import { TransformControls } from 'three/examples/jsm/controls/TransformControls.js';
 import type { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
-import { findIsland, islands, transformIsland, type Fix, type Island } from '../render/modelfix';
+import { findIsland, islands, transformIsland, unitShape, type Fix, type Island } from '../render/modelfix';
+import { buildingMaterialNames, partMesh } from '../render/buildings';
 import REPO_FIXES from '../data/modelFixes.json';
 import { tx } from '../i18n';
 
@@ -31,7 +32,8 @@ export function createModelEditor(ctx: Ctx): { onModel: () => void } {
   let on = false;
   /** Poprawki tej sesji (dla bieżącego modelu), po poprawkach z repozytorium */
   let edits: Fix[] = [];
-  const undo: { mesh: THREE.Mesh; isl: Island; P: Float32Array; N: Float32Array | null; fix: Fix }[][] = [];
+  /** cofanie: każdy krok to lista funkcji przywracających stan sprzed niego */
+  const undo: (() => void)[][] = [];
   const pendingDone = new WeakSet<THREE.BufferGeometry>();
   const islandCache = new WeakMap<THREE.BufferGeometry, { of: Int32Array; list: Island[] }>();
   const isl = (g: THREE.BufferGeometry): { of: Int32Array; list: Island[] } => {
@@ -56,7 +58,50 @@ export function createModelEditor(ctx: Ctx): { onModel: () => void } {
   const fileBtn = btn(tx('Pobierz plik poprawek', 'Download fixes file'), () => download());
   const status = document.createElement('span');
   status.style.cssText = 'align-self:center;font-size:12px;color:#e6d6b4;padding:0 6px';
-  const tools = [...modeBtns, delBtn, undoBtn, saveBtn, fileBtn, status];
+  const dupBtn = btn(tx('Kopiuj (Ctrl+D)', 'Duplicate (Ctrl+D)'), () => duplicateSel());
+  const dblBtn = btn(tx('Widać z obu stron', 'Visible from both sides'), () => doubleSel(), tx('Ściana lub płachta widoczna też od tyłu (gra nie rysuje tylnych stron)', 'A wall or sheet visible from behind too (the game does not draw back faces)'));
+  // druga linia: tekstura, nowa bryła, dokładne liczby, przyciąganie
+  const row2 = document.createElement('div');
+  row2.style.cssText = 'display:flex;gap:4px;flex-wrap:wrap;width:100%;justify-content:flex-end;align-items:center;font-size:12px;color:#e6d6b4';
+  const selCss = 'font:inherit;font-size:12px;color:#e8e0cc;background:#2e2b24;border:1px solid #3a362d;min-height:30px;padding:2px 4px';
+  const matSel = document.createElement('select');
+  matSel.style.cssText = selCss; matSel.title = tx('Tekstura (materiał gry)', 'Texture (game material)');
+  for (const n of buildingMaterialNames()) { const o = document.createElement('option'); o.value = o.textContent = n; matSel.append(o); }
+  matSel.value = 'castle';
+  const texBtn = btn(tx('Nadaj teksturę', 'Apply texture'), () => retexture(matSel.value));
+  const shapeSel = document.createElement('select');
+  shapeSel.style.cssText = selCss;
+  for (const [v, l] of [['box', tx('prostopadłościan', 'box')], ['cyl', tx('walec', 'cylinder')], ['wedge', tx('klin', 'wedge')]] as const) { const o = document.createElement('option'); o.value = v; o.textContent = l; shapeSel.append(o); }
+  const grpSel = document.createElement('select');
+  grpSel.style.cssText = selCss;
+  for (const [v, l] of [['base', tx('bryła', 'body')], ['interior', tx('wnętrze', 'interior')], ['shell', tx('dach i mury', 'roof & walls')]] as const) { const o = document.createElement('option'); o.value = v; o.textContent = l; grpSel.append(o); }
+  const addBtn = btn(tx('Dodaj bryłę', 'Add shape'), () => addShape(shapeSel.value as 'box' | 'cyl' | 'wedge', matSel.value, grpSel.value));
+  const num = (ph: string, title: string): HTMLInputElement => { const i = document.createElement('input'); i.type = 'number'; i.placeholder = ph; i.title = title; i.style.cssText = selCss + ';width:56px'; return i; };
+  const nx = num('X cm', tx('Przesuń w X (cm)', 'Move X (cm)')), ny = num('Y cm', tx('Przesuń w górę (cm)', 'Move up (cm)')), nz = num('Z cm', tx('Przesuń w Z (cm)', 'Move Z (cm)'));
+  const rx = num('obr X°', tx('Obróć wokół X (°)', 'Rotate X (°)')), ry = num('obr Y°', tx('Obróć wokół pionu (°)', 'Rotate Y (°)')), rz = num('obr Z°', tx('Obróć wokół Z (°)', 'Rotate Z (°)'));
+  const ns = num('skala %', tx('Skala (%)', 'Scale (%)'));
+  const applyNum = btn(tx('Zastosuj liczby', 'Apply numbers'), () => {
+    if (!sel.length) { say(tx('Najpierw zaznacz część', 'Select a part first')); return; }
+    const v = (i: HTMLInputElement): number => Number(i.value) || 0;
+    proxy.position.add(new THREE.Vector3(v(nx), v(ny), v(nz)).multiplyScalar(0.01));
+    proxy.rotation.set(THREE.MathUtils.degToRad(v(rx)), THREE.MathUtils.degToRad(v(ry)), THREE.MathUtils.degToRad(v(rz)));
+    const sc = ns.value ? Math.max(0.01, v(ns) / 100) : 1;
+    proxy.scale.setScalar(sc);
+    proxy.updateMatrixWorld();
+    live(); commit();
+    for (const i of [nx, ny, nz, rx, ry, rz, ns]) i.value = '';
+  });
+  const snapLab = document.createElement('label');
+  snapLab.style.cssText = 'display:flex;gap:4px;align-items:center;padding:0 4px';
+  const snap = document.createElement('input'); snap.type = 'checkbox';
+  snap.onchange = () => {
+    tc.setTranslationSnap(snap.checked ? 0.01 : null);
+    tc.setRotationSnap(snap.checked ? THREE.MathUtils.degToRad(5) : null);
+    tc.setScaleSnap(snap.checked ? 0.05 : null);
+  };
+  snapLab.append(snap, document.createTextNode(tx('przyciąganie 1 cm / 5°', 'snap 1 cm / 5°')));
+  row2.append(matSel, texBtn, shapeSel, grpSel, addBtn, nx, ny, nz, rx, ry, rz, ns, applyNum, snapLab);
+  const tools = [...modeBtns, dupBtn, dblBtn, delBtn, undoBtn, saveBtn, fileBtn, status, row2];
   wrap.append(editBtn, ...tools);
   ctx.bar.append(wrap);
 
@@ -160,18 +205,27 @@ export function createModelEditor(ctx: Ctx): { onModel: () => void } {
   /** Koniec ruchu: po jednej poprawce na część (macierz od stanu z chwili zaznaczenia), nowy punkt startu */
   function commit(): void {
     if (!sel.length) return;
-    const step: { p: Piece; P: Float32Array; N: Float32Array | null; fix: Fix }[] = [];
+    const step: (() => void)[] = [];
     for (const p of sel) {
       const L = deltaFor(p.mesh);
       if (L.equals(new THREE.Matrix4())) continue;
-      const [g, i] = p.mesh.userData.fx as [string, number];
-      const fix: Fix = { g, i, c: p.c.map(r4) as [number, number, number], n: p.isl.tris.length, m: L.elements.map(r4) };
-      edits.push(fix);
-      step.push({ p, P: p.P, N: p.N, fix });
-      const snap = snapshot(p.mesh, p.isl);
+      const P0 = p.P, N0 = p.N, mesh = p.mesh, island = p.isl;
+      const temp = mesh.userData.temp as Fix | undefined;
+      if (temp) {
+        // dodana / skopiowana / przetekstur. część: zmiana trafia do jej własnej macierzy
+        const prev = temp.m;
+        temp.m = L.clone().multiply(new THREE.Matrix4().fromArray(prev)).elements.map(r4);
+        step.push(() => { writeIsland(mesh, island, P0, N0, new THREE.Matrix4()); temp.m = prev; });
+      } else {
+        const [g, i] = mesh.userData.fx as [string, number];
+        const fix: Fix = { g, i, c: p.c.map(r4) as [number, number, number], n: island.tris.length, m: L.elements.map(r4) };
+        edits.push(fix);
+        step.push(() => { writeIsland(mesh, island, P0, N0, new THREE.Matrix4()); dropEdit(fix); });
+      }
+      const snap = snapshot(mesh, island);
       p.P = snap.P; p.N = snap.N; p.c = centerOf(snap.P);
     }
-    if (step.length) undo.push(step.map((u) => ({ mesh: u.p.mesh, isl: u.p.isl, P: u.P, N: u.N, fix: u.fix })));
+    if (step.length) undo.push(step);
     placeProxy();
     say(tx(`Zmiany do zapisania: ${edits.length}`, `Unsaved changes: ${edits.length}`));
   }
@@ -183,6 +237,7 @@ export function createModelEditor(ctx: Ctx): { onModel: () => void } {
     sel.push({ mesh, isl: island, P: snap.P, N: snap.N, c: centerOf(snap.P), hi });
   }
   function toggle(mesh: THREE.Mesh, island: Island, multi: boolean): void {
+    if (mesh.userData.temp) island = wholeOf(mesh);
     const k = sel.findIndex((p) => p.mesh === mesh && p.isl === island);
     if (!multi) { deselect(); addPiece(mesh, island); }
     else if (k >= 0) { const [p] = sel.splice(k, 1); p!.hi.removeFromParent(); p!.hi.geometry.dispose(); }
@@ -208,15 +263,17 @@ export function createModelEditor(ctx: Ctx): { onModel: () => void } {
   function removeSel(): void {
     if (!sel.length) return;
     // usunięcie = zgniecenie części w punkt (liczba trójkątów zostaje, więc poprawki dalej trafiają w wyspy)
-    const step: { mesh: THREE.Mesh; isl: Island; P: Float32Array; N: Float32Array | null; fix: Fix }[] = [];
+    const step: (() => void)[] = [];
     for (const p of sel) {
+      if (p.mesh.userData.temp) { step.push(dropTemp(p.mesh)); continue; }
       const c = new THREE.Vector3(...p.c);
       const L = new THREE.Matrix4().makeTranslation(c.x, c.y, c.z).multiply(new THREE.Matrix4().makeScale(0.0001, 0.0001, 0.0001)).multiply(new THREE.Matrix4().makeTranslation(-c.x, -c.y, -c.z));
       const [g, i] = p.mesh.userData.fx as [string, number];
       const fix: Fix = { g, i, c: p.c.map(r4) as [number, number, number], n: p.isl.tris.length, m: L.elements.map((v) => Math.round(v * 1e6) / 1e6) };
       writeIsland(p.mesh, p.isl, p.P, p.N, L);
       edits.push(fix);
-      step.push({ mesh: p.mesh, isl: p.isl, P: p.P, N: p.N, fix });
+      const mesh = p.mesh, island = p.isl, P0 = p.P, N0 = p.N;
+      step.push(() => { writeIsland(mesh, island, P0, N0, new THREE.Matrix4()); dropEdit(fix); });
     }
     undo.push(step);
     deselect();
@@ -226,12 +283,226 @@ export function createModelEditor(ctx: Ctx): { onModel: () => void } {
     const step = undo.pop();
     if (!step) return;
     deselect();
-    for (const u of step.reverse()) {
-      writeIsland(u.mesh, u.isl, u.P, u.N, new THREE.Matrix4());
-      const k = edits.lastIndexOf(u.fix);
-      if (k >= 0) edits.splice(k, 1);
-    }
+    for (const f of step.reverse()) f();
     say(tx(`Cofnięto. Zmiany do zapisania: ${edits.length}`, `Undone. Unsaved changes: ${edits.length}`));
+  }
+
+  function dropEdit(fix: Fix): void { const k = edits.lastIndexOf(fix); if (k >= 0) edits.splice(k, 1); }
+  /** cała siatka jako jedna część (dodane i skopiowane bryły chwyta się w całości) */
+  const wholeCache = new WeakMap<THREE.BufferGeometry, Island>();
+  function wholeOf(mesh: THREE.Mesh): Island {
+    let w = wholeCache.get(mesh.geometry);
+    if (!w) {
+      const n = (mesh.geometry.getAttribute('position') as THREE.BufferAttribute).count / 3;
+      w = { tris: Array.from({ length: n }, (_, k) => k), c: [0, 0, 0] };
+      wholeCache.set(mesh.geometry, w);
+    }
+    return w;
+  }
+
+  // ---------- nowe części: kopie, zmiana tekstury, dodane bryły (tymczasowe siatki aż do zapisu i przeładowania) ----------
+  const Q = 2000;
+  /** siatka z gotowymi wierzchołkami (układ modelu) i materiałem gry; trzyma swoją poprawkę w userData.temp */
+  function makeTemp(fix: Fix, P: Float32Array, mat: string): THREE.Mesh {
+    const p16 = new Int16Array(P.length);
+    for (let k = 0; k < P.length; k++) p16[k] = Math.max(-32768, Math.min(32767, Math.round(P[k]! * Q)));
+    const mesh = partMesh(mat, new Uint8Array(p16.buffer), new Uint8Array(P.length / 3).fill(230), Q);
+    // własna kopia geometrii (pamięć podręczna gry dzieli bryły o tym samym początku danych)
+    mesh.geometry = mesh.geometry.clone();
+    mesh.userData.temp = fix;
+    mesh.userData.tempMat = mat;
+    mesh.castShadow = mesh.receiveShadow = true;
+    mesh.frustumCulled = false;
+    groupFor(fix.g).add(mesh);
+    return mesh;
+  }
+  function groupFor(g: string): THREE.Object3D {
+    const cur = ctx.current()!;
+    let found: THREE.Object3D | null = null;
+    cur.traverse((o) => { const fx = o.userData?.fx as [string] | undefined; if (!found && fx && fx[0] === g && o.parent) found = o.parent; });
+    return found ?? cur;
+  }
+  /** usuwa tymczasową część i jej poprawkę; zwraca cofnięcie */
+  function dropTemp(mesh: THREE.Mesh): () => void {
+    const fix = mesh.userData.temp as Fix, parent = mesh.parent!, k = edits.indexOf(fix);
+    const src = mesh.userData.src as (() => void) | undefined;
+    mesh.removeFromParent();
+    if (k >= 0) edits.splice(k, 1);
+    src?.();
+    return () => { parent.add(mesh); if (k >= 0) edits.splice(Math.min(k, edits.length), 0, fix); else edits.push(fix); mesh.userData.unsrc?.(); };
+  }
+  const offset = (): THREE.Matrix4 => new THREE.Matrix4().makeTranslation(0.06, 0, 0.06);
+  function duplicateSel(): void {
+    const made: THREE.Mesh[] = [], step: (() => void)[] = [];
+    for (const p of sel) {
+      const temp = p.mesh.userData.temp as Fix | undefined;
+      if (temp && temp.k !== 'add') continue;      // kopia kopii: zapisz i przeładuj, potem kopiuj
+      let fix: Fix, P: Float32Array;
+      const m = offset();
+      if (temp) {
+        fix = { ...temp, m: m.clone().multiply(new THREE.Matrix4().fromArray(temp.m)).elements.map(r4) };
+        P = new Float32Array(unitShape(temp.shape ?? 'box'));
+        applyM(P, fix.m);
+      } else {
+        const [g, i, mat] = p.mesh.userData.fx as [string, number, string];
+        fix = { k: 'dup', g, i, c: p.c.map(r4) as [number, number, number], n: p.isl.tris.length, m: m.elements.map(r4) };
+        P = p.P.slice(); applyM(P, fix.m);
+        fix.to = mat;
+      }
+      edits.push(fix);
+      const mesh = makeTemp(fix, P, fix.to ?? 'wood');
+      made.push(mesh);
+      step.push(() => { mesh.removeFromParent(); dropEdit(fix); });
+    }
+    if (!made.length) { say(tx('Zaznacz część do skopiowania', 'Select a part to copy')); return; }
+    undo.push(step);
+    deselect();
+    for (const mesh of made) addPiece(mesh, wholeOf(mesh));
+    placeProxy(); markPanel();
+    say(tx(`Skopiowano: ${made.length}. Przesuń kopię uchwytem.`, `Copied: ${made.length}. Move the copy with the gizmo.`));
+  }
+  /** Część widoczna z obu stron: kopia z odwróconymi trójkątami (tył staje się przodem) */
+  function doubleSel(): void {
+    const step: (() => void)[] = [];
+    for (const p of sel) {
+      if (p.mesh.userData.temp) continue;
+      const [g, i, mat] = p.mesh.userData.fx as [string, number, string];
+      const fix: Fix = { k: 'dbl', g, i, c: p.c.map(r4) as [number, number, number], n: p.isl.tris.length, m: new THREE.Matrix4().elements };
+      edits.push(fix);
+      const P = p.P.slice();
+      for (let t = 0; t < P.length / 9; t++) for (let j = 0; j < 3; j++) { const a = t * 9 + 3 + j, b = t * 9 + 6 + j; const v = P[a]!; P[a] = P[b]!; P[b] = v; }
+      const mesh = makeTemp(fix, P, mat);
+      mesh.userData.locked = true;          // tył idzie za częścią — nie chwyta się go osobno
+      step.push(() => { mesh.removeFromParent(); dropEdit(fix); });
+    }
+    if (!step.length) { say(tx('Zaznacz ścianę lub płachtę', 'Select a wall or a sheet')); return; }
+    undo.push(step);
+    say(tx(`Widać z obu stron: ${step.length}`, `Visible from both sides: ${step.length}`));
+  }
+  function applyM(P: Float32Array, m: number[]): void {
+    for (let v = 0; v < P.length; v += 3) {
+      const x = P[v]!, y = P[v + 1]!, z = P[v + 2]!;
+      P[v] = m[0]! * x + m[4]! * y + m[8]! * z + m[12]!; P[v + 1] = m[1]! * x + m[5]! * y + m[9]! * z + m[13]!; P[v + 2] = m[2]! * x + m[6]! * y + m[10]! * z + m[14]!;
+    }
+  }
+  function retexture(mat: string): void {
+    if (!sel.length) { say(tx('Zaznacz części, którym zmienić teksturę', 'Select parts to retexture')); return; }
+    const step: (() => void)[] = [], made: THREE.Mesh[] = [];
+    for (const p of sel) {
+      const temp = p.mesh.userData.temp as Fix | undefined;
+      if (temp) {
+        // tymczasowa część: nowa siatka z tym samym kształtem i nowym materiałem
+        const old = p.mesh, parent = old.parent!, prevTo = temp.to;
+        temp.to = mat;
+        const P = new Float32Array((old.geometry.getAttribute('position') as THREE.BufferAttribute).array as Float32Array);
+        old.removeFromParent();
+        const mesh = makeTemp(temp, P, mat);
+        mesh.userData.src = old.userData.src; mesh.userData.unsrc = old.userData.unsrc;
+        made.push(mesh);
+        step.push(() => { mesh.removeFromParent(); parent.add(old); temp.to = prevTo; });
+        continue;
+      }
+      const [g, i, from] = p.mesh.userData.fx as [string, number, string];
+      if (from === mat) continue;
+      const fix: Fix = { k: 'mat', g, i, c: p.c.map(r4) as [number, number, number], n: p.isl.tris.length, to: mat, m: new THREE.Matrix4().elements };
+      edits.push(fix);
+      // źródło: część zgnieciona w punkt (w danych zostanie wycięta), nowa siatka z nowym materiałem w tym samym miejscu
+      const src = p.mesh, island = p.isl, P0 = p.P, N0 = p.N, c = new THREE.Vector3(...p.c);
+      const hide = (): void => writeIsland(src, island, P0, N0, new THREE.Matrix4().makeTranslation(c.x, c.y, c.z).multiply(new THREE.Matrix4().makeScale(1e-4, 1e-4, 1e-4)).multiply(new THREE.Matrix4().makeTranslation(-c.x, -c.y, -c.z)));
+      const show = (): void => writeIsland(src, island, P0, N0, new THREE.Matrix4());
+      hide();
+      const mesh = makeTemp(fix, P0.slice(), mat);
+      mesh.userData.src = show; mesh.userData.unsrc = hide;
+      made.push(mesh);
+      step.push(() => { mesh.removeFromParent(); show(); dropEdit(fix); });
+    }
+    if (!step.length) return;
+    undo.push(step);
+    deselect();
+    for (const mesh of made) addPiece(mesh, wholeOf(mesh));
+    placeProxy(); markPanel();
+    say(tx(`Nowa tekstura: ${mat} (${made.length})`, `New texture: ${mat} (${made.length})`));
+  }
+  function addShape(shape: 'box' | 'cyl' | 'wedge', mat: string, g: string): void {
+    const cur = ctx.current();
+    if (!cur) return;
+    const at = cur.worldToLocal(ctx.orbit.target.clone());
+    const m = new THREE.Matrix4().makeTranslation(at.x, Math.max(0.1, at.y), at.z).multiply(new THREE.Matrix4().makeScale(0.2, 0.2, 0.2));
+    const fix: Fix = { k: 'add', g, to: mat, shape, m: m.elements.map(r4) };
+    edits.push(fix);
+    const P = new Float32Array(unitShape(shape)); applyM(P, fix.m);
+    const mesh = makeTemp(fix, P, mat);
+    undo.push([() => { mesh.removeFromParent(); dropEdit(fix); }]);
+    deselect();
+    addPiece(mesh, wholeOf(mesh)); placeProxy(); markPanel();
+    say(tx('Dodano bryłę — ustaw ją uchwytem (1/2/3)', 'Shape added — place it with the gizmo (1/2/3)'));
+  }
+
+  // ---------- przedmioty: części z różnych materiałów, które się stykają (kłoda = kora + dwa czoła), chwytane razem ----------
+  interface Obj { nodes: { mesh: THREE.Mesh; island: Island }[]; c: THREE.Vector3; size: THREE.Vector3; mat: string; g: string }
+  let objs: Obj[] = [];
+  const objOf = new Map<string, Obj>();
+  const nodeKey = (mesh: THREE.Mesh, island: Island): string => `${mesh.uuid}:${isl(mesh.geometry).list.indexOf(island)}`;
+  function computeObjects(): void {
+    objs = []; objOf.clear();
+    const cur = ctx.current();
+    if (!cur) return;
+    const nodes: { mesh: THREE.Mesh; island: Island; box: THREE.Box3 }[] = [];
+    cur.traverse((o) => {
+      const m = o as THREE.Mesh;
+      if (!m.isMesh || !m.userData?.fx) return;
+      const pos = m.geometry.getAttribute('position') as THREE.BufferAttribute, v = new THREE.Vector3();
+      for (const island of isl(m.geometry).list) {
+        const box = new THREE.Box3();
+        for (const t of island.tris) for (let j = 0; j < 3; j++) box.expandByPoint(v.fromBufferAttribute(pos, t * 3 + j));
+        nodes.push({ mesh: m, island, box });
+      }
+    });
+    const parent = nodes.map((_, k) => k);
+    const find = (a: number): number => { while (parent[a] !== a) { parent[a] = parent[parent[a]!]!; a = parent[a]!; } return a; };
+    // łączymy tylko drobne rzeczy (do ok. 0,9 pola) — ściany i dachy dotykają wszystkiego i zlałyby budynek w jedno
+    const small = nodes.map((n) => n.box.getSize(new THREE.Vector3()).length() < 0.9);
+    const seen = new Map<string, number>();
+    nodes.forEach((n, k) => {
+      if (!small[k]) return;
+      const pos = n.mesh.geometry.getAttribute('position') as THREE.BufferAttribute;
+      for (const t of n.island.tris) for (let j = 0; j < 3; j++) {
+        const vi = t * 3 + j;
+        const key = `${Math.round(pos.getX(vi) * 1000)},${Math.round(pos.getY(vi) * 1000)},${Math.round(pos.getZ(vi) * 1000)}`;
+        const o = seen.get(key);
+        if (o === undefined) seen.set(key, k); else if (nodes[o]!.mesh !== n.mesh) { const a = find(o), b = find(k); if (a !== b) parent[a] = b; }
+      }
+    });
+    const by = new Map<number, Obj>();
+    nodes.forEach((n, k) => {
+      const r = find(k);
+      let o = by.get(r);
+      if (!o) { o = { nodes: [], c: new THREE.Vector3(), size: new THREE.Vector3(), mat: '', g: (n.mesh.userData.fx as [string])[0] }; by.set(r, o); objs.push(o); }
+      o.nodes.push({ mesh: n.mesh, island: n.island });
+      objOf.set(nodeKey(n.mesh, n.island), o);
+    });
+    for (const o of objs) {
+      const box = new THREE.Box3();
+      let best = -1;
+      for (const nd of o.nodes) {
+        const k = nodes.find((n) => n.mesh === nd.mesh && n.island === nd.island)!;
+        box.union(k.box);
+        if (nd.island.tris.length > best) { best = nd.island.tris.length; o.mat = (nd.mesh.userData.fx as [string, number, string])[2]; }
+      }
+      box.getCenter(o.c); box.getSize(o.size);
+    }
+    // obok siebie na liście to, co obok siebie w modelu: od tyłu do przodu, od lewej do prawej
+    objs.sort((a, b) => (Math.round(a.c.z * 5) - Math.round(b.c.z * 5)) || (a.c.x - b.c.x));
+  }
+  function selectObj(o: Obj, multi: boolean): void {
+    const all = o.nodes.every((nd) => sel.some((p) => p.mesh === nd.mesh && p.isl === nd.island));
+    if (!multi) deselect();
+    if (multi && all) {
+      for (const nd of o.nodes) { const k = sel.findIndex((p) => p.mesh === nd.mesh && p.isl === nd.island); if (k >= 0) { const [p] = sel.splice(k, 1); p!.hi.removeFromParent(); p!.hi.geometry.dispose(); } }
+    } else for (const nd of o.nodes) if (!sel.some((p) => p.mesh === nd.mesh && p.isl === nd.island)) addPiece(nd.mesh, nd.island);
+    placeProxy();
+    say(sel.length ? tx(`Zaznaczone: ${sel.length} części (Alt+klik — pojedyncza część)`, `Selected: ${sel.length} parts (Alt+click — a single part)`) : tx('Kliknij część (Ctrl — kilka naraz)', 'Click a part (Ctrl — several at once)'));
+    markPanel();
   }
 
   // ---------- lista warstw po prawej: grupy (pokaż/ukryj) i siatki po materiale (klik zaznacza całą siatkę) ----------
@@ -242,17 +513,20 @@ export function createModelEditor(ctx: Ctx): { onModel: () => void } {
   const GROUP_NAME: Record<string, string> = { base: tx('Bryła', 'Body'), shell: tx('Dach i mury', 'Roof and walls'), interior: tx('Wnętrze', 'Interior'), floor: tx('Posadzka', 'Floor'), ceiling: tx('Sufit sali', 'Hall ceiling') };
   const rows = new Map<THREE.Mesh, HTMLButtonElement>();
   let partRows: { m: THREE.Mesh; island: Island; b: HTMLButtonElement }[] = [];
+  let objRows: { o: Obj; b: HTMLButtonElement }[] = [];
   const ROW = 'text-align:left;padding:3px 6px;min-height:24px;font:inherit;color:inherit;background:#2e2b24;border:1px solid #3e3626;cursor:pointer';
   function buildPanel(): void {
     panel.textContent = '';
     rows.clear();
     partRows = [];
+    objRows = [];
     const cur = ctx.current();
     if (!cur) return;
     const h = document.createElement('div');
-    h.textContent = tx('Warstwy (klik — zaznacz całą, Ctrl — dodaj)', 'Layers (click — select all, Ctrl — add)');
+    h.textContent = tx('Przedmioty i warstwy (klik — zaznacz, Ctrl — dodaj)', 'Objects and layers (click — select, Ctrl — add)');
     h.style.cssText = 'font-weight:600;margin-bottom:6px';
     panel.append(h);
+    computeObjects();
     const byGroup = new Map<string, THREE.Mesh[]>();
     cur.traverse((o) => { const m = o as THREE.Mesh; const fx = m.userData?.fx as [string, number, string] | undefined; if (m.isMesh && fx) { if (!byGroup.has(fx[0])) byGroup.set(fx[0], []); byGroup.get(fx[0])!.push(m); } });
     for (const [g, meshes] of byGroup) {
@@ -265,6 +539,23 @@ export function createModelEditor(ctx: Ctx): { onModel: () => void } {
       const name = document.createElement('span'); name.textContent = `${GROUP_NAME[g] ?? g} (${meshes.length})`;
       head.append(eye, name);
       panel.append(head);
+      // przedmioty tej grupy, posortowane miejscem w modelu (sąsiednie rzeczy obok siebie na liście)
+      const list0 = objs.filter((o) => o.g === g);
+      const objBox = document.createElement('div');
+      list0.forEach((o, k) => {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.style.cssText = ROW + ';display:block;width:100%;font-size:11.5px';
+        b.textContent = `${k + 1}. ${o.mat} · ${(o.size.x * 100).toFixed(0)}×${(o.size.y * 100).toFixed(0)}×${(o.size.z * 100).toFixed(0)} cm${o.nodes.length > 1 ? ` · ${o.nodes.length} ${tx('części', 'parts')}` : ''}`;
+        b.onclick = (e) => selectObj(o, e.ctrlKey || e.metaKey || e.shiftKey);
+        objRows.push({ o, b });
+        objBox.append(b);
+      });
+      panel.append(objBox);
+      const matHead = document.createElement('div');
+      matHead.textContent = tx('według materiału', 'by material');
+      matHead.style.cssText = 'margin:6px 0 2px;color:#a89e86;font-size:11px';
+      panel.append(matHead);
       for (const m of meshes) {
         const fx = m.userData.fx as [string, number, string];
         const list = isl(m.geometry).list;
@@ -315,6 +606,11 @@ export function createModelEditor(ctx: Ctx): { onModel: () => void } {
   }
   function markPanel(): void {
     for (const [m, b] of rows) b.style.borderColor = sel.some((p) => p.mesh === m) ? '#e9c766' : '#3e3626';
+    for (const r of objRows) {
+      const on = r.o.nodes.every((nd) => sel.some((p) => p.mesh === nd.mesh && p.isl === nd.island));
+      r.b.style.borderColor = on ? '#e9c766' : '#3e3626';
+      r.b.style.background = on ? '#4a3e22' : '#2e2b24';
+    }
     for (const r of partRows) {
       const on = sel.some((p) => p.mesh === r.m && p.isl === r.island);
       r.b.style.borderColor = on ? '#e9c766' : '#3e3626';
@@ -334,17 +630,20 @@ export function createModelEditor(ctx: Ctx): { onModel: () => void } {
     const cur = ctx.current();
     if (!cur) return;
     const multi = e.ctrlKey || e.metaKey || e.shiftKey;
-    const hits = ray.intersectObject(cur, true).filter((h) => (h.object as THREE.Mesh).isMesh && h.object.userData.fx && h.faceIndex != null);
+    const hits = ray.intersectObject(cur, true).filter((h) => (h.object as THREE.Mesh).isMesh && (h.object.userData.fx || (h.object.userData.temp && !h.object.userData.locked)) && h.faceIndex != null);
     const h = hits.find((x) => { for (let o: THREE.Object3D | null = x.object; o; o = o.parent) if (!o.visible) return false; return true; });
     if (!h) { if (!multi) { deselect(); say(tx('Kliknij część (Ctrl — kilka naraz)', 'Click a part (Ctrl — several at once)')); } return; }
     const mesh = h.object as THREE.Mesh;
     const { of, list } = isl(mesh.geometry);
-    toggle(mesh, list[of[h.faceIndex!]!]!, multi);
+    const island = list[of[h.faceIndex!]!]!;
+    // klik chwyta cały przedmiot (np. kłodę z korą i czołami), Alt+klik — tylko kliknięty kawałek
+    const o = !e.altKey && !mesh.userData.temp ? objOf.get(nodeKey(mesh, island)) : undefined;
+    if (o) selectObj(o, multi); else toggle(mesh, island, multi);
   });
   window.addEventListener('keydown', (e) => {
     if (!on || (e.target as HTMLElement)?.tagName === 'INPUT') return;
     const k = e.key.toLowerCase();
-    if (e.ctrlKey || e.metaKey) { if (k === 'z') { e.preventDefault(); undoLast(); } return; }
+    if (e.ctrlKey || e.metaKey) { if (k === 'z') { e.preventDefault(); undoLast(); } else if (k === 'd') { e.preventDefault(); duplicateSel(); } return; }
     // 1/2/3 zamiast W/E/R: WASD lata kamerą (viewer.ts)
     if (k === '1') setMode('translate');
     else if (k === '2') setMode('rotate');
