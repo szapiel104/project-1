@@ -38,7 +38,10 @@ Wynik wpisać pod partią (data, fps / med / wywołania / trójkąty).
   Punkt wyjścia (10.11, po partii 0, okno 1718×1214, Ultra): 106 FPS, ok. 1410–1630 wywołań, 4,5 mln trójkątów —
   ale tego samego dnia ta sama scena dawała też 49–55 FPS (Michał pracował na komputerze, Chrome raz przykryty).
   **Pomiary mają sens tylko przy bezczynnym komputerze** — kolejne partie mierzyć parami (z/bez, `?kawalki=0`) od razu po sobie.
-- [~] **2. Wnętrza zlepione na kawałek mapy** (10.11.2026, włączone; `?kawalki=0` wyłącza). Pomiar parami:
+- [x] **2. Wnętrza zlepione na kawałek mapy — NIE OPŁACA SIĘ, wyłączone** (10.11.2026; `?kawalki=1&kawal=N` do prób).
+  Kawałek = cała mapa: 89 siatek, 45–47 FPS (bez zysku), a przeliczenie trwa 0,4–0,5 s i powtarza się, bo w grupach
+  wnętrza są zapasy (fill, foodfill…), które się pokazują i chowają → podpis kawałka się zmienia → przycięcia.
+  Wcześniejszy pomiar: Pomiar parami:
   z kawałkami 1175–1185 wywołań, 55–59 FPS; bez 1408–1422 wywołań, 49–55 FPS (szum duży). Uwaga: kawałek 16×16
   dawał 185 osobnych siatek (wnętrza mają ~50 różnych materiałów) i był gorszy — teraz 48×48, wciąż ~158 siatek.
   Wniosek do sprawdzenia: koszt rośnie z liczbą obiektów do narysowania (materiał × kawałek × przejście), nie tylko
@@ -49,7 +52,11 @@ Wynik wpisać pod partią (data, fps / med / wywołania / trójkąty).
   budynku i sklejone). Przeliczenie kawałka tylko, gdy zmieni się lista budynków w nim (postawiony, zburzony, ruina,
   plac budowy) — z opóźnieniem do następnej klatki i w kawałkach po jednym na klatkę. W `syncMatBatches` części wnętrz
   zlepionych budynków nie idą już do paczek. Sprawdzić: kliknięcie, spacer w izbie, budowa i burzenie (bez mrugania).
-- [ ] **3. Korpus budynku (grupa `base` w korzeniu) zlepiony, z dalekimi wersjami na poziom kawałka.** Cały kawałek ma
+- [ ] **3. (NOWY KIERUNEK, zamiast zlepiania) Mniej materiałów:** policzyć, ile różnych materiałów mają budynki
+  w paczkach (dziś ~136 paczek, ~53 barwy) i skąd różnice (te same tekstury z inną barwą, warianty z cieniem i bez,
+  różne układy atrybutów). Najpierw tanie scalenia: barwa materiału → kolor wierzchołków (jak w lod.ts), jeden wariant
+  cienia, ujednolicone atrybuty. Potem ewentualnie wspólny materiał z tablicą tekstur.
+- [ ] **3b. (stary pomysł, wstrzymany) Korpus budynku (grupa `base` w korzeniu) zlepiony, z dalekimi wersjami na poziom kawałka.** Cały kawałek ma
   jeden poziom szczegółów (od odległości środka kawałka); zlepione wersje na poziom liczone raz i trzymane w pamięci.
   Budynek uszkodzony / płonący / zaznaczony — wypada z kawałka do paczek.
 - [ ] **4. Mury i dach (`shell`, `roof`, `chimney`) zlepione** — budynek z otwartym dachem (kliknięty, pracujący

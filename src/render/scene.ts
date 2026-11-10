@@ -3151,8 +3151,9 @@ export class GameRenderer {
     return list;
   }
   private batchGroups = new Map<string, THREE.Mesh[]>();
-  /** wnętrza zlepione na kawałek mapy (chunkMerge.ts); ?kawalki=0 wyłącza */
-  private chunkOn = !/[?&]kawalki=0/.test(location.search);
+  /** wnętrza zlepione na kawałek mapy (chunkMerge.ts) — wyłączone (pomiar 10.11.2026: bez zysku, przeliczanie 0,4–0,5 s);
+   *  ?kawalki=1 włącza do prób */
+  private chunkOn = /[?&]kawalki=1/.test(location.search);
   private innerChunks?: ChunkMerge;
   /** Część nadaje się do zlepienia: nieprzezroczysta, każdy materiał widoczny */
   private mergeable(m: THREE.Mesh): boolean {
