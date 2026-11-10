@@ -603,7 +603,7 @@ export class GameRenderer {
   private torchGlow = new TorchGlow(this.scene); // src/render/torchglow.ts
   /** Stan lamp z puli: do jakiego źródła przypięta (klucz), docelowa i bieżąca jasność — lampy przechodzą płynnie,
    *  zamiast skakać, gdy kamera przesuwa się nad osadą i zmienia się zestaw najbliższych pochodni */
-  private lampState: { key: string; k: number; target: number; cur: number }[] = [];
+  private lampState: { key: string; k: number; target: number; cur: number; indoor: boolean }[] = [];
   /** Czubki pochodni niesionych przez ludzi i żołnierzy w tej klatce (płomienie rysuje system ognia) */
   private handFlames: THREE.Vector3[] = [];
   private handFlameN = 0;
@@ -2643,7 +2643,11 @@ export class GameRenderer {
     this.walkInView.clear();
     for (const [id, mesh] of this.buildingMeshes) {
       const dx = mesh.position.x - cam.position.x, dz = mesh.position.z - cam.position.z;
-      if (dx * dx + dz * dz < WALK_SEE_R * WALK_SEE_R) this.walkInView.add(id);
+      // zasięg liczony od brzegu budynku, nie od środka: wnętrza zamku i dużych budynków widać już z placu przed nimi
+      let sp = mesh.userData.cullSphere as THREE.Sphere | undefined;
+      if (!sp) { sp = new THREE.Box3().setFromObject(mesh).getBoundingSphere(new THREE.Sphere()); sp.radius += 2; mesh.userData.cullSphere = sp; }
+      const r = WALK_SEE_R + sp.radius - 2;
+      if (dx * dx + dz * dz < r * r) this.walkInView.add(id);
     }
     // stopy idą po podłożu z lekkim wygładzeniem: próg chaty, skraj sadu czy bruku to krok, a nie skok kamery
     // w locie kamera idzie za stopami od razu, na ziemi z lekkim wygładzeniem progów
@@ -2654,7 +2658,10 @@ export class GameRenderer {
     const tdx = kp ? Math.floor(kp[1] + KEEP_HALF) : -1, tdy = kp ? Math.floor(kp[2] + KEEP_HALF) : -1;
     const inTower = !!kp && keepTile(tdx, tdy) === '=' && (((tdx === 0 || tdx === KEEP_SIZE - 1) && (tdy === 0 || tdy === KEEP_SIZE - 1 || tdy === KEEP_SIZE >> 1))
       || (tdy === KEEP_SIZE - 1 && (keepTile(tdx - 1, tdy) === 'G' || keepTile(tdx + 1, tdy) === 'G'))); // baszty i wieże bramy
-    this.roomLight.intensity = inRoom || inTower || inTap ? 3.4 + Math.sin(this.time * 7) * 0.2 : 0;
+    // światło izby rozjaśnia się i gaśnie płynnie (ok. 0,4 s), a nie przeskakuje na progu
+    const roomWant = inRoom || inTower || inTap ? 3.4 + Math.sin(this.time * 7) * 0.2 : 0;
+    this.roomLight.intensity += (roomWant - this.roomLight.intensity) * Math.min(1, dt * 5);
+    if (this.roomLight.intensity < 0.01) this.roomLight.intensity = 0;
     this.roomLight.position.set(cam.position.x, cam.position.y + 0.35, cam.position.z);
     cam.rotation.set(w.pitch, w.yaw, 0, 'YXZ');
     // pochodnia w ręce przy patrzeniu w dół: podnosi się i przechyla z powrotem do pionu (jak trzymana przy piersi),
@@ -3751,10 +3758,13 @@ export class GameRenderer {
       });
       return;
     }
-    const on = this.night > 0.15;
+    const dark = this.night > 0.15;
+    // spacerem pochodnie we wnętrzach (izby, sale zamku) palą się także za dnia: wcześniej wnętrze było ciemne, aż
+    // weszło się do środka i nagle zapalało się światło izby (Michał 10.11.2026: „tak chamsko działa”)
+    const on = dark || !!this.walk;
     const flicker = this.calm ? 1 : 0.85 + Math.sin(this.time * 11) * 0.08 + Math.sin(this.time * 23.7) * 0.07;
     const lit = new Set<number>();
-    if (on) for (const b of g.buildings) if (b.lit && !b.ruined && !b.build) lit.add(b.id);
+    if (dark) for (const b of g.buildings) if (b.lit && !b.ruined && !b.build) lit.add(b.id);
     for (const mesh of this.buildingMeshes.values()) {
       const torch = named(mesh, 'torch');
       if (!torch) continue;
@@ -3763,8 +3773,8 @@ export class GameRenderer {
       // stary stożek zostaje tylko jako znacznik miejsca; płomień rysuje system ognia
       if (flame) flame.visible = false;
     }
-    this.handTorches.visible = on;
-    this.guardTorches.visible = on;
+    this.handTorches.visible = dark;
+    this.guardTorches.visible = dark;
     // pochodnia w ręce przy spacerze świeci zawsze, gdy jest zapalona (pierwsza lampa z puli)
     const own = this.walk && this.torchOn ? this.lamps[0]! : null;
     if (own) { this.handTip.getWorldPosition(own.position); own.intensity = (this.night > 0.15 ? 7 : 3) * flicker; }
@@ -3772,11 +3782,11 @@ export class GameRenderer {
     // nocą lampy rozjaśniają się, w dzień gasną — płynnie, bez przeskoku
     const dt = Math.min(0.1, this.frameDt || 0.016);
     const ease = Math.min(1, dt * 3.5);
-    if (this.lampState.length !== this.lamps.length) this.lampState = this.lamps.map(() => ({ key: '', k: 0, target: 0, cur: 0 }));
+    if (this.lampState.length !== this.lamps.length) this.lampState = this.lamps.map(() => ({ key: '', k: 0, target: 0, cur: 0, indoor: false }));
     // co kilka klatek wybieramy źródła światła najbliższe środkowi ekranu
     if (on && this.frameNo++ % 6 === 0) {
       const f = this.focusPoint;
-      const spots: { key: string; v: THREE.Vector3; d: number; k: number }[] = [];
+      const spots: { key: string; v: THREE.Vector3; d: number; k: number; indoor?: boolean }[] = [];
       // gruzy i place budowy nie świecą (pochodnia zburzonego budynku nie może wisieć w powietrzu)
       const dead = new Set<number>();
       for (const b of g.buildings) if (b.ruined || b.build) dead.add(b.id);
@@ -3793,12 +3803,15 @@ export class GameRenderer {
         const marks = this.lightMarks(mesh);
         for (let k = 0; k < marks.length; k++) {
           if (!this.shownIn(mesh, marks[k]!.parent ?? marks[k]!)) continue;
+          // za dnia (spacer) tylko pochodnie wewnątrz budynków
+          const indoor = this.insideOf(marks[k]!, mesh);
+          if (!dark && !indoor) continue;
           const v = marks[k]!.getWorldPosition(new THREE.Vector3());
-          spots.push({ key: 'm' + id + ':' + k, v, d: (v.x - f.x) ** 2 + (v.z - f.z) ** 2 + 1, k: 0.4 });
+          spots.push({ key: 'm' + id + ':' + k, v, d: (v.x - f.x) ** 2 + (v.z - f.z) ** 2 + 1, k: 0.4, indoor });
         }
       }
       // ognisko w obozowisku pali się zawsze, więc nocą świeci na ludzi i stołki dookoła
-      for (const b of g.buildings) {
+      for (const b of dark ? g.buildings : []) {
         if (BUILDINGS[b.type]!.id !== 'camp' || b.build) continue;
         const fl = named(this.buildingMeshes.get(b.id), 'flame');
         if (!fl) continue;
@@ -3816,12 +3829,12 @@ export class GameRenderer {
         spots.push({ key: 'f' + b.id, v, d: Math.max(0, (v.x - f.x) ** 2 + (v.z - f.z) ** 2 - 8), k: 1.2 });
       }
       const { width, height } = g.map;
-      for (const u of g.units) {
+      for (const u of dark ? g.units : []) {
         if (u.path.length === 0) continue; // pochodnię niosą ci, którzy idą
         const v = new THREE.Vector3(u.px / FP - width / 2, (this.view?.heightAt(u.px / FP, u.py / FP) ?? 0) + 0.8, u.py / FP - height / 2);
         spots.push({ key: 'u' + u.id, v, d: (v.x - f.x) ** 2 + (v.z - f.z) ** 2 + 4, k: 0.3 }); // ręczna pochodnia świeci dużo słabiej niż ta na słupie
       }
-      for (const sd of g.soldiers) {
+      for (const sd of dark ? g.soldiers : []) {
         if (sd.id % 5 !== 0 || sd.owner !== this.me) continue;
         const v = new THREE.Vector3(sd.px / FP - width / 2, (this.view?.heightAt(sd.px / FP, sd.py / FP) ?? 0) + 0.8, sd.py / FP - height / 2);
         spots.push({ key: 's' + sd.id, v, d: (v.x - f.x) ** 2 + (v.z - f.z) ** 2 + 4, k: 0.35 });
@@ -3842,7 +3855,7 @@ export class GameRenderer {
         if (lamp === own) return;
         const st = this.lampState[i]!;
         const sp = want.get(st.key);
-        if (sp) { taken.add(st.key); st.k = sp.k; st.target = weight(sp.d); lamp.position.copy(sp.v); }
+        if (sp) { taken.add(st.key); st.k = sp.k; st.indoor = !!sp.indoor; st.target = weight(sp.d); lamp.position.copy(sp.v); }
         else st.target = 0; // źródło wypadło z puli: lampa wygasa, zanim przejdzie gdzie indziej
       });
       // nowe źródła dostają lampy, które już zgasły (najciemniejsze najpierw)
@@ -3853,7 +3866,7 @@ export class GameRenderer {
         const i = idle.shift();
         if (i === undefined) break;
         const st = this.lampState[i]!;
-        st.key = sp.key; st.k = sp.k; st.target = weight(sp.d); st.cur = 0;
+        st.key = sp.key; st.k = sp.k; st.indoor = !!sp.indoor; st.target = weight(sp.d); st.cur = 0;
         this.lamps[i]!.position.copy(sp.v);
       }
     }
@@ -3864,10 +3877,16 @@ export class GameRenderer {
       // bezpiecznik: zepsuta liczba (NaN/∞) w sile światła czerni cały obraz i sama nie zniknie — gasimy lampę i zaczynamy od zera
       if (!Number.isFinite(st.cur) || !Number.isFinite(st.target)) { console.warn('[lampy] zła siła światła', st); st.cur = 0; st.target = 0; st.key = ''; }
       if (st.cur < 0.002) { st.cur = 0; if (!on) st.key = ''; }
-      lamp.intensity = st.cur * st.k * this.night * 10 * (0.9 + Math.sin(this.time * 9 + i * 2.1) * (this.calm ? 0 : 0.1)) * flicker;
+      // pochodnia we wnętrzu świeci także za dnia (w izbie i tak jest półmrok), na zewnątrz tylko nocą
+      lamp.intensity = st.cur * st.k * (st.indoor ? Math.max(this.night, 0.55) : this.night) * 10 * (0.9 + Math.sin(this.time * 9 + i * 2.1) * (this.calm ? 0 : 0.1)) * flicker;
     });
   }
 
+  /** Czy znacznik leży we wnętrzu budynku (grupa 'interior' albo 'ceiling' po drodze do korzenia) */
+  private insideOf(o: THREE.Object3D, root: THREE.Object3D): boolean {
+    for (let p: THREE.Object3D | null = o.parent; p && p !== root; p = p.parent) if (p.name === 'interior' || p.name === 'ceiling') return true;
+    return false;
+  }
   /** Znaczniki pochodni w bryle budynku (płomienie na bramach, pochodnie na ścianach zamku); liczone raz na budynek */
   private lightMarkCache = new WeakMap<THREE.Object3D, THREE.Object3D[]>();
   private lightMarks(mesh: THREE.Object3D): THREE.Object3D[] {
