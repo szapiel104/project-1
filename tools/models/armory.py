@@ -17,7 +17,7 @@ sys.path.insert(0, os.path.dirname(__file__))
 from building import Building  # noqa: E402
 from timber import Timber  # noqa: E402
 from logs import log  # noqa: E402
-from stonehall import TOP, WALL, arch_door, arch_hole, flat_roof, parapet, plinth, quoins, stairs, walls  # noqa: E402
+from stonehall import TOP, WALL, arch_door, arch_hole, chimney, flat_roof, parapet, plinth, quoins, stairs, walls  # noqa: E402
 
 b = Building()
 t = Timber(b, T=WALL)
@@ -103,9 +103,8 @@ t.block(SX - SW / 2, SX + SW / 2, Z0 + 0.08, Z0 + 0.42, 0.0, TOP - 0.02)
 # ---------------- dach z płyt, przedpiersie z blankami ----------------
 flat_roof(b, X0, X1, Z0, Z1, TOP, beams_along_x=False, nbeams=3)
 parapet(b, X0, X1, Z0, Z1, TOP, skip=('left', Z0 + 0.1, Z0 + 0.42))
-# przysadzisty komin kuźniczki w tylnym prawym rogu (dym rysuje gra)
-b.box('base', 'castle', 0.2, 0.42, 0.2, X1 - 0.2, TOP, Z0 + 0.2)
-b.box('base', 'castleDark', 0.25, 0.05, 0.25, X1 - 0.2, TOP + 0.42, Z0 + 0.2)
+# komin kuźniczki w tylnym prawym rogu (dym rysuje gra)
+SMOKE_Y = chimney(b, X1 - 0.42, Z0 + 0.2, TOP, w=0.24, d=0.22, h=0.52)
 
 # ---------------- wnętrze ----------------
 IX0, IX1, IZ0, IZ1 = X0 + T, X1 - T, Z0 + T, Z1 - T
@@ -186,6 +185,6 @@ VIEWS = [
     ['ze schodów', [SX, TOP + 0.45, Z1 + 0.6], [0.3, TOP, -0.3], OUT, 22],
 ]
 b.save('armory', maxe=0.26, rays=16, reach=0.4, extra={
-    'solid': t.solid, 'open': t.open, 'floorY': FY, 'windows': [], 'chimneys': [[round(X1 - 0.2, 3), round(TOP + 0.47, 3), round(Z0 + 0.2, 3)]],
+    'solid': t.solid, 'open': t.open, 'floorY': FY, 'windows': [], 'chimneys': [[round(X1 - 0.42, 3), round(SMOKE_Y, 3), round(Z0 + 0.2, 3)]],
     'flames': [], 'lamps': LAMPS,
     'pennant': [round(X1 - 0.05, 3), round(TOP + 0.35, 3), round(Z1 - 0.05, 3)], 'views': VIEWS, 'banners': BANNERS})

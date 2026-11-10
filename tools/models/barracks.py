@@ -17,7 +17,7 @@ from building import Building  # noqa: E402
 from timber import Timber  # noqa: E402
 from logs import log  # noqa: E402
 from strawdummy import straw_dummy  # noqa: E402
-from stonehall import TOP, WALL, arch_door, arch_hole, flat_roof, parapet, plinth, stairs, walls  # noqa: E402
+from stonehall import TOP, WALL, arch_door, arch_hole, chimney, flat_roof, parapet, plinth, stairs, walls  # noqa: E402
 
 b = Building()
 t = Timber(b, T=WALL)
@@ -105,11 +105,8 @@ t.block(SX - SW / 2, SX + SW / 2, Z0 + 0.08, Z0 + 0.48, 0.0, TOP - 0.02)
 # ---------------- dach, przedpiersie, komin ----------------
 flat_roof(b, X0, X1, Z0, Z1, TOP, beams_along_x=False, nbeams=5)
 parapet(b, X0, X1, Z0, Z1, TOP, skip=('left', Z0 + 0.1, Z0 + 0.48))
-CX, CZ = X1 - 0.32, Z0 + 0.16
-b.box('base', 'castle', 0.26, 0.5, 0.22, CX, TOP, CZ)
-b.box('base', 'castleDark', 0.31, 0.05, 0.27, CX, TOP + 0.5, CZ)
-for s in (-1, 1):
-    b.box('base', 'castleDark', 0.04, 0.08, 0.27, CX + s * 0.11, TOP + 0.55, CZ)
+CX, CZ = X1 - 0.34, Z0 + 0.17
+SMOKE_Y = chimney(b, CX, CZ, TOP, w=0.3, d=0.26, h=0.66)
 
 # ---------------- wnętrze ----------------
 IX0, IX1, IZ0, IZ1 = X0 + T, X1 - T, Z0 + T, Z1 - T
@@ -212,8 +209,8 @@ t.open.append([IX0, IX1, IZ0, IZ1])
 t.open.append([DX - DW / 2, DX + DW / 2, Z1 - T - 0.02, Z1 + 0.05])
 
 # ---------------- majdan przed koszarami: ubita ziemia, kukła, stojak z włóczniami ----------------
-b.box('base', 'soil', 2.2, 0.012, 0.66, 0.35, 0, 1.08)
-straw_dummy(b, 'base', 0.95, 0.012, 1.1, rot=0.3)
+# bez ubitej ziemi pod majdanem (Michał 10.11.2026: nigdy drewnianej ani żwirowej posadzki na zewnątrz)
+straw_dummy(b, 'base', 0.95, 0.0, 1.1, rot=0.3)
 RX2, RZ2 = -0.62, 1.2
 for x in (RX2 - 0.2, RX2 + 0.2):
     b.box('base', 'woodDark', 0.04, 0.32, 0.04, x, 0.0, RZ2)
@@ -233,5 +230,5 @@ VIEWS = [
     ['ze schodów', [SX, TOP + 0.45, Z1 + 0.9], [0.4, TOP, -0.4], OUT, 24],
 ]
 b.save('barracks', maxe=0.3, rays=16, reach=0.4, extra={'banners': BANNERS,
-    'solid': t.solid, 'open': t.open, 'floorY': FY, 'windows': [], 'chimneys': [[round(CX, 3), round(TOP + 0.6, 3), round(CZ, 3)]],
+    'solid': t.solid, 'open': t.open, 'floorY': FY, 'windows': [], 'chimneys': [[round(CX, 3), round(SMOKE_Y, 3), round(CZ, 3)]],
     'flames': flames, 'lamps': LAMPS, 'views': VIEWS})

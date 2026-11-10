@@ -72,6 +72,17 @@ def parapet(b, x0, x1, z0, z1, y, skip=None, step=0.27):
             if L > 0.3:
                 rough_merlons(b, px0 + (0.1 if px0 != px1 else 0), pz0 + (0.1 if pz0 != pz1 else 0),
                               px1 - (0.1 if px0 != px1 else 0), pz1 - (0.1 if pz0 != pz1 else 0), y + PAR, step, W)
+    # narożne wypusty (Michał 10.11.2026: „na rogach powinien być wypust”): masywny, wyższy słup z kamienia wysunięty
+    # poza lico na trzech kamiennych wspornikach, z nakrywą — jak małe narożne baszty na murach
+    C, CH = 0.24, PAR + 0.2
+    for cx_, sx in ((x0, -1), (x1, 1)):
+        for cz_, sz in ((z0, -1), (z1, 1)):
+            px, pz = cx_ + sx * (0.035 - C / 2 + 0.02), cz_ + sz * (0.035 - C / 2 + 0.02)
+            b.box('base', 'castle', C, CH + 0.1, C, px, y - 0.1, pz)
+            b.box('base', 'castleDark', C + 0.03, 0.035, C + 0.03, px, y + CH, pz)
+            b.box('base', 'castle', C * 0.55, 0.06, C * 0.55, px, y + CH + 0.035, pz)          # nakrywa z kamienia
+            for j, (o, h) in enumerate(((0.012, 0.05), (0.024, 0.045), (0.036, 0.04))):     # wsporniki pod wypustem
+                b.box('base', 'castleDark', C - 0.06 + 2 * o, h, C - 0.06 + 2 * o, px - sx * 0.02, y - 0.24 + j * 0.05, pz - sz * 0.02)
     # gzyms pod przedpiersiem (rama z czterech pasów, nie płyta — wnętrze widać, gdy dach zdjęty)
     for z, s in ((z1, 1), (z0, -1)):
         b.box('base', 'castleDark', x1 - x0 + 0.06, 0.05, 0.05, (x0 + x1) / 2, y - 0.07, z + s * 0.02)
@@ -195,3 +206,21 @@ def stairs(b, t, x, w, z_from, z_to, y_top, side=1, steps=None):
         zc = z_from - (k + 0.5) * run
         b.box('base', 'castle', 0.07, top + 0.12, abs(run) + 0.003, ex, 0.0, zc, bottom=False)
     return rise, run
+
+
+def chimney(b, x, z, y, w=0.28, d=0.24, h=0.62):
+    """Komin z kamienia (Michał 10.11.2026: „komin słaby”): szerszy trzon z odsadzką, wyżej węższy, gzyms ze wspornikami,
+    na szczycie dwie kamienne płyty na słupkach (daszek nad wylotem), osmolony wylot. Dym rysuje gra (chimneys)."""
+    b.box('base', 'castle', w + 0.06, 0.18, d + 0.06, x, y, z)                                 # stopa komina
+    b.box('base', 'castleDark', w + 0.08, 0.03, d + 0.08, x, y + 0.18, z, tilt=0.02)           # odsadzka
+    b.box('base', 'castle', w, h - 0.18, d, x, y + 0.21, z)                                    # trzon
+    top = y + h + 0.03
+    b.box('base', 'castleDark', w + 0.06, 0.045, d + 0.06, x, top - 0.045, z)                   # gzyms
+    for sx in (-1, 1):                                                                         # wsporniki gzymsu
+        b.box('base', 'castleDark', 0.05, 0.035, d + 0.04, x + sx * (w / 2 - 0.01), top - 0.08, z)
+    b.box('base', 'dark', w - 0.08, 0.004, d - 0.08, x, top + 0.0005, z)                      # osmolony wylot
+    for sx in (-1, 1):
+        for sz in (-1, 1):
+            b.box('base', 'castle', 0.04, 0.09, 0.04, x + sx * (w / 2 - 0.03), top, z + sz * (d / 2 - 0.03))   # słupki
+    b.box('base', 'castleDark', w + 0.04, 0.03, d + 0.04, x, top + 0.09, z, tilt=0.03)          # płyta daszku
+    return top + 0.06
