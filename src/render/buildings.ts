@@ -9,7 +9,7 @@ import { bump, grayPattern, heightMap, normal, pattern } from './textures';
 import { applyParallax } from './parallax';
 import { boxUv, modelGeo } from './peasants';
 import { beam, rng } from './craft';
-import { model, model as model_, bytes } from './modelstore';
+import { model, model as model_, bytes, modelNameOf } from './modelstore';
 import { wheatDepthMat, wheatMat, wheatRow } from './wheat';
 import { addModelBanners, bannerGeometry, bannerMaterial, flagTime } from './banners';
 import { PLANK } from './plank';
@@ -974,7 +974,7 @@ export const buildingMaterialNames = (): string[] => Object.keys(M).filter((k) =
 
 function blenderModel(g: THREE.Group, model: BlenderBuilding, flag: THREE.Material): void {
   // nazwa pliku modelu (modelstore.ts) — edytor w podglądzie modeli zapisuje poprawki pod nią
-  g.userData.modelName = (model as unknown as { __name?: string }).__name;
+  g.userData.modelName = modelNameOf(model);
   // każda siatka zna swoją grupę i numer w niej (edytor poprawek w podglądzie modeli, modelfix.ts)
   const meshes = (name: string): THREE.Mesh[] => ((model[name] as { mat: string; pos: string; ao: string }[] | undefined) ?? []).map((m, idx) => {
     const mesh = meshOf(name, m);

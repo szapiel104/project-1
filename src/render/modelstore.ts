@@ -45,6 +45,9 @@ function fixesFor(name: string): Fix[] | undefined {
 const URLS: Record<string, string> = PACKS;
 
 const store = new Map<string, unknown>();
+/** dane modelu → nazwa pliku (poza danymi: kod gry przegląda wszystkie klucze modelu jako grupy siatek) */
+const names = new WeakMap<object, string>();
+export function modelNameOf(data: unknown): string | undefined { return data && typeof data === 'object' ? names.get(data) : undefined; }
 let loading: Promise<void> | null = null;
 
 /** Lista nazw znanych modeli */
@@ -79,7 +82,7 @@ export function loadModels(onProgress?: (done: number, total: number) => void): 
       const data = await unpackModel(await res.arrayBuffer());
       // poprawki z edytora w podglądzie modeli (modelfix.ts)
       applyModelFixes(name, data as Record<string, unknown>, fixesFor(name));
-      (data as Record<string, unknown>).__name = name;   // nazwa pliku dla edytora poprawek (buildings.ts → userData.modelName)
+      names.set(data as object, name);   // nazwa pliku dla edytora poprawek (buildings.ts → userData.modelName)
       store.set(name, data);
     }
     done++;
