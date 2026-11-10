@@ -217,7 +217,8 @@ export function createModelEditor(ctx: Ctx): { onModel: () => void; guard: (go: 
     const cap = document.createElement('span'); cap.textContent = m.label ?? m.name; cap.style.cssText = 'padding:2px 3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis';
     sw.append(img, cap);
     sw.onclick = () => { picked = m.name; markSwatch(); if (sel.length) retexture(m.name); else say(tx(`Wybrana tekstura: ${m.name} (dla nowych brył)`, `Texture picked: ${m.name} (for new shapes)`)); };
-    sw.ondragstart = (e) => { e.dataTransfer?.setData('text/plain', m.name); picked = m.name; markSwatch(); };
+    sw.ondragstart = (e) => { e.dataTransfer?.setData('text/plain', m.name); picked = m.name; markSwatch(); dragAsset = null; dragPreview = null; clearPreview(); texDrag = m.name; };
+    sw.ondragend = () => { texDrag = null; clearTexHover(); };
     swatches.push(sw);
     grid.append(sw);
   }
@@ -411,6 +412,7 @@ export function createModelEditor(ctx: Ctx): { onModel: () => void; guard: (go: 
   ctx.canvas.addEventListener('dragover', (e) => {
     if (!on) return;
     e.preventDefault();
+    if (texDrag) { texHover(e.clientX, e.clientY); return; }
     if (!dragPreview) return;
     const at = dropPoint(e.clientX, e.clientY), c = ctx.current();
     if (!at || !c) return;
@@ -419,7 +421,32 @@ export function createModelEditor(ctx: Ctx): { onModel: () => void; guard: (go: 
     const local = (ghostObj.userData.local as ((a: THREE.Vector3) => THREE.Matrix4) | undefined)?.(at);
     if (local) { const w = c.matrixWorld.clone().multiply(local); w.decompose(ghostObj.position, ghostObj.quaternion, ghostObj.scale); }
   });
-  ctx.canvas.addEventListener('dragleave', () => clearPreview());
+  ctx.canvas.addEventListener('dragleave', () => { clearPreview(); clearTexHover(); });
+  // przeciąganie tekstury: część (cały przedmiot) pod kursorem podświetlona na zielono, zanim się ją upuści
+  let texDrag: string | null = null;
+  const texHi: THREE.Mesh[] = [];
+  const texHiMat = new THREE.MeshBasicMaterial({ color: 0x6dff8a, transparent: true, opacity: 0.35, depthTest: false, depthWrite: false });
+  let texHoverKey = '';
+  function clearTexHover(): void { for (const m of texHi.splice(0)) { m.removeFromParent(); m.geometry.dispose(); } texHoverKey = ''; }
+  function texHover(cx: number, cy: number): void {
+    const c = ctx.current();
+    if (!c) return;
+    const r = ctx.canvas.getBoundingClientRect();
+    ray.setFromCamera(new THREE.Vector2(((cx - r.left) / r.width) * 2 - 1, -((cy - r.top) / r.height) * 2 + 1), ctx.camera);
+    const h = ray.intersectObject(c, true).find((x) => (x.object as THREE.Mesh).isMesh && x.object.visible && (x.object.userData.fx || (x.object.userData.temp && x.object.userData.temp.k !== 'prop' && x.object.userData.temp.k !== 'f2p')) && x.faceIndex != null && !x.object.userData.hiFor);
+    if (!h) { clearTexHover(); return; }
+    const mesh = h.object as THREE.Mesh;
+    const island = mesh.userData.temp ? wholeOf(mesh) : isl(mesh.geometry).list[isl(mesh.geometry).of[h.faceIndex!]!]!;
+    const key = nodeKey(mesh, island);
+    if (key === texHoverKey) return;
+    clearTexHover(); texHoverKey = key;
+    const o = !mesh.userData.temp ? objOf.get(key) : undefined;
+    for (const nd of o ? o.nodes : [{ mesh, island }]) {
+      const g = new THREE.Mesh(islandGeo(nd.mesh, nd.island), texHiMat);
+      g.renderOrder = 999; g.userData.hiFor = true;
+      nd.mesh.add(g); texHi.push(g);
+    }
+  }
   ctx.canvas.addEventListener('drop', (e) => {
     if (!on) return;
     e.preventDefault();
@@ -431,9 +458,11 @@ export function createModelEditor(ctx: Ctx): { onModel: () => void; guard: (go: 
       dragAsset = null; dragPreview = null;
       return;
     }
+    clearPreview(); clearTexHover(); texDrag = null;
     const mat = e.dataTransfer?.getData('text/plain');
     if (!mat) return;
     const hit = pick(e.clientX, e.clientY);
+    if (hit && (hit.mesh.userData.fxProp || (hit.mesh.userData.temp as Fix | undefined)?.k === 'prop' || (hit.mesh.userData.temp as Fix | undefined)?.k === 'f2p')) { say(tx('Gotowe modele z paczek mają własne tekstury — upuść na część budynku albo dodaną bryłę', 'Ready-made models keep their own textures — drop onto a building part or an added shape')); return; }
     if (!hit) { say(tx('Upuść teksturę na część modelu', 'Drop the texture onto a part of the model')); return; }
     const o = !hit.mesh.userData.temp && !hit.mesh.userData.fxProp ? objOf.get(nodeKey(hit.mesh, hit.island)) : undefined;
     if (o) selectObj(o, false); else toggle(hit.mesh, hit.island, false);
