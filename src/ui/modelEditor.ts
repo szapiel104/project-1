@@ -291,6 +291,8 @@ export function createModelEditor(ctx: Ctx): { onModel: () => void } {
     say(tx(`Poprawki spoza gry: ${extra.length - miss}${miss ? `, nie pasuje: ${miss}` : ''}`, `Fixes not yet in the game: ${extra.length - miss}${miss ? `, not matching: ${miss}` : ''}`));
   }
 
+  // do sprawdzania z konsoli / testów
+  (window as unknown as { __modelEditor: unknown }).__modelEditor = { info: () => ({ on, sel: sel ? { n: sel.isl.tris.length, c: sel.c, g: sel.mesh.userData.fx, mat: (sel.mesh.material as THREE.Material).name || (sel.mesh.material as THREE.Material).type, visible: sel.mesh.visible } : null, edits: edits.length, delta: sel ? localDelta().elements.map(r4) : null }) };
   setOn(false);
   return {
     onModel: () => { deselect(); edits = []; undo.length = 0; void applyPending(); },
