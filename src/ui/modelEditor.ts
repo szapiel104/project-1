@@ -82,7 +82,7 @@ export function createModelEditor(ctx: Ctx): { onModel: () => void; guard: (go: 
   // ---------- inspektor na dole (jak w silnikach gier): położenie i obrót liczbami, paleta tekstur, nowe bryły ----------
   const insp = document.createElement('div');
   insp.className = 'edit-inspector';
-  insp.style.cssText = 'position:fixed;left:var(--insp-left,272px);right:254px;bottom:0;height:var(--insp-h,230px);grid-template-rows:minmax(0,1fr);background:rgba(24,21,17,.95);border-top:1px solid #5a4a2c;z-index:6;display:grid;grid-template-columns:auto 1fr;gap:12px;padding:8px 10px;font-size:12px;color:#e6d6b4';
+  insp.style.cssText = 'position:fixed;left:var(--insp-left,260px);right:0;bottom:0;height:var(--insp-h,230px);grid-template-rows:minmax(0,1fr);background:rgba(24,21,17,.95);border-top:1px solid #5a4a2c;z-index:6;display:grid;grid-template-columns:auto 1fr;gap:12px;padding:8px 10px;font-size:12px;color:#e6d6b4';
   document.body.append(insp);
   const selCss = 'font:inherit;font-size:12px;color:#e8e0cc;background:#2e2b24;border:1px solid #3a362d;min-height:28px;padding:2px 4px';
   const title = (t: string): HTMLElement => { const h = document.createElement('div'); h.textContent = t; h.style.cssText = 'font-weight:600;margin-bottom:4px;color:#e9c766'; return h; };
@@ -775,7 +775,7 @@ export function createModelEditor(ctx: Ctx): { onModel: () => void; guard: (go: 
   // ---------- lista warstw po prawej: grupy (pokaż/ukryj) i siatki po materiale (klik zaznacza całą siatkę) ----------
   const panel = document.createElement('div');
   panel.className = 'edit-layers';
-  panel.style.cssText = 'position:fixed;right:12px;top:calc(var(--top, 0px) + 10px);bottom:8px;width:230px;overflow:auto;background:rgba(24,21,17,.92);border:1px solid #5a4a2c;padding:8px;font-size:12px;color:#e6d6b4;z-index:5';
+  panel.style.cssText = 'position:fixed;right:12px;top:calc(var(--top, 0px) + 10px);bottom:calc(var(--insp-h, 230px) + 8px);width:230px;overflow:auto;background:rgba(24,21,17,.92);border:1px solid #5a4a2c;padding:8px;font-size:12px;color:#e6d6b4;z-index:5';
   document.body.append(panel);
   const GROUP_NAME: Record<string, string> = { base: tx('Bryła', 'Body'), shell: tx('Dach i mury', 'Roof and walls'), interior: tx('Wnętrze', 'Interior'), floor: tx('Posadzka', 'Floor'), ceiling: tx('Sufit sali', 'Hall ceiling') };
   const rows = new Map<THREE.Mesh, HTMLButtonElement>();
