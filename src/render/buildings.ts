@@ -930,6 +930,21 @@ function tinted(geo: THREE.BufferGeometry, color: THREE.Color): THREE.BufferGeom
   byColor.set(hex, t);
   return t;
 }
+/**
+ * To samo z teksturami: deski jasne i ciemne, dwa odcienie kamienia, kilka płócien… to ta sama tekstura z inną barwą.
+ * Jeden biały materiał na wzór (i osobno: moknący w deszczu / nie), barwa w kolorze wierzchołków.
+ * Bez: okien (świecą nocą), liści (pory roku), łąki sadu (chowana przez scenę).
+ */
+const TINT_SKIP = new Set(['window', 'pane', 'orchardGrass', 'leaf', 'leafLight']);
+const patMats = new Map<string, THREE.MeshStandardMaterial>();
+/** wspólne materiały wzorów, które mokną (setWetBuildings, isWetMat) */
+const wetShared: THREE.MeshStandardMaterial[] = [];
+function patMat(tex: Pattern, wet: boolean): THREE.MeshStandardMaterial {
+  const key = tex + (wet ? ':w' : '');
+  let m = patMats.get(key);
+  if (!m) { m = mat(0xffffff, tex); patMats.set(key, m); if (wet) wetShared.push(m); }
+  return m;
+}
 /** ?gladkie=0 — każdy gładki materiał osobno, jak dawniej (do porównań) */
 const PLAIN_ON = typeof location === 'undefined' || !/[?&]gladkie=0/.test(location.search);
 
@@ -939,6 +954,12 @@ function blenderModel(g: THREE.Group, model: BlenderBuilding, flag: THREE.Materi
     const base = m.mat === 'flag' ? flag : mats[m.mat] ?? M.wood;
     const k = (base.userData.tile as number) || 1;
     if (PLAIN_ON && PLAIN_KEYS.has(m.mat)) return new THREE.Mesh(tinted(blenderGeo(m.pos, m.ao, model.q, k), (base as THREE.MeshStandardMaterial).color), withAo(PLAIN));
+    const tex = base.userData.pattern as Pattern | undefined;
+    // skała zostaje osobno: kopalnie podmieniają ją na skałę krainy (scene.ts, pattern === 'rock')
+    if (PLAIN_ON && tex && tex !== 'rock' && m.mat in M && !TINT_SKIP.has(m.mat) && base instanceof THREE.MeshStandardMaterial && !base.transparent) {
+      const wet = (WET_KEYS as readonly string[]).includes(m.mat);
+      return new THREE.Mesh(tinted(blenderGeo(m.pos, m.ao, model.q, k), base.color), withAo(patMat(tex, wet)));
+    }
     return new THREE.Mesh(blenderGeo(m.pos, m.ao, model.q, k), withAo(base));
   });
   for (const m of meshes('base')) g.add(m);
@@ -1868,12 +1889,12 @@ for (const m of [M.leaf, M.leafLight, M.apple, M.appleGreen]) m.userData.season 
 export function isWetMat(m: THREE.Material): boolean {
   const mats = M as unknown as Record<string, THREE.Material | undefined>;
   for (const key of WET_KEYS) { const base = mats[key]; if (base && (m === base || m === aoMats.get(base))) return true; }
+  for (const base of wetShared) if (m === base || m === aoMats.get(base)) return true;
   return false;
 }
 export function setWetBuildings(k: number): void {
   const mats = M as unknown as Record<string, THREE.Material | undefined>;
-  for (const key of WET_KEYS) {
-    const base = mats[key] as THREE.MeshStandardMaterial | undefined;
+  for (const base of [...WET_KEYS.map((key) => mats[key] as THREE.MeshStandardMaterial | undefined), ...wetShared]) {
     if (!base) continue;
     for (const m of [base, aoMats.get(base) as THREE.MeshStandardMaterial | undefined]) {
       if (!m) continue;
