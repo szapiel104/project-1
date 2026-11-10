@@ -4,9 +4,10 @@ Michał wykonuje migracje ręcznie: Supabase → projekt „project-1” → SQL
 Każdy czat, który dodaje nową migrację, dopisuje ją tutaj. Po wykonaniu: przenieść do „Wykonane” i dopisać „wykonane DATA” w pierwszej linijce pliku.
 
 ## Czekają (stan 10.11.2026)
-- `20261110_model_fixes.sql` — tabela poprawek modeli z edytora w podglądzie modeli (bez niej „Zapisz” trzyma poprawki w przeglądarce i daje plik do pobrania)
+- (nic)
 
 ## Wykonane
+- `20261110_model_fixes.sql` — wykonane 10.11.2026 (przez czat, Supabase MCP, na prośbę Michała)
 - `20261103_note_delete.sql` — wykonane 3.11.2026
 - `20261102g_award_once.sql` — wykonane 3.11.2026
 - `20261102f_saves_storage.sql` — wykonane 3.11.2026

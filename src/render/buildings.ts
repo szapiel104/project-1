@@ -948,26 +948,33 @@ function patMat(tex: Pattern, wet: boolean): THREE.MeshStandardMaterial {
 /** ?gladkie=0 — każdy gładki materiał osobno, jak dawniej (do porównań) */
 const PLAIN_ON = typeof location === 'undefined' || !/[?&]gladkie=0/.test(location.search);
 
-function blenderModel(g: THREE.Group, model: BlenderBuilding, flag: THREE.Material): void {
+/** Jedna siatka modelu z Blendera (materiał po nazwie, jak w grze: barwa w kolorach wierzchołków, wspólne materiały);
+ *  też dla edytora poprawek w podglądzie modeli (nowe bryły, kopie, zmiana tekstury) */
+export function partMesh(mat: string, pos: string | Uint8Array, ao: string | Uint8Array, q: number, flag?: THREE.Material): THREE.Mesh {
   const mats = M as unknown as Record<string, THREE.Material>;
+  const base = mat === 'flag' && flag ? flag : mats[mat] ?? M.wood;
+  const k = (base.userData.tile as number) || 1;
+  const p = pos as string, a = ao as string;
+  if (PLAIN_ON && PLAIN_KEYS.has(mat)) return new THREE.Mesh(tinted(blenderGeo(p, a, q, k), (base as THREE.MeshStandardMaterial).color), withAo(PLAIN));
+  const tex = base.userData.pattern as Pattern | undefined;
+  // skała zostaje osobno: kopalnie podmieniają ją na skałę krainy (scene.ts, pattern === 'rock')
+  if (PLAIN_ON && tex && tex !== 'rock' && mat in M && !TINT_SKIP.has(mat) && base instanceof THREE.MeshStandardMaterial && !base.transparent) {
+    const wet = (WET_KEYS as readonly string[]).includes(mat);
+    return new THREE.Mesh(tinted(blenderGeo(p, a, q, k), base.color), withAo(patMat(tex, wet)));
+  }
+  return new THREE.Mesh(blenderGeo(p, a, q, k), withAo(base));
+}
+/** Nazwy materiałów budynków (do wyboru tekstury w edytorze poprawek) */
+export const buildingMaterialNames = (): string[] => Object.keys(M).filter((k) => !['trodden', 'smoke', 'ember', 'void', 'flameLight', 'flameCore', 'water'].includes(k)).sort();
+
+function blenderModel(g: THREE.Group, model: BlenderBuilding, flag: THREE.Material): void {
   // każda siatka zna swoją grupę i numer w niej (edytor poprawek w podglądzie modeli, modelfix.ts)
   const meshes = (name: string): THREE.Mesh[] => ((model[name] as { mat: string; pos: string; ao: string }[] | undefined) ?? []).map((m, idx) => {
     const mesh = meshOf(name, m);
     mesh.userData.fx = [name, idx, m.mat];
     return mesh;
   });
-  const meshOf = (_name: string, m: { mat: string; pos: string; ao: string }): THREE.Mesh => {
-    const base = m.mat === 'flag' ? flag : mats[m.mat] ?? M.wood;
-    const k = (base.userData.tile as number) || 1;
-    if (PLAIN_ON && PLAIN_KEYS.has(m.mat)) return new THREE.Mesh(tinted(blenderGeo(m.pos, m.ao, model.q, k), (base as THREE.MeshStandardMaterial).color), withAo(PLAIN));
-    const tex = base.userData.pattern as Pattern | undefined;
-    // skała zostaje osobno: kopalnie podmieniają ją na skałę krainy (scene.ts, pattern === 'rock')
-    if (PLAIN_ON && tex && tex !== 'rock' && m.mat in M && !TINT_SKIP.has(m.mat) && base instanceof THREE.MeshStandardMaterial && !base.transparent) {
-      const wet = (WET_KEYS as readonly string[]).includes(m.mat);
-      return new THREE.Mesh(tinted(blenderGeo(m.pos, m.ao, model.q, k), base.color), withAo(patMat(tex, wet)));
-    }
-    return new THREE.Mesh(blenderGeo(m.pos, m.ao, model.q, k), withAo(base));
-  };
+  const meshOf = (_name: string, m: { mat: string; pos: string; ao: string }): THREE.Mesh => partMesh(m.mat, m.pos, m.ao, model.q, flag);
   for (const m of meshes('base')) g.add(m);
   // wieże: dach zdejmuje się po kliknięciu, choć nie mają grupy wnętrza (pod dachem jest pomost)
   if ((model as unknown as { openTop?: boolean }).openTop) g.userData.openTop = true;
