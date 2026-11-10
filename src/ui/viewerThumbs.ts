@@ -49,9 +49,27 @@ export function createThumbs(renderer: Renderer, scene: THREE.Scene, isolate: ()
     out.getContext('2d')!.drawImage(cv, (cv.width - side) / 2, (cv.height - side) / 2, side, side, 0, 0, 112, 112);
     sc.remove(obj);
     restore();
+    // za ciemna miniatura = tekstury jeszcze się wczytują (pierwsze modele po starcie): ponawiamy za chwilę, bez zapisu
+    const tries = Number(img.dataset.tries ?? 0);
+    if (tries < 5 && tooDark(out)) {
+      img.dataset.tries = String(tries + 1);
+      setTimeout(() => { delete img.dataset.done; want.set(img, id); }, 1500);
+      return;
+    }
     const url = out.toDataURL('image/jpeg', 0.8);
     img.src = url;
     try { localStorage.setItem(key(id), url); } catch { /* pełna pamięć — narysuje się następnym razem */ }
+  }
+  /** średnia jasność pikseli modelu (różnych od tła 0x2e2b24) — poniżej progu model wyszedł prawie czarny */
+  function tooDark(c: HTMLCanvasElement): boolean {
+    const d = c.getContext('2d')!.getImageData(0, 0, c.width, c.height).data;
+    let sum = 0, n = 0;
+    for (let i = 0; i < d.length; i += 4) {
+      const r = d[i]!, g = d[i + 1]!, b = d[i + 2]!;
+      if (Math.abs(r - 0x2e) + Math.abs(g - 0x2b) + Math.abs(b - 0x24) < 12) continue;
+      sum += 0.3 * r + 0.59 * g + 0.11 * b; n++;
+    }
+    return n > 50 && sum / n < 38;
   }
   return {
     watch(id, img) {
