@@ -1036,7 +1036,11 @@ function blenderModel(g: THREE.Group, model: BlenderBuilding, flag: THREE.Materi
     mesh.castShadow = mesh.receiveShadow = true;
     // pochodnia z edytora świeci nocą jak pochodnie zrobione w modelu: znacznik światła na głowicy
     const ls = propLightSpot(p.prop);
-    const parent = p.g === 'interior' ? interior : p.g === 'shell' ? shell : g;
+    const host = p.g === 'interior' ? interior : p.g === 'shell' ? shell : g;
+    // modele z paczki w osobnej nazwanej grupie: łączenie nieruchomych części (merge.ts) ich nie bierze — mają inne
+    // atrybuty (normalne Int8) i sklejanie z bryłą budynku się wywracało
+    let parent = host.getObjectByName('fixProps') as THREE.Group | undefined;
+    if (!parent || parent.parent !== host) { parent = new THREE.Group(); parent.name = 'fixProps'; host.add(parent); }
     // znacznik obok siatki, nie w niej (łączenie siatek w partie mogłoby go zabrać razem z siatką)
     if (ls) { const o = new THREE.Object3D(); o.name = 'lightSpot'; o.position.copy(ls.applyMatrix4(new THREE.Matrix4().fromArray(p.m))); parent.add(o); }
     parent.add(mesh);
