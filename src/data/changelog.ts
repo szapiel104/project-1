@@ -12,9 +12,11 @@ const NEW: ChangeEntry[] = [
   { v: '0.94.97', date: '2026-11-10', pl: [
     'Edytor modeli: zapis łączy poprawki z różnych komputerów i przeglądarek zamiast nadpisywać wcześniejsze.',
     'Naprawa błędów cieni przy budynkach, w których wszystkie części jednego materiału dostały inną teksturę.',
+    'Koniec z setkami błędów grafiki przy wczytywaniu gry (WebGPU).',
   ], en: [
     'Model editor: saving merges fixes made on different computers and browsers instead of overwriting earlier ones.',
     'Fixed shadow errors on buildings where every part of one material was given another texture.',
+    'No more hundreds of graphics errors while the game loads (WebGPU).',
   ] },
   { v: '0.94.96', date: '2026-11-10', pl: [
     'Edytor modeli: przeciąganie tekstur i przedmiotów działa pewnie, z podglądem w miejscu upuszczenia i zielonym podświetleniem części, która dostanie teksturę.',
