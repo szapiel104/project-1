@@ -440,7 +440,7 @@ const menu = createMenu(document.body, {
       };
       const wait = (): void => { if (++frames < 4) requestAnimationFrame(wait); else reveal(); };
       // shadery nowej mapy kompilują się w tle; zasłona schodzi po kilku klatkach od ich gotowości
-      void renderer.warmup().then(() => renderer.prepareView()).catch((e) => console.error(e)).then(() => { if (job === previewJob) requestAnimationFrame(wait); });
+      void renderer.warmup(undefined, { light: true }).then(() => renderer.prepareView()).catch((e) => console.error(e)).then(() => { if (job === previewJob) requestAnimationFrame(wait); });
       setTimeout(reveal, 2500); // bardzo wolna karta: zasłona i tak schodzi po chwili
     }));
   },

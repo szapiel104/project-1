@@ -263,8 +263,8 @@ export class GameRenderer {
     // i wszystko rozwala i nie wraca prawie”)
     const fxKey = `${this.ao.enabled}|${this.aoMode}|${this.aaMode}|${this.bloom.enabled}`;
     if (fxKey !== this.gpuFxKey) { if (this.gpuFxKey) this.gpuBoostUntil = nowT + 6000; this.gpuFxKey = fxKey; }
-    const base = this.warming || nowT < this.gpuBoostUntil ? 45 : nowT - this.gpuStart < 20000 ? 14 : 6;
-    gpuFrameBudget(gap > 100 ? Math.max(base, Math.min(gap * 0.5, 400)) : base);
+    const base = this.warmLight ? 10 : this.warming || nowT < this.gpuBoostUntil ? 45 : nowT - this.gpuStart < 20000 ? 14 : 6;
+    gpuFrameBudget(gap > 100 && !this.warmLight ? Math.max(base, Math.min(gap * 0.5, 400)) : base);
     // po błędzie efektów obrazu: sama scena, a po 3 s (najwyżej trzy razy) nowa próba — przyczyna bywa chwilowa
     if (this.gpuPostFailed) {
       if (this.gpuPostRetries < 3 && performance.now() - this.gpuPostFailedAt > 3000) { this.gpuPostRetries++; this.gpuPostFailed = false; this.gpuPost = undefined; }
@@ -1779,10 +1779,17 @@ export class GameRenderer {
    * (`compileAsync`, rozszerzenie KHR_parallel_shader_compile) — strona nie zamarza na kilkanaście sekund,
    * pasek wczytywania się rusza. `onProgress(gotowe, wszystkich)` po każdej partii modeli.
    */
-  async warmup(onProgress?: (done: number, total: number) => void): Promise<void> {
+  async warmup(onProgress?: (done: number, total: number) => void, opts?: { light?: boolean }): Promise<void> {
     this.warming = true;
-    try { await this.warmupInner(onProgress); } finally { this.warming = false; this.pre.start(); void this.prewarmLater().catch((e) => console.error(e)); }
+    this.warmLight = !!opts?.light;
+    try { await this.warmupInner(onProgress); } finally { this.warming = false; this.warmLight = false; this.pre.start(); void this.prewarmLater().catch((e) => console.error(e)); }
   }
+  /**
+   * Lekka rozgrzewka (podgląd mapy w Nowej grze, Michał 10.11.2026: „gdy ładuje mapę, zacina interfejs”): małe porcje
+   * składania na klatkę, bez rosnącego budżetu przy wolnych klatkach i bez próbnych modeli budynków — interfejs
+   * (panel, przyciski, kręciołek) ma zostać płynny; resztę dołoży zwykła gra.
+   */
+  private warmLight = false;
   private warming = false;
   /**
    * Wstrzymanie rysowania na czas przygotowania nowej mapy (od jej zbudowania do końca rozgrzewki): bez tego pętla gry
@@ -1908,7 +1915,8 @@ export class GameRenderer {
     let first = -1;
     // przy wczytywaniu karta kompiluje więcej programów naraz (gpuLoading), więc czekamy do końca, najwyżej 10 s:
     // po 2,5 s gra startowała z połową budynków (same cienie bez budynków, Michał 6.11.2026)
-    gpuLoading(true);
+    const light = this.warmLight;
+    gpuLoading(!light);
     const drain = async (maxMs: number, report: boolean): Promise<void> => {
       const s0 = performance.now();
       let prevLeft = Infinity, moved = s0;
@@ -1930,6 +1938,7 @@ export class GameRenderer {
     // Michał 7.11.2026: „jak buduję, FPS spada” — pierwszy budynek danego rodzaju składał swoje materiały (także wersje
     // do rysowania razem) w trakcie gry; tu stawiamy na chwilę po jednym modelu każdego rodzaju w barwach gracza,
     // żeby karta złożyła je za ekranem wczytywania. Po rozgrzewce znikają (wspólne bryły zostają w pamięci podręcznej).
+    if (light) { try { await drain(8000, true); } finally { gpuLoading(false); } return; }
     const warmRoots = this.warmBuildingModels();
     try {
       await drain(40000, true);
