@@ -241,9 +241,12 @@ export function createModelEditor(ctx: Ctx): { onModel: () => void } {
   document.body.append(panel);
   const GROUP_NAME: Record<string, string> = { base: tx('Bryła', 'Body'), shell: tx('Dach i mury', 'Roof and walls'), interior: tx('Wnętrze', 'Interior'), floor: tx('Posadzka', 'Floor'), ceiling: tx('Sufit sali', 'Hall ceiling') };
   const rows = new Map<THREE.Mesh, HTMLButtonElement>();
+  let partRows: { m: THREE.Mesh; island: Island; b: HTMLButtonElement }[] = [];
+  const ROW = 'text-align:left;padding:3px 6px;min-height:24px;font:inherit;color:inherit;background:#2e2b24;border:1px solid #3e3626;cursor:pointer';
   function buildPanel(): void {
     panel.textContent = '';
     rows.clear();
+    partRows = [];
     const cur = ctx.current();
     if (!cur) return;
     const h = document.createElement('div');
@@ -264,19 +267,59 @@ export function createModelEditor(ctx: Ctx): { onModel: () => void } {
       panel.append(head);
       for (const m of meshes) {
         const fx = m.userData.fx as [string, number, string];
+        const list = isl(m.geometry).list;
+        const line = document.createElement('div');
+        line.style.cssText = 'display:flex;gap:2px;margin:1px 0';
+        const open = document.createElement('button');
+        open.type = 'button'; open.textContent = '▸'; open.setAttribute('aria-expanded', 'false');
+        open.title = tx('Pokaż części', 'Show parts');
+        open.style.cssText = ROW + ';width:24px;flex:none;text-align:center;padding:0';
         const b = document.createElement('button');
         b.type = 'button';
-        b.style.cssText = 'display:block;width:100%;text-align:left;margin:1px 0;padding:3px 6px;min-height:24px;font:inherit;color:inherit;background:#2e2b24;border:1px solid #3e3626;cursor:pointer';
-        b.textContent = `${fx[2] ?? '?'} · ${isl(m.geometry).list.length} ${tx('części', 'parts')}`;
+        b.style.cssText = ROW + ';flex:1';
+        b.textContent = `${fx[2] ?? '?'} · ${list.length} ${tx('części', 'parts')}`;
+        b.title = tx('Zaznacz wszystkie części tej warstwy (Ctrl — dodaj)', 'Select all parts of this layer (Ctrl — add)');
         b.onclick = (e) => selectMesh(m, e.ctrlKey || e.metaKey || e.shiftKey);
         rows.set(m, b);
-        panel.append(b);
+        line.append(open, b);
+        panel.append(line);
+        // rozwijana lista części: każda osobno (klik — zaznacz, Ctrl — dodaj); wymiary, żeby rozpoznać, co to jest
+        const sub = document.createElement('div');
+        sub.hidden = true;
+        sub.style.cssText = 'margin:0 0 4px 26px';
+        open.onclick = () => {
+          const v = sub.hidden;
+          sub.hidden = !v; open.textContent = v ? '▾' : '▸'; open.setAttribute('aria-expanded', String(v));
+          if (v && !sub.childElementCount) {
+            const pos = m.geometry.getAttribute('position') as THREE.BufferAttribute;
+            list.forEach((island, k) => {
+              const bb = new THREE.Box3(), v3 = new THREE.Vector3();
+              for (const t of island.tris) for (let j = 0; j < 3; j++) bb.expandByPoint(v3.fromBufferAttribute(pos, t * 3 + j));
+              const sz = bb.getSize(new THREE.Vector3());
+              const pb = document.createElement('button');
+              pb.type = 'button';
+              pb.style.cssText = ROW + ';display:block;width:100%;font-size:11px';
+              pb.textContent = `${tx('część', 'part')} ${k + 1} · ${(sz.x * 100).toFixed(0)}×${(sz.y * 100).toFixed(0)}×${(sz.z * 100).toFixed(0)} cm`;
+              pb.onclick = (e) => toggle(m, island, e.ctrlKey || e.metaKey || e.shiftKey);
+              pb.dataset.k = String(k);
+              partRows.push({ m, island, b: pb });
+              sub.append(pb);
+            });
+            markPanel();
+          }
+        };
+        panel.append(sub);
       }
     }
     markPanel();
   }
   function markPanel(): void {
     for (const [m, b] of rows) b.style.borderColor = sel.some((p) => p.mesh === m) ? '#e9c766' : '#3e3626';
+    for (const r of partRows) {
+      const on = sel.some((p) => p.mesh === r.m && p.isl === r.island);
+      r.b.style.borderColor = on ? '#e9c766' : '#3e3626';
+      r.b.style.background = on ? '#4a3e22' : '#2e2b24';
+    }
   }
 
   // ---------- klikanie w część ----------

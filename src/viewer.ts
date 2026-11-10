@@ -454,6 +454,20 @@ function show(id: string): void {
 }
 
 // ---------- panel ----------
+// zwijanie lewego panelu z listą modeli (Michał 10.11.2026) — więcej miejsca na model w edytorze
+const fold = document.createElement('button');
+fold.type = 'button'; fold.className = 'fold';
+const setFold = (v: boolean): void => {
+  document.body.classList.toggle('folded', v);
+  fold.textContent = v ? '»' : '«';
+  fold.title = v ? tx('Pokaż listę modeli', 'Show the model list') : tx('Schowaj listę modeli', 'Hide the model list');
+  fold.setAttribute('aria-expanded', String(!v));
+  try { localStorage.setItem('p1-viewer-fold', v ? '1' : ''); } catch { /* bez pamięci */ }
+  requestAnimationFrame(() => resize());
+};
+fold.onclick = () => setFold(!document.body.classList.contains('folded'));
+document.body.append(fold);
+try { setFold(localStorage.getItem('p1-viewer-fold') === '1'); } catch { setFold(false); }
 const groupsEl = document.getElementById('groups')!;
 for (const [title, list] of GROUPS) {
   const h = document.createElement('h2'); h.textContent = title; groupsEl.append(h);
@@ -526,7 +540,7 @@ renderer.setAnimationLoop(() => {
     if (held.has('q')) move.y -= 1;
     if (move.lengthSq()) {
       const span = Math.max(size.x, size.y, size.z, 0.2);
-      move.normalize().multiplyScalar(span * (held.has('shift') ? 1.6 : 0.55) * dt);
+      move.normalize().multiplyScalar(span * (held.has('shift') ? 6 : 2) * dt);   // ok. 2 długości modelu na sekundę (0,55 było za wolno)
       camera.position.add(move); controls.target.add(move);
     }
   }
