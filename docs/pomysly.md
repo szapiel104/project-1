@@ -46,6 +46,17 @@ Tu trafia wszystko nowe, co nie należy do bieżącej partii. Do planu etapów (
 - Towar pod drzwiami przy deszczu moknie (zboże i mąka powoli się psują), co dodatkowo zachęca do budowy magazynów
 - Złodzieje nocą (pomysł niżej) najpierw biorą to, co leży pod drzwiami
 
+## Edytor poprawek w podglądzie modeli (Michał 10.11.2026, następna partia)
+Cel: „skrócony Blender bez modelowania” w `modele.html` — kliknąć część modelu (kłoda, beczka, belka), przesunąć/obrócić
+strzałkami (TransformControls z three.js), zapisać. Plan:
+- Części do chwytania: `building.py` zapisuje w JSON-ie, z których trójkątów składa się każda bryła (id + nazwa z wywołania
+  `b.box/b.prism/...`), bo dziś siatki są sklejane po materiale i kłody nie da się chwycić osobno.
+- Zapis jako osobny plik poprawek `src/render/models/<id>.fix.json` (id części → przesunięcie/obrót/skala), czytany przy
+  wczytaniu modelu w grze i w podglądzie — skrypt Blendera można dalej uruchamiać, poprawki się nie gubią.
+- Przycisk „Zapisz” działa lokalnie (`npm run dev`): podgląd wysyła poprawki do serwera vite, który zapisuje plik w repo;
+  na stronie gry tylko podgląd + „Pobierz plik poprawek”.
+- Cofnij/ponów, siatka przyciągania (1 cm / 5°), podświetlenie kolizji (części wchodzące w siebie na czerwono).
+
 ## Kolejka Michała z 2.11.2026, popołudnie (po kolei, odhaczać datą)
 - [x] (2.11.2026, 0.73.6: nowa tekstura warstw pęczków) Strzecha wygląda źle (smugi, rozciągnięte źdźbła) — także po dodaniu głębi.
 - [x] (2.11.2026, 0.73.6: ściany wykuszy z grubością) Duże baszty (3×3, 4×4): dziury, prześwituje — brak ścian od drugiej strony.
