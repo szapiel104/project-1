@@ -1237,7 +1237,7 @@ body.tips-delay .res li[data-tip]:hover::after { animation: tip-late .9s steps(1
 .preview-cover.gone { opacity: 0; pointer-events: none; }
 .preview-cover-box { display: grid; justify-items: center; gap: 14px; }
 .preview-cover p { margin: 0; font-family: var(--display); font-size: 20px; letter-spacing: .12em; color: #e9c766; text-shadow: 0 2px 4px #000; }
-.preview-spin { width: 46px; height: 46px; border-radius: 50%; border: 3px solid rgba(233, 199, 102, .22); border-top-color: #e9c766; animation: preview-spin .9s linear infinite; }
+.preview-spin { width: 46px; height: 46px; border-radius: 50%; border: 3px solid rgba(233, 199, 102, .22); border-top-color: #e9c766; animation: preview-spin .9s linear infinite; will-change: transform; } /* własna warstwa: kręci się też, gdy strona chwilę liczy */
 @keyframes preview-spin { to { transform: rotate(360deg); } }
 @media (prefers-reduced-motion: reduce) { .preview-spin { animation-duration: 2.4s; } .preview-cover { transition: none; } }
 
