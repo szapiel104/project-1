@@ -2698,6 +2698,21 @@ if (import.meta.env.DEV || new URLSearchParams(location.search).has('perf')) {
     return { przed: base, po: test, ukryte: hidden.length };
   };
 }
+// stały pomiar (lokalnie): `await __bench()` — kamera nad twierdzą, oddalona; 2 s na ustalenie, 5 s pomiaru; wyniki do porównań
+// między partiami optymalizacji (docs/optymalizacja-budynkow.md)
+if (import.meta.env.DEV || new URLSearchParams(location.search).has('perf')) {
+  (window as unknown as { __bench: unknown }).__bench = async (dist = 40, ms = 5000): Promise<unknown> => {
+    const back = renderer.benchView(dist);
+    await new Promise((ok) => setTimeout(ok, 2000));
+    const ts: number[] = [];
+    await new Promise<void>((ok) => { const t0 = performance.now(); const f = (t: number): void => { ts.push(t); if (t - t0 < ms) requestAnimationFrame(f); else ok(); }; requestAnimationFrame(f); });
+    const d = ts.slice(1).map((t, i) => t - ts[i]!).sort((a, b) => a - b);
+    const p = (window as unknown as { __perf: () => Record<string, unknown> }).__perf();
+    back();
+    return { fps: Math.round((1000 * d.length) / (ts[ts.length - 1]! - ts[0]!)), med: +(d[d.length >> 1] ?? 0).toFixed(1), p95: +(d[Math.floor(d.length * 0.95)] ?? 0).toFixed(1),
+      wywołania: p['wywołania rysowania'], trójkąty: p['trójkąty'], rysowanie: p['rysowanie ms/klatkę'], okno: `${innerWidth}×${innerHeight}`, jakość: p['jakość'] };
+  };
+}
 // próbkowanie procesora z samej strony (lokalnie, src/debug/prof.ts): JSON.stringify(await __prof(8))
 if (import.meta.env.DEV || new URLSearchParams(location.search).has('perf')) void import('./debug/prof');
 if (import.meta.env.DEV || new URLSearchParams(location.search).has('perf')) void import('./render/buildings').then((m) => { (window as unknown as { __debugDraw: unknown }).__debugDraw = m.debugDraw;  (window as unknown as { __batches: unknown }).__batches = () => renderer.batchStats(); });

@@ -1464,6 +1464,19 @@ export class GameRenderer {
   /** Testy: budynki stawiane od ręki stoją od razu, bez kilkusekundowego pokazu budowy */
   noBuildShow = false;
 
+  /**
+   * Pomiar wydajności z zawsze tego samego miejsca (lokalnie: __bench()): kamera nad twierdzą gracza, oddalona, pod stałym
+   * kątem — żeby wyniki z różnych dni dało się porównać. Zwraca funkcję przywracającą poprzedni widok.
+   */
+  benchView(dist = 40): () => void {
+    const g = this.state, before = this.cam.view;
+    if (!g) return () => {};
+    const keep = g.buildings.find((b) => b.owner === this.me && BUILDINGS[b.type]!.id === 'keep');
+    const x = (keep?.x ?? g.map.width / 2) - g.map.width / 2, z = (keep?.y ?? g.map.height / 2) - g.map.height / 2;
+    this.cam.orbit(x + 1, z + 4, dist, 0.35, 0.95);
+    return () => this.cam.setView(before);
+  }
+
   lookAt(x: number, y: number, dist = 40): void {
     if (!this.state) return;
     this.cam.lookAt(x - this.state.map.width / 2, y - this.state.map.height / 2, dist);
