@@ -905,11 +905,40 @@ function basketGeos(model: unknown, spots: BasketSpot[]): [string, THREE.BufferG
 
 /** Szyby modelu w jednej siatce (osobno skorupa i korzeń), wspólne dla wszystkich budynków tego modelu */
 const paneCache = new WeakMap<object, { shell: THREE.BufferGeometry | null; root: THREE.BufferGeometry | null }>();
+/**
+ * Gładkie materiały bez tekstury (żelazo, wosk, złoto, mięso…) różniły się tylko barwą, a każdy był osobnym obiektem do
+ * narysowania w każdym przejściu (obraz, cień, odbicie) — 64 ze 133 paczek budynków (pomiar 10.11.2026). Barwę wpisujemy
+ * w kolor wierzchołków (jak w dalekich wersjach, lod.ts), a wszystkie dostają jeden wspólny biały materiał.
+ * Bez: jabłek (pory roku zmieniają ich barwę), ciemnych wnęk i szyb (przesunięcie głębi, świecenie nocą), castlePlain (mur).
+ */
+const PLAIN_KEYS = new Set(['wheat', 'iron', 'white', 'bread', 'ash', 'trousers', 'skin', 'gold', 'ore', 'crust', 'meat', 'meatDark', 'roast', 'roastDark', 'bone', 'fish']);
+const PLAIN = mat(0xffffff);
+const tintCache = new Map<THREE.BufferGeometry, Map<number, THREE.BufferGeometry>>();
+function tinted(geo: THREE.BufferGeometry, color: THREE.Color): THREE.BufferGeometry {
+  let byColor = tintCache.get(geo);
+  if (!byColor) tintCache.set(geo, (byColor = new Map()));
+  const hex = color.getHex();
+  let t = byColor.get(hex);
+  if (t) return t;
+  t = new THREE.BufferGeometry();
+  for (const k of Object.keys(geo.attributes)) if (k !== 'color') t.setAttribute(k, geo.attributes[k]!);
+  if (geo.index) t.setIndex(geo.index);
+  const src = geo.getAttribute('color') as THREE.BufferAttribute, C = new Float32Array(src.count * 3);
+  for (let i = 0; i < src.count; i++) { C[i * 3] = src.getX(i) * color.r; C[i * 3 + 1] = src.getY(i) * color.g; C[i * 3 + 2] = src.getZ(i) * color.b; }
+  t.setAttribute('color', new THREE.BufferAttribute(C, 3));
+  t.boundingBox = geo.boundingBox; t.boundingSphere = geo.boundingSphere;
+  byColor.set(hex, t);
+  return t;
+}
+/** ?gladkie=0 — każdy gładki materiał osobno, jak dawniej (do porównań) */
+const PLAIN_ON = typeof location === 'undefined' || !/[?&]gladkie=0/.test(location.search);
+
 function blenderModel(g: THREE.Group, model: BlenderBuilding, flag: THREE.Material): void {
   const mats = M as unknown as Record<string, THREE.Material>;
   const meshes = (name: string): THREE.Mesh[] => ((model[name] as { mat: string; pos: string; ao: string }[] | undefined) ?? []).map((m) => {
     const base = m.mat === 'flag' ? flag : mats[m.mat] ?? M.wood;
     const k = (base.userData.tile as number) || 1;
+    if (PLAIN_ON && PLAIN_KEYS.has(m.mat)) return new THREE.Mesh(tinted(blenderGeo(m.pos, m.ao, model.q, k), (base as THREE.MeshStandardMaterial).color), withAo(PLAIN));
     return new THREE.Mesh(blenderGeo(m.pos, m.ao, model.q, k), withAo(base));
   });
   for (const m of meshes('base')) g.add(m);
