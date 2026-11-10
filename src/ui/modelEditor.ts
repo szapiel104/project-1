@@ -82,7 +82,7 @@ export function createModelEditor(ctx: Ctx): { onModel: () => void; guard: (go: 
   // ---------- inspektor na dole (jak w silnikach gier): położenie i obrót liczbami, paleta tekstur, nowe bryły ----------
   const insp = document.createElement('div');
   insp.className = 'edit-inspector';
-  insp.style.cssText = 'position:fixed;left:var(--insp-left,272px);right:254px;bottom:0;height:var(--insp-h,230px);grid-template-rows:minmax(0,1fr);background:rgba(24,21,17,.95);border-top:1px solid #5a4a2c;z-index:6;display:grid;grid-template-columns:auto 1fr auto;gap:12px;padding:8px 10px;font-size:12px;color:#e6d6b4';
+  insp.style.cssText = 'position:fixed;left:var(--insp-left,272px);right:254px;bottom:0;height:var(--insp-h,230px);grid-template-rows:minmax(0,1fr);background:rgba(24,21,17,.95);border-top:1px solid #5a4a2c;z-index:6;display:grid;grid-template-columns:auto 1fr;gap:12px;padding:8px 10px;font-size:12px;color:#e6d6b4';
   document.body.append(insp);
   const selCss = 'font:inherit;font-size:12px;color:#e8e0cc;background:#2e2b24;border:1px solid #3a362d;min-height:28px;padding:2px 4px';
   const title = (t: string): HTMLElement => { const h = document.createElement('div'); h.textContent = t; h.style.cssText = 'font-weight:600;margin-bottom:4px;color:#e9c766'; return h; };
@@ -217,7 +217,7 @@ export function createModelEditor(ctx: Ctx): { onModel: () => void; guard: (go: 
   pal.append(palHead, grid, assets);
   function showTab(t: 'tex' | 'assets'): void {
     // style.display, nie hidden — inline display:grid przykrywa atrybut hidden (obie siatki naraz, Michał 10.11.2026)
-    grid.style.display = t === 'tex' ? 'grid' : 'none'; assets.style.display = t === 'assets' ? 'grid' : 'none'; find.style.display = t === 'tex' ? '' : 'none';
+    grid.style.display = t === 'tex' ? 'grid' : 'none'; assets.style.display = t === 'assets' ? 'grid' : 'none'; find.style.display = t === 'tex' ? '' : 'none'; grpSel.style.display = t === 'assets' ? '' : 'none';
     palTitle.textContent = t === 'tex' ? tx('klik: zaznaczonym, przeciągnij: na część', 'click: selected, drag: onto a part') : tx('klik albo przeciągnij na model — dodaje w środku widoku / w miejscu upuszczenia', 'click or drag onto the model — adds at the view centre / where dropped');
     for (const [b, on] of [[tabTex, t === 'tex'], [tabAssets, t === 'assets']] as const) { b.style.borderColor = on ? '#e9c766' : '#3a362d'; b.style.background = on ? '#4a3e22' : '#2e2b24'; }
     if (t === 'assets') buildAssets();
@@ -285,17 +285,14 @@ export function createModelEditor(ctx: Ctx): { onModel: () => void; guard: (go: 
     wait();
   }
   // 3) nowa bryła w wybranej teksturze
-  const add = document.createElement('div');
-  const shapeSel = document.createElement('select');
-  shapeSel.style.cssText = selCss;
-  for (const v of SHAPES) { const o = document.createElement('option'); o.value = v; o.textContent = shapeLabel(v, tx); shapeSel.append(o); }
+  // bryły i modele wybiera się w zakładce Zasoby (Michał 10.11.2026: „te wybory niech będą już w obiektach”);
+  // tu tylko, do której części budynku trafia nowa rzecz
   const grpSel = document.createElement('select');
   grpSel.style.cssText = selCss;
-  for (const [v, l] of [['base', tx('bryła', 'body')], ['interior', tx('wnętrze', 'interior')], ['shell', tx('dach i mury', 'roof & walls')]] as const) { const o = document.createElement('option'); o.value = v; o.textContent = l; grpSel.append(o); }
-  const addBtn = btn(tx('Dodaj bryłę', 'Add shape'), () => addShape(shapeSel.value as Shape, picked, grpSel.value));
-  const stack = (...els: HTMLElement[]): HTMLElement => { const d = document.createElement('div'); d.style.cssText = 'display:flex;flex-direction:column;gap:4px'; d.append(...els); return d; };
-  add.append(title(tx('Nowa bryła', 'New shape')), stack(shapeSel, grpSel, addBtn));
-  insp.append(tr, pal, add);
+  grpSel.title = tx('Gdzie dodać: bryła, wnętrze albo dach i mury (dach znika w widoku „Bez dachu”)', 'Where to add: body, interior or roof & walls');
+  for (const [v, l] of [['base', tx('dodaj do: bryły', 'add to: body')], ['interior', tx('dodaj do: wnętrza', 'add to: interior')], ['shell', tx('dodaj do: dachu i murów', 'add to: roof & walls')]] as const) { const o = document.createElement('option'); o.value = v; o.textContent = l; grpSel.append(o); }
+  palHead.append(grpSel);
+  insp.append(tr, pal);
   // upuszczenie tekstury na model: część pod kursorem (cały przedmiot) dostaje teksturę
   ctx.canvas.addEventListener('dragover', (e) => { if (on) e.preventDefault(); });
   ctx.canvas.addEventListener('drop', (e) => {
