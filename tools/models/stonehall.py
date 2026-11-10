@@ -85,7 +85,7 @@ def flat_roof(b, x0, x1, z0, z1, y, beams_along_x=False, nbeams=4):
     ix0, ix1, iz0, iz1 = x0 + W, x1 - W, z0 + W, z1 - W
     # deski stropu od spodu (widać z izby) i płyty z bruku na wierzchu, z lekkim spadkiem nie trzeba — płasko
     b.box('shell', 'woodDark', ix1 - ix0 + 0.01, 0.03, iz1 - iz0 + 0.01, (ix0 + ix1) / 2, y - 0.075, (iz0 + iz1) / 2)
-    b.box('shell', 'cobble', ix1 - ix0 + 0.012, 0.045, iz1 - iz0 + 0.012, (ix0 + ix1) / 2, y - 0.045, (iz0 + iz1) / 2)
+    b.box('shell', 'pathCobble', ix1 - ix0 + 0.012, 0.045, iz1 - iz0 + 0.012, (ix0 + ix1) / 2, y - 0.045, (iz0 + iz1) / 2)
     # belki pod stropem (z izby widać je przy suficie)
     for k in range(nbeams):
         f = (k + 1) / (nbeams + 1)
