@@ -39,10 +39,13 @@ export class MaterialBatches {
   begin(): void { for (const e of this.entries.values()) { e.used = 0; e.anyVisible = false; } }
 
   /** Jedna nieruchoma część budynku (bryła, materiał, macierz świata) */
-  add(geo: THREE.BufferGeometry, mat: THREE.Material, matrix: THREE.Matrix4, cast: boolean, recv: boolean, hidden = false): void {
-    const key = mat.uuid + (cast ? 'c' : '') + (recv ? 'r' : '') + '|' + attrKey(geo);
+  add(geo: THREE.BufferGeometry, mat: THREE.Material, matrix: THREE.Matrix4, cast: boolean, recv: boolean, hidden = false, inner = false): void {
+    // wnętrza osobno (Michał 10.11.2026): w obrazie zawsze, ale bez cienia słońca i bez odbicia w wodzie — siedzą pod
+    // dachem, a każda sztuka w tych przejściach to dodatkowe polecenie rysowania
+    if (inner) cast = false;
+    const key = mat.uuid + (cast ? 'c' : '') + (recv ? 'r' : '') + (inner ? 'i' : '') + '|' + attrKey(geo);
     let e = this.entries.get(key);
-    if (!e) e = this.create(key, geo, mat, cast, recv);
+    if (!e) e = this.create(key, geo, mat, cast, recv, inner);
     let gid = e.geoIds.get(geo);
     if (gid === undefined) {
       const v = vertsOf(geo), ix = indexOf(geo);
@@ -108,7 +111,7 @@ export class MaterialBatches {
   private rebuild(e: Entry, maxVerts: number, maxIndex: number, maxInst: number): void {
     const old = e.mesh;
     const mesh = new THREE.BatchedMesh(maxInst, maxVerts, maxIndex, old.material as THREE.Material);
-    mesh.castShadow = old.castShadow; mesh.receiveShadow = old.receiveShadow;
+    mesh.castShadow = old.castShadow; mesh.receiveShadow = old.receiveShadow; mesh.userData.noReflect = old.userData.noReflect;
     mesh.perObjectFrustumCulled = false; mesh.sortObjects = false; mesh.frustumCulled = false; mesh.userData.noCull = true;
     const remap = new Map<number, number>();
     for (const [geo, gid] of e.geoIds) { const n = mesh.addGeometry(geo); remap.set(gid, n); e.geoIds.set(geo, n); }
@@ -124,7 +127,7 @@ export class MaterialBatches {
     e.mesh = mesh; e.maxVerts = maxVerts; e.maxIndex = maxIndex; e.maxInst = maxInst;
   }
 
-  private create(key: string, geo: THREE.BufferGeometry, mat: THREE.Material, cast: boolean, recv: boolean): Entry {
+  private create(key: string, geo: THREE.BufferGeometry, mat: THREE.Material, cast: boolean, recv: boolean, inner = false): Entry {
     const maxInst = 64, maxVerts = Math.max(4096, vertsOf(geo) * 4), maxIndex = geo.index ? Math.max(8192, indexOf(geo) * 4) : 0;
     const mesh = new THREE.BatchedMesh(maxInst, maxVerts, maxIndex, mat);
     mesh.castShadow = cast; mesh.receiveShadow = recv;
@@ -133,6 +136,7 @@ export class MaterialBatches {
     mesh.perObjectFrustumCulled = false;
     mesh.sortObjects = false;
     mesh.userData.noCull = true;
+    if (inner) mesh.userData.noReflect = true;
     mesh.frustumCulled = false; // całość obejmuje całą osadę; cięcie do kadru robi każda sztuka osobno
     this.parent.add(mesh);
     const e: Entry = { mesh, geoIds: new Map(), inst: [], instGeo: [], used: 0, verts: 0, index: 0, maxVerts, maxIndex, maxInst, anyVisible: false };

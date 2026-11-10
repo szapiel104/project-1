@@ -3112,8 +3112,9 @@ export class GameRenderer {
     let list = this.batchParts.get(root);
     if (list) return list;
     list = [];
-    const walk = (o: THREE.Object3D): void => {
+    const walk = (o: THREE.Object3D, inner = false): void => {
       for (const ch of o.children) {
+        const inn = inner || ch.name === 'interior';
         // wnętrza, ludzie, ogień, ruchome części: po staremu; pochodnia (słup i kosz, wspólne siatki) i dalekie wersje
         // budynków (wspólne dla budynków tego samego rodzaju) też idą razem
         if (ch.name && !MERGE_IN.has(ch.name) && !BATCH_ALSO.test(ch.name)) continue;
@@ -3125,9 +3126,9 @@ export class GameRenderer {
           // Michał 9.11.2026); osobna siatka odpada sama, gdy jest poza kadrem — wygląd bez zmian
           const g = m.geometry, tris = (g.index ? g.index.count : g.getAttribute('position')!.count) / 3;
           if (tris > HEAVY_TRIS) continue;
-          if (!mat.transparent && mat.visible !== false && g.getAttribute('position')) list!.push(m);
+          if (!mat.transparent && mat.visible !== false && g.getAttribute('position')) { list!.push(m); if (inn) this.innerParts.add(m); }
         }
-        walk(ch);
+        walk(ch, inn);
       }
     };
     walk(root);
@@ -3135,6 +3136,8 @@ export class GameRenderer {
     return list;
   }
   private batchGroups = new Map<string, THREE.Mesh[]>();
+  /** części wnętrz w paczkach: w obrazie zawsze, bez cienia i odbicia (buildingBatch.ts, add(..., inner)) */
+  private innerParts = new WeakSet<THREE.Object3D>();
   /** Budynki razem po materiale (buildingBatch.ts); ?batch=0 — dawne łączenie po parze bryła+materiał */
   private matBatchOn = !/[?&]batch=0/.test(location.search); // 8.11.2026: mieszanie części naprawione (rebuild zamiast setGeometrySize)
   private matBatches?: MaterialBatches;
@@ -3178,11 +3181,12 @@ export class GameRenderer {
           const mats = m.material, subs = groupGeos(m.geometry);
           if (!subs.length || subs.some((sg) => { const mt = mats[sg.userData.materialIndex as number]; return !mt || mt.transparent; })) { m.layers.set(0); continue; }
           m.layers.set(BATCH_LAYER);
-          for (const sg of subs) mb.add(sg, mats[sg.userData.materialIndex as number]!, m.matrixWorld, m.castShadow, m.receiveShadow, hide);
+          const inn = this.innerParts.has(m);
+          for (const sg of subs) mb.add(sg, mats[sg.userData.materialIndex as number]!, m.matrixWorld, m.castShadow, m.receiveShadow, hide, inn);
           continue;
         }
         m.layers.set(BATCH_LAYER);
-        mb.add(m.geometry, m.material as THREE.Material, m.matrixWorld, m.castShadow, m.receiveShadow, hide);
+        mb.add(m.geometry, m.material as THREE.Material, m.matrixWorld, m.castShadow, m.receiveShadow, hide, this.innerParts.has(m));
       }
     }
     if (!keepOff) mb.end();
