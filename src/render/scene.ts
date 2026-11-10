@@ -4023,7 +4023,9 @@ export class GameRenderer {
       const cp = this.cam.camera.position, mp = mesh.position;
       const steep = cp.y - mp.y > Math.hypot(cp.x - mp.x, cp.z - mp.z) * 0.85;
       const open = id === this.selectedId || id === this.ghostOpen || (working.has(id) && steep);
-      animateBuilding(mesh, this.walk ? inHall : open || inHall, this.time, dt);
+      // spacerem dach zostaje zawsze, także w środku (Michał 10.11.2026: „niech nie usuwa dachu jak z trzeciej osoby”);
+      // w salach zamku od spodu jest sufit ('ceiling'), a połacie i ściany oglądane od środka i tak są niewidoczne
+      animateBuilding(mesh, this.walk ? false : open || inHall, this.time, dt);
       if (this.walk && busy && !inHall) {
         const inn = named(mesh, 'interior'); if (inn) inn.visible = true;
         const fl = named(mesh, 'flame'); if (fl) fl.visible = true;
