@@ -17,7 +17,7 @@ sys.path.insert(0, os.path.dirname(__file__))
 from building import Building  # noqa: E402
 from timber import Timber  # noqa: E402
 from logs import log  # noqa: E402
-from stonehall import TOP, WALL, arch_door, flat_roof, parapet, plinth, quoins, stairs, walls  # noqa: E402
+from stonehall import TOP, WALL, arch_door, arch_hole, flat_roof, parapet, plinth, quoins, stairs, walls  # noqa: E402
 
 b = Building()
 t = Timber(b, T=WALL)
@@ -39,7 +39,7 @@ FY = P + 0.028                        # wierzch posadzki
 SL = 0.06                             # szerokość strzelnicy
 SY0, SY1 = FY + 0.42, FY + 0.72
 walls(t, X0, X1, Z0, Z1, P, TOP, {
-    'front': [(DX - DW / 2, DX + DW / 2, P, FY + DH), (0.0 - SL / 2, 0.0 + SL / 2, SY0, SY1)],
+    'front': [arch_hole(DX, DW, DH, FY), (0.0 - SL / 2, 0.0 + SL / 2, SY0, SY1)],
     'back': [(-0.1 - SL / 2, -0.1 + SL / 2, SY0, SY1), (0.55 - SL / 2, 0.55 + SL / 2, SY0, SY1)],
     'right': [(-0.35 - SL / 2, -0.35 + SL / 2, SY0, SY1), (0.25 - SL / 2, 0.25 + SL / 2, SY0, SY1)],
 })
@@ -66,12 +66,12 @@ def slit(x, z, nx, nz):
 slit(0.0, Z1 - T / 2, 0, 1)
 slit(-0.1, Z0 + T / 2, 0, -1); slit(0.55, Z0 + T / 2, 0, -1)
 slit(X1 - T / 2, -0.35, 1, 0); slit(X1 - T / 2, 0.25, 1, 0)
-quoins(b, X0, X1, Z0, Z1, P + 0.02, TOP - 0.1)
-t.block(X0, DX - DW / 2, Z1 - T, Z1); t.block(DX + DW / 2, X1, Z1 - T, Z1)
+# bez narożnych ciosów: gładkie bloki wyglądały jak beton (Michał 10.11.2026) — narożniki z tego samego łupanego kamienia
+t.block(X0, DX - DW / 2, Z1 - T, Z1); t.block(DX + DW / 2, X1, Z1 - T, Z1)  # ościeża łuku leżą w tych blokach
 t.block(X0, X1, Z0, Z0 + T); t.block(X0, X0 + T, Z0, Z1); t.block(X1 - T, X1, Z0, Z1)
 
 # ---------------- wejście: łuk z klińców, wrota uchylone do środka, schodek z płyty ----------------
-arch_door(b, t, DX, Z1 - T / 2, DW, DH, FY, swing=0.9)
+arch_door(b, t, DX, Z1 - T / 2, DW, DH, FY)
 b.box('base', 'castleDark', DW + 0.16, P + 0.02, 0.16, DX, 0.0, Z1 + 0.08, bottom=False)     # stopień przed progiem
 # pochodnie po obu stronach łuku: żelazny uchwyt z kółkiem, płomień rysuje gra (znacznik 'lamps')
 LAMPS = []

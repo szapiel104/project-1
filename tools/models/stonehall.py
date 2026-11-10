@@ -97,35 +97,59 @@ def flat_roof(b, x0, x1, z0, z1, y, beams_along_x=False, nbeams=4):
             b.box('shell', 'bark', 0.08, 0.08, iz1 - iz0, x, y - 0.155, (iz0 + iz1) / 2)
 
 
-def arch_door(b, t, cx, z, w, h, y0, door=True, swing=0.0):
-    """Łukowe wejście w ścianie przedniej (lico na z): kamienne ościeże z ciosów, łuk z klińców, próg, dwa skrzydła
-    okute żelazem (uchylone do środka), u nasady łuku zwornik"""
+RING = 0.065        # szerokość łuku i ościeża z kamienia
+
+
+def arch_hole(cx, w, h, y0):
+    """Otwór w murze pod łukowe wejście (prostokąt obejmujący ościeża i łuk; resztę zakrywają naroża — arch_door)"""
+    ro = w / 2 + RING
+    spring = y0 + h - w / 2
+    return (cx - ro, cx + ro, 0.0, spring + ro)
+
+
+def arch_door(b, t, cx, z, w, h, y0, door=True, swing=1.45):
+    """Łukowe wejście w ścianie przedniej (lico na z), otwór z arch_hole: ościeża i ciągły łuk z łupanego kamienia
+    (jedna zamknięta bryła — wcześniej osobne kliny z przerwami i gładkie ciosy jak beton, Michał 10.11.2026),
+    naroża nad łukiem z kamienia muru, wrota z dwóch skrzydeł otwarte do środka, próg"""
     T = t.T
-    r = w / 2 + 0.035
-    spring = y0 + h - w / 2       # nasada łuku
+    ri, ro = w / 2, w / 2 + RING
+    spring = y0 + h - w / 2
+    zf, zb = z + T / 2 + 0.018, z - T / 2 - 0.018      # łuk i ościeża wystają 1,8 cm z obu lic
+    # ościeża: od progu do nasady łuku, lekko szersze niż otwór (wchodzą w mur)
     for sx in (-1, 1):
-        for k in range(int((spring - y0) / 0.12)):
-            big = k % 2 == 0
-            b.box('base', 'cut', 0.07 if big else 0.05, 0.11, T + 0.05, cx + sx * (w / 2 + (0.035 if big else 0.025)), y0 + k * 0.12, z)
-    n = 9
+        b.box('base', 'castleDark', RING + 0.008, spring - 0.0, zf - zb, cx + sx * (ri + (RING + 0.008) / 2), 0.0, (zf + zb) / 2)
+    # łuk: pierścień z 16 odcinków, każdy zamknięty (przód, tył, podniebienie, grzbiet)
+    n = 16
+    arc = [(math.cos(math.pi * k / n), math.sin(math.pi * k / n)) for k in range(n + 1)]
     for k in range(n):
-        a = math.pi * (k + 0.5) / n
-        b.box('base', 'cut', 0.075, 0.055, T + 0.055, cx - math.cos(a) * r, spring + math.sin(a) * r - 0.03, z, roll=a - math.pi / 2)
-    b.box('base', 'cutDark', 0.085, 0.075, T + 0.07, cx, spring + r - 0.04, z)        # zwornik
-    # ciemna wnęka w łuku nad wrotami (wrota prostokątne do nasady, nad nimi półkole mroku)
+        (c0, s0), (c1, s1) = arc[k], arc[k + 1]
+        i0, i1 = (cx + c0 * ri, spring + s0 * ri), (cx + c1 * ri, spring + s1 * ri)
+        o0, o1 = (cx + c0 * ro, spring + s0 * ro), (cx + c1 * ro, spring + s1 * ro)
+        mid = (cx + (c0 + c1) / 2 * (ri + ro) / 2, spring + (s0 + s1) / 2 * (ri + ro) / 2)
+        b.poly('base', 'castleDark', [(i0[0], i0[1], zf), (o0[0], o0[1], zf), (o1[0], o1[1], zf), (i1[0], i1[1], zf)], away=(mid[0], mid[1], zf - 1))
+        b.poly('base', 'castleDark', [(i0[0], i0[1], zb), (o0[0], o0[1], zb), (o1[0], o1[1], zb), (i1[0], i1[1], zb)], away=(mid[0], mid[1], zb + 1))
+        b.poly('base', 'castleDark', [(i0[0], i0[1], zf), (i1[0], i1[1], zf), (i1[0], i1[1], zb), (i0[0], i0[1], zb)], away=(mid[0], mid[1], (zf + zb) / 2))
+        b.poly('base', 'castleDark', [(o0[0], o0[1], zf), (o1[0], o1[1], zf), (o1[0], o1[1], zb), (o0[0], o0[1], zb)], away=(cx, spring, (zf + zb) / 2))
+    # naroża nad łukiem (między grzbietem łuku a prostokątem otworu): kamień muru, od przodu i od tyłu w licu muru
+    for sx in (-1, 1):
+        corner = (cx + sx * ro, spring + ro)
+        pts = [(cx + sx * c * ro, spring + sn * ro) for c, sn in arc[: n // 2 + 1]]
+        for a, c in zip(pts, pts[1:]):
+            for zz, aw in ((z + T / 2, -1), (z - T / 2, 1)):
+                b.poly('base', 'castle', [(corner[0], corner[1], zz), (a[0], a[1], zz), (c[0], c[1], zz)], away=((corner[0] + a[0] + c[0]) / 3, (corner[1] + a[1] + c[1]) / 3, zz + aw))
+    # wrota: dwa skrzydła z desek okute żelazem, otwarte do środka niemal pod ścianę
     if door:
-        hw = w / 2 - 0.008
+        hw = w / 2 - 0.006
+        hh = spring - y0 + ri * 0.55
         for sx in (-1, 1):
-            leaf = b.box  # noqa
             a = swing * sx
-            px = cx + sx * hw
-            # skrzydło obrócone wokół zawiasu (px, z - T/2)
-            lx = px - sx * math.cos(a) * hw / 2
-            lz = z - T / 2 - 0.02 - math.sin(abs(a)) * hw / 2
-            b.box('base', 'woodDark', hw, spring - y0 - 0.01, 0.035, lx, y0 + 0.005, lz, rot=a)
-            for yy in (y0 + 0.08, y0 + (spring - y0) * 0.55):
-                b.box('base', 'iron', hw - 0.01, 0.03, 0.012, lx - math.sin(a) * 0.02, yy, lz + math.cos(a) * 0.02, rot=a)
-    b.box('base', 'castleDark', w + 0.12, 0.03, 0.18, cx, 0.0, z + T / 2 + 0.07)      # próg
+            px, pz = cx + sx * hw, z - T / 2 - 0.01             # zawias przy wewnętrznym licu
+            lx = px - sx * math.cos(swing) * hw / 2
+            lz = pz - math.sin(swing) * hw / 2
+            b.box('base', 'woodDark', hw, hh, 0.035, lx, y0 + 0.005, lz, rot=a)
+            for yy in (y0 + 0.08, y0 + hh * 0.6):
+                b.box('base', 'iron', hw - 0.01, 0.03, 0.045, lx, yy, lz, rot=a)
+    b.box('base', 'castleDark', w + 0.16, 0.03, 0.2, cx, 0.0, z + T / 2 + 0.08)      # próg
 
 
 def stairs(b, t, x, w, z_from, z_to, y_top, side=1, steps=None):
