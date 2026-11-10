@@ -15,6 +15,13 @@
   h2 { font-size: 13px; margin: 16px 0 6px; color: var(--dim); text-transform: uppercase; letter-spacing: .08em; }
   .list { display: flex; flex-wrap: wrap; gap: 4px; }
   .list button, .bar button { font: inherit; font-size: 13px; color: var(--text); background: #2e2b24; border: 1px solid var(--line); padding: 5px 8px; cursor: pointer; min-height: 30px; }
+  .list-search { width: 100%; font: inherit; font-size: 13px; color: var(--text); background: #1d1b17; border: 1px solid var(--line); padding: 6px 8px; min-height: 32px; margin: 0 0 4px; }
+  .list-search:focus-visible { outline: 2px solid var(--gold); outline-offset: 1px; }
+  .list.tiles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; }
+  .list.tiles button { display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 4px 3px 5px; font-size: 11.5px; line-height: 1.2; text-align: center; }
+  .list.tiles button img { width: 100%; max-width: 72px; aspect-ratio: 1; height: auto; background: #1d1b17; display: block; }
+  .list.tiles button span { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; min-height: 2.4em; }
+  .list.tiles [hidden], #groups [hidden] { display: none !important; }
   .list button:hover, .bar button:hover { border-color: var(--gold); }
   .list button[aria-pressed="true"], .bar button[aria-pressed="true"] { background: #4a3e22; border-color: var(--gold); color: #fff3d0; }
   button:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }

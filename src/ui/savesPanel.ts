@@ -42,6 +42,7 @@ export function savesPanel(mode: 'save' | 'load', go: SavesActions): HTMLElement
   const info = el('p', 'net-msg sv-info'); info.setAttribute('role', 'status');
   const say = (t: string, bad = false): void => { info.textContent = t; info.classList.toggle('bad', bad); };
 
+  let nameField: HTMLInputElement | null = null;
   // --- pasek: nowy zapis, filtr, import, stan chmury ---
   const top = el('div', 'sv-top');
   if (mode === 'save') {
@@ -49,6 +50,7 @@ export function savesPanel(mode: 'save' | 'load', go: SavesActions): HTMLElement
     const id = `sv-name-${Math.random().toString(36).slice(2, 6)}`;
     const lab = el('label', 'sr-only', tx('Nazwa zapisu', 'Save name')); lab.htmlFor = id;
     const name = el('input'); name.id = id; name.maxLength = 40; name.autocomplete = 'off';
+    nameField = name;
     name.placeholder = tx('Nazwa zapisu, np. „Przed oblężeniem”', 'Save name, e.g. “Before the siege”');
     name.addEventListener('keydown', (e) => e.stopPropagation());
     const ok = el('button', 'menu-btn btn-ok sv-btn', tx('Zapisz nową grę', 'Save as new')); ok.type = 'submit';
@@ -207,7 +209,9 @@ export function savesPanel(mode: 'save' | 'load', go: SavesActions): HTMLElement
       void confirmDialog({ title: tx(`Nadpisać „${m.name}”?`, `Overwrite “${m.name}”?`), image: m.thumb || undefined, text: tx('Ten zapis zostanie zastąpiony obecną grą. Tego nie da się cofnąć.', 'This save will be replaced with the current game. This cannot be undone.'), ok: tx('Nadpisz', 'Overwrite'), tone: 'danger', icon: 'save', caption: `${tx('zapisano', 'saved')} ${when(m.created)}` }).then((yes) => {
         if (!yes) return;
         say(tx('Zapisuję…', 'Saving…'));
-        void go.save(m.name, m.id).then((r) => { if (typeof r === 'string') say(r, true); else { say(tx(`Nadpisano „${r.name}”.`, `Overwrote “${r.name}”.`)); go.changed?.(); void refresh(); } });
+        // autozapis nadpisany ręcznie staje się zwykłym zapisem: nazwa z pola u góry albo „Zapis — dzień N”
+        const nm = m.kind === 'manual' ? m.name : (nameField?.value.trim() || m.name.replace(/^Autozapis/, tx('Zapis', 'Save')).replace(/^Autosave/, 'Save'));
+        void go.save(nm, m.id).then((r) => { if (typeof r === 'string') say(r, true); else { say(tx(`Nadpisano „${r.name}”.`, `Overwrote “${r.name}”.`)); go.changed?.(); void refresh(); } });
       });
     };
     const rename = (): void => {
@@ -225,7 +229,8 @@ export function savesPanel(mode: 'save' | 'load', go: SavesActions): HTMLElement
     const items: [string, () => void, boolean?][] = [];
     // w oknie „Zapisz grę” na zapisie ręcznym główny przycisk to „Nadpisz” (Michał 9.11.2026: „w trakcie gry nie można
     // nadpisywać”) — wcześniej nadpisanie siedziało schowane w menu „⋯”; wczytanie przechodzi do tego menu
-    const saveHere = mode === 'save' && m.kind === 'manual' && go.canSave();
+    // także autozapisy (Michał 10.11.2026: „nie mogę nadpisać save'a” — miał same autozapisy)
+    const saveHere = mode === 'save' && go.canSave();
     if (saveHere) items.push([tx('Wczytaj ten zapis', 'Load this save'), doLoad]);
     items.push([tx('Zmień nazwę', 'Rename'), rename]);
     items.push([tx('Pobierz plik .p1save', 'Download .p1save file'), () => void exportSave(m.id).then((e) => { if (e) say(e, true); })]);

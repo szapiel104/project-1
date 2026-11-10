@@ -588,6 +588,15 @@ export function createModelEditor(ctx: Ctx): { onModel: () => void; guard: (go: 
     return () => { parent.add(mesh); if (k >= 0) edits.splice(Math.min(k, edits.length), 0, fix); else edits.push(fix); mesh.userData.unsrc?.(); };
   }
   const offset = (): THREE.Matrix4 => new THREE.Matrix4().makeTranslation(0.06, 0, 0.06);
+  /** Ctrl+C / Ctrl+V (Michał 10.11.2026): schowek pamięta części, wklejenie robi ich kopię obok (jak Ctrl+D) */
+  let clip: [THREE.Mesh, Island][] = [];
+  function paste(): void {
+    const alive = clip.filter(([m]) => m.parent);
+    if (!alive.length) { say(tx('Schowek jest pusty — zaznacz część i naciśnij Ctrl+C', 'Clipboard is empty — select a part and press Ctrl+C')); return; }
+    deselect();
+    for (const [m, i] of alive) addPiece(m, m.userData.temp ? wholeOf(m) : i);
+    duplicateSel();
+  }
   function duplicateSel(): void {
     const made: THREE.Mesh[] = [], step: (() => void)[] = [];
     for (const p of sel) {
@@ -934,7 +943,7 @@ export function createModelEditor(ctx: Ctx): { onModel: () => void; guard: (go: 
   window.addEventListener('keydown', (e) => {
     if (!on || (e.target as HTMLElement)?.tagName === 'INPUT') return;
     const k = e.key.toLowerCase();
-    if (e.ctrlKey || e.metaKey) { if (k === 'z') { e.preventDefault(); undoLast(); } else if (k === 'd') { e.preventDefault(); duplicateSel(); } else if (k === 's') { e.preventDefault(); void save(); } return; }
+    if (e.ctrlKey || e.metaKey) { if (k === 'z') { e.preventDefault(); undoLast(); } else if (k === 'd') { e.preventDefault(); duplicateSel(); } else if (k === 's') { e.preventDefault(); void save(); } else if (k === 'c') { if (sel.length) { e.preventDefault(); clip = sel.map((p) => [p.mesh, p.isl]); say(tx(`Skopiowano do schowka: ${clip.length}`, `Copied: ${clip.length}`)); } } else if (k === 'v') { e.preventDefault(); paste(); } return; }
     // 1/2/3 zamiast W/E/R: WASD lata kamerą (viewer.ts)
     if (k === '1') setMode('translate');
     else if (k === '2') setMode('rotate');
@@ -945,13 +954,27 @@ export function createModelEditor(ctx: Ctx): { onModel: () => void; guard: (go: 
   });
 
   // ---------- zapis ----------
-  const all = (): Fix[] => [...repo(ctx.id()), ...stored(ctx.id()).slice(repo(ctx.id()).length), ...edits];
+  /**
+   * Pod jaką nazwą zapisywać poprawki: nazwa PLIKU modelu, nie budynku (kopalnia to budynek 'oremine' z pliku 'mine' —
+   * zapis pod 'oremine' nie trafiał do modelu i po odświeżeniu wracał stary wygląd, Michał 10.11.2026)
+   */
+  function fixId(): string {
+    let name: string | undefined;
+    ctx.current()?.traverse((o) => { if (!name && typeof o.userData?.modelName === 'string') name = o.userData.modelName as string; });
+    const id = ctx.id();
+    if (name && name !== id) {
+      // przeniesienie poprawek zapisanych wcześniej pod nazwą budynku
+      try { const old = localStorage.getItem(LS(id)); if (old && !localStorage.getItem(LS(name))) { localStorage.setItem(LS(name), old); localStorage.removeItem(LS(id)); } } catch { /* bez pamięci */ }
+    }
+    return name ?? id;
+  }
+  const all = (): Fix[] => { const id = fixId(); return [...repo(id), ...stored(id).slice(repo(id).length), ...edits]; };
   function stored(id: string): Fix[] {
     try { const v = JSON.parse(localStorage.getItem(LS(id)) ?? 'null') as Fix[] | null; return Array.isArray(v) ? v : repo(id); } catch { return repo(id); }
   }
   async function save(): Promise<void> {
     if (!edits.length) { say(tx('Nie ma zmian do zapisania', 'Nothing to save')); return; }
-    const id = ctx.id(), list = all();
+    const id = fixId(), list = all();
     try { localStorage.setItem(LS(id), JSON.stringify(list)); } catch { /* prywatne okno */ }
     savedNow.add(id);
     edits = [];
@@ -967,7 +990,7 @@ export function createModelEditor(ctx: Ctx): { onModel: () => void; guard: (go: 
     } catch (e) { say(tx(`Zapisano w przeglądarce; baza niedostępna (${String(e)})`, `Saved in the browser; database unavailable (${String(e)})`)); }
   }
   function download(): void {
-    const id = ctx.id();
+    const id = fixId();
     const blob = new Blob([JSON.stringify({ [id]: all() }, null, 1)], { type: 'application/json' });
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob); a.download = `poprawki-${id}.json`; a.click();
@@ -976,7 +999,7 @@ export function createModelEditor(ctx: Ctx): { onModel: () => void; guard: (go: 
 
   /** Po pokazaniu modelu: zapisane w przeglądarce (albo w bazie) poprawki ponad te z repozytorium — od razu widać je w podglądzie */
   async function applyPending(): Promise<void> {
-    const id = ctx.id(), base = repo(id).length;
+    const id = fixId(), base = repo(id).length;
     let list = stored(id);
     try {
       const { supa } = await import('../net/supa');
@@ -1066,7 +1089,9 @@ export function createModelEditor(ctx: Ctx): { onModel: () => void; guard: (go: 
       edit: [
         { label: tx('Cofnij', 'Undo'), key: 'Ctrl+Z', act: undoLast, enabled: () => on && undo.length > 0 },
         { sep: true },
-        { label: tx('Kopiuj', 'Duplicate'), key: 'Ctrl+D', act: duplicateSel, enabled: hasSel },
+        { label: tx('Kopiuj do schowka', 'Copy'), key: 'Ctrl+C', act: () => { clip = sel.map((p) => [p.mesh, p.isl]); }, enabled: hasSel },
+        { label: tx('Wklej', 'Paste'), key: 'Ctrl+V', act: paste, enabled: () => on && clip.length > 0 },
+        { label: tx('Powiel', 'Duplicate'), key: 'Ctrl+D', act: duplicateSel, enabled: hasSel },
         { label: tx('Usuń', 'Delete'), key: 'Del', act: removeSel, enabled: hasSel },
         { label: tx('Odznacz', 'Deselect'), key: 'Esc', act: deselect, enabled: hasSel },
         { sep: true },

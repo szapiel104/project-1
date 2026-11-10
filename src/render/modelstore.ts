@@ -27,12 +27,16 @@ import FIXES from '../data/modelFixes.json';
 let live: Record<string, Fix[]> = {};
 /** Poprawki „na żywo” dla podglądu modeli (baza + ta przeglądarka) — ustawiane przed loadModels() w viewerboot.ts */
 export function setLiveFixes(map: Record<string, Fix[]>): void { live = map; }
+/** poprawki zapisane przez pierwszą wersję edytora pod nazwą budynku zamiast pliku modelu */
+const OLD_KEY: Record<string, string> = { mine: 'oremine' };
 function fixesFor(name: string): Fix[] | undefined {
-  const repo0 = (FIXES as Record<string, Fix[]>)[name], l = live[name];
+  const old = OLD_KEY[name];
+  const repo0 = (FIXES as Record<string, Fix[]>)[name] ?? (old ? (FIXES as Record<string, Fix[]>)[old] : undefined);
+  const l = live[name] ?? (old ? live[old] : undefined);
   const repo = l && l.length >= (repo0?.length ?? 0) ? l : repo0;
   try {
     if (typeof location === 'undefined' || !['localhost', '127.0.0.1', '[::1]'].includes(location.hostname)) return repo;
-    const local = JSON.parse(localStorage.getItem(`p1-model-fixes:${name}`) ?? 'null') as Fix[] | null;
+    const local = JSON.parse(localStorage.getItem(`p1-model-fixes:${name}`) ?? (old ? localStorage.getItem(`p1-model-fixes:${old}`) : null) ?? 'null') as Fix[] | null;
     return Array.isArray(local) && local.length >= (repo?.length ?? 0) ? local : repo;
   } catch { return repo; }
 }
@@ -75,6 +79,7 @@ export function loadModels(onProgress?: (done: number, total: number) => void): 
       const data = await unpackModel(await res.arrayBuffer());
       // poprawki z edytora w podglądzie modeli (modelfix.ts)
       applyModelFixes(name, data as Record<string, unknown>, fixesFor(name));
+      (data as Record<string, unknown>).__name = name;   // nazwa pliku dla edytora poprawek (buildings.ts → userData.modelName)
       store.set(name, data);
     }
     done++;

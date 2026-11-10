@@ -15,7 +15,8 @@ import { BUILDINGS } from './data/buildings';
 import { RESOURCES } from './data/resources';
 import { carryArms, loadGeometry, loadMaterials, ON_SHOULDER, plankBundle } from './render/loads';
 import { lang, t, tx } from './i18n';
-import { buildingModel, isWetMat, isWindowMat, setNight, towerDoorKit } from './render/buildings';
+import { buildingModel, isWetMat, isWindowMat, mineLevelModel, setNight, towerDoorKit } from './render/buildings';
+import { createThumbs } from './ui/viewerThumbs';
 import { attachLod, lodReady, prepareLod, showLod, type BuildingLod } from './render/lod';
 import { partsGeometry, toolGeometry, toolMaterials } from './render/gear';
 import { proceduralModels } from './render/models';
@@ -42,6 +43,7 @@ import { createModelEditor } from './ui/modelEditor';
 const RAM_MODEL = model('ram');
 
 const RED = 0xa32a22;
+declare const __BUILD__: string;
 type Make = () => { obj: THREE.Object3D; size?: THREE.Vector3 };
 const vc = (): THREE.MeshStandardMaterial => new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.9 });
 const mesh = (g: THREE.BufferGeometry, m: THREE.Material = vc()): THREE.Mesh => new THREE.Mesh(g, m);
@@ -178,7 +180,7 @@ const GROUPS: [string, [string, string, Make][]][] = [
     const m = buildingModel(d.id, RED);
     const base = m.getObjectByName('base'); if (base) base.visible = false;
     return { obj: m };
-  }] as [string, string, Make])],
+  }] as [string, string, Make]).concat([['minelevel', tx('Kopalnia — wnętrze (sztolnia)', 'Mine — inside (the shaft)'), () => ({ obj: mineLevelModel() })]])],
   [tx('Ludzie', 'People'), [
     ['peasant', tx('Chłop', 'Peasant'), figure('peasant', 3)],
     ['woman', tx('Gospodyni (chusta)', 'Goodwife (headscarf)'), figure('woman', idWithHead((h) => h % 2 === 0))],
@@ -334,6 +336,7 @@ scene.environment = env;
 scene.environmentIntensity = 0.45;
 const camera = new THREE.PerspectiveCamera(35, 1, 0.01, 200);
 const controls = new OrbitControls(camera, canvas);
+controls.zoomToCursor = true;   // kółko przybliża tam, gdzie wskazuje mysz — łatwiej podjechać do detalu
 controls.enableDamping = true;
 controls.dampingFactor = 0.08;
 controls.autoRotateSpeed = 0.8;
@@ -440,10 +443,11 @@ function show(id: string): void {
   }
   const span = Math.max(size.x, size.y, size.z, 0.2);
   const d = span * 2.4;
-  camera.near = span * 0.01; camera.far = span * 60; camera.updateProjectionMatrix();
+  camera.near = span * 0.003; camera.far = span * 60; camera.updateProjectionMatrix();
   controls.target.set(0, size.y * 0.45, 0);
   camera.position.set(d * 0.7, size.y * 0.6 + d * 0.35, d * 0.75);
-  controls.minDistance = span * 0.3; controls.maxDistance = span * 8;
+  // blisko do detali (Michał 10.11.2026: „w trybie budowy nie mogę mocno przybliżyć”)
+  controls.minDistance = span * 0.015; controls.maxDistance = span * 8;
   sun.position.set(span * 3, span * 5, span * 2.5);
   const s = sun.shadow.camera as THREE.OrthographicCamera;
   s.left = s.bottom = -span * 1.4; s.right = s.top = span * 1.4; s.near = 0.01; s.far = span * 15; s.updateProjectionMatrix();
@@ -471,17 +475,48 @@ fold.onclick = () => setFold(!document.body.classList.contains('folded'));
 document.body.append(fold);
 try { setFold(localStorage.getItem('p1-viewer-fold') === '1'); } catch { setFold(false); }
 const groupsEl = document.getElementById('groups')!;
+// lista modeli jako kafelki z miniaturą (Michał 10.11.2026) i mała wyszukiwarka jak przy teksturach
+const thumbs = createThumbs(renderer, scene, () => {
+  // na czas miniatury: bez bieżącego modelu, podstawki, trawy i cienia; dzień
+  const hid = [current, plinth, grass, shadowCatch].filter((o): o is THREE.Object3D => !!o && o.visible);
+  for (const o of hid) o.visible = false;
+  const bg = scene.background, night = state.night;
+  scene.background = new THREE.Color(0x2e2b24);
+  if (night) { state.night = false; applyLook(); for (const o of hid) o.visible = false; }
+  return () => { scene.background = bg; for (const o of hid) o.visible = true; if (night) { state.night = true; applyLook(); } };
+}, (id) => find(id)?.[1]().obj ?? null, __BUILD__);
+const search = document.createElement('input');
+search.type = 'search'; search.className = 'list-search';
+search.placeholder = tx('szukaj modelu…', 'search models…');
+search.setAttribute('aria-label', tx('Szukaj modelu', 'Search models'));
+search.addEventListener('keydown', (e) => e.stopPropagation());   // bez lotu WASD przy pisaniu
+groupsEl.append(search);
+const sections: { h: HTMLElement; box: HTMLElement; tiles: HTMLButtonElement[] }[] = [];
 for (const [title, list] of GROUPS) {
   const h = document.createElement('h2'); h.textContent = title; groupsEl.append(h);
-  const box = document.createElement('div'); box.className = 'list';
+  const box = document.createElement('div'); box.className = 'list tiles';
+  const tiles: HTMLButtonElement[] = [];
   for (const [id, label] of list) {
     const b = document.createElement('button');
-    b.type = 'button'; b.textContent = label; b.dataset.id = id; b.setAttribute('aria-pressed', 'false');
+    b.type = 'button'; b.dataset.id = id; b.title = label; b.setAttribute('aria-pressed', 'false');
+    const img = document.createElement('img'); img.alt = ''; img.width = img.height = 56;
+    const cap = document.createElement('span'); cap.textContent = label;
+    b.append(img, cap);
     b.onclick = () => editor.guard(() => show(id));
-    box.append(b);
+    box.append(b); tiles.push(b);
+    thumbs.watch(id, img);
   }
   groupsEl.append(box);
+  sections.push({ h, box, tiles });
 }
+search.addEventListener('input', () => {
+  const q = search.value.trim().toLowerCase();
+  for (const s of sections) {
+    let any = false;
+    for (const b of s.tiles) { const on = !q || b.title.toLowerCase().includes(q) || (b.dataset.id ?? '').toLowerCase().includes(q); b.hidden = !on; any ||= on; }
+    s.h.hidden = s.box.hidden = !any;
+  }
+});
 const barEl = document.getElementById('bar')!;
 const toggles: [string, () => boolean, () => void][] = [
   [tx('Podstawka', 'Plinth'), () => state.bg === 'podstawka', () => { state.bg = 'podstawka'; }],
@@ -573,6 +608,7 @@ renderer.setAnimationLoop(() => {
     }
   }
   controls.update();
+  thumbs.step();
   nightLights.update(current, state.night, camera, Math.max(size.x, size.z, 0.3));
   renderer.render(scene, camera);
 });

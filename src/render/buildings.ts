@@ -973,6 +973,8 @@ export const buildingMaterialInfo = (): { name: string; pattern: string | null; 
 export const buildingMaterialNames = (): string[] => Object.keys(M).filter((k) => !['trodden', 'smoke', 'ember', 'void', 'flameLight', 'flameCore', 'water'].includes(k)).sort();
 
 function blenderModel(g: THREE.Group, model: BlenderBuilding, flag: THREE.Material): void {
+  // nazwa pliku modelu (modelstore.ts) — edytor w podglądzie modeli zapisuje poprawki pod nią
+  g.userData.modelName = (model as unknown as { __name?: string }).__name;
   // każda siatka zna swoją grupę i numer w niej (edytor poprawek w podglądzie modeli, modelfix.ts)
   const meshes = (name: string): THREE.Mesh[] => ((model[name] as { mat: string; pos: string; ao: string }[] | undefined) ?? []).map((m, idx) => {
     const mesh = meshOf(name, m);

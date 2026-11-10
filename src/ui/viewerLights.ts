@@ -18,18 +18,24 @@ export function createNightLights(scene: THREE.Scene): { update: (root: THREE.Ob
   gr.addColorStop(0, 'rgba(255,220,150,1)'); gr.addColorStop(0.25, 'rgba(255,150,50,.75)'); gr.addColorStop(1, 'rgba(255,90,20,0)');
   c2.fillStyle = gr; c2.fillRect(0, 0, 64, 64);
   const glowMat = new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(cv), color: 0xffffff, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending });
-  for (let i = 0; i < POOL; i++) {
-    const l = new THREE.PointLight(0xff9a40, 0, 1.6, 2);
-    l.castShadow = false;
-    scene.add(l); lights.push(l);
-    const s = new THREE.Sprite(glowMat); s.visible = false; scene.add(s); glows.push(s);
-  }
+  // światła dokładamy dopiero przy pierwszej nocy: każde światło w scenie zmienia shadery wszystkich materiałów,
+  // a w dzień nie są potrzebne (z nimi od startu pierwszy obraz w dzień długo był czarny)
+  const ensure = (): void => {
+    if (lights.length) return;
+    for (let i = 0; i < POOL; i++) {
+      const l = new THREE.PointLight(0xff9a40, 0, 1.6, 2);
+      l.castShadow = false;
+      scene.add(l); lights.push(l);
+      const s = new THREE.Sprite(glowMat); s.visible = false; scene.add(s); glows.push(s);
+    }
+  };
   let spots: THREE.Object3D[] = [], lastScan = 0, lastRoot: THREE.Object3D | null = null;
   const w = new THREE.Vector3(), tmp: { o: THREE.Object3D; d: number; p: THREE.Vector3 }[] = [];
   return {
     update(root, night, camera, span) {
       const now = performance.now();
-      if (!night || !root) { for (let i = 0; i < POOL; i++) { lights[i]!.intensity = 0; glows[i]!.visible = false; } return; }
+      if (!night || !root) { for (let i = 0; i < lights.length; i++) { lights[i]!.intensity = 0; glows[i]!.visible = false; } return; }
+      ensure();
       // znaczniki zbieramy co pół sekundy (edytor dokłada i przesuwa pochodnie)
       if (root !== lastRoot || now - lastScan > 500) {
         spots = [];
