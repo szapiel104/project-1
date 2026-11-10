@@ -1144,6 +1144,9 @@ function* terrainSteps(map: GameMap, models: ModelFactory, waterLevel: number): 
       const isW = (xx: number, yy: number): boolean => xx >= 0 && yy >= 0 && xx < w && yy < h && map.tiles[yy * w + xx] === Terrain.Water;
       const nearW = isW(x + 1, y) || isW(x - 1, y) || isW(x, y + 1) || isW(x, y - 1);
       const sandy = sandTile[y * w + x]! > 0.3;
+      // pustynia (Michał 10.11.2026: „za dużo samotnych krzewów, patyków i kamieni; szczegółowo tylko przy oazach”):
+      // gd = odległość od zieleni oazy (0–5 pól); dalej niż 2 pola to goły piach — prawie bez roślin i kamyków
+      const gd = DESERT ? greenDist[y * w + x]! : 0, bare = gd > 2;
       if (!sandy && t === Terrain.Grass && nearW && (r >>> 18) % 4 === 0) put(bushes, x, y, 24, 0.9 + ((r >>> 20) & 7) / 12, 0.8);
       if (!sandy && t !== Terrain.Water && nearW && (r >>> 9) % 3 !== 0) { put(reeds, x, y, 21, 1, 1.0); if ((r >>> 12) & 1) put(reeds, x, y, 22, 0.8, 1.0); }
       if (t === Terrain.Water) {
@@ -1168,16 +1171,16 @@ function* terrainSteps(map: GameMap, models: ModelFactory, waterLevel: number): 
         const d = rockFoot(x, y);
         const clump = (nz(x / 7, y / 7) + 1) / 2; // 0..1: tu leży więcej, tam prawie nic
         const chance = (d === 1 ? 0.55 : d === 2 ? 0.28 : 0.1) * (0.35 + clump * 0.9);
-        if (((r >>> 5) & 1023) / 1023 < chance) {
+        if (((r >>> 5) & 1023) / 1023 < chance * (bare ? 0.3 : 1)) {
           const n = d === 1 ? 1 + ((r >>> 9) & 1) + (clump > 0.6 ? 1 : 0) : 1;
           const big = d === 1 ? 0.55 : d === 2 ? 0.38 : 0.24;
           for (let k = 0; k < n; k++) put(rocks, x, y, 50 + k, big + ((r >>> (12 + k * 3)) & 7) / (d === 1 ? 14 : 22), 0.95);
         }
-        if ((r >>> 17) % (d === 1 ? 2 : 4) === 0) put(pebbles, x, y, 55, 0.25 + ((r >>> 20) & 3) * 0.08, 0.95);
+        if ((r >>> 17) % ((d === 1 ? 2 : 4) * (bare ? 4 : 1)) === 0) put(pebbles, x, y, 55, 0.25 + ((r >>> 20) & 3) * 0.08, 0.95);
         // między kamieniami jałowiec i krzaki, trawa zostaje (to łąka pod górą, nie żwirowisko)
-        if ((r >>> 24) % 7 === 0) put(bushes, x, y, 56, 0.6 + ((r >>> 27) & 3) * 0.1, 0.95);
+        if (!bare && (r >>> 24) % 7 === 0) put(bushes, x, y, 56, 0.6 + ((r >>> 27) & 3) * 0.1, 0.95);
       }
-      else if (t === Terrain.Grass && !sandy && !nearW && !map.trails?.[y * w + x] && !besideForest(x, y) && (r >>> 7) % V.lone === 0 && farFromKeeps(x, y)) {
+      else if (t === Terrain.Grass && !sandy && !bare && !nearW && !map.trails?.[y * w + x] && !besideForest(x, y) && (r >>> 7) % V.lone === 0 && farFromKeeps(x, y)) {
         // samotne drzewo na łące: rozłożysty, stary dąb (czasem świerk), widoczny z daleka
         put(role(r, 1.25), x, y, 0, 1.35 + ((r >>> 20) & 7) / 25, 0.5);
         put(bushes, x, y, 4, 0.7, 0.95);
@@ -1197,18 +1200,19 @@ function* terrainSteps(map: GameMap, models: ModelFactory, waterLevel: number): 
         if (TEST && ((r >>> 7) & 3) === 0) put(tufts, x, y, 2, 1, 0.95);
         // kwiaty wyłączone na razie (19.10.2026, prośba Michała) — wrócą z gotowych modeli; włącza się je z powrotem tą flagą
         if (FLOWERS && (r >>> 13) % 15 === 0) { put(flowers, x, y, 7, 1, 0.9); put(flowers, x, y, 8, 0.9, 0.9); if ((r >>> 4) & 1) put(flowers, x, y, 9, 1.1, 0.9); }
-        if ((r >>> 16) % V.bush === 0) put(bushes, x, y, 4, 0.9 + ((r >>> 20) & 7) / 14, 0.6);
+        if (!bare && (r >>> 16) % V.bush === 0) put(bushes, x, y, 4, 0.9 + ((r >>> 20) & 7) / 14, 0.6);
         // większe głazy na łące liczy teraz symulacja (sim/systems/boulders.ts) — są fizyczne: blokują budowę, mają
         // kolizję w spacerze i można je rozbić; rysowane przed pętlą z tej samej listy
         // drobne kamyki wystające z darni, częściej tam, gdzie łąka rzadsza
-        if ((r >>> 22) % Math.max(3, Math.round((lush > 0.5 ? 19 : 11) * V.pebble)) === 0) put(pebbles, x, y, 12, 0.12 + ((r >>> 26) & 7) / 40, 0.95);
-        if ((r >>> 25) % 41 === 0) put(pebbles, x, y, 14, 0.1 + ((r >>> 3) & 7) / 50, 0.95);
+        if ((r >>> 22) % (Math.max(3, Math.round((lush > 0.5 ? 19 : 11) * V.pebble)) * (bare ? 8 : 1)) === 0) put(pebbles, x, y, 12, 0.12 + ((r >>> 26) & 7) / 40, 0.95);
+        if ((r >>> 25) % (bare ? 400 : 41) === 0) put(pebbles, x, y, 14, 0.1 + ((r >>> 3) & 7) / 50, 0.95);
       }
       if (DESERT && t === Terrain.Grass && !map.trails?.[y * w + x]) {
         // pustynia: suche trawy wszędzie po trochu, z rzadka krzew albo uschnięta palma, przy wodzie zielone palmy (oaza)
-        if ((r >>> 12) % 4 === 0) put(dGrass, x, y, 72, 0.7 + ((r >>> 22) & 7) / 12, 0.95);
+        // przy oazie gęsto (trawy, krzewy), pole dalej rzadziej, na gołym piachu tylko z rzadka kępa
+        if ((r >>> 12) % (gd <= 1 ? 4 : gd === 2 ? 8 : 70) === 0) put(dGrass, x, y, 72, 0.7 + ((r >>> 22) & 7) / 12, 0.95);
         if (farFromKeeps(x, y)) {
-          const k = (r >>> 3) % 131;
+          const k = (r >>> 3) % (gd <= 1 ? 131 : gd === 2 ? 300 : 2600);
           if (k === 0) put(dDead, x, y, 70, 0.8 + ((r >>> 20) & 7) / 14, 0.6);
           else if (k < 6) put(dBush, x, y, 71, 0.8 + ((r >>> 20) & 7) / 10, 0.9);
           if (nearW && (r >>> 26) % 3 === 0) put(dPalm, x, y, 73, 0.75 + ((r >>> 20) & 7) / 20, 0.7);

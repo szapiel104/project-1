@@ -29,12 +29,14 @@ export function boulderTiles(map: GameMap): Map<number, number> {
   m = new Map();
   const { width: w, height: h } = map;
   const water = (x: number, y: number): boolean => x >= 0 && y >= 0 && x < w && y < h && map.tiles[y * w + x] === Terrain.Water;
+  // pustynia: głazów trzy razy mniej (Michał 10.11.2026: „za dużo kamieni”)
+  const every = map.biome === 'desert' ? 420 : 140;
   for (let y = 1; y < h - 1; y++)
     for (let x = 1; x < w - 1; x++) {
       const t = y * w + x;
       if (map.tiles[t] !== Terrain.Grass || map.trails?.[t]) continue;
       const r = hash2(x * 7 + 77, y * 13 - 77, map.seed ^ 0x9b0d1);
-      if (r % 140 !== 0) continue;
+      if (r % every !== 0) continue;
       if (water(x + 1, y) || water(x - 1, y) || water(x, y + 1) || water(x, y - 1)) continue;
       if (map.starts.some((s) => Math.hypot(s.x - x, s.y - y) <= 16)) continue;   // nie przy zamkach na starcie
       m.set(t, 0.9 + ((r >>> 8) & 7) / 14);
