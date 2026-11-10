@@ -9,6 +9,17 @@ export type { ChangeEntry } from './changelogTypes';
  * — tak jak CHANGELOG.md dla nas. `tests/changelog.test.ts` pilnuje, że najnowszy wpis ma wersję z package.json.
  */
 const NEW: ChangeEntry[] = [
+  { v: '0.94.95', date: '2026-11-10', pl: [
+    'Zapis gry: w oknie „Zapisz grę” każdy zapis da się nadpisać — także autozapis (staje się wtedy zwykłym zapisem).',
+    'Ulepszenia budynków zrobione w edytorze twórcy trafiają do gry: przestawione i dodane sprzęty, beczki, kosze, jedzenie i pochodnie (świecą nocą).',
+    'Podgląd modeli (Ustawienia → Dla twórców): lista modeli z miniaturami i wyszukiwarką, wnętrze kopalni, światła nocą, mocniejsze przybliżenie, menu i pasek ikon jak w programach graficznych.',
+    'Nowe gotowe przedmioty i tekstury z Poly Haven (CC0): skrzynie, beczki, wiadra, stołki, stoły, ławy, regały, miski, dzbany, latarnie, narzędzia, kołowrotek, tarcza, pnie i kamienie; mury, bruki, dachy, deski i tynki.',
+  ], en: [
+    'Saving: in the “Save game” window every save can be overwritten — autosaves too (they then become a regular save).',
+    'Building improvements made in the creator’s editor now reach the game: moved and added furnishings, barrels, baskets, food and torches (lit at night).',
+    'Model viewer (Settings → For creators): model list with thumbnails and search, the mine interior, night lights, closer zoom, and a menu and icon bar like in graphics programs.',
+    'New ready-made objects and textures from Poly Haven (CC0): crates, barrels, buckets, stools, tables, benches, shelves, bowls, jugs, lanterns, tools, a spinning wheel, a shield, stumps and stones; walls, cobbles, roofs, planks and plaster.',
+  ] },
   { v: '0.94.94', date: '2026-11-10', pl: [
     'Logowanie: „Nie pamiętam hasła” — link na e-mail i ustawienie nowego hasła po powrocie do gry.',
   ], en: [

@@ -41,15 +41,24 @@ export interface Fix {
 export interface Island { tris: number[]; c: [number, number, number] }
 
 /** Wyspy trójkątów połączonych wspólnymi wierzchołkami (siatka bez indeksów: 3 wierzchołki na trójkąt) */
-export function islands(P: ArrayLike<number>): { of: Int32Array; list: Island[] } {
+/**
+ * Wyspy: trójkąty połączone wspólnymi wierzchołkami. `segs` — numery trójkątów, od których zaczynają się kawałki
+ * dopisane poprawkami (kopie, „widać z obu stron”, nowe bryły): wyspy nie łączą się ponad granicą kawałka, inaczej
+ * kopia w tym samym miejscu sklejała się z oryginałem w jedną wyspę o podwójnej liczbie trójkątów i dalsze poprawki
+ * (zapisane, gdy kopia była osobną siatką) nie trafiały — Michał 10.11.2026, strażnica, zamek, siedziba magów.
+ */
+export function islands(P: ArrayLike<number>, segs?: readonly number[]): { of: Int32Array; list: Island[] } {
   const nv = P.length / 3, nt = nv / 3;
+  const seg = new Int32Array(nt);
+  if (segs?.length) { const ss = [...segs].sort((a, b) => a - b); let k = 0; for (let t = 0; t < nt; t++) { while (k < ss.length && ss[k]! <= t) k++; seg[t] = k; } }
   const parent = new Int32Array(nt);
   for (let t = 0; t < nt; t++) parent[t] = t;
   const find = (a: number): number => { while (parent[a] !== a) { parent[a] = parent[parent[a]!]!; a = parent[a]!; } return a; };
   const seen = new Map<string, number>();
   for (let v = 0; v < nv; v++) {
-    const k = `${Math.round(P[v * 3]! * 2000)},${Math.round(P[v * 3 + 1]! * 2000)},${Math.round(P[v * 3 + 2]! * 2000)}`;
-    const t = (v / 3) | 0, o = seen.get(k);
+    const t = (v / 3) | 0;
+    const k = `${seg[t]}|${Math.round(P[v * 3]! * 2000)},${Math.round(P[v * 3 + 1]! * 2000)},${Math.round(P[v * 3 + 2]! * 2000)}`;
+    const o = seen.get(k);
     if (o === undefined) seen.set(k, t);
     else { const a = find(o), b = find(t); if (a !== b) parent[a] = b; }
   }
@@ -133,8 +142,8 @@ const apply = (m: number[], P: number[] | Float32Array, from = 0, to = P.length)
 export function applyModelFixes(name: string, data: Record<string, unknown>, fixes: Fix[] | undefined): void {
   if (!fixes?.length) return;
   const q = data.q as number;
-  type Entry = { mat: string; pos: string | Uint8Array; ao: string | Uint8Array };
-  type Dec = { P: number[]; A: number[]; list: Island[] | null; dirty: boolean };
+  type Entry = { mat: string; pos: string | Uint8Array; ao: string | Uint8Array; segs?: number[] };
+  type Dec = { P: number[]; A: number[]; list: Island[] | null; dirty: boolean; segs: number[] };
   const dec = new Map<Entry, Dec>();
   const get = (e: Entry): Dec => {
     let d = dec.get(e);
@@ -143,12 +152,18 @@ export function applyModelFixes(name: string, data: Record<string, unknown>, fix
       const P = Array.from(p16, (v) => v / q);
       const a = e.ao ? bytes(e.ao) : new Uint8Array(0);
       const A = Array.from({ length: P.length / 3 }, (_, k) => a[k] ?? 230);
-      d = { P, A, list: null, dirty: false };
+      d = { P, A, list: null, dirty: false, segs: [...(e.segs ?? [])] };
       dec.set(e, d);
     }
     return d;
   };
-  const islandsOf = (d: Dec): Island[] => (d.list ??= islands(d.P).list);
+  const islandsOf = (d: Dec): Island[] => (d.list ??= islands(d.P, d.segs).list);
+  /** dopisanie trójkątów jako nowy kawałek (osobne wyspy, patrz islands) */
+  const append = (d: Dec, P: number[], A: number[]): void => {
+    d.segs.push(d.P.length / 9);
+    d.P.push(...P); d.A.push(...A);
+    d.list = null; d.dirty = true;
+  };
   const target = (g: string, mat: string): Entry => {
     const arr = ((data[g] as Entry[] | undefined) ?? (data[g] = [] as Entry[])) as Entry[];
     let e = arr.find((x) => x.mat === mat);
@@ -162,6 +177,7 @@ export function applyModelFixes(name: string, data: Record<string, unknown>, fix
     return { P, A };
   };
   let miss = 0;
+  const ghosts: { g: string; i: number; n: number; c: [number, number, number]; P: number[]; A: number[] }[] = [];
   for (const f of fixes) {
     const kind = f.k ?? 'move';
     if (kind === 'prop') {
@@ -189,16 +205,32 @@ export function applyModelFixes(name: string, data: Record<string, unknown>, fix
       const d = get(target(f.g, f.to ?? 'wood'));
       const P = unitShape(f.shape ?? 'box');
       applyFix(f.m, P);
-      d.P.push(...P); for (let k = 0; k < P.length / 3; k++) d.A.push(235);
-      d.list = null; d.dirty = true;
+      append(d, P, new Array<number>(P.length / 3).fill(235));
       continue;
     }
     const entry = (data[f.g] as Entry[] | undefined)?.[f.i ?? -1];
     if (!entry) { miss++; continue; }
     const d = get(entry);
-    const isl = findIsland(islandsOf(d), f);
+    // kopia kopii: edytor zapisuje ją ze środkiem części źródłowej sprzed jej późniejszego przesunięcia — bierzemy
+    // wtedy zapamiętany kształt części z tamtej chwili (ślad po przesunięciu)
+    const ghost = (): { P: number[]; A: number[] } | null => {
+      const gh = ghosts.find((x) => x.g === f.g && x.i === f.i && x.n === f.n && f.c && Math.hypot(x.c[0] - f.c[0], x.c[1] - f.c[1], x.c[2] - f.c[2]) <= 0.003);
+      return gh ? { P: gh.P.slice(), A: gh.A.slice() } : null;
+    };
+    if (kind === 'dup' && !findIsland(islandsOf(d), f)) {
+      const c = ghost();
+      if (c) {
+        applyFix(f.m, c.P, c.A);
+        const td = f.to && f.to !== entry.mat ? get(target(f.g, f.to)) : d;
+        append(td, c.P, c.A);
+        continue;
+      }
+    }
+    // zgodność wstecz: poprawki zapisane po odświeżeniu przy dawnym liczeniu wysp (kawałki sklejone z oryginałem)
+    const isl = findIsland(islandsOf(d), f) ?? (d.segs.length ? findIsland(islands(d.P).list, f) : null);
     if (!isl) { miss++; continue; }
     if (kind === 'move') {
+      { const g0 = cut(d, isl); ghosts.push({ g: f.g, i: f.i ?? -1, n: isl.tris.length, c: isl.c.slice() as [number, number, number], P: g0.P, A: g0.A }); }
       transformIsland(d.P as unknown as { [i: number]: number }, isl, f.m, d.A);
       let x = 0, y = 0, z = 0;
       for (const t of isl.tris) for (let j = 0; j < 3; j++) { const v = (t * 3 + j) * 3; x += d.P[v]!; y += d.P[v + 1]!; z += d.P[v + 2]!; }
@@ -212,14 +244,12 @@ export function applyModelFixes(name: string, data: Record<string, unknown>, fix
         for (let j = 0; j < 3; j++) { const a = t * 9 + 3 + j, b = t * 9 + 6 + j; const v = c.P[a]!; c.P[a] = c.P[b]!; c.P[b] = v; }
         const a = t * 3 + 1, b = t * 3 + 2; const v = c.A[a]!; c.A[a] = c.A[b]!; c.A[b] = v;
       }
-      d.P.push(...c.P); d.A.push(...c.A);
-      d.list = null; d.dirty = true;
+      append(d, c.P, c.A);
     } else if (kind === 'dup') {
       const c = cut(d, isl);
       applyFix(f.m, c.P, c.A);
       const td = f.to && f.to !== entry.mat ? get(target(f.g, f.to)) : d;
-      td.P.push(...c.P); td.A.push(...c.A);
-      td.list = null; td.dirty = true;
+      append(td, c.P, c.A);
     } else if (kind === 'mat') {
       const c = cut(d, isl);
       applyFix(f.m, c.P, c.A);
@@ -230,9 +260,13 @@ export function applyModelFixes(name: string, data: Record<string, unknown>, fix
         if (drop.has(t)) continue;
         for (let j = 0; j < 3; j++) { const v = t * 3 + j; P.push(d.P[v * 3]!, d.P[v * 3 + 1]!, d.P[v * 3 + 2]!); A.push(d.A[v]!); }
       }
+      // granice kawałków przesuwają się o wycięte trójkąty
+      const cutT = [...drop].sort((a, b) => a - b);
+      const before = (t: number): number => { let lo = 0, hi = cutT.length; while (lo < hi) { const mid = (lo + hi) >> 1; if (cutT[mid]! < t) lo = mid + 1; else hi = mid; } return lo; };
+      d.segs = [...new Set(d.segs.map((t) => t - before(t)))].filter((t) => t > 0 && t < P.length / 9);
       d.P = P; d.A = A; d.list = null; d.dirty = true;
       const td = get(target(f.g, f.to ?? entry.mat));
-      td.P.push(...c.P); td.A.push(...c.A); td.list = null; td.dirty = true;
+      append(td, c.P, c.A);
     }
   }
   for (const [e, d] of dec) {
@@ -241,6 +275,7 @@ export function applyModelFixes(name: string, data: Record<string, unknown>, fix
     for (let k = 0; k < d.P.length; k++) p16[k] = Math.max(-32768, Math.min(32767, Math.round(d.P[k]! * q)));
     e.pos = new Uint8Array(p16.buffer);
     e.ao = Uint8Array.from(d.A);
+    if (d.segs.length) e.segs = d.segs; else delete e.segs;
   }
   if (miss) missedFixes.set(name, miss); else missedFixes.delete(name);
 }

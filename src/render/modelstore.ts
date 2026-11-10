@@ -18,6 +18,7 @@ import PACKS from 'virtual:model-packs';
 import { tx } from '../i18n';
 import { unpackModel } from './modelpack';
 import { applyModelFixes, type Fix } from './modelfix';
+import { loadPh, phUsed } from './phAssets';
 import FIXES from '../data/modelFixes.json';
 
 /**
@@ -30,8 +31,9 @@ export function setLiveFixes(map: Record<string, Fix[]>): void { live = map; }
 /** poprawki zapisane przez pierwszą wersję edytora pod nazwą budynku zamiast pliku modelu */
 const OLD_KEY: Record<string, string> = { mine: 'oremine' };
 function fixesFor(name: string): Fix[] | undefined {
-  const old = OLD_KEY[name];
-  const repo0 = (FIXES as Record<string, Fix[]>)[name] ?? (old ? (FIXES as Record<string, Fix[]>)[old] : undefined);
+  // stara nazwa budynku: z tabeli albo ta sama inaczej pisana (budynek 'mageFire' → plik 'magefire')
+  const old = OLD_KEY[name] ?? [...Object.keys(FIXES as Record<string, unknown>), ...Object.keys(live)].find((k) => k !== name && k.toLowerCase() === name);
+  const repo0 = (FIXES as unknown as Record<string, Fix[]>)[name] ?? (old ? (FIXES as unknown as Record<string, Fix[]>)[old] : undefined);
   const l = live[name] ?? (old ? live[old] : undefined);
   const repo = l && l.length >= (repo0?.length ?? 0) ? l : repo0;
   try {
@@ -87,6 +89,9 @@ export function loadModels(onProgress?: (done: number, total: number) => void): 
     }
     done++;
     onProgress?.(done, entries.length);
-  })).then(() => undefined);
+  })).then(async () => {
+    // modele z Poly Haven użyte w poprawkach budynków (rekwizyty 'ph:<id>') — przed budową sceny, żeby stały od razu
+    await Promise.all(phUsed(store.values()).map((id) => loadPh(id)));
+  });
   return loading;
 }

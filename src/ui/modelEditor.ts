@@ -17,6 +17,7 @@ import type { MenuItem } from './menuBar';
 import { buildingMaterialInfo, partMesh } from '../render/buildings';
 import { photoUrlFor } from '../render/textures';
 import { propGeometry, propLightSpot, propMaterial, type PropName } from '../render/props';
+import { PH_ASSETS, loadPh, phLoaded } from '../render/phAssets';
 import REPO_FIXES from '../data/modelFixes.json';
 import { tx } from '../i18n';
 
@@ -32,7 +33,7 @@ interface Ctx {
 }
 
 const LS = (id: string): string => `p1-model-fixes:${id}`;
-const repo = (id: string): Fix[] => (REPO_FIXES as Record<string, Fix[]>)[id] ?? [];
+const repo = (id: string): Fix[] => (REPO_FIXES as unknown as Record<string, Fix[]>)[id] ?? [];
 const r4 = (v: number): number => Math.round(v * 1e4) / 1e4;
 
 export function createModelEditor(ctx: Ctx): { onModel: () => void; guard: (go: () => void) => void; menus: () => Record<'file' | 'edit' | 'tools' | 'add', MenuItem[]> } {
@@ -45,7 +46,7 @@ export function createModelEditor(ctx: Ctx): { onModel: () => void; guard: (go: 
   const islandCache = new WeakMap<THREE.BufferGeometry, { of: Int32Array; list: Island[] }>();
   const isl = (g: THREE.BufferGeometry): { of: Int32Array; list: Island[] } => {
     let v = islandCache.get(g);
-    if (!v) { v = islands((g.getAttribute('position') as THREE.BufferAttribute).array as Float32Array); islandCache.set(g, v); }
+    if (!v) { v = islands((g.getAttribute('position') as THREE.BufferAttribute).array as Float32Array, g.userData.segs as number[] | undefined); islandCache.set(g, v); }
     return v;
   };
 
@@ -206,14 +207,14 @@ export function createModelEditor(ctx: Ctx): { onModel: () => void; guard: (go: 
   let picked = 'castle';
   const swatches: HTMLElement[] = [];
   for (const m of buildingMaterialInfo()) {
-    const url = m.pattern ? photoUrlFor(m.pattern) : null;
+    const url = m.photo ?? (m.pattern ? photoUrlFor(m.pattern) : null);
     const sw = document.createElement('button');
-    sw.type = 'button'; sw.draggable = true; sw.title = `${m.name}${m.pattern ? ` (${m.pattern})` : ''}`;
+    sw.type = 'button'; sw.draggable = true; sw.title = `${m.label ?? m.name}${m.pattern ? ` (${m.pattern})` : ''} ${m.name}`;
     sw.dataset.name = m.name;
     sw.style.cssText = `display:flex;flex-direction:column;align-items:stretch;padding:0;border:1px solid #3e3626;background:#2e2b24;color:inherit;font:inherit;font-size:10.5px;cursor:grab`;
     const img = document.createElement('span');
     img.style.cssText = `display:block;height:44px;background-color:${m.color};${url ? `background-image:url(${url});background-size:cover;background-blend-mode:multiply;` : ''}`;
-    const cap = document.createElement('span'); cap.textContent = m.name; cap.style.cssText = 'padding:2px 3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis';
+    const cap = document.createElement('span'); cap.textContent = m.label ?? m.name; cap.style.cssText = 'padding:2px 3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis';
     sw.append(img, cap);
     sw.onclick = () => { picked = m.name; markSwatch(); if (sel.length) retexture(m.name); else say(tx(`Wybrana tekstura: ${m.name} (dla nowych brył)`, `Texture picked: ${m.name} (for new shapes)`)); };
     sw.ondragstart = (e) => { e.dataTransfer?.setData('text/plain', m.name); picked = m.name; markSwatch(); };
@@ -324,6 +325,24 @@ export function createModelEditor(ctx: Ctx): { onModel: () => void; guard: (go: 
       if (m.map) maps.push(m.map);
       assets.append(assetTile(label, '', (at) => addProp(p, grpSel.value, at), make));
     }
+    // modele z Poly Haven (CC0): wczytują się po kolei przy otwarciu zakładki, miniatura rysuje się po wczytaniu
+    const phHead = document.createElement('div'); phHead.textContent = tx('Modele z Poly Haven (CC0)', 'Poly Haven models (CC0)');
+    phHead.style.cssText = presetHead.style.cssText;
+    assets.append(phHead);
+    const phTiles: [string, HTMLImageElement][] = [];
+    for (const [id, pl, en] of PH_ASSETS) {
+      const tile = assetTile(tx(pl, en), '', (at) => void addPh(id, at));
+      assets.append(tile);
+      phTiles.push([id, tile.querySelector('img')!]);
+    }
+    void (async () => {
+      for (const [id, img] of phTiles) {
+        const r = await loadPh(id);
+        if (!r) continue;
+        await texturesOf(r.mats);
+        try { img.src = thumb(new THREE.Mesh(r.geo, r.mats)); } catch { /* bez miniatury */ }
+      }
+    })();
     // czekamy na zdjęcia tekstur (do 8 s), potem rysujemy wszystkie miniatury
     const t0 = performance.now();
     const wait = (): void => {
@@ -789,7 +808,7 @@ export function createModelEditor(ctx: Ctx): { onModel: () => void; guard: (go: 
     if (mesh.userData.baked) return;
     mesh.updateMatrix();
     mesh.userData.propM = mesh.matrix.clone();     // bieżąca macierz modelu (do kopii); edycje mnożą ją z przodu
-    const g = mesh.geometry.clone().toNonIndexed();
+    const g0 = mesh.geometry.clone(), g = g0.index ? g0.toNonIndexed() : g0;
     g.applyMatrix4(mesh.matrix);
     mesh.geometry = g;
     mesh.position.set(0, 0, 0); mesh.quaternion.identity(); mesh.scale.set(1, 1, 1); mesh.updateMatrix();
@@ -1057,17 +1076,38 @@ export function createModelEditor(ctx: Ctx): { onModel: () => void; guard: (go: 
   }
 
   /** gotowy model z paczki (beczka, worek…): w podglądzie osobna siatka z kopią bryły, w grze dopisany do rekwizytów modelu */
+  /** czeka na obrazki tekstur materiałów (miniatura bez nich wychodzi czarna) — najwyżej 6 s */
+  function texturesOf(mats: THREE.Material[]): Promise<void> {
+    const imgs: HTMLImageElement[] = [];
+    for (const m of mats) for (const k of ['map', 'normalMap'] as const) { const t = (m as THREE.MeshStandardMaterial)[k]; const im = t?.image as HTMLImageElement | ImageBitmap | undefined; if (im && 'complete' in im) imgs.push(im); }
+    const t0 = performance.now();
+    return new Promise((ok) => { const tick = (): void => { if (imgs.every((i) => i.complete) || performance.now() - t0 > 6000) ok(); else setTimeout(tick, 120); }; tick(); });
+  }
+  /** model z Poly Haven: najpierw wczytanie (raz), potem jak każdy model z paczki */
+  async function addPh(id: string, where?: THREE.Vector3): Promise<void> {
+    say(tx('Wczytuję model…', 'Loading the model…'));
+    const r = await loadPh(id);
+    if (!r) { say(tx('Nie udało się wczytać modelu', 'Could not load the model')); return; }
+    addProp(`ph:${id}` as PropName, grpSel.value, where);
+  }
+  /** bryła i materiał modelu z paczki (także 'ph:<id>' z Poly Haven, który musi być już wczytany) */
+  function propParts(name: string): { geo: THREE.BufferGeometry; mat: THREE.Material | THREE.Material[] } {
+    if (name.startsWith('ph:')) { const r = phLoaded(name.slice(3))!; return { geo: r.geo, mat: r.mats }; }
+    return { geo: propGeometry(name as PropName), mat: propMaterial(name as PropName) };
+  }
   function addProp(name: PropName, g: string, where?: THREE.Vector3, exact?: THREE.Matrix4, keepSel = false): THREE.Mesh | undefined {
     const cur = ctx.current();
     if (!cur) return;
+    if ((name as string).startsWith('ph:') && !phLoaded((name as string).slice(3))) return;
     const at = where ?? cur.worldToLocal(ctx.orbit.target.clone());
-    const s = PROP_SIZE[name] ?? 0.2;
+    const s = (name as string).startsWith('ph:') ? 1 : PROP_SIZE[name] ?? 0.2;
     const m = exact ?? new THREE.Matrix4().makeTranslation(at.x, where ? at.y : Math.max(0, at.y - 0.2), at.z).multiply(new THREE.Matrix4().makeScale(s, s, s));
     const fix: Fix = { k: 'prop', g, prop: name, m: m.elements.map(r4) };
     edits.push(fix);
-    const geo = propGeometry(name).clone().toNonIndexed();
+    const parts = propParts(name);
+    const g0 = parts.geo.clone(), geo = g0.index ? g0.toNonIndexed() : g0;
     geo.applyMatrix4(m);
-    const mesh = new THREE.Mesh(geo, propMaterial(name));
+    const mesh = new THREE.Mesh(geo, parts.mat);
     mesh.userData.temp = fix;
     mesh.castShadow = mesh.receiveShadow = true;
     // pochodnia: znacznik światła na głowicy (nocą świeci w podglądzie i w grze); siatka ma już wypieczoną macierz

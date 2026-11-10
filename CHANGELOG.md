@@ -1,5 +1,12 @@
 # Dziennik zmian
 
+
+## 0.94.95 — 2026-11-10
+- Edytor w podglądzie modeli (`src/ui/modelEditor.ts`, `menuBar.ts`, `editorIcons.ts`, `editorSnap.ts`, `viewerThumbs.ts`, `viewerLights.ts`): górne menu i pasek ikon, 18 brył (`src/render/shapes.ts`, naprawiony odwrócony klin), materiały budowlane, inspektor położenie/obrót/skala w osiach, odbicie lustrzane (kolejność wierzchołków naprawiana przy wyznaczniku < 0, także w `modelfix.ts`), ponów, grupy, wyrównywanie, kładzenie na powierzchni, chowanie, siatka, Shift — przyciąganie do krawędzi z kreskami, Ctrl+C/V, kopie w miejscu, zasoby z miniaturami.
+- Poprawki modeli: nowe rodzaje `pm` (ruch zapisanego modelu z paczki) i `f2p` (jabłko/chleb/worek/kosz z `foods`/`baskets` → model z paczki); zapis pod nazwą pliku modelu (`oremine` → `mine`, stare klucze przez `OLD_KEY`); nazwa pliku w `WeakMap` (nie w danych — las się wywracał); modele z paczki w grupie `fixProps` (bez sklejania w `merge.ts`); podgląd nakłada poprawki z bazy i przeglądarki przy wczytaniu (`viewerboot.ts`).
+- Poly Haven (CC0): 36 modeli w `public/models/ph/` (`src/render/phAssets.ts`, wczytywane dopiero przy użyciu; rekwizyty `ph:<id>`), 34 tekstury 1K + KTX2 w `public/textures/ph/` jako materiały `ph_<id>` (`src/render/phTextures.ts`). Boty: nic nowego do stawiania — to wystrój budynków.
+- Zapisy: „Nadpisz” także na autozapisach (`savesPanel.ts`).
+
 ## 0.94.94 — 2026-11-10
 - Reset hasła: `sendReset`, `onPasswordRecovery` (supa.ts), ekrany „Nie pamiętam hasła” i „Nowe hasło” (online.ts).
 

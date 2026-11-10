@@ -1,6 +1,9 @@
 import { cloneMaterial } from './matclone';
 import { named } from './named';
 import * as THREE from 'three';
+import { loadTexture } from './ktx';
+import { tx } from '../i18n';
+import { PH_TEXTURES } from './phTextures';
 import { basketAt, propAt, propGeometry, propGeometryFlat, propLightSpot, propMaterial, type PropName } from './props';
 import { assetModel } from './assets';
 import { BUILDINGS } from '../data/buildings';
@@ -10,6 +13,7 @@ import { applyParallax } from './parallax';
 import { boxUv, modelGeo } from './peasants';
 import { beam, rng } from './craft';
 import { model, model as model_, bytes, modelNameOf } from './modelstore';
+import { loadPh, phLoaded } from './phAssets';
 import { wheatDepthMat, wheatMat, wheatRow } from './wheat';
 import { addModelBanners, bannerGeometry, bannerMaterial, flagTime } from './banners';
 import { PLANK } from './plank';
@@ -972,6 +976,22 @@ function patMat(tex: Pattern, wet: boolean): THREE.MeshStandardMaterial {
   if (!m) { m = mat(0xffffff, tex); patMats.set(key, m); if (wet) wetShared.push(m); }
   return m;
 }
+// tekstury z Poly Haven (phTextures.ts) jako dodatkowe materiały 'ph_<id>' — w palecie edytora i w budynkach z poprawek
+const phBase = (): string => ((import.meta as unknown as { env?: { BASE_URL?: string } }).env?.BASE_URL ?? './') + 'textures/ph/';
+for (const [id, pl, en, tile] of PH_TEXTURES) {
+  const m = new THREE.MeshStandardMaterial({ color: 0xffffff, flatShading: true, roughness: 0.9, metalness: 0, normalScale: new THREE.Vector2(0.9, 0.9) });
+  if (typeof document !== 'undefined') {
+    const map = loadTexture(`${phBase()}${id}.jpg`);
+    map.wrapS = map.wrapT = THREE.RepeatWrapping; map.colorSpace = THREE.SRGBColorSpace; map.anisotropy = 16;
+    const nm = loadTexture(`${phBase()}${id}_n.jpg`);
+    nm.wrapS = nm.wrapT = THREE.RepeatWrapping; nm.anisotropy = 8;
+    m.map = map; m.normalMap = nm;
+  }
+  m.userData.tile = tile;
+  m.userData.photo = `${phBase()}${id}.jpg`;
+  m.userData.label = tx(pl, en);
+  (M as unknown as Record<string, THREE.Material>)[`ph_${id}`] = m;
+}
 /** ?gladkie=0 — każdy gładki materiał osobno, jak dawniej (do porównań) */
 const PLAIN_ON = typeof location === 'undefined' || !/[?&]gladkie=0/.test(location.search);
 
@@ -992,9 +1012,9 @@ export function partMesh(mat: string, pos: string | Uint8Array, ao: string | Uin
   return new THREE.Mesh(blenderGeo(p, a, q, k), withAo(base));
 }
 /** Materiały budynków z wzorem i barwą (paleta tekstur w edytorze poprawek) */
-export const buildingMaterialInfo = (): { name: string; pattern: string | null; color: string }[] => buildingMaterialNames().map((name) => {
+export const buildingMaterialInfo = (): { name: string; pattern: string | null; color: string; photo?: string; label?: string }[] => buildingMaterialNames().map((name) => {
   const m = (M as unknown as Record<string, THREE.MeshStandardMaterial>)[name]!;
-  return { name, pattern: (m.userData?.pattern as string | undefined) ?? null, color: '#' + (m.color?.getHexString() ?? 'ffffff') };
+  return { name, pattern: (m.userData?.pattern as string | undefined) ?? null, color: '#' + (m.color?.getHexString() ?? 'ffffff'), photo: m.userData?.photo as string | undefined, label: m.userData?.label as string | undefined };
 });
 /** Nazwy materiałów budynków (do wyboru tekstury w edytorze poprawek) */
 export const buildingMaterialNames = (): string[] => Object.keys(M).filter((k) => !['trodden', 'smoke', 'ember', 'void', 'flameLight', 'flameCore', 'water'].includes(k)).sort();
@@ -1006,6 +1026,9 @@ function blenderModel(g: THREE.Group, model: BlenderBuilding, flag: THREE.Materi
   const meshes = (name: string): THREE.Mesh[] => ((model[name] as { mat: string; pos: string; ao: string }[] | undefined) ?? []).map((m, idx) => {
     const mesh = meshOf(name, m);
     mesh.userData.fx = [name, idx, m.mat];
+    // granice kawałków dopisanych poprawkami (modelfix.ts → islands): edytor liczy wyspy tak samo jak gra
+    const segs = (m as { segs?: number[] }).segs;
+    if (segs) mesh.geometry.userData.segs = segs;
     return mesh;
   });
   const meshOf = (_name: string, m: { mat: string; pos: string; ao: string }): THREE.Mesh => partMesh(m.mat, m.pos, m.ao, model.q, flag);
@@ -1030,7 +1053,12 @@ function blenderModel(g: THREE.Group, model: BlenderBuilding, flag: THREE.Materi
   // skrzydła wrót (brama): zapisane zamknięte, obracają się wokół zawiasów x = ±hinge; startują otwarte
   // rekwizyty z paczek dodane w edytorze poprawek (modelfix.ts, rodzaj 'prop'): beczki, worki, kosze… w swojej grupie
   for (const [pi, p] of ((model as unknown as { props?: { prop: string; g: string; m: number[] }[] }).props ?? []).entries()) {
-    const mesh = new THREE.Mesh(propGeometry(p.prop as PropName), propMaterial(p.prop as PropName));
+    // modele z Poly Haven ('ph:<id>', phAssets.ts) — wczytane zawczasu przez modelstore; gdyby nie, dochodzą chwilę później
+    const ph = p.prop.startsWith('ph:') ? p.prop.slice(3) : null, phm = ph ? phLoaded(ph) : null;
+    const mesh = ph
+      ? new THREE.Mesh(phm?.geo ?? new THREE.BufferGeometry(), phm?.mats ?? [])
+      : new THREE.Mesh(propGeometry(p.prop as PropName), propMaterial(p.prop as PropName));
+    if (ph && !phm) void loadPh(ph).then((r) => { if (r) { mesh.geometry = r.geo; mesh.material = r.mats; } });
     mesh.userData.fxProp = [p.g, pi, p.prop];   // edytor w podglądzie modeli może go potem przesunąć albo usunąć
     new THREE.Matrix4().fromArray(p.m).decompose(mesh.position, mesh.quaternion, mesh.scale);
     mesh.castShadow = mesh.receiveShadow = true;
