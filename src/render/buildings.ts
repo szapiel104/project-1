@@ -1,7 +1,7 @@
 import { cloneMaterial } from './matclone';
 import { named } from './named';
 import * as THREE from 'three';
-import { basketAt, propAt, propGeometry, propGeometryFlat, propMaterial, type PropName } from './props';
+import { basketAt, propAt, propGeometry, propGeometryFlat, propLightSpot, propMaterial, type PropName } from './props';
 import { assetModel } from './assets';
 import { BUILDINGS } from '../data/buildings';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
@@ -1004,7 +1004,12 @@ function blenderModel(g: THREE.Group, model: BlenderBuilding, flag: THREE.Materi
     const mesh = new THREE.Mesh(propGeometry(p.prop as PropName), propMaterial(p.prop as PropName));
     new THREE.Matrix4().fromArray(p.m).decompose(mesh.position, mesh.quaternion, mesh.scale);
     mesh.castShadow = mesh.receiveShadow = true;
-    (p.g === 'interior' ? interior : p.g === 'shell' ? shell : g).add(mesh);
+    // pochodnia z edytora świeci nocą jak pochodnie zrobione w modelu: znacznik światła na głowicy
+    const ls = propLightSpot(p.prop);
+    const parent = p.g === 'interior' ? interior : p.g === 'shell' ? shell : g;
+    // znacznik obok siatki, nie w niej (łączenie siatek w partie mogłoby go zabrać razem z siatką)
+    if (ls) { const o = new THREE.Object3D(); o.name = 'lightSpot'; o.position.copy(ls.applyMatrix4(new THREE.Matrix4().fromArray(p.m))); parent.add(o); }
+    parent.add(mesh);
   }
   const hinge = (model as unknown as { hinge?: number }).hinge;
   if (hinge) for (const [name, side] of [['leafL', -1], ['leafR', 1]] as const) {

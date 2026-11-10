@@ -37,6 +37,7 @@ import { streamWaterMaterial, waterfallModel } from './render/streams';
 import { mistNoise } from './render/highmist';
 import { createRenderer } from './render/glcontext';
 import { createMenuBar } from './ui/menuBar';
+import { createNightLights } from './ui/viewerLights';
 import { createModelEditor } from './ui/modelEditor';
 const RAM_MODEL = model('ram');
 
@@ -551,6 +552,7 @@ window.addEventListener('keyup', (e) => held.delete(e.key.toLowerCase()));
 window.addEventListener('blur', () => held.clear());
 let lastT = performance.now();
 const fwd = new THREE.Vector3(), right = new THREE.Vector3(), move = new THREE.Vector3();
+const nightLights = createNightLights(scene);
 renderer.setAnimationLoop(() => {
   const now = performance.now(), dt = Math.min(0.05, (now - lastT) / 1000);
   lastT = now;
@@ -571,6 +573,7 @@ renderer.setAnimationLoop(() => {
     }
   }
   controls.update();
+  nightLights.update(current, state.night, camera, Math.max(size.x, size.z, 0.3));
   renderer.render(scene, camera);
 });
 // do zrzutów z testów: window.__view('tavern', yawStopnie, nachylenieStopnie, dalekaWersja 0..3, przybliżenie)

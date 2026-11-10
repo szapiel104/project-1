@@ -15,7 +15,7 @@ import { icon } from './editorIcons';
 import type { MenuItem } from './menuBar';
 import { buildingMaterialInfo, partMesh } from '../render/buildings';
 import { photoUrlFor } from '../render/textures';
-import { propGeometry, propMaterial, type PropName } from '../render/props';
+import { propGeometry, propLightSpot, propMaterial, type PropName } from '../render/props';
 import REPO_FIXES from '../data/modelFixes.json';
 import { tx } from '../i18n';
 
@@ -344,7 +344,7 @@ export function createModelEditor(ctx: Ctx): { onModel: () => void; guard: (go: 
     editBtn.setAttribute('aria-pressed', String(on));
     for (const t of tools) (t as HTMLElement).hidden = !on;
     panel.hidden = !on;
-    insp.hidden = !on;
+    insp.style.display = on ? 'grid' : 'none';   // nie hidden: inline display:grid go przykrywa
     if (!on) deselect();
     setMode((tc.mode as 'translate' | 'rotate' | 'scale') ?? 'translate');
     say(on ? tx('Kliknij część (Ctrl — kilka naraz)', 'Click a part (Ctrl — several at once)') : '');
@@ -463,7 +463,8 @@ export function createModelEditor(ctx: Ctx): { onModel: () => void; guard: (go: 
         // dodana / skopiowana / przetekstur. część: zmiana trafia do jej własnej macierzy
         const prev = temp.m;
         temp.m = L.clone().multiply(new THREE.Matrix4().fromArray(prev)).elements.map(r4);
-        step.push(() => { writeIsland(mesh, island, P0, N0, new THREE.Matrix4()); temp.m = prev; });
+        moveLightSpot(mesh);
+        step.push(() => { writeIsland(mesh, island, P0, N0, new THREE.Matrix4()); temp.m = prev; moveLightSpot(mesh); });
       } else {
         const [g, i] = mesh.userData.fx as [string, number];
         const fix: Fix = { g, i, c: p.c.map(r4) as [number, number, number], n: island.tris.length, m: L.elements.map(r4) };
@@ -476,6 +477,12 @@ export function createModelEditor(ctx: Ctx): { onModel: () => void; guard: (go: 
     if (step.length) undo.push(step);
     placeProxy();
     say(tx(`Zmiany do zapisania: ${edits.length}`, `Unsaved changes: ${edits.length}`));
+  }
+  /** znacznik światła pochodni idzie za nią (siatka tymczasowa ma wypieczone położenie, więc liczymy z macierzy poprawki) */
+  function moveLightSpot(mesh: THREE.Mesh): void {
+    const f = mesh.userData.temp as Fix | undefined, o = mesh.getObjectByName('lightSpot');
+    const ls = f?.prop ? propLightSpot(f.prop) : null;
+    if (o && ls) o.position.copy(ls.applyMatrix4(new THREE.Matrix4().fromArray(f!.m)));
   }
   function addPiece(mesh: THREE.Mesh, island: Island): void {
     const snap = snapshot(mesh, island);
@@ -698,6 +705,9 @@ export function createModelEditor(ctx: Ctx): { onModel: () => void; guard: (go: 
     const mesh = new THREE.Mesh(geo, propMaterial(name));
     mesh.userData.temp = fix;
     mesh.castShadow = mesh.receiveShadow = true;
+    // pochodnia: znacznik światła na głowicy (nocą świeci w podglądzie i w grze); siatka ma już wypieczoną macierz
+    const ls = propLightSpot(name);
+    if (ls) { const o = new THREE.Object3D(); o.name = 'lightSpot'; o.position.copy(ls.applyMatrix4(m)); mesh.add(o); }
     groupFor(g).add(mesh);
     undo.push([() => { mesh.removeFromParent(); dropEdit(fix); }]);
     deselect();
@@ -872,16 +882,24 @@ export function createModelEditor(ctx: Ctx): { onModel: () => void; guard: (go: 
     markPanel();
   }
   function markPanel(): void {
+    let first: HTMLElement | null = null;
     for (const [m, b] of rows) b.style.borderColor = sel.some((p) => p.mesh === m) ? '#e9c766' : '#3e3626';
     for (const r of objRows) {
       const on = r.o.nodes.every((nd) => sel.some((p) => p.mesh === nd.mesh && p.isl === nd.island));
       r.b.style.borderColor = on ? '#e9c766' : '#3e3626';
       r.b.style.background = on ? '#4a3e22' : '#2e2b24';
+      if (on && !first) first = r.b;
     }
     for (const r of partRows) {
       const on = sel.some((p) => p.mesh === r.m && p.isl === r.island);
       r.b.style.borderColor = on ? '#e9c766' : '#3e3626';
       r.b.style.background = on ? '#4a3e22' : '#2e2b24';
+      if (on && !first && r.b.offsetParent) first = r.b;
+    }
+    // lista sama przewija się do zaznaczonego (Michał 10.11.2026), tylko w obrębie panelu
+    if (first && !panel.hidden) {
+      const pr = panel.getBoundingClientRect(), br = first.getBoundingClientRect();
+      if (br.top < pr.top + 30 || br.bottom > pr.bottom - 8) panel.scrollTop += br.top - pr.top - pr.height / 3;
     }
   }
 

@@ -120,3 +120,18 @@ export function propMaterial(name: PropName): THREE.MeshStandardMaterial {
   mats.set(name, m);
   return m;
 }
+
+/**
+ * Miejsce płomienia pochodni w układzie modelu (środek górnej części głowicy, odrobinę nad nią) — tam stawiamy znacznik
+ * 'lightSpot', przy którym gra (scene.ts) i podgląd modeli zapalają nocą światło. Dla innych modeli null.
+ */
+export function propLightSpot(name: string): THREE.Vector3 | null {
+  if (name !== 'torch') return null;
+  const pos = propGeometry('torch').getAttribute('position') as THREE.BufferAttribute;
+  let top = -Infinity, bottom = Infinity;
+  for (let i = 0; i < pos.count; i++) { top = Math.max(top, pos.getY(i)); bottom = Math.min(bottom, pos.getY(i)); }
+  const cut = top - (top - bottom) * 0.15, c = new THREE.Vector3();
+  let n = 0;
+  for (let i = 0; i < pos.count; i++) if (pos.getY(i) > cut) { c.x += pos.getX(i); c.y += pos.getY(i); c.z += pos.getZ(i); n++; }
+  return c.divideScalar(Math.max(1, n)).add(new THREE.Vector3(0, (top - bottom) * 0.12, 0));
+}
