@@ -1479,7 +1479,8 @@ export function createModelEditor(ctx: Ctx): { onModel: () => void; guard: (go: 
   }
   async function save(): Promise<void> {
     if (!edits.length) { say(tx('Nie ma zmian do zapisania', 'Nothing to save')); return; }
-    const id = fixId(), list = all();
+    const id = fixId(), mine = edits.slice();
+    let list = all();
     try { localStorage.setItem(LS(id), JSON.stringify(list)); } catch { /* prywatne okno */ }
     savedNow.add(id);
     edits = [];
@@ -1487,6 +1488,17 @@ export function createModelEditor(ctx: Ctx): { onModel: () => void; guard: (go: 
     say(tx('Zapisano w przeglądarce, wysyłam do bazy…', 'Saved in the browser, sending to the database…'));
     try {
       const { supa } = await import('../net/supa');
+      // scalanie zamiast nadpisania (Michał 10.11.2026: „zmienię lokalnie i na produkcji — które wygra?”): bierzemy
+      // świeżą listę z bazy, dokładamy poprawki znane tylko tej przeglądarce i na końcu zmiany z tej sesji — nic nie ginie
+      const { data: row } = await supa.from('model_fixes').select('fixes').eq('model', id).maybeSingle();
+      const remote = (row as { fixes?: Fix[] } | null)?.fixes;
+      if (Array.isArray(remote)) {
+        const key = (f: Fix): string => JSON.stringify(f);
+        const have = new Set(remote.map(key));
+        const prev = list.slice(0, list.length - mine.length);
+        list = [...remote, ...prev.filter((f) => !have.has(key(f))), ...mine.filter((f) => !have.has(key(f)))];
+        try { localStorage.setItem(LS(id), JSON.stringify(list)); } catch { /* prywatne okno */ }
+      }
       const { data: s } = await supa.auth.getSession();
       if (!s.session) { say(tx('⚠ Zapisano TYLKO w tej przeglądarce — zaloguj się w grze (RebaZius), wtedy poprawki same polecą do bazy i trafią na produkcję', '⚠ Saved ONLY in this browser — log in to the game (owner account); the fixes will then go to the database and reach production')); status.style.color = '#ffb070'; return; }
       status.style.color = '#e6d6b4';
