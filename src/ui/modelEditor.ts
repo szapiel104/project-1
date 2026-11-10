@@ -12,6 +12,7 @@ import type { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js
 import { applyFix, islands, unitShape, type Fix, type Island } from '../render/modelfix';
 import { SHAPES, shapeLabel, type Shape } from '../render/shapes';
 import { icon } from './editorIcons';
+import type { MenuItem } from './menuBar';
 import { buildingMaterialInfo, partMesh } from '../render/buildings';
 import { photoUrlFor } from '../render/textures';
 import { propGeometry, propMaterial, type PropName } from '../render/props';
@@ -33,7 +34,7 @@ const LS = (id: string): string => `p1-model-fixes:${id}`;
 const repo = (id: string): Fix[] => (REPO_FIXES as Record<string, Fix[]>)[id] ?? [];
 const r4 = (v: number): number => Math.round(v * 1e4) / 1e4;
 
-export function createModelEditor(ctx: Ctx): { onModel: () => void; guard: (go: () => void) => void } {
+export function createModelEditor(ctx: Ctx): { onModel: () => void; guard: (go: () => void) => void; menus: () => Record<'file' | 'edit' | 'tools' | 'add', MenuItem[]> } {
   let on = false;
   /** Poprawki tej sesji (dla bieżącego modelu), po poprawkach z repozytorium */
   let edits: Fix[] = [];
@@ -50,7 +51,7 @@ export function createModelEditor(ctx: Ctx): { onModel: () => void; guard: (go: 
   // ---------- przyciski ----------
   const wrap = document.createElement('div');
   wrap.className = 'edit-tools';
-  wrap.style.cssText = 'display:flex;gap:4px;flex-wrap:wrap;width:100%;justify-content:flex-end';
+  wrap.style.cssText = 'display:flex;gap:4px;align-items:center';
   const btn = (label: string, f: () => void, title = ''): HTMLButtonElement => {
     const b = document.createElement('button'); b.type = 'button'; b.textContent = label; b.title = title; b.onclick = f; return b;
   };
@@ -182,7 +183,7 @@ export function createModelEditor(ctx: Ctx): { onModel: () => void; guard: (go: 
   palHead.style.cssText = 'display:flex;gap:8px;align-items:center;margin-bottom:4px';
   const find = document.createElement('input'); find.type = 'search'; find.placeholder = tx('szukaj tekstury…', 'search textures…'); find.style.cssText = selCss + ';width:150px';
   const palTitle = title(tx('Tekstury — klik: zaznaczonym, przeciągnij: na część', 'Textures — click: selected, drag: onto a part'));
-  palTitle.style.margin = '0';
+  palTitle.style.cssText += ';margin:0;font-weight:400;color:#bfb294;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;flex:1';
   // zakładki: Tekstury | Zasoby (bryły i gotowe modele z paczek, jak okno zasobów w silnikach gier)
   const tabBtn = (label: string, f: () => void): HTMLButtonElement => { const b = btn(label, f); b.style.cssText = 'font:inherit;font-size:12px;padding:3px 10px;min-height:26px;color:#e8e0cc;background:#2e2b24;border:1px solid #3a362d;cursor:pointer'; return b; };
   const tabTex = tabBtn(tx('Tekstury', 'Textures'), () => showTab('tex'));
@@ -777,7 +778,7 @@ export function createModelEditor(ctx: Ctx): { onModel: () => void; guard: (go: 
   // ---------- lista warstw po prawej: grupy (pokaż/ukryj) i siatki po materiale (klik zaznacza całą siatkę) ----------
   const panel = document.createElement('div');
   panel.className = 'edit-layers';
-  panel.style.cssText = 'position:fixed;right:12px;top:96px;bottom:8px;width:230px;overflow:auto;background:rgba(24,21,17,.92);border:1px solid #5a4a2c;padding:8px;font-size:12px;color:#e6d6b4;z-index:5';
+  panel.style.cssText = 'position:fixed;right:12px;top:calc(var(--top, 0px) + 10px);bottom:8px;width:230px;overflow:auto;background:rgba(24,21,17,.92);border:1px solid #5a4a2c;padding:8px;font-size:12px;color:#e6d6b4;z-index:5';
   document.body.append(panel);
   const GROUP_NAME: Record<string, string> = { base: tx('Bryła', 'Body'), shell: tx('Dach i mury', 'Roof and walls'), interior: tx('Wnętrze', 'Interior'), floor: tx('Posadzka', 'Floor'), ceiling: tx('Sufit sali', 'Hall ceiling') };
   const rows = new Map<THREE.Mesh, HTMLButtonElement>();
@@ -1039,7 +1040,48 @@ export function createModelEditor(ctx: Ctx): { onModel: () => void; guard: (go: 
   });
   showTab('tex');
   setOn(false);
+  /** pozycje górnego menu (viewer.ts składa z nich pasek Plik / Edycja / Narzędzia / Dodaj) */
+  const isOn = (): boolean => on, hasSel = (): boolean => on && sel.length > 0;
+  function menus(): Record<'file' | 'edit' | 'tools' | 'add', MenuItem[]> {
+    return {
+      file: [
+        { label: tx('Zapisz', 'Save'), key: 'Ctrl+S', act: () => void save(), enabled: isOn },
+        { label: tx('Pobierz plik poprawek', 'Download fixes file'), act: download, enabled: isOn },
+      ],
+      edit: [
+        { label: tx('Cofnij', 'Undo'), key: 'Ctrl+Z', act: undoLast, enabled: () => on && undo.length > 0 },
+        { sep: true },
+        { label: tx('Kopiuj', 'Duplicate'), key: 'Ctrl+D', act: duplicateSel, enabled: hasSel },
+        { label: tx('Usuń', 'Delete'), key: 'Del', act: removeSel, enabled: hasSel },
+        { label: tx('Odznacz', 'Deselect'), key: 'Esc', act: deselect, enabled: hasSel },
+        { sep: true },
+        { label: tx('Odbij lustrzanie w osi X', 'Mirror along X'), act: () => mirror(0), enabled: hasSel },
+        { label: tx('Odbij lustrzanie w osi Z', 'Mirror along Z'), act: () => mirror(2), enabled: hasSel },
+        { label: tx('Postaw na ziemi', 'Drop to the ground'), act: dropToGround, enabled: hasSel },
+        { label: tx('Widać z obu stron', 'Visible from both sides'), act: doubleSel, enabled: hasSel },
+      ],
+      tools: [
+        { label: tx('Tryb edycji', 'Edit mode'), checked: isOn, act: () => setOn(!on), enabled: () => !editBtn.hidden },
+        { sep: true },
+        { label: tx('Przesuń', 'Move'), key: '1', checked: () => on && tc.mode === 'translate', act: () => setMode('translate'), enabled: isOn },
+        { label: tx('Obróć', 'Rotate'), key: '2', checked: () => on && tc.mode === 'rotate', act: () => setMode('rotate'), enabled: isOn },
+        { label: tx('Skaluj', 'Scale'), key: '3', checked: () => on && tc.mode === 'scale', act: () => setMode('scale'), enabled: isOn },
+        { sep: true },
+        { label: tx('Przyciąganie', 'Snap'), checked: () => snap.checked, act: () => { snap.checked = !snap.checked; applySnap(); }, enabled: isOn },
+        { label: tx('Osie części (lokalnie)', 'Part axes (local)'), checked: () => space.checked, act: () => { space.checked = !space.checked; tc.setSpace(space.checked ? 'local' : 'world'); }, enabled: isOn },
+        { label: tx('Pokaż zaznaczenie', 'Frame selection'), key: 'F', act: focusSel, enabled: hasSel },
+      ],
+      add: [
+        { label: tx('Bryła', 'Shape'), enabled: isOn, sub: () => SHAPES.map((sh) => ({ label: shapeLabel(sh, tx), act: () => addShape(sh, picked, grpSel.value) })) },
+        { label: tx('Gotowy model z paczki', 'Ready-made model'), enabled: isOn, sub: () => ASSET_PROPS.map(([p, l]) => ({ label: l, act: () => addProp(p, grpSel.value) })) },
+        { sep: true },
+        { label: tx('Okno zasobów', 'Assets window'), act: () => showTab('assets'), enabled: isOn },
+        { label: tx('Okno tekstur', 'Textures window'), act: () => showTab('tex'), enabled: isOn },
+      ],
+    };
+  }
   return {
+    menus,
     guard,
     onModel: () => { deselect(); edits = []; undo.length = 0; void applyPending(); if (on) buildPanel(); },
   };

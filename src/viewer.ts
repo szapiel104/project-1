@@ -36,6 +36,7 @@ import { watchRenderer } from './debug/errlog';
 import { streamWaterMaterial, waterfallModel } from './render/streams';
 import { mistNoise } from './render/highmist';
 import { createRenderer } from './render/glcontext';
+import { createMenuBar } from './ui/menuBar';
 import { createModelEditor } from './ui/modelEditor';
 const RAM_MODEL = model('ram');
 
@@ -491,11 +492,15 @@ const toggles: [string, () => boolean, () => void][] = [
   [tx('Obrót', 'Spin'), () => state.spin, () => { state.spin = !state.spin; }],
   [tx('Z daleka', 'Far'), () => state.far > 0, () => { state.far = (state.far + 1) % 4; }],
 ];
+const viewBox = document.createElement('div');
+viewBox.className = 'view-tools';
+barEl.append(viewBox);
+const runToggle = (act: () => void): void => { act(); applyLook(); history.replaceState(null, '', url()); };
 const barButtons = toggles.map(([label, on, act]) => {
   const b = document.createElement('button');
-  b.type = 'button'; b.textContent = label;
-  b.onclick = () => { act(); applyLook(); history.replaceState(null, '', url()); };
-  barEl.append(b);
+  b.type = 'button'; b.textContent = label; b.title = label;
+  b.onclick = () => runToggle(act);
+  viewBox.append(b);
   return [b, on] as const;
 });
 function syncBar(): void {
@@ -508,6 +513,27 @@ function syncBar(): void {
 
 // edytor poprawek (Michał 10.11.2026): „Edytuj” → klik w część, uchwyt do przesuwania i obracania, „Zapisz”
 const editor = createModelEditor({ renderer, scene, camera, canvas, orbit: controls, bar: barEl, current: () => current, id: () => state.id });
+
+// górne menu jak w programach graficznych (Michał 10.11.2026): Plik, Edycja, Narzędzia, Dodaj, Widok, Pomoc
+createMenuBar(document.getElementById('menus')!, [
+  { label: tx('Plik', 'File'), items: () => editor.menus().file },
+  { label: tx('Edycja', 'Edit'), items: () => editor.menus().edit },
+  { label: tx('Narzędzia', 'Tools'), items: () => editor.menus().tools },
+  { label: tx('Dodaj', 'Add'), items: () => editor.menus().add },
+  { label: tx('Widok', 'View'), items: () => [
+    ...toggles.slice(0, 3).map(([label, on, act]) => ({ label, checked: on, act: () => runToggle(act) })),
+    { sep: true },
+    ...toggles.slice(3).map(([label, on, act]) => ({ label, checked: on, act: () => runToggle(act), enabled: label === toggles[7]![0] ? () => !!lod : undefined })),
+    { sep: true },
+    { label: tx('Lista modeli', 'Model list'), checked: () => !document.body.classList.contains('folded'), act: () => setFold(!document.body.classList.contains('folded')) },
+  ] },
+  { label: tx('Pomoc', 'Help'), items: () => [
+    { label: tx('Mysz: lewy — obrót, prawy — przesuw, kółko — zoom', 'Mouse: left — orbit, right — pan, wheel — zoom'), enabled: () => false },
+    { label: tx('WASD — lot kamerą, Shift — szybciej, Q/E — dół/góra', 'WASD — fly, Shift — faster, Q/E — down/up'), enabled: () => false },
+    { label: tx('Klik — przedmiot, Alt+klik — jedna część, Ctrl — kilka', 'Click — object, Alt+click — single part, Ctrl — several'), enabled: () => false },
+    { label: tx('1/2/3 — przesuń/obróć/skaluj, F — pokaż zaznaczenie', '1/2/3 — move/rotate/scale, F — frame selection'), enabled: () => false },
+  ] },
+]);
 
 function resize(): void {
   const w = canvas.clientWidth, h = canvas.clientHeight;
