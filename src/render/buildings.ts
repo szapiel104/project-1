@@ -953,7 +953,7 @@ function blenderModel(g: THREE.Group, model: BlenderBuilding, flag: THREE.Materi
   // każda siatka zna swoją grupę i numer w niej (edytor poprawek w podglądzie modeli, modelfix.ts)
   const meshes = (name: string): THREE.Mesh[] => ((model[name] as { mat: string; pos: string; ao: string }[] | undefined) ?? []).map((m, idx) => {
     const mesh = meshOf(name, m);
-    mesh.userData.fx = [name, idx];
+    mesh.userData.fx = [name, idx, m.mat];
     return mesh;
   });
   const meshOf = (_name: string, m: { mat: string; pos: string; ao: string }): THREE.Mesh => {

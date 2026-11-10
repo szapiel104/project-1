@@ -504,7 +504,35 @@ window.addEventListener('resize', resize);
 resize();
 // upraszczanie (WebAssembly) wczytuje się chwilę; bez niego model i tak się pokaże, tylko bez dalekiej wersji
 void lodReady.then(() => show(state.id));
-renderer.setAnimationLoop(() => { controls.update(); renderer.render(scene, camera); });
+// latanie kamerą WASD (Q/E — w dół / w górę, Shift — szybciej), też w edytorze (Michał 10.11.2026)
+const held = new Set<string>();
+window.addEventListener('keydown', (e) => { if (!(e.target instanceof HTMLInputElement) && !e.ctrlKey && !e.metaKey) held.add(e.key.toLowerCase()); });
+window.addEventListener('keyup', (e) => held.delete(e.key.toLowerCase()));
+window.addEventListener('blur', () => held.clear());
+let lastT = performance.now();
+const fwd = new THREE.Vector3(), right = new THREE.Vector3(), move = new THREE.Vector3();
+renderer.setAnimationLoop(() => {
+  const now = performance.now(), dt = Math.min(0.05, (now - lastT) / 1000);
+  lastT = now;
+  if (held.size) {
+    camera.getWorldDirection(fwd); fwd.y = 0; fwd.normalize();
+    right.crossVectors(fwd, camera.up).normalize();
+    move.set(0, 0, 0);
+    if (held.has('w')) move.add(fwd);
+    if (held.has('s')) move.sub(fwd);
+    if (held.has('d')) move.add(right);
+    if (held.has('a')) move.sub(right);
+    if (held.has('e')) move.y += 1;
+    if (held.has('q')) move.y -= 1;
+    if (move.lengthSq()) {
+      const span = Math.max(size.x, size.y, size.z, 0.2);
+      move.normalize().multiplyScalar(span * (held.has('shift') ? 1.6 : 0.55) * dt);
+      camera.position.add(move); controls.target.add(move);
+    }
+  }
+  controls.update();
+  renderer.render(scene, camera);
+});
 // do zrzutów z testów: window.__view('tavern', yawStopnie, nachylenieStopnie, dalekaWersja 0..3, przybliżenie)
 (window as unknown as { __view: (id: string, yaw?: number, pitch?: number, far?: number, zoom?: number, lift?: number) => void }).__view = (id, yaw = 40, pitch = 25, far, zoom = 1, lift = 0) => {
   if (id !== state.id) show(id);
