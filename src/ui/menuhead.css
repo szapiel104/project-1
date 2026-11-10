@@ -90,3 +90,6 @@ body .menu.in-game:not(.previewing) .menu-head > .menu-title.has-logo { font-siz
 /* strzałki rad kwadratowe (Michał 9.11.2026: „szerokość taka sama jak wysokość”) */
 #loading .loading-card .ld-top { align-items: center; }
 #loading .tip-arrow { width: 44px; height: 44px; aspect-ratio: 1; padding: 0; display: grid; place-items: center; align-self: center; }
+
+/* lokalnie druga linijka przy wersji: kiedy zmienił się dev i main (src/ui/gitInfo.ts, Michał 10.11.2026) */
+#loading .loading-ver .ver-git, .menu .tb-ver .ver-git { display: block; margin-top: 3px; font-size: .72em; font-weight: 500; letter-spacing: .03em; color: #e6d6b4; opacity: .9; }

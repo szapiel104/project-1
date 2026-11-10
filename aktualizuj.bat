@@ -5,5 +5,6 @@ cd /d "%~dp0"
 title Project-1: aktualizacja z dev
 :petla
 git pull --ff-only -q origin dev
+git fetch -q origin main
 timeout /t 20 /nobreak >nul
 goto petla

@@ -9,6 +9,8 @@ import pkg from './package.json' with { type: 'json' };
 import { createHash } from 'node:crypto';
 // @ts-expect-error — jak wyżej
 import { readFileSync, readdirSync, statSync } from 'node:fs';
+// @ts-expect-error — jak wyżej
+import { execSync } from 'node:child_process';
 
 /**
  * Odcisk wszystkiego, co zmienia wygląd miniatur budynków w menu budowy (modele, rysowanie miniatur, dane budynków, tekstury).
@@ -45,6 +47,28 @@ const noAutoReload = {
   },
 };
 
+/**
+ * Lokalnie: /__git.json — czas i opis ostatniego commita na dysku (HEAD), na dev i na main (origin/…), dla drugiej
+ * linijki przy numerze wersji (src/ui/gitInfo.ts, Michał 10.11.2026). aktualizuj.bat co 20 s pobiera dev i main.
+ */
+const gitInfo = {
+  name: 'git-info',
+  apply: 'serve' as const,
+  configureServer(server: { middlewares: { use: (path: string, fn: (req: unknown, res: { setHeader: (k: string, v: string) => void; end: (b: string) => void }) => void) => void } }): void {
+    const ref = (r: string): { t: number; h: string; s: string } | undefined => {
+      try {
+        const [t, h, ...s] = String(execSync(`git log -1 --format=%ct%x09%h%x09%s ${r}`, { stdio: ['ignore', 'pipe', 'ignore'] })).trim().split('\t');
+        return { t: Number(t), h: h!, s: s.join(' ') };
+      } catch { return undefined; }
+    };
+    server.middlewares.use('/__git.json', (_req, res) => {
+      res.setHeader('Content-Type', 'application/json');
+      res.setHeader('Cache-Control', 'no-store');
+      res.end(JSON.stringify({ head: ref('HEAD'), dev: ref('origin/dev'), main: ref('origin/main') }));
+    });
+  },
+};
+
 export default defineConfig(({ mode }) => ({
   base: './',
   // godzina zbudowania trafia do gry, żeby było widać, czy przeglądarka pokazuje najnowszą wersję
@@ -52,7 +76,7 @@ export default defineConfig(({ mode }) => ({
   define: { __VERSION__: JSON.stringify(pkg.version), __BUILD__: JSON.stringify(BUILD), __THUMBS__: JSON.stringify(thumbsKey()) },
   // długie symulacje (bot, 10 000 ticków) potrzebują więcej czasu niż domyślne 5 s
   test: { testTimeout: 60000, setupFiles: ['tests/setup/lang.ts', 'tests/setup/models.ts'] },
-  plugins: mode === 'single' ? [versionInHtml, modelPacks(true), viteSingleFile()] : [versionInHtml, versionFile, modelPacks(false), preloadMain(), noAutoReload],
+  plugins: mode === 'single' ? [versionInHtml, modelPacks(true), viteSingleFile()] : [versionInHtml, versionFile, modelPacks(false), preloadMain(), noAutoReload, gitInfo],
   // lokalnie: zgoda na próbkowanie JS z samej strony (window.__prof w src/debug/prof.ts — gdzie ucieka czas klatki)
   server: { headers: { 'Document-Policy': 'js-profiling' } },
   build: {

@@ -2700,6 +2700,7 @@ if (import.meta.env.DEV || new URLSearchParams(location.search).has('perf')) {
 }
 // próbkowanie procesora z samej strony (lokalnie, src/debug/prof.ts): JSON.stringify(await __prof(8))
 if (import.meta.env.DEV || new URLSearchParams(location.search).has('perf')) void import('./debug/prof');
+if (import.meta.env.DEV) void import('./ui/gitInfo').then((m) => m.startGitInfo());
 
 declare const __BUILD__: string;
 const badge = document.createElement('div');
