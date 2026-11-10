@@ -312,7 +312,7 @@ export function createModelEditor(ctx: Ctx): { onModel: () => void; guard: (go: 
     if (!mat) return;
     const hit = pick(e.clientX, e.clientY);
     if (!hit) { say(tx('Upuść teksturę na część modelu', 'Drop the texture onto a part of the model')); return; }
-    const o = !hit.mesh.userData.temp ? objOf.get(nodeKey(hit.mesh, hit.island)) : undefined;
+    const o = !hit.mesh.userData.temp && !hit.mesh.userData.fxProp ? objOf.get(nodeKey(hit.mesh, hit.island)) : undefined;
     if (o) selectObj(o, false); else toggle(hit.mesh, hit.island, false);
     retexture(mat);
   });
@@ -465,6 +465,14 @@ export function createModelEditor(ctx: Ctx): { onModel: () => void; guard: (go: 
         temp.m = L.clone().multiply(new THREE.Matrix4().fromArray(prev)).elements.map(r4);
         moveLightSpot(mesh);
         step.push(() => { writeIsland(mesh, island, P0, N0, new THREE.Matrix4()); temp.m = prev; moveLightSpot(mesh); });
+      } else if (mesh.userData.fxProp) {
+        // zapisany wcześniej model z paczki: poprawka 'pm' przed jego macierzą
+        const [g, i] = mesh.userData.fxProp as [string, number, string];
+        const fix: Fix = { k: 'pm', g, i, m: L.elements.map(r4) };
+        edits.push(fix);
+        const pm = mesh.userData.propM as THREE.Matrix4, prevM = pm.clone();
+        pm.premultiply(L);
+        step.push(() => { writeIsland(mesh, island, P0, N0, new THREE.Matrix4()); dropEdit(fix); pm.copy(prevM); });
       } else {
         const [g, i] = mesh.userData.fx as [string, number];
         const fix: Fix = { g, i, c: p.c.map(r4) as [number, number, number], n: island.tris.length, m: L.elements.map(r4) };
@@ -477,6 +485,21 @@ export function createModelEditor(ctx: Ctx): { onModel: () => void; guard: (go: 
     if (step.length) undo.push(step);
     placeProxy();
     say(tx(`Zmiany do zapisania: ${edits.length}`, `Unsaved changes: ${edits.length}`));
+  }
+  /**
+   * Model z paczki zapisany wcześniej (rekwizyt w budynku): dzieli bryłę z innymi, więc przed edycją dostaje własną kopię
+   * z wypieczonym położeniem (jak części dodane w edytorze) — wtedy da się go chwycić, przesunąć i usunąć
+   */
+  function bakeProp(mesh: THREE.Mesh): void {
+    if (mesh.userData.baked) return;
+    mesh.updateMatrix();
+    mesh.userData.propM = mesh.matrix.clone();     // bieżąca macierz modelu (do kopii); edycje mnożą ją z przodu
+    const g = mesh.geometry.clone().toNonIndexed();
+    g.applyMatrix4(mesh.matrix);
+    mesh.geometry = g;
+    mesh.position.set(0, 0, 0); mesh.quaternion.identity(); mesh.scale.set(1, 1, 1); mesh.updateMatrix();
+    mesh.frustumCulled = false;
+    mesh.userData.baked = true;
   }
   /** znacznik światła pochodni idzie za nią (siatka tymczasowa ma wypieczone położenie, więc liczymy z macierzy poprawki) */
   function moveLightSpot(mesh: THREE.Mesh): void {
@@ -492,7 +515,7 @@ export function createModelEditor(ctx: Ctx): { onModel: () => void; guard: (go: 
     sel.push({ mesh, isl: island, P: snap.P, N: snap.N, c: centerOf(snap.P), hi });
   }
   function toggle(mesh: THREE.Mesh, island: Island, multi: boolean): void {
-    if (mesh.userData.temp) island = wholeOf(mesh);
+    if (mesh.userData.temp || mesh.userData.fxProp) island = wholeOf(mesh);
     const k = sel.findIndex((p) => p.mesh === mesh && p.isl === island);
     if (!multi) { deselect(); addPiece(mesh, island); }
     else if (k >= 0) { const [p] = sel.splice(k, 1); p!.hi.removeFromParent(); p!.hi.geometry.dispose(); }
@@ -522,6 +545,17 @@ export function createModelEditor(ctx: Ctx): { onModel: () => void; guard: (go: 
     const step: (() => void)[] = [];
     for (const p of sel) {
       if (p.mesh.userData.temp) { step.push(dropTemp(p.mesh)); continue; }
+      if (p.mesh.userData.fxProp) {
+        const c = new THREE.Vector3(...p.c);
+        const L = new THREE.Matrix4().makeTranslation(c.x, c.y, c.z).multiply(new THREE.Matrix4().makeScale(0.0001, 0.0001, 0.0001)).multiply(new THREE.Matrix4().makeTranslation(-c.x, -c.y, -c.z));
+        const [g, i] = p.mesh.userData.fxProp as [string, number, string];
+        const fix: Fix = { k: 'pm', g, i, m: L.elements.map((v) => Math.round(v * 1e6) / 1e6) };
+        writeIsland(p.mesh, p.isl, p.P, p.N, L);
+        edits.push(fix);
+        const mesh = p.mesh, island = p.isl, P0 = p.P, N0 = p.N;
+        step.push(() => { writeIsland(mesh, island, P0, N0, new THREE.Matrix4()); dropEdit(fix); });
+        continue;
+      }
       const c = new THREE.Vector3(...p.c);
       const L = new THREE.Matrix4().makeTranslation(c.x, c.y, c.z).multiply(new THREE.Matrix4().makeScale(0.0001, 0.0001, 0.0001)).multiply(new THREE.Matrix4().makeTranslation(-c.x, -c.y, -c.z));
       const [g, i] = p.mesh.userData.fx as [string, number];
@@ -601,6 +635,15 @@ export function createModelEditor(ctx: Ctx): { onModel: () => void; guard: (go: 
     const made: THREE.Mesh[] = [], step: (() => void)[] = [];
     for (const p of sel) {
       const temp = p.mesh.userData.temp as Fix | undefined;
+      // model z paczki (dodany teraz albo zapisany wcześniej): kopia jako nowy model obok
+      if (temp?.k === 'prop' || p.mesh.userData.fxProp) {
+        const name = (temp?.prop ?? (p.mesh.userData.fxProp as [string, number, string])[2]) as PropName;
+        const g = temp?.g ?? (p.mesh.userData.fxProp as [string, number, string])[0];
+        const base = temp ? new THREE.Matrix4().fromArray(temp.m) : (p.mesh.userData.propM as THREE.Matrix4).clone();
+        const mm = addProp(name, g, undefined, offset().multiply(base), true);
+        if (mm) made.push(mm);
+        continue;
+      }
       if (temp && temp.k !== 'add') continue;      // kopia kopii: zapisz i przeładuj, potem kopiuj
       let fix: Fix, P: Float32Array;
       const m = offset();
@@ -630,7 +673,7 @@ export function createModelEditor(ctx: Ctx): { onModel: () => void; guard: (go: 
   function doubleSel(): void {
     const step: (() => void)[] = [];
     for (const p of sel) {
-      if (p.mesh.userData.temp) continue;
+      if (p.mesh.userData.temp || p.mesh.userData.fxProp) continue;
       const [g, i, mat] = p.mesh.userData.fx as [string, number, string];
       const fix: Fix = { k: 'dbl', g, i, c: p.c.map(r4) as [number, number, number], n: p.isl.tris.length, m: new THREE.Matrix4().elements };
       edits.push(fix);
@@ -651,7 +694,7 @@ export function createModelEditor(ctx: Ctx): { onModel: () => void; guard: (go: 
     const step: (() => void)[] = [], made: THREE.Mesh[] = [];
     for (const p of sel) {
       const temp = p.mesh.userData.temp as Fix | undefined;
-      if (temp?.k === 'prop') continue;               // gotowe modele z paczek mają własną teksturę
+      if (temp?.k === 'prop' || p.mesh.userData.fxProp) continue;               // gotowe modele z paczek mają własną teksturę
       if (temp) {
         // tymczasowa część: nowa siatka z tym samym kształtem i nowym materiałem
         const old = p.mesh, parent = old.parent!, prevTo = temp.to;
@@ -701,12 +744,12 @@ export function createModelEditor(ctx: Ctx): { onModel: () => void; guard: (go: 
   }
 
   /** gotowy model z paczki (beczka, worek…): w podglądzie osobna siatka z kopią bryły, w grze dopisany do rekwizytów modelu */
-  function addProp(name: PropName, g: string, where?: THREE.Vector3): void {
+  function addProp(name: PropName, g: string, where?: THREE.Vector3, exact?: THREE.Matrix4, keepSel = false): THREE.Mesh | undefined {
     const cur = ctx.current();
     if (!cur) return;
     const at = where ?? cur.worldToLocal(ctx.orbit.target.clone());
     const s = PROP_SIZE[name] ?? 0.2;
-    const m = new THREE.Matrix4().makeTranslation(at.x, where ? at.y : Math.max(0, at.y - 0.2), at.z).multiply(new THREE.Matrix4().makeScale(s, s, s));
+    const m = exact ?? new THREE.Matrix4().makeTranslation(at.x, where ? at.y : Math.max(0, at.y - 0.2), at.z).multiply(new THREE.Matrix4().makeScale(s, s, s));
     const fix: Fix = { k: 'prop', g, prop: name, m: m.elements.map(r4) };
     edits.push(fix);
     const geo = propGeometry(name).clone().toNonIndexed();
@@ -719,9 +762,11 @@ export function createModelEditor(ctx: Ctx): { onModel: () => void; guard: (go: 
     if (ls) { const o = new THREE.Object3D(); o.name = 'lightSpot'; o.position.copy(ls.applyMatrix4(m)); mesh.add(o); }
     groupFor(g).add(mesh);
     undo.push([() => { mesh.removeFromParent(); dropEdit(fix); }]);
+    if (keepSel) return mesh;
     deselect();
     addPiece(mesh, wholeOf(mesh)); placeProxy(); markPanel();
     say(tx('Dodano — ustaw uchwytem (1/2/3)', 'Added — place it with the gizmo (1/2/3)'));
+    return mesh;
   }
 
   // ---------- przedmioty: części z różnych materiałów, które się stykają (kłoda = kora + dwa czoła), chwytane razem ----------
@@ -920,10 +965,11 @@ export function createModelEditor(ctx: Ctx): { onModel: () => void; guard: (go: 
     ray.setFromCamera(new THREE.Vector2(((cx - r.left) / r.width) * 2 - 1, -((cy - r.top) / r.height) * 2 + 1), ctx.camera);
     const cur = ctx.current();
     if (!cur) return null;
-    const hits = ray.intersectObject(cur, true).filter((h) => (h.object as THREE.Mesh).isMesh && (h.object.userData.fx || (h.object.userData.temp && !h.object.userData.locked)) && h.faceIndex != null);
+    const hits = ray.intersectObject(cur, true).filter((h) => (h.object as THREE.Mesh).isMesh && (h.object.userData.fx || h.object.userData.fxProp || (h.object.userData.temp && !h.object.userData.locked)) && h.faceIndex != null);
     const h = hits.find((x) => { for (let o: THREE.Object3D | null = x.object; o; o = o.parent) if (!o.visible) return false; return true; });
     if (!h) return null;
     const mesh = h.object as THREE.Mesh;
+    if (mesh.userData.fxProp) { bakeProp(mesh); return { mesh, island: wholeOf(mesh) }; }
     const { of, list } = isl(mesh.geometry);
     return { mesh, island: list[of[h.faceIndex!]!]! };
   }
@@ -946,7 +992,7 @@ export function createModelEditor(ctx: Ctx): { onModel: () => void; guard: (go: 
     }
     const { mesh, island } = hit;
     // klik chwyta cały przedmiot (np. kłodę z korą i czołami), Alt+klik — tylko kliknięty kawałek
-    const o = !e.altKey && !mesh.userData.temp ? objOf.get(nodeKey(mesh, island)) : undefined;
+    const o = !e.altKey && !mesh.userData.temp && !mesh.userData.fxProp ? objOf.get(nodeKey(mesh, island)) : undefined;
     if (o) selectObj(o, multi); else toggle(mesh, island, multi);
   });
   window.addEventListener('keydown', (e) => {

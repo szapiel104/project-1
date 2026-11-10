@@ -17,7 +17,7 @@ const bytes = (s: string | Uint8Array): Uint8Array => (typeof s === 'string' ? U
 
 export interface Fix {
   /** rodzaj: move (domyślnie), dup, mat, add */
-  k?: 'move' | 'dup' | 'mat' | 'add' | 'dbl' | 'prop';
+  k?: 'move' | 'dup' | 'mat' | 'add' | 'dbl' | 'prop' | 'pm';
   /** gotowy model z paczki dla 'prop' (beczka, worek, kosz…; render/props.ts) */
   prop?: string;
   /** grupa w modelu (base, shell, interior, floor, ceiling) */
@@ -90,6 +90,12 @@ export function transformIsland(P: { [i: number]: number }, isl: Island, m: numb
   // odbicie lustrzane odwraca kolejność wierzchołków — przywracamy ją, żeby przód został przodem
   if (det3(m) < 0) for (const t of isl.tris) swapTri(P, A, t);
 }
+/** iloczyn macierzy 4×4 zapisanych kolumnami (jak three.js): a·b */
+function mul4(a: number[], b: number[]): number[] {
+  const o = new Array<number>(16).fill(0);
+  for (let c = 0; c < 4; c++) for (let r = 0; r < 4; r++) { let v = 0; for (let k = 0; k < 4; k++) v += a[k * 4 + r]! * b[c * 4 + k]!; o[c * 4 + r] = v; }
+  return o;
+}
 /** wyznacznik części obrotowo-skalującej macierzy 4×4 (ujemny = odbicie lustrzane) */
 export const det3 = (m: number[]): number =>
   m[0]! * (m[5]! * m[10]! - m[6]! * m[9]!) - m[4]! * (m[1]! * m[10]! - m[2]! * m[9]!) + m[8]! * (m[1]! * m[6]! - m[2]! * m[5]!);
@@ -159,6 +165,13 @@ export function applyModelFixes(name: string, data: Record<string, unknown>, fix
     if (kind === 'prop') {
       // gotowy model z paczki: dopisany do listy rekwizytów modelu (blenderModel w buildings.ts stawia go w grupie g)
       ((data.props ??= []) as { prop: string; g: string; m: number[] }[]).push({ prop: f.prop ?? 'barrel', g: f.g, m: f.m });
+      continue;
+    }
+    if (kind === 'pm') {
+      // przesunięcie / obrót / usunięcie wcześniej dodanego modelu z paczki: macierz przed jego dotychczasową
+      const pr = (data.props as { m: number[] }[] | undefined)?.[f.i ?? -1];
+      if (!pr) { miss++; continue; }
+      pr.m = mul4(f.m, pr.m);
       continue;
     }
     if (kind === 'add') {

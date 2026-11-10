@@ -1002,8 +1002,9 @@ function blenderModel(g: THREE.Group, model: BlenderBuilding, flag: THREE.Materi
   g.add(ceiling);
   // skrzydła wrót (brama): zapisane zamknięte, obracają się wokół zawiasów x = ±hinge; startują otwarte
   // rekwizyty z paczek dodane w edytorze poprawek (modelfix.ts, rodzaj 'prop'): beczki, worki, kosze… w swojej grupie
-  for (const p of (model as unknown as { props?: { prop: string; g: string; m: number[] }[] }).props ?? []) {
+  for (const [pi, p] of ((model as unknown as { props?: { prop: string; g: string; m: number[] }[] }).props ?? []).entries()) {
     const mesh = new THREE.Mesh(propGeometry(p.prop as PropName), propMaterial(p.prop as PropName));
+    mesh.userData.fxProp = [p.g, pi, p.prop];   // edytor w podglądzie modeli może go potem przesunąć albo usunąć
     new THREE.Matrix4().fromArray(p.m).decompose(mesh.position, mesh.quaternion, mesh.scale);
     mesh.castShadow = mesh.receiveShadow = true;
     // pochodnia z edytora świeci nocą jak pochodnie zrobione w modelu: znacznik światła na głowicy

@@ -35,4 +35,11 @@ describe('poprawki modeli z edytora (modelfix.ts)', () => {
     expect(out.slice(12, 15)).toEqual(out.slice(6, 9));
     expect((data.props as unknown[]).length).toBe(1);
   });
+  it('poprawka „pm” przesuwa wcześniej dodany model z paczki', () => {
+    const data: Record<string, unknown> = { q, base: [] };
+    const I = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1];
+    const up = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0.5, 0, 1];
+    applyModelFixes('test4', data, [{ k: 'prop', g: 'base', prop: 'apple', m: I }, { k: 'pm', g: 'base', i: 0, m: up }]);
+    expect((data.props as { m: number[] }[])[0]!.m[13]).toBeCloseTo(0.5, 6);
+  });
 });
