@@ -119,9 +119,28 @@ for row in range(3):
 b.prism('base', 'wood', 0.09, 0.08, 0.24, DOOR[1] + 0.15, 0.0, Z1 + 0.14, seg=10)
 for y in (0.05, 0.18):
     b.prism('base', 'iron', 0.092, 0.092, 0.015, DOOR[1] + 0.15, y, Z1 + 0.14, seg=10)
-b.box('base', 'wood', 0.3, 0.06, 0.08, (FW[0] + FW[1]) / 2, P + 0.26, Z1 + 0.06)
-for k in range(5):
-    b.prism('base', 'apple' if k % 2 else 'gold', 0.025, 0.0, 0.05, (FW[0] + FW[1]) / 2 - 0.12 + k * 0.06, P + 0.32, Z1 + 0.06, seg=5)
+# skrzynka pod oknem (Michał 10.11.2026: kwiaty ze stożków to „ulep”): skrzynka z desek z dnem i ściankami, w niej
+# ziemia, kępy liści i kwiaty z kilku płatków na łodyżkach; wsporniki pod spodem
+FXc, FY, FZ = (FW[0] + FW[1]) / 2, P + 0.26, Z1 + 0.065
+b.box('base', 'plank', 0.3, 0.012, 0.08, FXc, FY, FZ)                                   # dno
+for sz in (-1, 1):
+    b.box('base', 'plank', 0.3, 0.06, 0.01, FXc, FY, FZ + sz * 0.035, roll=sz * 0.06)   # ścianka przód/tył
+for sx in (-1, 1):
+    b.box('base', 'plank', 0.012, 0.06, 0.07, FXc + sx * 0.144, FY, FZ)                  # boki
+    b.box('base', 'woodDark', 0.016, 0.05, 0.016, FXc + sx * 0.1, FY - 0.05, Z1 + 0.035, tilt=0.5)  # wspornik
+b.crystal('base', 'soil', FXc, FY + 0.045, FZ, 0.135, seed=1.7, sx=1.0, sy=0.1, sz=0.24, seg=10)
+for k in range(7):                                                                       # kępy liści
+    b.crystal('base', 'leaf' if k % 2 else 'leafLight', FXc - 0.12 + k * 0.04, FY + 0.07, FZ + (k % 3 - 1) * 0.012,
+              0.026, seed=k * 2.3 + 1, sx=1.0, sy=0.8, sz=0.9, seg=7)
+for k in range(5):                                                                       # kwiaty: łodyżka, płatki, środek
+    x, z = FXc - 0.11 + k * 0.055, FZ + (0.012 if k % 2 else -0.01)
+    top = FY + 0.12 + (k % 3) * 0.012
+    b.box('base', 'leaf', 0.004, top - FY - 0.06, 0.004, x, FY + 0.06, z)
+    for j in range(5):
+        a = j * 2 * math.pi / 5 + k
+        b.crystal('base', 'apple' if k % 2 else 'gold', x + math.cos(a) * 0.011, top, z + math.sin(a) * 0.011, 0.009,
+                  seed=k * 5 + j, sx=1.0, sy=0.35, sz=0.7, seg=5)
+    b.crystal('base', 'gold' if k % 2 else 'woodDark', x, top + 0.003, z, 0.006, seed=k + 40, sy=0.6, seg=5)
 
 E = P + 0.46
 OUT, ROOM = ['base', 'shell'], ['base', 'interior', 'floor', 'ceiling']
