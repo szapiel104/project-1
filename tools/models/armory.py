@@ -49,16 +49,16 @@ def slit(x, z, nx, nz):
     """Strzelnica: ościeża z ciosu, żelazny pręt, ciemna wnęka (5 mm za licem)"""
     if nz:
         for s in (-1, 1):
-            b.box('base', 'cutDark', 0.035, SY1 - SY0 + 0.04, T + 0.02, x + s * (SL / 2 + 0.017), SY0 - 0.02, z)
-        b.box('base', 'cutDark', SL + 0.1, 0.04, T + 0.03, x, SY0 - 0.05, z + nz * 0.006)
-        b.box('base', 'cutDark', SL + 0.1, 0.04, T + 0.02, x, SY1, z)
+            b.box('base', 'castleDark', 0.035, SY1 - SY0 + 0.04, T + 0.02, x + s * (SL / 2 + 0.017), SY0 - 0.02, z)
+        b.box('base', 'castleDark', SL + 0.1, 0.04, T + 0.03, x, SY0 - 0.05, z + nz * 0.006)
+        b.box('base', 'castleDark', SL + 0.1, 0.04, T + 0.02, x, SY1, z)
         b.box('base', 'iron', 0.012, SY1 - SY0, 0.012, x, SY0, z)
         b.box('base', 'dark', SL, SY1 - SY0, 0.004, x, SY0, z - nz * (T / 2 - 0.006))
     else:
         for s in (-1, 1):
-            b.box('base', 'cutDark', T + 0.02, SY1 - SY0 + 0.04, 0.035, x, SY0 - 0.02, z + s * (SL / 2 + 0.017))
-        b.box('base', 'cutDark', T + 0.03, 0.04, SL + 0.1, x + nx * 0.006, SY0 - 0.05, z)
-        b.box('base', 'cutDark', T + 0.02, 0.04, SL + 0.1, x, SY1, z)
+            b.box('base', 'castleDark', T + 0.02, SY1 - SY0 + 0.04, 0.035, x, SY0 - 0.02, z + s * (SL / 2 + 0.017))
+        b.box('base', 'castleDark', T + 0.03, 0.04, SL + 0.1, x + nx * 0.006, SY0 - 0.05, z)
+        b.box('base', 'castleDark', T + 0.02, 0.04, SL + 0.1, x, SY1, z)
         b.box('base', 'iron', 0.012, SY1 - SY0, 0.012, x, SY0, z)
         b.box('base', 'dark', 0.004, SY1 - SY0, SL, x - nx * (T / 2 - 0.006), SY0, z)
 
@@ -95,7 +95,7 @@ for sg in (-1, 1):
 stairs(b, t, SX, SW, Z1 + 0.32, Z0 + 0.42, TOP, side=-1, steps=11)
 # podest u szczytu schodów, wsparty o lewą ścianę (tędy wchodzi się na dach przez przerwę w przedpiersiu)
 b.box('base', 'castle', SW, TOP - 0.03, 0.34, SX, 0.0, Z0 + 0.25, bottom=False)
-b.box('base', 'cutDark', SW + 0.01, 0.03, 0.35, SX, TOP - 0.03, Z0 + 0.25)
+b.box('base', 'castleDark', SW + 0.01, 0.03, 0.35, SX, TOP - 0.03, Z0 + 0.25)
 b.box('base', 'castle', 0.07, TOP + 0.2, 0.34, SX - SW / 2 - 0.035, 0.0, Z0 + 0.25, bottom=False)   # murek podestu z zewnątrz
 b.box('base', 'castle', SW + 0.07, TOP + 0.2, 0.07, SX - 0.035, 0.0, Z0 + 0.045, bottom=False)       # i z tyłu
 t.block(SX - SW / 2, SX + SW / 2, Z0 + 0.08, Z0 + 0.42, 0.0, TOP - 0.02)

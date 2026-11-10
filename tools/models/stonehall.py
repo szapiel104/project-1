@@ -164,7 +164,7 @@ def stairs(b, t, x, w, z_from, z_to, y_top, side=1, steps=None):
         # masyw stopnia od ziemi do jego wierzchu (od spodu otwarty — stoi na ziemi)
         b.box('base', 'castle', w, top - 0.03, abs(run) + 0.002, x, 0.0, zc, bottom=False)
         # nakrywa stopnia z ciemniejszego ciosu, wystaje odrobinę do przodu
-        b.box('base', 'cutDark', w + 0.01, 0.03, abs(run) + 0.012, x, top - 0.03, zc + 0.004)
+        b.box('base', 'castleDark', w + 0.01, 0.03, abs(run) + 0.012, x, top - 0.03, zc + 0.004)
         t.block(x - w / 2, x + w / 2, zc - abs(run) / 2, zc + abs(run) / 2, 0.0, top - 0.02)
     # przedpiersie schodów od strony zewnętrznej: pochyły murek z blankami co kilka stopni
     ex = x + side * (w / 2 + 0.035)
