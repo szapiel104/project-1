@@ -224,7 +224,7 @@ export function createModelEditor(ctx: Ctx): { onModel: () => void; guard: (go: 
   }
   const markSwatch = (): void => { for (const sw of swatches) sw.style.borderColor = sw.dataset.name === picked ? '#e9c766' : '#3e3626'; };
   markSwatch();
-  find.oninput = () => { const q = find.value.trim().toLowerCase(); for (const sw of swatches) sw.hidden = !!q && !sw.title.toLowerCase().includes(q); };
+  find.oninput = () => { const q = find.value.trim().toLowerCase(); for (const sw of swatches) sw.style.display = q && !sw.title.toLowerCase().includes(q) ? 'none' : 'flex'; };
   const assets = document.createElement('div');
   assets.style.cssText = grid.style.cssText + ';grid-template-columns:repeat(auto-fill,minmax(84px,1fr));padding-bottom:6px';
   assets.style.display = 'none';
