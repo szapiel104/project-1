@@ -10,7 +10,9 @@ import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js
  * zawartość (budynek postawiony, zburzony, przesunięty, inna liczba części) — najwyżej jeden kawałek na klatkę; do czasu
  * przeliczenia jego budynki rysują się po staremu (paczki), więc nic nie znika ani nie miga.
  */
-export const CELL = 16;
+// Duże kawałki: każda zlepiona siatka to osobny obiekt do narysowania (a każdy kosztuje procesor ~20 µs w każdym przejściu),
+// więc kawałek 16×16 dawał więcej obiektów niż oszczędzał (pomiar 10.11.2026: 185 siatek). 48×48 = osada w 1–4 kawałkach.
+export const CELL = 48;
 
 export interface MergePart {
   geo: THREE.BufferGeometry;
