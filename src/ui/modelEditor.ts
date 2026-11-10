@@ -427,17 +427,25 @@ export function createModelEditor(ctx: Ctx): { onModel: () => void } {
 
   // do sprawdzania z konsoli / testów
   (window as unknown as { __modelEditor: unknown }).__modelEditor = { info: () => ({ on, sel: sel.map((p) => ({ n: p.isl.tris.length, c: p.c, g: p.mesh.userData.fx })), edits: edits.length }) };
-  // kto może edytować (Michał 10.11.2026): lokalnie (localhost) każdy, na stronie gry tylko twórca (admins.owner)
-  const LOCAL = ['localhost', '127.0.0.1', '[::1]'].includes(location.hostname);
-  editBtn.hidden = !LOCAL;
-  if (!LOCAL) void (async () => {
+  // kto może edytować (Michał 10.11.2026): tylko twórca gry (admins.owner), także lokalnie — inne konta i niezalogowani
+  // w ogóle nie widzą przycisku „Edytuj”
+  editBtn.hidden = true;
+  void (async () => {
     try {
       const { supa } = await import('../net/supa');
-      const { data: s } = await supa.auth.getSession();
-      if (!s.session) return;
-      const { data } = await supa.from('admins').select('owner').eq('user_id', s.session.user.id).maybeSingle();
-      editBtn.hidden = !(data as { owner?: boolean } | null)?.owner;
-    } catch { /* bez bazy: bez edycji na stronie */ }
+      const check = async (): Promise<void> => {
+        const { data: s } = await supa.auth.getSession();
+        let owner = false;
+        if (s.session) {
+          const { data } = await supa.from('admins').select('owner').eq('user_id', s.session.user.id).maybeSingle();
+          owner = !!(data as { owner?: boolean } | null)?.owner;
+        }
+        editBtn.hidden = !owner;
+        if (!owner && on) setOn(false);
+      };
+      await check();
+      supa.auth.onAuthStateChange(() => { void check(); });
+    } catch { /* bez bazy: bez edycji */ }
   })();
   setOn(false);
   return {
