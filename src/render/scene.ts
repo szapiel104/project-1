@@ -3112,9 +3112,8 @@ export class GameRenderer {
     let list = this.batchParts.get(root);
     if (list) return list;
     list = [];
-    const walk = (o: THREE.Object3D, inner = false): void => {
+    const walk = (o: THREE.Object3D): void => {
       for (const ch of o.children) {
-        const inn = inner || ch.name === 'interior';
         // wnętrza, ludzie, ogień, ruchome części: po staremu; pochodnia (słup i kosz, wspólne siatki) i dalekie wersje
         // budynków (wspólne dla budynków tego samego rodzaju) też idą razem
         if (ch.name && !MERGE_IN.has(ch.name) && !BATCH_ALSO.test(ch.name)) continue;
@@ -3126,9 +3125,9 @@ export class GameRenderer {
           // Michał 9.11.2026); osobna siatka odpada sama, gdy jest poza kadrem — wygląd bez zmian
           const g = m.geometry, tris = (g.index ? g.index.count : g.getAttribute('position')!.count) / 3;
           if (tris > HEAVY_TRIS) continue;
-          if (!mat.transparent && mat.visible !== false && g.getAttribute('position')) { list!.push(m); if (inn) this.innerParts.add(m); }
+          if (!mat.transparent && mat.visible !== false && g.getAttribute('position')) list!.push(m);
         }
-        walk(ch, inn);
+        walk(ch);
       }
     };
     walk(root);
@@ -3136,10 +3135,6 @@ export class GameRenderer {
     return list;
   }
   private batchGroups = new Map<string, THREE.Mesh[]>();
-  /** części wnętrz w paczkach: zostają w scenie na stałe, a do karty idą tylko, gdy wnętrze da się zobaczyć (innerSeen) */
-  private innerParts = new WeakSet<THREE.Object3D>();
-  /** budynki, których wnętrze widać w tej klatce: otwarty dach, sala zamku, spacer obok, kamera tuż przy drzwiach i oknach */
-  private innerSeen = new Set<number>();
   /** Budynki razem po materiale (buildingBatch.ts); ?batch=0 — dawne łączenie po parze bryła+materiał */
   private matBatchOn = !/[?&]batch=0/.test(location.search); // 8.11.2026: mieszanie części naprawione (rebuild zamiast setGeometrySize)
   private matBatches?: MaterialBatches;
@@ -3172,7 +3167,6 @@ export class GameRenderer {
       const parts = this.staticParts(root);
       const own = this.sites.sites.has(id) || !root.visible;
       const hide = !own && !seen(root);
-      const innerHide = hide || !this.innerSeen.has(id);
       for (const m of parts) {
         if (own) { m.layers.set(0); continue; }
         let vis = m.visible;
@@ -3182,12 +3176,11 @@ export class GameRenderer {
           const mats = m.material, subs = groupGeos(m.geometry);
           if (!subs.length || subs.some((sg) => { const mt = mats[sg.userData.materialIndex as number]; return !mt || mt.transparent; })) { m.layers.set(0); continue; }
           m.layers.set(BATCH_LAYER);
-          const h = this.innerParts.has(m) ? innerHide : hide;
-          for (const sg of subs) mb.add(sg, mats[sg.userData.materialIndex as number]!, m.matrixWorld, m.castShadow, m.receiveShadow, h);
+          for (const sg of subs) mb.add(sg, mats[sg.userData.materialIndex as number]!, m.matrixWorld, m.castShadow, m.receiveShadow, hide);
           continue;
         }
         m.layers.set(BATCH_LAYER);
-        mb.add(m.geometry, m.material as THREE.Material, m.matrixWorld, m.castShadow, m.receiveShadow, this.innerParts.has(m) ? innerHide : hide);
+        mb.add(m.geometry, m.material as THREE.Material, m.matrixWorld, m.castShadow, m.receiveShadow, hide);
       }
     }
     if (!keepOff) mb.end();
@@ -4020,19 +4013,8 @@ export class GameRenderer {
     // kopalnia zawsze stoi zakryta (kopiec i portal): jej wnętrze to osobna sztolnia, do której wchodzi się spacerem
     const shut = new Set<number>();
     for (const b of g.buildings) if (b.type === OREMINE_T) shut.add(b.id);
-    // wnętrza (Michał 10.11.2026): stoją zawsze, ale do karty idą tylko te, które da się zobaczyć — od 10.11 wszystkie wnętrza
-    // wioski rysowały się w każdej klatce i w cieniu, choć zakrywał je dach i ściany (spadek FPS)
-    this.innerSeen.clear();
-    const icp = this.cam.camera.position;
     for (const [id, mesh] of this.buildingMeshes) {
       if (shut.has(id) && !this.walk) { animateBuilding(mesh, false, this.time, dt); continue; }
-      {
-        const sp = mesh.userData.cullSphere as THREE.Sphere | undefined;
-        const r = sp ? sp.radius : 3, cx = sp ? sp.center.x : mesh.position.x, cz = sp ? sp.center.z : mesh.position.z;
-        // z bliska przez drzwi i okna; spacerem dalej (z ulicy widać światło i sprzęty w izbie przez otwarte drzwi)
-        const reach = (this.walk ? WALK_SEE_R + 6 : 9) + r;
-        if (Math.hypot(icp.x - cx, icp.z - cz) < reach) this.innerSeen.add(id);
-      }
       const inHall = !!this.walk && id === this.walkHall;
       // spacerem z ziemi dachy zostają na miejscu (zdjęty dach widać od dołu jako dziurę); zdejmujemy go tylko nad salą, w której stoimy
       const busy = working.has(id) || id === this.selectedId;
@@ -4047,7 +4029,6 @@ export class GameRenderer {
       // widać, bo nad salą kładziemy sufit ('ceiling'); bez tego w zamku znikały sprzęty sal (Michał 10.11.2026)
       const hallCeil = inHall && !!named(mesh, 'ceiling');
       animateBuilding(mesh, this.walk ? hallCeil : open || inHall, this.time, dt);
-      if (open || inHall || (this.walk && (id === this.walkNear || id === this.walkHall || this.walkInView.has(id)))) this.innerSeen.add(id);
       if (this.walk && busy && !inHall) {
         const inn = named(mesh, 'interior'); if (inn) inn.visible = true;
         const fl = named(mesh, 'flame'); if (fl) fl.visible = true;
