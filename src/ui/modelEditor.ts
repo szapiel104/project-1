@@ -934,7 +934,16 @@ export function createModelEditor(ctx: Ctx): { onModel: () => void; guard: (go: 
     if (Math.hypot(e.clientX - down[0], e.clientY - down[1]) > 4) return;
     const multi = e.ctrlKey || e.metaKey || e.shiftKey;
     const hit = pick(e.clientX, e.clientY);
-    if (!hit) { if (!multi) { deselect(); say(tx('Kliknij część (Ctrl — kilka naraz)', 'Click a part (Ctrl — several at once)')); } return; }
+    if (!hit) {
+      if (!multi) deselect();
+      // trafienie w siatkę bez danych do poprawek (gotowe skany z paczek, drabina z kodu, ludzie): mówimy wprost
+      const cur = ctx.current(), r = ctx.canvas.getBoundingClientRect();
+      ray.setFromCamera(new THREE.Vector2(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1), ctx.camera);
+      const raw = cur ? ray.intersectObject(cur, true).some((h) => (h.object as THREE.Mesh).isMesh && h.object.visible) : false;
+      say(raw ? tx('Tego modelu nie da się tu poprawiać — edytor działa na budynkach z Blendera i rzeczach dodanych w edytorze', 'This model cannot be edited here — the editor works on Blender buildings and things added in the editor')
+        : tx('Kliknij część (Ctrl — kilka naraz)', 'Click a part (Ctrl — several at once)'));
+      return;
+    }
     const { mesh, island } = hit;
     // klik chwyta cały przedmiot (np. kłodę z korą i czołami), Alt+klik — tylko kliknięty kawałek
     const o = !e.altKey && !mesh.userData.temp ? objOf.get(nodeKey(mesh, island)) : undefined;
