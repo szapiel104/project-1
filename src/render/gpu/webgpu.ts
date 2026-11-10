@@ -315,7 +315,18 @@ export async function prepareGpu(canvas: HTMLCanvasElement): Promise<void> {
   // (Michał 3.11.2026, dziennik po 440 s gry). Niezałożonych wiązań nie zwalniamy.
   const bnd = (r as unknown as { _bindings: { get(o: unknown): { initialized?: boolean }; delete(o: unknown): void; deleteForRender(ro: unknown): void } })._bindings;
   const delForRender = bnd.deleteForRender.bind(bnd);
-  bnd.deleteForRender = (ro: unknown): void => { if (bnd.get(ro).initialized === true) delForRender(ro); else bnd.delete(ro); };
+  // Zwolnienie wiązań obiektu, którego RenderObject three.js wymienia w środku klatki (zmiana materiału/geometrii między
+  // przejściem cieni a sceną), niszczyło jego bufor uniformów, zanim polecenia tej klatki — z cieniami, które go już
+  // użyły — trafiły do karty: „[Buffer bindingBuffer…_object] used in submit while destroyed”, ok. 200 błędów przy
+  // wczytywaniu (three.js przypisuje je do składanego właśnie potoku cieni). Zwalniamy więc dopiero po zakończeniu
+  // bieżącego zadania przeglądarki (po wysłaniu poleceń klatki) — Michał 10.11.2026.
+  const later: unknown[] = [];
+  let laterSched = false;
+  bnd.deleteForRender = (ro: unknown): void => {
+    if (bnd.get(ro).initialized !== true) { bnd.delete(ro); return; }
+    later.push(ro);
+    if (!laterSched) { laterSched = true; setTimeout(() => { laterSched = false; for (const x of later.splice(0)) delForRender(x); }, 0); }
+  };
   // Usunięcie (dispose) wspólnej geometrii niszczy w three.js także atrybuty „węzłowe” pierwszego obiektu, który ją
   // rysował — m.in. macierze instancji puli (instanceMatrix), choć pula żyje dalej i co klatkę je wpisuje. Kończyło się
   // „used in submit while destroyed” w każdej klatce i zastygłym obrazem (dziennik Michała 7.11.2026, 125 s gry,
