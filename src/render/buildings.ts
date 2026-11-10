@@ -794,6 +794,8 @@ function withAo(m: THREE.Material): THREE.Material {
   }
   return c;
 }
+/** Niewidoczny materiał znaczników ognia (three.js nie rysuje obiektów z material.visible = false) */
+const FLAME_MARK = new THREE.MeshBasicMaterial({ visible: false });
 const b64 = (s: string | Uint8Array): Uint8Array => bytes(s);
 const geoCache = new Map<string, THREE.BufferGeometry>();
 function blenderGeo(pos: string, ao: string, q: number, k: number): THREE.BufferGeometry {
@@ -1025,7 +1027,9 @@ function blenderModel(g: THREE.Group, model: BlenderBuilding, flag: THREE.Materi
     g.add(o);
   }
   for (const [x, y, z] of marks.flames ?? []) {
-    const f = new THREE.Mesh(new THREE.ConeGeometry(0.07, 0.16, 6).translate(0, 0.08, 0), M.ember);
+    // znacznik ognia: sam punkt dla systemu efektów (ogień rysuje gra), bez widocznej bryły — pomarańczowy stożek był
+    // „ulepem” i wyłaził, odkąd wnętrza są zawsze widoczne (Michał 10.11.2026). Widoczność grupy dalej mówi „pali się”.
+    const f = new THREE.Mesh(new THREE.ConeGeometry(0.07, 0.16, 6).translate(0, 0.08, 0), FLAME_MARK);
     f.name = 'flame';
     f.position.set(x, y, z);
     g.add(f);
