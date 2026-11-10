@@ -70,13 +70,35 @@ def parapet(b, x0, x1, z0, z1, y, skip=None, step=0.27):
                 b.box('base', 'castle', L, PAR, W, cx, y, cz)
                 b.box('base', 'castleDark', L + 0.02, 0.03, W + 0.025, cx, y + PAR - 0.025, cz)
             if L > 0.3:
-                b.merlons_line('base', 'castle', px0 + (0.1 if px0 != px1 else 0), pz0 + (0.1 if pz0 != pz1 else 0),
-                               px1 - (0.1 if px0 != px1 else 0), pz1 - (0.1 if pz0 != pz1 else 0), y + PAR, step=step, w=0.15, h=0.15, t=W)
+                rough_merlons(b, px0 + (0.1 if px0 != px1 else 0), pz0 + (0.1 if pz0 != pz1 else 0),
+                              px1 - (0.1 if px0 != px1 else 0), pz1 - (0.1 if pz0 != pz1 else 0), y + PAR, step, W)
     # gzyms pod przedpiersiem (rama z czterech pasów, nie płyta — wnętrze widać, gdy dach zdjęty)
     for z, s in ((z1, 1), (z0, -1)):
         b.box('base', 'castleDark', x1 - x0 + 0.06, 0.05, 0.05, (x0 + x1) / 2, y - 0.07, z + s * 0.02)
     for x, s in ((x0, -1), (x1, 1)):
         b.box('base', 'castleDark', 0.05, 0.05, z1 - z0 - 0.02, x + s * 0.02, y - 0.07, (z0 + z1) / 2)
+
+
+def _rnd(k):
+    """Powtarzalny „los” 0..1 (bez random — model ma wychodzić zawsze taki sam)"""
+    v = math.sin(k * 12.9898 + 78.233) * 43758.5453
+    return v - math.floor(v)
+
+
+def rough_merlons(b, x0, z0, x1, z1, y, step, W):
+    """Blanki jak z ręcznie kładzionego kamienia (Michał 10.11.2026: równe klocki = ulep): każda trochę innej szerokości
+    i wysokości, lekko przechylona, z ciemniejszą, obtłuczoną nakrywą z kamienia wystającą kilka mm"""
+    L = math.hypot(x1 - x0, z1 - z0)
+    n = max(1, int(L / step))
+    rot = -math.atan2(z1 - z0, x1 - x0)
+    seed = x0 * 7.1 + z0 * 3.3 + x1 * 1.7 + z1 * 5.9
+    for i in range(n):
+        f = (i + 0.5) / n
+        cx, cz = x0 + (x1 - x0) * f, z0 + (z1 - z0) * f
+        r1, r2, r3 = _rnd(seed + i), _rnd(seed + i + 0.37), _rnd(seed + i + 0.71)
+        w, h = 0.14 + 0.03 * r1, 0.13 + 0.035 * r2
+        b.box('base', 'castle', w, h, W, cx, y, cz, rot, tilt=(r3 - 0.5) * 0.05, roll=(r1 - 0.5) * 0.04)
+        b.box('base', 'castleDark', w + 0.012, 0.028, W + 0.014, cx, y + h - 0.012, cz, rot + (r2 - 0.5) * 0.08, tilt=(r3 - 0.5) * 0.06)
 
 
 def flat_roof(b, x0, x1, z0, z1, y, beams_along_x=False, nbeams=4):
