@@ -33,6 +33,14 @@ const P2: Record<string, string> = {
   alignR: 'M16 2h2v16h-2zM4 5h10v4H4zm4 6h6v4H8z',
   spread: 'M1 3h2v14H1zm16 0h2v14h-2zM5 7h3v6H5zm7 0h3v6h-3z',
   surface: 'M9 1h2v8.2l3.3-3.3 1.4 1.4L10 13 4.3 7.3l1.4-1.4L9 9.2zM1 15h18v4H1z',
+  plinth: 'M5 4h10v6H5zM2 12h16l-1 5H3z',
+  air: 'M6 3h8v6H6zM3 15c2-1.5 4-1.5 7 0s5 1.5 7 0v2c-2 1.5-4 1.5-7 0s-5-1.5-7 0z',
+  grass: 'M2 17h16v2H2zM4 17l1-7 1.5 7zM8 17l1.5-10L11 17zM13 17l1.5-8L16 17z',
+  night: 'M12.5 2A8 8 0 1 0 18 13.5 6.5 6.5 0 0 1 12.5 2z',
+  noroof: 'M10 2l8 6h-2.5L10 4.2 4.5 8H2zM4 10h12v8H4zm4 3v5h4v-5z',
+  wire: 'M10 1l8 5v8l-8 5-8-5V6zm0 2.3L4.5 6.7 10 10l5.5-3.3zM4 8.5v4.4l5 3.1v-4.4zm12 0l-5 3.1V16l5-3.1z',
+  spin: 'M10 3a7 7 0 0 1 7 7h2l-3 4-3-4h2a5 5 0 1 0-1.5 3.6l1.4 1.4A7 7 0 1 1 10 3z',
+  far: 'M1 16l5-8 3 5 2-3 4 6zM14 3a2.5 2.5 0 1 1 0 5 2.5 2.5 0 0 1 0-5z',
 };
 export function icon2(name: string): string {
   return `<svg width="18" height="18" viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path fill="currentColor" d="${P2[name] ?? ''}"/></svg>`;

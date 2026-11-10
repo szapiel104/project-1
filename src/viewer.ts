@@ -38,6 +38,7 @@ import { streamWaterMaterial, waterfallModel } from './render/streams';
 import { mistNoise } from './render/highmist';
 import { createRenderer } from './render/glcontext';
 import { createMenuBar } from './ui/menuBar';
+import { icon } from './ui/editorIcons';
 import { createNightLights } from './ui/viewerLights';
 import { createModelEditor } from './ui/modelEditor';
 const RAM_MODEL = model('ram');
@@ -532,9 +533,11 @@ const viewBox = document.createElement('div');
 viewBox.className = 'view-tools';
 barEl.append(viewBox);
 const runToggle = (act: () => void): void => { act(); applyLook(); history.replaceState(null, '', url()); };
-const barButtons = toggles.map(([label, on, act]) => {
+const VIEW_ICONS = ['plinth', 'air', 'grass', 'night', 'noroof', 'wire', 'spin', 'far'];
+const barButtons = toggles.map(([label, on, act], k) => {
   const b = document.createElement('button');
-  b.type = 'button'; b.textContent = label; b.title = label;
+  b.type = 'button'; b.title = label; b.className = 'ico';
+  b.innerHTML = icon(VIEW_ICONS[k]!); b.setAttribute('aria-label', label);
   b.onclick = () => runToggle(act);
   viewBox.append(b);
   return [b, on] as const;
@@ -543,7 +546,9 @@ function syncBar(): void {
   for (const [b, on] of barButtons) b.setAttribute('aria-pressed', String(on()));
   // przycisk dalekiej wersji przełącza po kolei: pełny → 1 → 2 → 3 (tylko budynki ją mają)
   const farBtn = barButtons[barButtons.length - 1]![0];
-  farBtn.textContent = state.far ? tx(`Z daleka ${state.far}/3`, `Far ${state.far}/3`) : tx('Z daleka', 'Far');
+  const farLabel = state.far ? tx(`Z daleka ${state.far}/3 (klik — następny stopień)`, `Far ${state.far}/3 (click — next level)`) : tx('Z daleka — uproszczona wersja na daleki plan', 'Far — simplified distant version');
+  farBtn.title = farLabel; farBtn.setAttribute('aria-label', farLabel);
+  farBtn.innerHTML = icon('far') + (state.far ? `<span class="ico-badge">${state.far}</span>` : '');
   farBtn.hidden = !lod;
 }
 
