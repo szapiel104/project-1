@@ -173,12 +173,14 @@ def build(base, aid, cfg):
         p = fix(posed(gra, t))
         z0, z1 = p[:, 2].min(), p[:, 2].max()
         return p[p[:, 2] > z1 - (z1 - z0) * 0.12][:, 1].min()
-    # bez animacji spoczynku: stoi w klatce chodu z nogami najbliżej siebie (najkrótszy rozkrok przy ziemi)
-    def spread(t):
+    # bez animacji spoczynku: stoi w klatce chodu, w której wszystkie racice są przy ziemi (najwięcej wierzchołków tuż
+    # nad ziemią — uniesiona noga je zabiera), a przy remisie z najkrótszym rozkrokiem
+    def stance(t):
         p = fix(posed(walk, t))
-        low = p[p[:, 1] < p[:, 1].min() + (p[:, 1].max() - p[:, 1].min()) * 0.12]
-        return low[:, 2].max() - low[:, 2].min()
-    still = 0.0 if idle else min(np.linspace(0, walk[1], 30, endpoint=False), key=spread)
+        y0, h = p[:, 1].min(), p[:, 1].max() - p[:, 1].min()
+        low = p[p[:, 1] < y0 + h * 0.04]
+        return (-len(low), low[:, 2].max() - low[:, 2].min())
+    still = 0.0 if idle else min(np.linspace(0, walk[1], 40, endpoint=False), key=stance)
     poses = {'base': (idle, 0.0) if idle else (walk, still)}
     for k in range(WALK):
         poses[f'walk{k}'] = (walk, walk[1] * k / WALK)
