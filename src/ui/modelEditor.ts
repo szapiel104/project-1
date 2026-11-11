@@ -1310,7 +1310,9 @@ export function createModelEditor(ctx: Ctx): { onModel: () => void; guard: (go: 
         const vi = t * 3 + j;
         const key = `${Math.round(pos.getX(vi) * 1000)},${Math.round(pos.getY(vi) * 1000)},${Math.round(pos.getZ(vi) * 1000)}`;
         const o = seen.get(key);
-        if (o === undefined) seen.set(key, k); else if (nodes[o]!.mesh !== n.mesh) { const a = find(o), b = find(k); if (a !== b) parent[a] = b; }
+        // także w tej samej siatce: kawałki przeniesione poprawkami (zmiana tekstury, kopie) są osobnymi wyspami,
+        // choć się stykają — bez tego kocioł z obozowiska rozpadał się na kilkadziesiąt kawałków (Michał 11.11.2026)
+        if (o === undefined) seen.set(key, k); else if (o !== k) { const a = find(o), b = find(k); if (a !== b) parent[a] = b; }
       }
     });
     const by = new Map<number, Obj>();
