@@ -12,11 +12,11 @@ Tu trafia wszystko nowe, co nie należy do bieżącej partii. Do planu etapów (
 
 ## Co dalej — lista z 11.11.2026 (Michał: „zapisz to wszystko”; odhaczać datą)
 **1. Mniej drewniana gra (płynność i reakcje)**
-- [ ] Ruch ludzi: płynne przejścia między animacjami (chód, praca, niesienie) bez przeskoków póz; skręt łukiem zamiast obrotu w miejscu; lekkie przyspieszanie i hamowanie.
+- [x] (11.11.2026) Ruch ludzi: figura z rozpędem (sprężyna krytycznie tłumiona w `motion.ts`) — rusza i hamuje miękko, zakręca łukiem; kończyny przechodzą przez ok. 0,2 s między chodem, pracą, niesieniem i siedzeniem (`peasants.ts`, `blends`).
 - [ ] Wojsko: wyraźna odpowiedź na rozkaz (okrzyk i dymek są — dołożyć gest: uniesiona broń, dowódca wskazuje kierunek); szyk w marszu jest (`army.ts`).
 - [x] (11.11.2026) Wojsko: zbiórka przed marszem skrócona z 4 s do 1,5 s (`STALL` w `army.ts`), maruderzy doganiają w drodze.
-- [ ] Kamera: miękkie dojazdy i zbliżenia; lekkie drganie przy zawaleniu budynku i uderzeniu taranu.
-- [ ] Pojawianie się rzeczy: budynek „osiada” z kurzem, towar znika w worku zamiast znikać; płynne przenikanie przy zmianie wersji z daleka.
+- [x] (11.11.2026) Kamera: miękkie zbliżanie kółkiem, płynny dolot (kronika, alarm, listy), wstrząs przy walącym się budynku i uderzeniu taranu (`camera.ts` shake, `scene.ts` quake).
+- [x] (11.11.2026) Pojawianie się rzeczy: ukończony budynek osiada z kurzem spod ścian (`sites.ts`, settling); oddawany towar wędruje do budynku i maleje (`scene.ts`, loadDrops).
 - [x] (11.11.2026) Bez wyskakiwania przy oddalaniu: budynki przełączają wersje już poniżej 0,6 piksela różnicy (nie do zauważenia); drobiazgi z edytora znikały razem z progiem budynku, mając jeszcze ~10 pikseli — teraz każdy według swojej wielkości na ekranie (pełny > 28 px, uproszczony, znika < 2 px, `showProps` w lod.ts); wnętrza za drzwiami od 20 pól zamiast 11. Dither w shaderach odpada: budynki idą wspólnymi paczkami (BatchedMesh) ze wspólnymi materiałami, a przezroczystość na sztukę rozbiłaby paczki.
 - [ ] Dźwięk: prawdziwe nagrania kowadła, młyna, kroków konia, wiatru przy burzy; inny pogłos w chacie, karczmie i kopalni.
 - [x] (11.11.2026) Dzikie zwierzęta (tylko wygląd, `render/fauna.ts`): wielbłądy na pustyni, jelenie na zielonych krainach, pasą się stadami i uciekają od ludzi (modele 0 A.D., `tools/models/fauna_0ad.py`). Dalej: myśliwy — zwierzęta do symulacji, mięso; na północy wilki już są.
