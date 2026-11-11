@@ -231,6 +231,8 @@ export class Figures {
   private nearN = 0;
   private farN = 0;
   private hasFar = false;
+  /** Przejścia między pozami: rodzaj pozy, kiedy się zmienił, kąty kończyn sprzed zmiany i ostatnie (set) */
+  private blends = new Map<number, { mode: number; t0: number; n: number; from: Float32Array; last: Float32Array; seen: number }>();
   private viewPos: THREE.Vector3 | null = null;
   /** Od tej odległości od kamery (do kwadratu) postać rysuje się w wersji uproszczonej */
   static FAR2 = 13 * 13;
@@ -578,7 +580,18 @@ export class Figures {
       const br = Math.sin(performance.now() * 0.0016 + id * 2.3);
       this.scaled.multiply(this.gait.makeScale(1, 1 + br * 0.006, 1));
     }
-    for (const p of this.parts) {
+    // płynne przejścia między pozami (Michał 11.11.2026: chód → praca → niesienie bez przeskoków): gdy zmienia się rodzaj
+    // pozy, każda kończyna przez ok. 0,2 s przechodzi z ostatniego kąta do nowego
+    const mode = (armsUp ? 1 : 0) + (work !== undefined ? 2 : 0) + (sitLegs !== undefined ? 4 : 0) + (pose ? 8 : 0) + (walkLegs ? 16 : 0);
+    const now = performance.now();
+    if (this.blends.size > 3000) for (const [k, v] of this.blends) if (now - v.seen > 5000) this.blends.delete(k);
+    let bl = this.blends.get(id);
+    if (!bl || bl.n !== this.parts.length) { bl = { mode, t0: -1e9, n: this.parts.length, from: new Float32Array(this.parts.length), last: new Float32Array(this.parts.length), seen: now }; this.blends.set(id, bl); }
+    if (bl.mode !== mode) { if (now - bl.seen < 500) { bl.from.set(bl.last); bl.t0 = now; } bl.mode = mode; }
+    bl.seen = now;
+    const bw = Math.min(1, (now - bl.t0) / 220), mix = bw * bw * (3 - 2 * bw);
+    for (let pi = 0; pi < this.parts.length; pi++) {
+      const p = this.parts[pi]!;
       if (p.lod !== lod) continue;
       if (!p.shown(look) || (p.orb && !armsUp)) { p.mesh.setMatrixAt(i, this.none); continue; }
       if (p.opt) p.used = (p.used ?? 0) + 1;
@@ -589,7 +602,10 @@ export class Figures {
       const roll = grip && (p.rot === armR || p.rot === armL) ? (p.rot === armR ? -grip : grip) : 0;
       // ręka cięciwy łucznika przy naciągu: pełny obrót (w przód, w poziomie i w przekroju), kolejność jak w tools/models/render_preview.py
       const full = pose && pose[5] !== undefined && p.rot === this.weaponArm;
-      this.q.setFromEuler(full ? this.e.set(pose[0], pose[5]!, pose[6] ?? 0, 'YXZ') : this.e.set(sitLegs !== undefined && (p.rot === legL || p.rot === legR) ? sitLegs : r, 0, roll, 'XYZ'));
+      let ang = sitLegs !== undefined && (p.rot === legL || p.rot === legR) ? sitLegs : r;
+      if (mix < 1) ang = bl.from[pi]! + (ang - bl.from[pi]!) * mix;
+      bl.last[pi] = ang;
+      this.q.setFromEuler(full ? this.e.set(pose[0], pose[5]!, pose[6] ?? 0, 'YXZ') : this.e.set(ang, 0, roll, 'XYZ'));
       // pchnięcie włócznią: cała broń przesuwa się wzdłuż drzewca (w przód postaci), nie tylko obraca
       this.local.compose(pose && p.rot === this.weaponRot ? this.gripAt(pose[0], pose[2] ?? 0) : p.pos, this.q, this.one);
       // łuk w dłoni ręki prowadzonej pozą: obrót odwrotny do ręki, więc łuk zostaje pionowo

@@ -18,6 +18,8 @@ interface Vis {
   /** Odsunięcie od sąsiadów stojących albo idących w tym samym miejscu (pola) — żeby nikt nie wchodził w drugiego */
   ox: number; oy: number;
   speed: number;
+  /** Prędkość figury (pola/s) — sprężyna w `move` */
+  vx?: number; vy?: number;
   frame: number;
   solid: boolean;
   id: number;
@@ -71,12 +73,18 @@ export class Crowd {
       this.vis.set(id, v);
       return v;
     }
-    const k = 1 - Math.exp(-this.dt * 9);
-    const nx = v.x + (tx - v.x) * k, ny = v.y + (ty - v.y) * k;
-    const vx = (nx - v.x) / this.dt, vy = (ny - v.y) / this.dt;
+    // sprężyna krytycznie tłumiona zamiast zwykłego doganiania (Michał 11.11.2026: „mniej drewniana gra”): figura ma
+    // własną prędkość, więc rusza z rozpędem i hamuje miękko, a na rogach pól zakręca szerszym łukiem; bez przestrzału
+    // (tłumienie krytyczne). Wzór dokładny dla kroku dt, więc przy zacięciu klatki nie wyskakuje.
+    const w = 12, e = Math.exp(-w * this.dt);
+    let vx = v.vx ?? 0, vy = v.vy ?? 0;
+    const dx0 = v.x - tx, dy0 = v.y - ty;
+    const tx0 = (vx + w * dx0) * this.dt, ty0 = (vy + w * dy0) * this.dt;
+    vx = (vx - w * tx0) * e; vy = (vy - w * ty0) * e;
+    v.x = tx + (dx0 + tx0) * e; v.y = ty + (dy0 + ty0) * e;
+    v.vx = vx; v.vy = vy;
     const sp = Math.hypot(vx, vy);
     v.speed += (sp - v.speed) * (1 - Math.exp(-this.dt * 10));
-    v.x = nx; v.y = ny;
     // kierunek z ruchu figury (łuk na zakręcie), obrót płynny
     if (sp > 0.25) {
       const want = Math.atan2(vx, vy);
