@@ -185,9 +185,9 @@ def build(art, aid, cfg):
     tn = cfg['tex'] if '.' in cfg['tex'] else cfg['tex'] + '.png'
     src_im = Image.open(os.path.join(art, 'textures/skins/skeletal', tn))
     if 'A' in src_im.getbands():
-        # przezroczyste miejsca w paczce to barwa gracza (obroża psa) — w grze bez niej byłyby czarne łaty; kładziemy skórę
+        # przezroczyste miejsca w paczce to barwa gracza (obroża psa) — w grze bez niej byłyby czarne łaty; kładziemy barwę sierści
         rgba = src_im.convert('RGBA')
-        bg = Image.new('RGBA', rgba.size, (96, 66, 40, 255))
+        bg = Image.new('RGBA', rgba.size, (208, 194, 172, 255))   # barwa sierści
         im = Image.alpha_composite(bg, rgba).convert('RGB')
     else:
         im = src_im.convert('RGB')
