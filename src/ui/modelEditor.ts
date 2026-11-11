@@ -1315,6 +1315,36 @@ export function createModelEditor(ctx: Ctx): { onModel: () => void; guard: (go: 
         if (o === undefined) seen.set(key, k); else if (o !== k) { const a = find(o), b = find(k); if (a !== b) parent[a] = b; }
       }
     });
+    // drobne kawałki, które się nie stykają, ale zachodzą na siebie pudełkami (kocioł z pokrywą, obręczami i kabłąkiem
+    // złożony z osobnych brył): też jeden przedmiot, o ile całość zostaje mała (do ok. 0,6 pola) — nogi trójnogu,
+    // kłody i ściany są za duże, więc się nie doklejają
+    {
+      const tiny = nodes.map((n) => n.box.getSize(new THREE.Vector3()).length() < 0.3);
+      const grown = nodes.map((n) => n.box.clone().expandByScalar(0.006));
+      const boxOf = new Map<number, THREE.Box3>();
+      nodes.forEach((n, k) => { const r = find(k), b = boxOf.get(r); if (b) b.union(n.box); else boxOf.set(r, n.box.clone()); });
+      const rootBox = (r: number): THREE.Box3 => boxOf.get(r)!;
+      const cell = 0.3, grid = new Map<string, number[]>();
+      nodes.forEach((_n, k) => {
+        if (!tiny[k]) return;
+        const b = grown[k]!;
+        for (let x = Math.floor(b.min.x / cell); x <= Math.floor(b.max.x / cell); x++)
+          for (let y = Math.floor(b.min.y / cell); y <= Math.floor(b.max.y / cell); y++)
+            for (let z = Math.floor(b.min.z / cell); z <= Math.floor(b.max.z / cell); z++) {
+              const key = `${x},${y},${z}`, list = grid.get(key);
+              if (list) list.push(k); else grid.set(key, [k]);
+            }
+      });
+      for (const list of grid.values()) for (let i = 0; i < list.length; i++) for (let j = i + 1; j < list.length; j++) {
+        const a = list[i]!, b = list[j]!;
+        if (nodes[a]!.mesh.userData.fx[0] !== nodes[b]!.mesh.userData.fx[0] || !grown[a]!.intersectsBox(grown[b]!)) continue;
+        const ra = find(a), rb = find(b);
+        if (ra === rb) continue;
+        const u = rootBox(ra).clone().union(rootBox(rb));
+        if (u.getSize(new THREE.Vector3()).length() > 0.6) continue;
+        parent[ra] = rb; boxOf.set(rb, u); boxOf.delete(ra);
+      }
+    }
     const by = new Map<number, Obj>();
     nodes.forEach((n, k) => {
       const r = find(k);
