@@ -3692,8 +3692,11 @@ export class GameRenderer {
     // zasięg widzenia zależy od jakości (Michał 9.11.2026: „za daleko widzę, gra muli”): na niższych ustawieniach mgła
     // zamyka widok bliżej, więc kamera nie rysuje dalekich gór, palm i budynków; na Ultra zostaje jak było (220)
     const reach = Math.max(0, Math.min(1, (this.detail - 0.55) / 0.8)); // minimum 0, „wysoka” (1) ok. 0,56, Ultra (1,35) 1
-    fog.near = cd * 0.95 + (50 + 20 * reach) * (1 - m * 0.8) - this.rain * 20;
-    fog.far = Math.max(fog.near + 45, cd + 150 + 70 * reach - m * 140 * (0.7 + 0.3 * reach) - this.rain * 90);
+    // Michał 11.11.2026: „większa mgła, ma się zaczynać tam, gdzie obiekty znikają”: drobiazgi znikają ok. 30 pól od kamery,
+    // narzędzia 60, zwierzęta 90 — mgła gęstnieje od ziemi pod kamerą + ok. 15 pól i zamyka widok ok. 75–95 pól dalej,
+    // więc wszystko, co się chowa, chowa się już w mgle (i kamera rysuje dużo mniej dalekiego świata)
+    fog.near = cd * 0.95 + (15 + 10 * reach) * (1 - m * 0.8) - this.rain * 10;
+    fog.far = Math.max(fog.near + 35, cd * 0.95 + 90 + 25 * reach - m * 60 - this.rain * 40);
     // za mgłą i tak nic nie widać: kamera nie rysuje dalej niż mgła (dużo mniej trójkątów w gęstej pogodzie i przy niskim kącie)
     const cam = this.cam.camera, wantFar = fog.far + 15;
     if (Math.abs(cam.far - wantFar) > 8) { cam.far = wantFar; cam.updateProjectionMatrix(); }
