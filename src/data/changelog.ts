@@ -9,6 +9,27 @@ export type { ChangeEntry } from './changelogTypes';
  * — tak jak CHANGELOG.md dla nas. `tests/changelog.test.ts` pilnuje, że najnowszy wpis ma wersję z package.json.
  */
 const NEW: ChangeEntry[] = [
+  { v: '0.95.2', date: '2026-11-11', pl: [
+    'Dzikie zwierzęta: wielbłądy na pustyni, jelenie na zielonych krainach — pasą się stadami i uciekają przed ludźmi.',
+    'Pustynia: jasny, czysty piach, przeważnie płasko, wydmy tylko miejscami; zielona trawa tylko w oazach.',
+    'Woda: piana i fale biegnące do brzegu, turkusowe oazy.',
+    'Płynniejsza gra: lżejsze wersje przedmiotów i towarów z daleka, wnętrza pod dachem rysują się tylko z bliska.',
+    'Ludzie i żołnierze obracają się płynnie, żołnierze ruszają szybciej po rozkazie i unoszą broń na znak, że go przyjęli.',
+    'Chłopi pracują prawdziwymi narzędziami: łopatą, kilofem, toporkiem i młotkiem.',
+    'Mur przechodzi wprost w dach koszar i zbrojowni.',
+    'Rynek w oknie na środku ekranu.',
+    'Nowe, bardziej klimatyczne zdjęcia na ekranie wczytywania i w menu.',
+  ], en: [
+    'Wild animals: camels in the desert, deer in the green lands — they graze in herds and flee from people.',
+    'Desert: clean, pale sand, mostly flat with dunes only here and there; green grass only in the oases.',
+    'Water: foam and waves rolling to the shore, turquoise oases.',
+    'Smoother play: lighter versions of items and goods at a distance, interiors under a roof drawn only up close.',
+    'Folk and soldiers turn smoothly; soldiers set off sooner after an order and raise their weapons to acknowledge it.',
+    'Peasants work with real tools: spade, pickaxe, hatchet and hammer.',
+    'Walls now run straight onto the roofs of the barracks and armoury.',
+    'The market opens in a window in the middle of the screen.',
+    'New, moodier pictures on the loading screen and in the menu.',
+  ] },
   { v: '0.95.1', date: '2026-11-11', pl: [
     'Płynniejsza gra w dużych osadach: przedmioty dodane do budynków rysują się razem, z daleka znikają, a drobne nie rzucają cienia.',
     'Mur kamienny łączy się z koszarami i zbrojownią tak jak z wieżą.',

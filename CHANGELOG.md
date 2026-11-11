@@ -6,6 +6,15 @@
 
 
 
+## 0.95.2 — 2026-11-11
+- `render/fauna.ts` + `tools/models/fauna_0ad.py`: wielbłąd i jeleń z 0 A.D. (10 klatek chodu i skubanie jako osobne siatki w pulach — morph targets w InstancedMesh nie działają na WebGPU), stada tylko w wyglądzie, ucieczka przed ludźmi.
+- Pustynia: `sandDry` w `groundNode.ts`, płaskie wydmy w `terrain.ts`, `dDry` (sucha kępa) zamiast zielonej trawy poza oazą.
+- Woda: piana przy brzegu w `waterNode.ts`.
+- Wydajność: `farVersion` (meshoptimizer, 1/8) dla skanów z edytora i towarów w składach (`fixPropsFar`, `setFillFar`), wnętrza tylko bliżej niż `INTERIOR_NEAR`.
+- Ruch: `smoothYaw` w scene.ts, zbiórka wojska 1,5 s (`STALL`), gest przy rozkazie (`ackUntil`), narzędzia ze skanów (`fitTool`).
+- Koszary i zbrojownia: przedpiersie w grupach `parF/B/L/R`, `walls.ts` chowa bok przy murze. Rynek 80% ekranu.
+- `vite-plugin.mjs`: nowe pliki modeli bez restartu serwera.
+
 ## 0.95.1 — 2026-11-11
 - Wydajność: `fixProps` w `BATCH_ALSO` (scene.ts), chowane z daleka w `showLod` (lod.ts, `extras`), cień tylko od promienia > 0,08 (buildings.ts). Zapis Michała: 2926 → 2450 wywołań, 11,2 → 5,3 mln trójkątów.
 - `walls.ts`: `HALL_GAPS` — mur kamienny dochodzi mostkiem do lica koszar i zbrojowni (bez drzwi).
