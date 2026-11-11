@@ -72,7 +72,7 @@ b.crystal('interior', 'leaf', sx, 0.31, sz, 0.035, seed=2.2, sy=1.5)
 # palenisko z kamieni pod dymnikiem, z żarem
 HX, HZ = CX - 0.2, CZ - 0.12 + 0.18
 b.prism('interior', 'stoneDark', 0.1, 0.11, 0.04, HX, F, HZ, seg=10)
-b.prism('interior', 'ember', 0.075, 0.075, 0.004, HX, F + 0.04, HZ, seg=10)
+b.coals('interior', HX, F + 0.035, HZ, 0.075, seed=0.5, bed=None)
 flames.append([HX, F + 0.04, HZ])
 # mały kociołek na trójnogu przy palenisku
 b.prism('interior', 'iron', 0.045, 0.035, 0.05, HX + 0.14, F + 0.03, HZ + 0.02, seg=10)
@@ -111,7 +111,8 @@ for k, a in enumerate((-1.2, -0.85, -0.5, 0.45, 0.75, 1.05)):
 FX, FZ = CX - 0.42, DZ + 0.32
 b.crystal('base', 'rockDark', FX, 0.0, FZ, 0.1, seed=4.0, sy=0.5)
 b.prism('base', 'stoneDark', 0.1, 0.14, 0.09, FX, 0.04, FZ, seg=10, top=False)
-b.prism('base', 'ember', 0.12, 0.12, 0.004, FX, 0.12, FZ, seg=10)
+b.prism('base', 'ember', 0.12, 0.12, 0.004, FX, 0.12, FZ, seg=10)   # rozżarzone dno (Michał je poprawiał w edytorze — zostaje)
+b.coals('base', FX, 0.12, FZ, 0.11, seed=2.0, bed=None)             # na nim bryłki węgla i grudki żaru
 flames.append([FX, 0.12, FZ])
 lights.append([FX, 0.3, FZ])
 TX, TZ = CX + 0.44, DZ + 0.3

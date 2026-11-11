@@ -117,6 +117,21 @@ class Building:
         for f in faces:
             self.poly(group, mat, [v[i] for i in f])
 
+    def coals(self, group, x, y, z, r, seed=0.0, bed='dark', coal='dark'):
+        """Żar w palenisku, misie albo koszu (zakaz „ulepów”, Michał 6.11.2026): zamiast płaskiego pomarańczowego krążka
+        warstwa miału, bryłki węgla i kilka rozżarzonych grudek; sam ogień rysuje gra ze znacznika `flames`.
+        Pierwsza jest rozżarzona grudka — 'ember' zostaje na tym samym miejscu w kolejności materiałów co dawny krążek
+        (poprawki z edytora wskazują siatki numerem materiału)."""
+        n = max(4, int(r * 70))
+        for k in range(n):
+            a = seed + k * 2.39996
+            d = r * 0.75 * math.sqrt((k + 0.5) / n)
+            cx, cz = x + math.sin(a) * d, z + math.cos(a) * d
+            hot = k % 3 == 0
+            self.crystal(group, 'ember' if hot else coal, cx, y + 0.008, cz, r * (0.16 if hot else 0.22), seed=seed + k * 1.7, sy=0.55)
+            if k == 0 and bed:
+                self.prism(group, bed, r, r * 0.92, 0.012, x, y, z, seg=10)
+
     def crystal(self, group, mat, x, y, z, r, seed=0.0, sx=1.0, sy=1.0, sz=1.0, seg=7):
         """Bryła rudy jak w Gothicu: nieregularny, zamknięty wielościan z płaskimi ściankami (same trójkąty).
         Środek w (x, y, z), promień r, rozciągnięcie sx/sy/sz; seed zmienia kształt."""

@@ -128,7 +128,7 @@ b.prism('base', 'ash', 0.21, 0.19, 0.016, FX, 0.0, FZ, seg=12)
 for k in range(5):
     a = k / 5 * 2 * math.pi
     b.box('base', 'bark', 0.045, 0.27, 0.045, FX + math.cos(a) * 0.11, 0.012, FZ + math.sin(a) * 0.11, -a + math.pi / 2, tilt=-0.6)
-b.prism('base', 'ember', 0.1, 0.07, 0.03, FX, 0.016, FZ, seg=10)
+b.coals('base', FX, 0.014, FZ, 0.1, seed=1.0, bed='ash', coal='woodDark')   # zwęglone szczapy (bez nowego materiału — poprawki z edytora)
 fires.append([FX, 0.04, FZ])
 for s in (-1, 1):      # rożen: dwa rozwidlone kije i drąg z kawałem mięsa
     stick('base', 'woodDark', (FX + s * 0.34, 0.0, FZ), (FX + s * 0.34, 0.44, FZ), 0.016)

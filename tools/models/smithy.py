@@ -61,7 +61,7 @@ for sx in (-1, 1):                                                              
     b.box('interior', 'stoneDark', 0.035, 0.04, 0.3, FX + sx * 0.18, P + 0.315, FZ)
 b.box('interior', 'stoneDark', 0.33, 0.04, 0.035, FX, P + 0.315, FZ + 0.13)
 b.box('interior', 'dark', 0.24, 0.02, 0.18, FX, P + 0.31, FZ - 0.01)              # węgiel
-b.box('interior', 'ember', 0.13, 0.02, 0.1, FX, P + 0.318, FZ - 0.01)             # żar (wystaje 8 mm nad węgiel)
+b.coals('interior', FX, P + 0.318, FZ - 0.01, 0.09, seed=0.7, bed=None)             # żar: rozżarzone grudki na węglu
 # okap z kamienia nad paleniskiem, prowadzi dym do komina
 b.box('interior', 'stoneDark', 0.4, 0.06, 0.18, FX, P + 0.62, FZ - 0.05)
 b.box('interior', 'stone', 0.3, 0.12, 0.12, FX, P + 0.67, FZ - 0.07)
