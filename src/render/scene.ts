@@ -84,7 +84,7 @@ import { clockAt, rainAt } from '../sim/clock';
 import { COLD, seasonAt, weatherOf, yearPos } from '../sim/weather';
 import { applySeason, SEASON_U, SnowTrails } from './season';
 import { Snowfall } from './snowfall';
-import { gpuBackend, gpuDeferredCount, gpuFrameBudget, gpuLoading, gpuPending, hideGlslMaterials, takeGpuRenderer } from './gpu/webgpu';
+import { gpuBackend, gpuDeferredCount, gpuFrameBudget, gpuLoading, gpuMods, gpuPending, hideGlslMaterials, takeGpuRenderer } from './gpu/webgpu';
 import { GpuPost } from './gpu/postNode';
 import { makeGpuEnvironment } from './gpu/envNode';
 import { markReflect, REFLECT_LAYER, reflectGate } from './gpu/waterNode';
@@ -928,6 +928,7 @@ export class GameRenderer {
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     this.scene.background = new THREE.Color(HAZE);
     this.scene.fog = new THREE.Fog(HAZE, 55, 150);
+    this.setupFogNode();
     // Cienie: jedno słońce, którego obszar cienia podąża za kamerą.
     // filmowe odwzorowanie tonów: jasne partie nie przepalają się, cienie zostają głębokie
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
@@ -2765,7 +2766,7 @@ export class GameRenderer {
       // w sztolni: bez słońca i nieba, ciemna mgła, światło tylko z latarń
       this.sun.intensity = 0; this.hemi.intensity = 0.1; this.scene.environmentIntensity = this.envOn ? 0.03 : 0;
       const fog = this.scene.fog as THREE.Fog;
-      fog.color.setHex(0x0b0806); fog.near = 3; fog.far = 20;
+      fog.color.setHex(0x0b0806); fog.near = 3; fog.far = 20; if (this.fogU) { this.fogU.near.value = 3; this.fogU.far.value = 20; this.fogU.color.value.copy(fog.color); }
       (this.scene.background as THREE.Color).setHex(0x0b0806);
     }
     this.bolts.update(dt);
@@ -3698,6 +3699,7 @@ export class GameRenderer {
     fog.near = cd * 0.95 + (15 + 10 * reach) * (1 - m * 0.8) - this.rain * 10;
     fog.far = Math.max(fog.near + 35, cd * 0.95 + 90 + 25 * reach - m * 60 - this.rain * 40);
     // za mgłą i tak nic nie widać: kamera nie rysuje dalej niż mgła (dużo mniej trójkątów w gęstej pogodzie i przy niskim kącie)
+    if (this.fogU) { this.fogU.near.value = fog.near; this.fogU.far.value = fog.far; this.fogU.color.value.copy(fog.color); }
     const cam = this.cam.camera, wantFar = fog.far + 15;
     if (Math.abs(cam.far - wantFar) > 8) { cam.far = wantFar; cam.updateProjectionMatrix(); }
     // słońce wędruje ze wschodu na zachód; nocą tę samą drogę robi księżyc
@@ -4376,6 +4378,26 @@ export class GameRenderer {
     const out = cur + d * (1 - Math.exp(-this.frameDt * 16));
     this.drawYaw.set(id, out);
     return out;
+  }
+  /**
+   * Mgła jak w nowych grach (Michał 11.11.2026: „mgła profesjonalna, ładniejsza”; wcześniej płaska mleczna ściana):
+   * od odległości (promieniowo, nie po osi kamery), gęstnieje miękko (krzywa S), przy ziemi gęstsza niż wysoko (góry
+   * i korony palm wyłaniają się z niej sylwetką), a na samej granicy widoku domyka się całkiem, żeby nic nie ucinało się
+   * na krawędzi. Bliska i daleka granica oraz barwa przychodzą co klatkę z `scene.fog` (pora dnia, pogoda, kamera).
+   */
+  private fogU: { near: { value: number }; far: { value: number }; color: { value: THREE.Color } } | null = null;
+  private setupFogNode(): void {
+    if (!gpuMods) return;
+    const T = gpuMods.TSL as any;
+    const { uniform, fog, smoothstep, length, positionView, positionWorld, exp, max, mix, pow, float, clamp } = T;
+    const near = uniform(55), far = uniform(150), color = uniform(new (gpuMods.W as any).Color(HAZE));
+    const d = length(positionView);
+    const s = smoothstep(near, far, d);
+    const ground = exp(max(positionWorld.y.sub(0.5), 0).mul(-0.09));          // 1 przy ziemi, mniej wysoko
+    const body = pow(s, float(1.35)).mul(mix(float(0.62), float(1), ground));
+    const edge = smoothstep(far.mul(0.86), far, d);                          // granica widoku zawsze w pełnej mgle
+    (this.scene as unknown as { fogNode: unknown }).fogNode = fog(color, clamp(max(body, edge), 0, 1));
+    this.fogU = { near, far, color };
   }
   /** Do kiedy zaznaczeni żołnierze unoszą broń na znak, że przyjęli rozkaz */
   private ackUntil = 0;
