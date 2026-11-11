@@ -10,7 +10,8 @@
  */
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
-import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
+import { mergeGeometries, mergeVertices } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
+import { MeshoptSimplifier as MS } from 'three/examples/jsm/libs/meshopt_simplifier.module.js';
 
 export const PH_SCALE = 0.36;
 
@@ -114,7 +115,45 @@ export const PH_ASSETS: [string, string, string][] = [
   ['moss_01', 'mech', 'moss'],
 ];
 
-type Loaded = { geo: THREE.BufferGeometry; mats: THREE.Material[] };
+type Loaded = { geo: THREE.BufferGeometry; mats: THREE.Material[]; far: THREE.BufferGeometry | null };
+
+/** Powyżej tylu trójkątów model z paczki dostaje lżejszą wersję do oglądania z dalszej odległości */
+const FAR_ABOVE = 6000;
+/**
+ * Wersja z daleka (Michał 11.11.2026: „stosuj techniki z gier AAA”; zasada z 19.10: z bliska oryginał, upraszczać wolno
+ * tylko wersję z daleka): każda grupa materiału osobno, spawanie wierzchołków po położeniu i UV, upraszczanie
+ * meshoptimizerem do ok. 1/8 trójkątów z błędem do 1% wielkości modelu — z kilkunastu pól różnicy nie widać, a świecznik
+ * ze skanu ma 213 tys. trójkątów. Normalne liczone na nowo z zachowaniem ostrych krawędzi.
+ */
+function farVersion(geo: THREE.BufferGeometry): THREE.BufferGeometry | null {
+  if (!MS.supported) return null;
+  const tris = geo.getAttribute('position').count / 3;
+  if (tris < FAR_ABOVE) return null;
+  const parts: THREE.BufferGeometry[] = [];
+  for (const gr of geo.groups) {
+    const sub = new THREE.BufferGeometry();
+    for (const name of ['position', 'normal', 'uv'] as const) {
+      const a = geo.getAttribute(name) as THREE.BufferAttribute;
+      sub.setAttribute(name, new THREE.BufferAttribute((a.array as Float32Array).slice(gr.start * a.itemSize, (gr.start + gr.count) * a.itemSize), a.itemSize));
+    }
+    const w = mergeVertices(sub, 1e-4);
+    const idx = new Uint32Array(w.index!.array);
+    const pos = w.getAttribute('position').array as Float32Array;
+    const target = Math.max(36, Math.floor(idx.length / 8 / 3) * 3);
+    const [res] = MS.simplify(idx, pos, 3, target, 0.01, ['LockBorder']);
+    const out = new THREE.BufferGeometry();
+    out.setAttribute('position', w.getAttribute('position'));
+    out.setAttribute('normal', w.getAttribute('normal'));
+    out.setAttribute('uv', w.getAttribute('uv'));
+    out.setIndex(new THREE.BufferAttribute(res, 1));
+    parts.push(out.toNonIndexed());
+  }
+  const m = mergeGeometries(parts, true);
+  if (!m) return null;
+  m.groups.forEach((g, i) => { g.materialIndex = geo.groups[i]!.materialIndex; });
+  m.computeBoundingBox(); m.computeBoundingSphere();
+  return m;
+}
 const cache = new Map<string, Loaded>();
 const pending = new Map<string, Promise<Loaded | null>>();
 const base = (): string => ((import.meta as unknown as { env?: { BASE_URL?: string } }).env?.BASE_URL ?? './') + 'models/ph/';
@@ -125,7 +164,7 @@ export function loadPh(id: string): Promise<Loaded | null> {
   if (c) return Promise.resolve(c);
   let p = pending.get(id);
   if (p) return p;
-  p = new GLTFLoader().loadAsync(`${base()}${id}/${id}_1k.gltf`).then((gltf) => {
+  p = new GLTFLoader().loadAsync(`${base()}${id}/${id}_1k.gltf`).then(async (gltf) => {
     gltf.scene.updateMatrixWorld(true);
     const geos: THREE.BufferGeometry[] = [], mats: THREE.Material[] = [];
     gltf.scene.traverse((o) => {
@@ -167,7 +206,9 @@ export function loadPh(id: string): Promise<Loaded | null> {
       s.side = THREE.DoubleSide;   // listki, płótno i szmaty w paczkach bywają pojedynczą płaszczyzną
       if (s.map) s.map.anisotropy = 8;
     }
-    const out = { geo, mats };
+    let far: THREE.BufferGeometry | null = null;
+    try { await MS.ready; far = farVersion(geo); } catch { far = null; }
+    const out = { geo, mats, far };
     cache.set(id, out);
     return out;
   }).catch(() => null);

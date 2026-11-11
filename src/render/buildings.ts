@@ -1141,6 +1141,15 @@ function blenderModel(g: THREE.Group, model: BlenderBuilding, flag: THREE.Materi
     // znacznik obok siatki, nie w niej (łączenie siatek w partie mogłoby go zabrać razem z siatką)
     if (ls) { const o = new THREE.Object3D(); o.name = 'lightSpot'; o.position.copy(ls.applyMatrix4(new THREE.Matrix4().fromArray(p.m))); parent.add(o); }
     parent.add(mesh);
+    // wersja z daleka (uproszczony skan, phAssets.ts farVersion; lekkie modele bez zmian) w osobnej grupie 'fixPropsFar':
+    // gra przełącza grupy zależnie od odległości kamery (scene.ts, updateLods); domyślnie schowana (podgląd modeli i edytor)
+    let farParent = host.getObjectByName('fixPropsFar') as THREE.Group | undefined;
+    if (!farParent || farParent.parent !== host) { farParent = new THREE.Group(); farParent.name = 'fixPropsFar'; farParent.visible = false; host.add(farParent); }
+    const farMesh = new THREE.Mesh(phm ? phm.far ?? phm.geo : mesh.geometry, mesh.material);
+    farMesh.position.copy(mesh.position); farMesh.quaternion.copy(mesh.quaternion); farMesh.scale.copy(mesh.scale);
+    farMesh.receiveShadow = true; farMesh.castShadow = mesh.castShadow;
+    if (ph && !phm) void loadPh(ph).then((r) => { if (r) { farMesh.geometry = r.far ?? r.geo; farMesh.material = r.mats; } });
+    farParent.add(farMesh);
   }
   const hinge = (model as unknown as { hinge?: number }).hinge;
   if (hinge) for (const [name, side] of [['leafL', -1], ['leafR', 1]] as const) {

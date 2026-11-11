@@ -126,7 +126,9 @@ import { rockMaterial } from './rocks0ad';
 // więc otwierane drzwi dalej się ruszają, a schowana drabina znika (widoczność sprawdzana co klatkę) — Michał 9.11.2026
 /** Z jakiej odległości kamery (w polach) rysujemy wnętrza pod zamkniętym dachem — bliżej widać je przez drzwi i okna */
 const INTERIOR_NEAR = 11;
-const BATCH_ALSO = /^(torch|lod\d+|fill|grainfill|crop|life|leafL|leafR|ladder|warBrazier|yardlog|interior|foodfill|armsfill|fixProps)$/; // fixProps: modele z paczek dodane w edytorze (osobno każdy był jednym rysowaniem na sztukę — 87 na farmie, Michał 11.11.2026: „FPS mało”) // wnętrza zawsze widoczne (10.11.2026): też razem // koksowniki i kłody na podwórku: nieruchome, tylko pokazywane i chowane
+/** Od jakiej odległości (w polach) drobiazgi z edytora rysują się w lżejszej wersji (uproszczone skany) */
+const PROPS_NEAR = 9;
+const BATCH_ALSO = /^(torch|lod\d+|fill|grainfill|crop|life|leafL|leafR|ladder|warBrazier|yardlog|interior|foodfill|armsfill|fixProps|fixPropsFar)$/; // fixProps: modele z paczek dodane w edytorze (osobno każdy był jednym rysowaniem na sztukę — 87 na farmie, Michał 11.11.2026: „FPS mało”) // wnętrza zawsze widoczne (10.11.2026): też razem // koksowniki i kłody na podwórku: nieruchome, tylko pokazywane i chowane
 /**
  * Część z kilkoma materiałami (np. zapasy w składzie: towar + skrzynka) dzielimy na kawałki po grupach geometrii —
  * każdy kawałek idzie do pakietu swojego materiału. Wcześniej takie części rysowały się osobno (38 rysowań zapasów
@@ -3626,7 +3628,9 @@ export class GameRenderer {
           if (d > D) { want = i; break; }
         }
       }
-      showLod(lod, want);
+      // drobiazgi z edytora (skany z paczek): dalej niż PROPS_NEAR pól od kamery lżejsza wersja
+      const pd = pinned ? 0 : this.lodW.copy(lod.center).applyMatrix4(mesh.matrixWorld).distanceTo(cp) - lod.radius;
+      showLod(lod, want, pd > PROPS_NEAR * (lod.propsKey !== undefined && lod.propsKey >= 2 ? 0.9 : 1));
       counts[lod.level + 1]!++;
       if (lod.level >= 0) saved += lod.full - lod.levels[lod.level]!.tris;
     }

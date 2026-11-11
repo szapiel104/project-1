@@ -37,6 +37,10 @@ export interface BuildingLod {
   parts: THREE.Mesh[];
   /** Drobiazgi dodane w edytorze (grupy 'fixProps': kubki, świeczniki, skrzynki) — z daleka ich nie widać, więc znikają */
   extras?: THREE.Object3D[];
+  /** Te same drobiazgi w lżejszej wersji (uproszczone skany) — od średniej odległości zamiast pełnych */
+  extrasFar?: THREE.Object3D[];
+  /** Ostatnio ustawiony stan drobiazgów (pełne / lżejsze / schowane) */
+  propsKey?: number;
   /** Uproszczone wersje, od najbliższej do najdalszej (puste, dopóki się nie policzą) */
   levels: LodLevel[];
   /** Trójkąty pełnych brył zewnętrznych */
@@ -102,9 +106,10 @@ export function prepareLod(root: THREE.Object3D, kind: string): BuildingLod | nu
   let lidRef: THREE.Object3D | null = null;
   root.traverse((o) => { if (!lidRef && o !== root && LIDS.has(o.name) && !(o as THREE.Mesh).isMesh) lidRef = o; });
   const extras: THREE.Object3D[] = [];
-  root.traverse((o) => { if (o.name === 'fixProps') extras.push(o); });
+  const extrasFar: THREE.Object3D[] = [];
+  root.traverse((o) => { if (o.name === 'fixProps') extras.push(o); else if (o.name === 'fixPropsFar') extrasFar.push(o); });
   return {
-    parts: found.map((p) => p.mesh), extras, levels: [], full, level: -1, sig,
+    parts: found.map((p) => p.mesh), extras, extrasFar, levels: [], full, level: -1, sig,
     center: box.getCenter(new THREE.Vector3()), radius: box.getSize(new THREE.Vector3()).length() / 2, lidRef,
   };
 }
@@ -330,12 +335,19 @@ export function attachLod(root: THREE.Object3D, lod: BuildingLod, o: LodOptions 
 }
 
 /** Przełącza widoczny poziom (−1 = pełny model); wieko dalekiej wersji idzie za dachem pełnego modelu */
-export function showLod(lod: BuildingLod, level: number): void {
+export function showLod(lod: BuildingLod, level: number, propsFar = false): void {
   level = Math.min(level, lod.levels.length - 1);
+  // drobiazgi z edytora: z bliska pełne, od średniej odległości uproszczone skany, na drugim progu znikają
+  // (na pierwszym drobiazg ma jeszcze kilka pikseli i znikałby na oczach)
+  const pk = (level < 1 ? 1 : 0) + (propsFar ? 2 : 0);
+  if (pk !== lod.propsKey) {
+    lod.propsKey = pk;
+    for (const e of lod.extras ?? []) e.visible = level < 1 && !propsFar;
+    for (const e of lod.extrasFar ?? []) e.visible = level < 1 && propsFar;
+  }
   if (level !== lod.level) {
     for (const p of lod.parts) p.visible = level < 0;
     // Michał 11.11.2026: „FPS mało” — skany z paczek w każdym egzemplarzu budynku (np. świecznik 213 tys. trójkątów)
-    for (const e of lod.extras ?? []) e.visible = level < 1;   // dopiero na drugim progu: na pierwszym drobiazg ma jeszcze kilka pikseli i znikałby na oczach
     lod.levels.forEach((l, i) => { l.obj.visible = i === level; });
     lod.level = level;
   }

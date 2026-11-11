@@ -818,7 +818,7 @@ export function createModelEditor(ctx: Ctx): { onModel: () => void; guard: (go: 
         const o = new THREE.Vector3(ctr.x + (b.max.x - b.min.x) * fx, b.min.y - 0.002, ctr.z + (b.max.z - b.min.z) * fz);
         ray.set(o, new THREE.Vector3(0, -1, 0));
         ray.far = 50;
-        const h = ray.intersectObject(c, true).find((x) => (x.object as THREE.Mesh).isMesh && x.object.visible && !((x.object as THREE.Mesh).material as THREE.Material).transparent && !(selMeshes.has(x.object as THREE.Mesh) && (x.object.userData.temp || x.object.userData.fxProp)) && x.object.name !== 'lightSpot');
+        const h = ray.intersectObject(c, true).find((x) => (x.object as THREE.Mesh).isMesh && x.object.visible && x.object.parent?.visible !== false && !((x.object as THREE.Mesh).material as THREE.Material).transparent && !(selMeshes.has(x.object as THREE.Mesh) && (x.object.userData.temp || x.object.userData.fxProp)) && x.object.name !== 'lightSpot');
         if (h && h.point.y > top) top = h.point.y;
       }
       ray.far = Infinity;
