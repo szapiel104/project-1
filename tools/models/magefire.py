@@ -29,6 +29,19 @@ PH = math.pi / 8         # ośmiobok ścianą do przodu
 AP = R * math.cos(PH)    # odległość ściany od osi
 
 
+def coals(b, x, y, z, r, seed=0.0):
+    """Żar w misie albo koszu (zakaz „ulepów”, Michał 6.11.2026): zamiast płaskiego pomarańczowego krążka popiół, bryłki
+    węgla i kilka rozżarzonych grudek; sam ogień rysuje gra ze znacznika `flames`"""
+    b.prism('base', 'ash', r, r * 0.92, 0.012, x, y, z, seg=10)
+    n = max(4, int(r * 70))
+    for k in range(n):
+        a = seed + k * 2.39996
+        d = r * 0.75 * math.sqrt((k + 0.5) / n)
+        cx, cz = x + math.sin(a) * d, z + math.cos(a) * d
+        hot = k % 3 == 0
+        b.crystal('base', 'ember' if hot else 'dark', cx, y + 0.008, cz, r * (0.16 if hot else 0.22), seed=seed + k * 1.7, sy=0.55)
+
+
 def face(k):
     """Środek k-tej ściany ośmioboku (0 = przód, dalej w lewo) i kąt obrotu ściany"""
     a = k * math.pi / 4
@@ -130,7 +143,7 @@ b.prism('base', 'castleDark', 0.15, 0.13, 0.1, FX, 0.03, FZ, seg=8)
 b.prism('base', 'castle', 0.09, 0.08, 0.42, FX, 0.13, FZ, seg=8)
 b.prism('base', 'castleDark', 0.12, 0.14, 0.06, FX, 0.55, FZ, seg=8)
 b.prism('base', 'gold', 0.1, 0.2, 0.12, FX, 0.61, FZ, seg=12, top=False)
-b.prism('base', 'ember', 0.185, 0.185, 0.005, FX, 0.715, FZ, seg=12)
+coals(b, FX, 0.703, FZ, 0.185, seed=0.3)
 b.prism('base', 'gold', 0.205, 0.205, 0.025, FX, 0.715, FZ, seg=12, top=False)
 for (dx, dz) in ((0, 0), (0.08, 0.04), (-0.07, 0.05), (0.03, -0.08), (-0.05, -0.06)):
     flames.append([round(FX + dx, 4), 0.72, round(FZ + dz, 4)])
@@ -142,7 +155,7 @@ for s in (-1, 1):
     b.box('base', 'castleDark', 0.12, 0.06, 0.12, bx, 0.0, bz)
     log(b, 'base', 'iron', (bx, 0.06, bz), (bx, 0.62, bz), r=0.018, seg=6, ends='iron')
     b.prism('base', 'iron', 0.035, 0.08, 0.08, bx, 0.62, bz, seg=8, top=False)
-    b.prism('base', 'ember', 0.07, 0.07, 0.004, bx, 0.69, bz, seg=8)
+    coals(b, bx, 0.68, bz, 0.07, seed=s * 1.3)
     flames.append([round(bx, 4), 0.69, round(bz, 4)])
     lights.append([bx, 0.85, bz])
 
@@ -177,7 +190,7 @@ low_wall(b, -E, E, -E, E, gate_w=GW)
 # brama: dwa filary z koszami ognia i czerwonymi płachtami
 for (px, py, pz) in gate_pillars(b, 0.0, E, GW, h=1.1):
     b.prism('base', 'iron', 0.05, 0.11, 0.1, px, py, pz, seg=8, top=False)
-    b.prism('base', 'ember', 0.095, 0.095, 0.004, px, py + 0.09, pz, seg=8)
+    coals(b, px, py + 0.08, pz, 0.095, seed=px)
     flames.append([round(px, 4), round(py + 0.09, 4), round(pz, 4)])
     lights.append([px, py + 0.3, pz])
     b.box('base', 'robeRed', 0.2, 0.5, 0.012, px, py - 0.62, pz + 0.135)
@@ -235,7 +248,7 @@ DX0, DZ0 = 1.85, 0.75
 for x in (DX0 - 0.3, DX0 + 0.3):
     for z in (DZ0 - 0.3, DZ0 + 0.3):
         log(b, 'base', 'woodDark', (x, 0.0, z), (x, 0.72 if z < DZ0 else 0.6, z), r=0.025, seg=6)
-b.slope('base', 'roofTile', [(DX0 - 0.38, 0.76, DZ0 - 0.38), (DX0 + 0.38, 0.76, DZ0 - 0.38), (DX0 + 0.38, 0.62, DZ0 + 0.4), (DX0 - 0.38, 0.62, DZ0 + 0.4)], away=(DX0, 0.0, DZ0))
+b.slope('base', 'slate', [(DX0 - 0.38, 0.76, DZ0 - 0.38), (DX0 + 0.38, 0.76, DZ0 - 0.38), (DX0 + 0.38, 0.62, DZ0 + 0.4), (DX0 - 0.38, 0.62, DZ0 + 0.4)], away=(DX0, 0.0, DZ0))
 for k in range(3):
     for j in range(4 - k):
         z = DZ0 - 0.2 + 0.13 * j + 0.065 * k

@@ -63,7 +63,7 @@ import { tx } from '../i18n';
 import { GearPool } from './gearpool';
 import { propGeometry, propMaterial } from './props';
 import { enableShadowLayer } from './shadowlayer';
-import { animateBuilding, isWindowMat, roadMaterials, setNight, STONE_WALL_TOP, TOWER_TOP, WATCH_TOWER_TOP, setStockFill, setFillFar, torchModel } from './buildings';
+import { animateBuilding, isWindowMat, roadMaterials, setNight, STONE_WALL_TOP, TOWER_TOP, WATCH_TOWER_TOP, setStockFill, setFillFar, torchModel, tickBuildingWater } from './buildings';
 import { RESOURCES, RESOURCE_DEFS } from '../data/resources';
 import { Terrain } from '../data/terrain';
 import { BANDIT_COLOR, TEAM_COLORS } from '../data/teams';
@@ -2829,7 +2829,7 @@ export class GameRenderer {
       T('towar pod magazynami', () => this.piles.sync(g, v, this.me, this.time));
       T('światła', () => this.syncLamps(g));
       T('budynki', () => { this.syncAreas(g, v); this.syncBuildings(g, v); this.sites.sync(g, this.view, this.buildingMeshes, { time: this.time, calm: this.calm, lodTick: this.lodTick }); this.walls.sync(g, v, this.buildingMeshes); this.wear.sync(g, v, this.buildingMeshes); this.scorch.sync(g, this.buildingMeshes); this.repairs.sync(g, v, this.buildingMeshes, this.time, this.calm); this.braziers.sync(g, v, this.buildingMeshes); this.gates.sync(g, this.buildingMeshes, dt, this.calm); this.syncStores(g); });
-      T('budynki z daleka', () => this.updateLods());
+      T('budynki z daleka', () => { this.updateLods(); tickBuildingWater(this.time); });
       const cp = this.cam.camera.position;
       for (const f of [this.figures, this.spearmen, this.archers, this.guardsFig, this.kings, this.bodies, this.peasantBodies, this.archerBodies, this.guardBodies, this.menAtArms, this.manAtArmsBodies, this.sappersFig, this.sapperBodies, this.banditsFig, this.banditBodies, this.magesFireFig, this.magesWaterFig, this.battleFireFig, this.battleWaterFig, this.mageBodiesFire, this.mageBodiesWater, this.preacherFig]) f.view(cp);
       for (const t of [this.axes, this.picks, this.clubs, this.forks, this.backPicks, this.beltClubs, this.hammers, this.spades, this.rods, this.handTorches, this.guardTorches, this.buckets, this.bucketWater, this.bedrolls]) t.setView(cp);

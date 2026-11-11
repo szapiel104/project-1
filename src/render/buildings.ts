@@ -187,8 +187,8 @@ const M = {
   // czerwone sukno w pasach namiotu polowego (pawilon jak z turnieju, Michał 9.11.2026)
   canvasRed: mat(0x9a2c1e, 'burlap'),
   thatchDark: mat(0xa9862f, 'thatch'), fish: mat(0x9cc3d6), sawdust: mat(0xd9c08a, 'soil'), needle: mat(0x3c7a3a, 'needles'),
-  // woda w studni i korycie: ciemna, gładka tafla z połyskiem (bez tekstury)
-  water: new THREE.MeshStandardMaterial({ color: 0x1b3a40, roughness: 0.15, metalness: 0.1 }),
+  // woda w studni, korycie, sadzawce i fontannie: przejrzysta tafla z falującymi zmarszczkami i odbiciem nieba (waterMaterial)
+  water: waterMaterial(),
   // kamień zamku jaśniejszy (Michał 3.11.2026: „zamek taki czarny, ciemny, dziwnie”): tekstura ciosów ma średnio ok. 0,25
   // jasności liniowej, więc przy dawnym 0xa9a08c lico wychodziło prawie czarne; teraz jak jasny, ciosany wapień
   castle: mat(0xe4dac4, 'ashlar'), castleDark: mat(0xc2b59c, 'ashlar'), castlePlain: mat(0xd6c49a),
@@ -666,6 +666,45 @@ export function palisadeLogs(links: [boolean, boolean, boolean, boolean], seed: 
 
 /** Czy materiał to szyba okna (świeci nocą) */
 export const isWindowMat = (m: THREE.Material): boolean => m === M.window || m === M.pane;
+
+/**
+ * Woda w budynkach (Michał 11.11.2026: sadzawka i fontanna w Sanktuarium Źródła były gładkimi, ciemnymi bryłami):
+ * mapa normalnych ze zmarszczek (fale z całkowitymi częstotliwościami, więc kafel się powtarza bez szwów) przesuwana
+ * w czasie (tickBuildingWater), mała szorstkość — odbija niebo i światło, lekko przejrzysta, z głębią w kolorze.
+ */
+let rippleCache: THREE.DataTexture | null | undefined;
+function rippleTex(): THREE.DataTexture | null {
+  if (rippleCache !== undefined) return rippleCache;
+  if (typeof document === 'undefined') return (rippleCache = null);
+  const N = 128, H = new Float32Array(N * N);
+  const waves: [number, number, number, number][] = [[3, 1, 1, 0], [1, 4, 0.8, 1.3], [5, -2, 0.5, 2.1], [-2, 7, 0.35, 0.4], [8, 5, 0.22, 2.8], [-9, 3, 0.18, 1.1]];
+  for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
+    let h = 0;
+    for (const [fx, fy, a, p] of waves) h += a * Math.sin(((fx * x + fy * y) / N) * Math.PI * 2 + p);
+    H[y * N + x] = h;
+  }
+  const data = new Uint8Array(N * N * 4);
+  for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
+    const dx = H[y * N + ((x + 1) % N)]! - H[y * N + ((x + N - 1) % N)]!, dy = H[((y + 1) % N) * N + x]! - H[((y + N - 1) % N) * N + x]!;
+    const nx = -dx * 0.35, ny = -dy * 0.35, l = Math.hypot(nx, ny, 1), o = (y * N + x) * 4;
+    data[o] = (nx / l * 0.5 + 0.5) * 255; data[o + 1] = (ny / l * 0.5 + 0.5) * 255; data[o + 2] = (1 / l * 0.5 + 0.5) * 255; data[o + 3] = 255;
+  }
+  const t = new THREE.DataTexture(data, N, N);
+  t.wrapS = t.wrapT = THREE.RepeatWrapping; t.generateMipmaps = true; t.minFilter = THREE.LinearMipmapLinearFilter; t.magFilter = THREE.LinearFilter; t.needsUpdate = true;
+  return (rippleCache = t);
+}
+function waterMaterial(): THREE.MeshStandardMaterial {
+  const m = new THREE.MeshStandardMaterial({ color: 0x1e4a52, roughness: 0.06, metalness: 0.0, transparent: true, opacity: 0.88, depthWrite: true });
+  const rt = rippleTex();
+  if (rt) { m.normalMap = rt; m.normalScale = new THREE.Vector2(0.55, 0.55); }
+  m.userData.tile = 2.2;
+  return m;
+}
+/** Zmarszczki na wodzie w budynkach płyną wolno w jedną stronę (scene.ts woła co klatkę) */
+export function tickBuildingWater(time: number): void {
+  const rt = rippleTex();
+  if (rt) rt.offset.set(time * 0.018, time * 0.011);
+}
 
 export function setNight(k: number): void {
   M.window.emissive.setHex(0xffb050);
