@@ -33,7 +33,7 @@ import { Figures, idWithHead, type FigureKind } from './render/peasants';
 import { normal, pattern } from './render/textures';
 import { ANIMAL_AT, animalGeo } from './render/village';
 import { HORSE_MORPH, horseObject } from './render/horse';
-import { faunaObject } from './render/fauna';
+import { faunaAnimated } from './render/fauna';
 import { watchRenderer } from './debug/errlog';
 import { streamWaterMaterial, waterfallModel } from './render/streams';
 import { mistNoise } from './render/highmist';
@@ -223,8 +223,10 @@ const GROUPS: [string, [string, string, Make][]][] = [
     ['hen', tx('Kura', 'Hen'), () => ({ obj: mesh(animalGeo('hen_brown')) })],
     ['pig', tx('Świnia', 'Pig'), () => ({ obj: mesh(animalGeo('pig')) })],
     ['horse', tx('Koń', 'Horse'), () => ({ obj: horse() })],
-    ['camel', tx('Wielbłąd', 'Camel'), () => ({ obj: faunaObject('camel') })],
-    ['deer', tx('Jeleń', 'Deer'), () => ({ obj: faunaObject('deer') })],
+    ['camel', tx('Wielbłąd', 'Camel'), () => ({ obj: faunaAnimated('camel', 'idle') })],
+    ['camel-walk', tx('Wielbłąd idzie', 'Camel, walking'), () => ({ obj: faunaAnimated('camel', 'walk'), size: new THREE.Vector3(2.6, 0.9, 2.6) })],
+    ['deer', tx('Jeleń', 'Deer'), () => ({ obj: faunaAnimated('deer', 'idle') })],
+    ['deer-walk', tx('Jeleń idzie', 'Deer, walking'), () => ({ obj: faunaAnimated('deer', 'walk'), size: new THREE.Vector3(1.6, 0.6, 1.6) })],
     ['horse-graze', tx('Koń skubie trawę', 'Horse, grazing'), () => ({ obj: horse('graze') })],
     ['horse-look', tx('Koń czujny', 'Horse, alert'), () => ({ obj: horse('look') })],
     ['dog', tx('Pies', 'Dog'), () => ({ obj: dog() })],
@@ -621,6 +623,8 @@ renderer.setAnimationLoop(() => {
     }
   }
   controls.update();
+  // modele, które się ruszają (zwierzęta w podglądzie: chód, ruch spoczynkowy)
+  (current?.userData.tick as ((dt: number, t: number) => void) | undefined)?.(dt, now / 1000);
   thumbs.step();
   nightLights.update(current, state.night, camera, Math.max(size.x, size.z, 0.3));
   renderer.render(scene, camera);

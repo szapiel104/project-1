@@ -93,6 +93,64 @@ export function faunaMaterial(sp: Species): THREE.MeshStandardMaterial {
   return m;
 }
 
+/** Siatka zwierzęcia z własnymi położeniami i normalnymi (do mieszania klatek), wspólne UV, trójkąty i materiał */
+function ownBody(sp: Species): THREE.Mesh {
+  const src = faunaGeometry(sp), V = src.getAttribute('position').count;
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(V * 3), 3).setUsage(THREE.DynamicDrawUsage));
+  geo.setAttribute('normal', new THREE.BufferAttribute(new Float32Array(V * 3), 3).setUsage(THREE.DynamicDrawUsage));
+  geo.setAttribute('uv', src.getAttribute('uv'));
+  geo.setIndex(src.getIndex());
+  geo.boundingSphere = src.boundingSphere!.clone();
+  geo.boundingBox = src.boundingBox!.clone();
+  const m = new THREE.Mesh(geo, faunaMaterial(sp));
+  m.castShadow = true; m.receiveShadow = true;
+  blendFrames(m, sp, IDLE0, IDLE0, 0);
+  return m;
+}
+/** Wpisuje do siatki mieszankę dwóch klatek (a, b, waga b) */
+function blendFrames(mesh: THREE.Mesh, sp: Species, a: number, b: number, w: number): void {
+  const fr = frames(sp), PA = fr.P[a]!, PB = fr.P[b]!, NA = fr.N[a]!, NB = fr.N[b]!;
+  const pa = mesh.geometry.getAttribute('position') as THREE.BufferAttribute, na = mesh.geometry.getAttribute('normal') as THREE.BufferAttribute;
+  const P = pa.array as Float32Array, N = na.array as Float32Array, u = 1 - w;
+  for (let i = 0; i < P.length; i++) { P[i] = PA[i]! * u + PB[i]! * w; N[i] = NA[i]! * u + NB[i]! * w; }
+  pa.needsUpdate = true; na.needsUpdate = true;
+}
+/** Klatki dla stanu: idzie (faza kroku) albo stoi (ruch spoczynkowy), z przejściem do skubania */
+function poseFor(walking: boolean, phase: number, t: number, seed: number, graze: number): [number, number, number] {
+  if (walking) { const a = Math.floor(phase) % WALK; return [a, (a + 1) % WALK, phase - Math.floor(phase)]; }
+  if (graze > 0.02) return [IDLE0, GRAZE, Math.min(1, graze)];
+  const ip = (t * 0.9 + seed * IDLE) % IDLE, i0 = Math.floor(ip);
+  return [IDLE0 + i0, IDLE0 + (i0 + 1) % IDLE, ip - i0];
+}
+
+/**
+ * Zwierzę do podglądu modeli, które się rusza (Michał 11.11.2026: „scena do testowania jak w silnikach — wielbłąd chodzi
+ * po pustej podstawce, wczytuje się w 2 sekundy”): `walk` — chodzi w kółko po podstawce, `idle` — stoi i rusza łbem
+ * i ogonem, co kilka sekund schyla się do trawy. Podgląd woła `userData.tick(dt, time)` co klatkę.
+ */
+export function faunaAnimated(sp: Species, mode: 'walk' | 'idle'): THREE.Group {
+  const g = new THREE.Group(), body = ownBody(sp);
+  g.add(body);
+  const len = model<FaunaModel>(`fauna_${sp}`).length, R = len * 1.4, speed = sp === 'camel' ? 0.55 : 0.7;
+  let phase = 0, ang = 0, graze = 0;
+  g.userData.tick = (dt: number, t: number): void => {
+    if (mode === 'walk') {
+      ang += (speed * dt) / R;
+      phase = (phase + (speed * dt) / (len * 1.1) * WALK) % WALK;
+      body.position.set(Math.cos(ang) * R, 0, Math.sin(ang) * R);
+      body.rotation.y = -ang;             // łeb w kierunku marszu (styczna do koła)
+      const [a, b, w] = poseFor(true, phase, t, 0.3, 0);
+      blendFrames(body, sp, a, b, w);
+    } else {
+      graze += ((Math.sin(t * 0.35) > 0.4 ? 1 : 0) - graze) * Math.min(1, dt * 1.2);
+      const [a, b, w] = poseFor(false, 0, t, 0.3, graze);
+      blendFrames(body, sp, a, b, w);
+    }
+  };
+  return g;
+}
+
 /** Pojedyncze zwierzę (podgląd modeli) */
 export function faunaObject(sp: Species): THREE.Mesh {
   const mesh = new THREE.Mesh(faunaGeometry(sp), faunaMaterial(sp));
@@ -134,19 +192,12 @@ export class Wildlife {
 
   constructor(scene: THREE.Scene) { scene.add(cat(this.group, 'dzikie zwierzęta')); }
 
-  /** Siatka zwierzęcia: własne położenia i normalne (mieszane co klatkę), wspólne UV, trójkąty i materiał */
+  /** Siatka zwierzęcia w scenie (własne położenia i normalne, mieszane co klatkę) */
   private body(b: Beast): THREE.Mesh {
     let m = this.bodies.get(b);
     if (m) return m;
-    const src = faunaGeometry(b.sp), V = src.getAttribute('position').count;
-    const geo = new THREE.BufferGeometry();
-    geo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(V * 3), 3).setUsage(THREE.DynamicDrawUsage));
-    geo.setAttribute('normal', new THREE.BufferAttribute(new Float32Array(V * 3), 3).setUsage(THREE.DynamicDrawUsage));
-    geo.setAttribute('uv', src.getAttribute('uv'));
-    geo.setIndex(src.getIndex());
-    geo.boundingSphere = src.boundingSphere!.clone();
-    m = new THREE.Mesh(geo, faunaMaterial(b.sp));
-    m.castShadow = true; m.receiveShadow = true; m.matrixAutoUpdate = false;
+    m = ownBody(b.sp);
+    m.matrixAutoUpdate = false;
     this.group.add(m);
     this.bodies.set(b, m);
     return m;
@@ -238,23 +289,10 @@ export class Wildlife {
       // klatka chodu z przebytej drogi (nogi nie ślizgają się): pełny cykl na ok. 1,1 długości ciała
       b.phase = (b.phase + (b.speed * dt) / (len * 1.1) * WALK) % WALK;
       b.graze += ((b.state === 0 && !ctx.calm ? 1 : 0) * (0.5 + 0.5 * Math.max(0, Math.sin(t * 0.25 + b.seed * 40))) - b.graze) * Math.min(1, dt * 1.2);
-      let fa: number, fb: number, fw: number;
-      if (b.speed > 0.06) {
-        // chód: dwie sąsiednie klatki, mieszane ułamkiem kroku
-        fa = Math.floor(b.phase) % WALK; fb = (fa + 1) % WALK; fw = b.phase - Math.floor(b.phase);
-      } else {
-        // stoi: zapętlony ruch spoczynkowy (łeb, uszy, ogon), a przy skubaniu przejście do łba przy ziemi
-        const ip = (t * 0.9 + b.seed * IDLE) % IDLE, i0 = Math.floor(ip);
-        if (b.graze > 0.02) { fa = IDLE0; fb = GRAZE; fw = Math.min(1, b.graze); }
-        else { fa = IDLE0 + i0; fb = IDLE0 + (i0 + 1) % IDLE; fw = ip - i0; }
-      }
+      const [fa, fb, fw] = poseFor(b.speed > 0.06, b.phase, t, b.seed, b.graze);
       // mieszanie dwóch klatek na procesorze: zwierząt jest kilkanaście, a gotowa siatka rysuje się zwykłym materiałem
-      const mesh = this.body(b), fr = frames(b.sp);
-      const PA = fr.P[fa]!, PB = fr.P[fb]!, NA = fr.N[fa]!, NB = fr.N[fb]!;
-      const pa = mesh.geometry.getAttribute('position') as THREE.BufferAttribute, na = mesh.geometry.getAttribute('normal') as THREE.BufferAttribute;
-      const P = pa.array as Float32Array, N = na.array as Float32Array, u = 1 - fw;
-      for (let i = 0; i < P.length; i++) { P[i] = PA[i]! * u + PB[i]! * fw; N[i] = NA[i]! * u + NB[i]! * fw; }
-      pa.needsUpdate = true; na.needsUpdate = true;
+      const mesh = this.body(b);
+      blendFrames(mesh, b.sp, fa, fb, fw);
       // odgłosy: od czasu do czasu z bliska, przy ucieczce częściej
       const near = (b.x - ctx.cam.x) ** 2 + (b.y - ctx.cam.y) ** 2 < 30 * 30;
       if (near && !ctx.calm) {
