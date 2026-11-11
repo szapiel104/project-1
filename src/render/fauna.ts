@@ -28,6 +28,10 @@ const WALK_SPEED: Record<Species, number> = { camel: 0.55, deer: 0.7, pig: 0.3, 
 /** bieg przy ucieczce (pola na sekundę) */
 const FLEE_SPEED: Partial<Record<Species, number>> = { camel: 2.6, deer: 3.4, boar: 2.8, fox: 3.6, rabbit: 4 };
 const WALK = 10, IDLE = 8;
+/** Ile długości ciała na pełny cykl chodu: zając kica daleko (Michał 11.11.2026: „królik skacze jak powalony” — przy
+ *  1,1 długości robił ok. 4 skoki na sekundę), reszta stawia kroki mniej więcej na swoją długość */
+const STRIDE: Partial<Record<Species, number>> = { rabbit: 3.6, fox: 1.3 };
+const strideOf = (sp: Species): number => STRIDE[sp] ?? 1.1;
 const MORPHS = [...Array.from({ length: WALK }, (_, k) => `walk${k}`), ...Array.from({ length: IDLE }, (_, k) => `idle${k}`), 'graze'];
 /** wiersze tekstury klatek: 0..9 chód, 10..17 spoczynek, 18 skubanie */
 const IDLE0 = WALK, GRAZE = WALK + IDLE, FRAMES = WALK + IDLE + 1;
@@ -116,23 +120,37 @@ function ownBody(sp: Species): THREE.Mesh {
   geo.boundingBox = src.boundingBox!.clone();
   const m = new THREE.Mesh(geo, faunaMaterial(sp));
   m.castShadow = true; m.receiveShadow = true;
-  blendFrames(m, sp, IDLE0, IDLE0, 0);
+  blendFrames(m, sp, [[IDLE0, 1]]);
   return m;
 }
-/** Wpisuje do siatki mieszankę dwóch klatek (a, b, waga b) */
-function blendFrames(mesh: THREE.Mesh, sp: Species, a: number, b: number, w: number): void {
-  const fr = frames(sp), PA = fr.P[a]!, PB = fr.P[b]!, NA = fr.N[a]!, NB = fr.N[b]!;
+/** Wpisuje do siatki mieszankę klatek: lista [klatka, waga] (wagi sumują się do 1) */
+type Mix = [number, number][];
+function blendFrames(mesh: THREE.Mesh, sp: Species, mix: Mix): void {
+  const fr = frames(sp);
   const pa = mesh.geometry.getAttribute('position') as THREE.BufferAttribute, na = mesh.geometry.getAttribute('normal') as THREE.BufferAttribute;
-  const P = pa.array as Float32Array, N = na.array as Float32Array, u = 1 - w;
-  for (let i = 0; i < P.length; i++) { P[i] = PA[i]! * u + PB[i]! * w; N[i] = NA[i]! * u + NB[i]! * w; }
+  const P = pa.array as Float32Array, N = na.array as Float32Array;
+  const use = mix.filter(([, w]) => w > 0.001);
+  const [f0, w0] = use[0] ?? [IDLE0, 1];
+  { const PA = fr.P[f0]!, NA = fr.N[f0]!; for (let i = 0; i < P.length; i++) { P[i] = PA[i]! * w0; N[i] = NA[i]! * w0; } }
+  for (let k = 1; k < use.length; k++) {
+    const [f, w] = use[k]!, PA = fr.P[f]!, NA = fr.N[f]!;
+    for (let i = 0; i < P.length; i++) { P[i] = P[i]! + PA[i]! * w; N[i] = N[i]! + NA[i]! * w; }
+  }
   pa.needsUpdate = true; na.needsUpdate = true;
 }
-/** Klatki dla stanu: idzie (faza kroku) albo stoi (ruch spoczynkowy), z przejściem do skubania */
-function poseFor(walking: boolean, phase: number, t: number, seed: number, graze: number): [number, number, number] {
-  if (walking) { const a = Math.floor(phase) % WALK; return [a, (a + 1) % WALK, phase - Math.floor(phase)]; }
-  if (graze > 0.02) return [IDLE0, GRAZE, Math.min(1, graze)];
-  const ip = (t * 0.9 + seed * IDLE) % IDLE, i0 = Math.floor(ip);
-  return [IDLE0 + i0, IDLE0 + (i0 + 1) % IDLE, ip - i0];
+/**
+ * Mieszanka klatek dla stanu (Michał 11.11.2026: „wielbłąd z łbem w dół nagle przeskakuje do góry”): wszystko przechodzi
+ * płynnie — ruch spoczynkowy ↔ skubanie (waga `graze`), postój ↔ chód (waga `walk` 0–1, rośnie z prędkością). Ruch
+ * spoczynkowy gra tam i z powrotem (0→7→0), bo animacje z paczek nie zawsze zamykają się w pętlę.
+ */
+function poseFor(walk: number, phase: number, t: number, seed: number, graze: number): Mix {
+  const g = Math.max(0, Math.min(1, graze)), wk = Math.max(0, Math.min(1, walk));
+  const span = IDLE - 1, cyc = (t * 0.9 + seed * IDLE * 2) % (span * 2), ip = cyc < span ? cyc : span * 2 - cyc;
+  const i0 = Math.min(span - 1, Math.floor(ip)), iw = ip - i0;
+  const st = 1 - wk;
+  const out: Mix = [[IDLE0 + i0, st * (1 - g) * (1 - iw)], [IDLE0 + i0 + 1, st * (1 - g) * iw], [GRAZE, st * g]];
+  if (wk > 0) { const a = Math.floor(phase) % WALK, fw = phase - Math.floor(phase); out.push([a, wk * (1 - fw)], [(a + 1) % WALK, wk * fw]); }
+  return out;
 }
 
 /**
@@ -148,15 +166,13 @@ export function faunaAnimated(sp: Species, mode: 'walk' | 'idle'): THREE.Group {
   g.userData.tick = (dt: number, t: number): void => {
     if (mode === 'walk') {
       ang += (speed * dt) / R;
-      phase = (phase + (speed * dt) / (len * 1.1) * WALK) % WALK;
+      phase = (phase + (speed * dt) / (len * strideOf(sp)) * WALK) % WALK;
       body.position.set(Math.cos(ang) * R, 0, Math.sin(ang) * R);
       body.rotation.y = -ang;             // łeb w kierunku marszu (styczna do koła)
-      const [a, b, w] = poseFor(true, phase, t, 0.3, 0);
-      blendFrames(body, sp, a, b, w);
+      blendFrames(body, sp, poseFor(1, phase, t, 0.3, 0));
     } else {
       graze += ((Math.sin(t * 0.35) > 0.4 ? 1 : 0) - graze) * Math.min(1, dt * 1.2);
-      const [a, b, w] = poseFor(false, 0, t, 0.3, graze);
-      blendFrames(body, sp, a, b, w);
+      blendFrames(body, sp, poseFor(0, 0, t, 0.3, graze));
     }
   };
   return g;
@@ -170,12 +186,17 @@ export function faunaAnimated(sp: Species, mode: 'walk' | 'idle'): THREE.Group {
 export class FaunaPool {
   private list: THREE.Mesh[] = [];
   private n = 0;
+  private walkMix = new Map<number, number>();
+  private seen = new Map<number, number>();
   constructor(private sp: Species, private parent: THREE.Object3D) {}
   put(matrix: THREE.Matrix4, walking: boolean, phase: number, alt: number, seed: number, time: number): void {
     let m = this.list[this.n];
     if (!m) { m = ownBody(this.sp); m.matrixAutoUpdate = false; this.parent.add(m); this.list.push(m); }
-    const [a, b, w] = poseFor(walking, phase % WALK, time, seed, alt);
-    blendFrames(m, this.sp, a, b, w);
+    // chód ↔ postój płynnie: waga chodu dąży do 1 albo 0 w ok. 0,2 s (osobno dla każdego zwierzęcia, po ziarnie)
+    const prev = this.walkMix.get(seed) ?? (walking ? 1 : 0), dt = Math.min(0.1, Math.max(0, time - (this.seen.get(seed) ?? time)));
+    const wm = prev + ((walking ? 1 : 0) - prev) * Math.min(1, dt * 7);
+    this.walkMix.set(seed, wm); this.seen.set(seed, time);
+    blendFrames(m, this.sp, poseFor(wm, phase % WALK, time, seed, alt));
     m.matrix.copy(matrix); m.matrixWorldNeedsUpdate = true; m.visible = true;
     this.n++;
   }
@@ -327,12 +348,13 @@ export class Wildlife {
       if ((b.x - ctx.cam.x) ** 2 + (b.y - ctx.cam.y) ** 2 > 90 * 90) continue;
       const len = model<FaunaModel>(`fauna_${b.sp}`).length;
       // klatka chodu z przebytej drogi (nogi nie ślizgają się): pełny cykl na ok. 1,1 długości ciała
-      b.phase = (b.phase + (b.speed * dt) / (len * 1.1) * WALK) % WALK;
+      // przy ucieczce nogi nie młócą szybciej niż ~2,5 cyklu na sekundę (małe zwierzęta wyglądały jak nakręcane)
+      b.phase = (b.phase + Math.min(2.5, b.speed / (len * strideOf(b.sp))) * dt * WALK) % WALK;
       b.graze += ((b.state === 0 && !ctx.calm ? 1 : 0) * (0.5 + 0.5 * Math.max(0, Math.sin(t * 0.25 + b.seed * 40))) - b.graze) * Math.min(1, dt * 1.2);
-      const [fa, fb, fw] = poseFor(b.speed > 0.06, b.phase, t, b.seed, b.graze);
+      const mix = poseFor(Math.min(1, b.speed / (WALK_SPEED[b.sp] * 0.7)), b.phase, t, b.seed, b.graze);
       // mieszanie dwóch klatek na procesorze: zwierząt jest kilkanaście, a gotowa siatka rysuje się zwykłym materiałem
       const mesh = this.body(b);
-      blendFrames(mesh, b.sp, fa, fb, fw);
+      blendFrames(mesh, b.sp, mix);
       // odgłosy: od czasu do czasu z bliska, przy ucieczce częściej
       const near = (b.x - ctx.cam.x) ** 2 + (b.y - ctx.cam.y) ** 2 < 30 * 30;
       if (near && !ctx.calm) {

@@ -194,8 +194,13 @@ def build(base, aid, cfg):
     offs = np.cumsum([0] + [len(p['pos']) for p in prims])
     idx = np.vstack([p['idx'] + offs[k] for k, p in enumerate(prims)])
     res = {}
+    # ruch z korzenia (jeleń: chód przesuwa całe ciało do przodu, a pętla wraca na początek) — gra przesuwa zwierzę sama,
+    # więc każdą klatkę cofamy w poziomie do środka pozy stojącej; inaczej szło do przodu i co krok skakało do tyłu
+    c0 = fix(posed(*poses['base'])).mean(0)
     for pn, (an, t) in poses.items():
         p = fix(posed(an, t))
+        c = p.mean(0)
+        p = p - np.array([c[0] - c0[0], 0, c[2] - c0[2]])
         res[pn] = (p, smooth(p, idx))
 
     # atlas: kafle po materiałach (każdy z jednym zdjęciem), UV przesunięte do swojego kafla

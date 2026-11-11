@@ -37,7 +37,7 @@ ANIMALS = {
     'pig': {'mesh': 'pig.dae', 'idle': 'animal_pig_idle_01', 'graze': 'animal_pig_feeding_01', 'walk': 'animal_pig_walk_01', 'tex': 'animal_pig_01', 'height': 0.27},
     'hen': {'mesh': 'chicken.dae', 'idle': 'chicken_idle_01', 'graze': 'chicken_idle_02', 'walk': 'chicken_walk', 'tex': 'animal_chicken.dds', 'height': 0.1, 'up': 4},
     # zwierzyna w lasach i na łąkach (przyszłe mięso dla myśliwego): dzik ryje, lis węszy przy ziemi, zając skubie
-    'boar': {'mesh': 'animal_boar.dae', 'idle': 'animal_boar_idle_01', 'graze': 'animal_boar_idle_02', 'walk': 'animal_boar_walk_01', 'tex': 'animal_boar_01', 'height': 0.3},
+    'boar': {'mesh': 'animal_boar.dae', 'idle': 'animal_boar_idle_01', 'graze': 'animal_boar_idle_02', 'walk': 'animal_boar_walk_01', 'tex': 'animal_boar_01', 'height': 0.3, 'flip': False},
     'fox': {'mesh': 'fox.dae', 'idle': 'fox_idle', 'graze': 'fox_feeding', 'walk': 'fox_walk', 'tex': 'animal_fox_red', 'height': 0.15},
     'rabbit': {'mesh': 'rabbit_01.dae', 'idle': 'rabbit_idle_01', 'graze': 'rabbit_idle_02', 'walk': 'rabbit_walk', 'tex': 'animal_rabbit_01', 'height': 0.08},
     'dog': {'mesh': 'wolfhound.dae', 'idle': 'wolfhound_idle1', 'graze': 'wolfhound_idle_sit', 'walk': 'wolfhound_walk', 'tex': 'brit/wolfhound', 'height': 0.27},
@@ -134,7 +134,7 @@ def build(art, aid, cfg):
     zmin, zmax = bp[:, 2].min(), bp[:, 2].max()
     front = bp[bp[:, 2] > zmax - (zmax - zmin) * 0.15][:, 1].max()
     back = bp[bp[:, 2] < zmin + (zmax - zmin) * 0.15][:, 1].max()
-    flip = back > front
+    flip = back > front if 'flip' not in cfg else cfg['flip']   # dzik ma łeb niżej niż zad — wtedy kierunek podany ręcznie
     fix = (lambda p: np.c_[-p[:, 0], p[:, 1], -p[:, 2]]) if flip else (lambda p: p)
     print(f'{aid}: {"obrócony o 180°" if flip else "łeb w +z"}')
     # klatka z łbem najniżej (skubanie)
