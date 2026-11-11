@@ -139,6 +139,9 @@ def clip(path):
     d = Dae(path)
     out = {}
     for ch in d.root.iter('{%s}channel' % NS['c']):
+        # tylko pełne macierze kości; kanały po składowych (location.X…) w paczce celują w obiekt siatki, nie w kości
+        if not ch.get('target').endswith('/transform'):
+            continue
         node = ch.get('target').split('/')[0]
         smp = d.byid[ch.get('source').lstrip('#')]
         outp = [i for i in smp.findall('c:input', NS) if i.get('semantic') == 'OUTPUT'][0].get('source')

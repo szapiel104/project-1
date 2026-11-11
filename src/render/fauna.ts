@@ -22,9 +22,11 @@ import { play3d } from '../audio/engine';
  */
 type Packed = { pos: string; nrm: string; uv: string; idx: string; morph: Record<string, { pos: string; nrm: string }> };
 type FaunaModel = { height: number; length: number; body: Packed };
-export type Species = 'camel' | 'deer' | 'pig' | 'hen' | 'dog';
+export type Species = 'camel' | 'deer' | 'pig' | 'hen' | 'dog' | 'boar' | 'fox' | 'rabbit';
 /** Prędkość chodu w polach na sekundę (podgląd modeli) */
-const WALK_SPEED: Record<Species, number> = { camel: 0.55, deer: 0.7, pig: 0.3, hen: 0.35, dog: 0.8 };
+const WALK_SPEED: Record<Species, number> = { camel: 0.55, deer: 0.7, pig: 0.3, hen: 0.35, dog: 0.8, boar: 0.45, fox: 0.6, rabbit: 0.35 };
+/** bieg przy ucieczce (pola na sekundę) */
+const FLEE_SPEED: Partial<Record<Species, number>> = { camel: 2.6, deer: 3.4, boar: 2.8, fox: 3.6, rabbit: 4 };
 const WALK = 10, IDLE = 8;
 const MORPHS = [...Array.from({ length: WALK }, (_, k) => `walk${k}`), ...Array.from({ length: IDLE }, (_, k) => `idle${k}`), 'graze'];
 /** wiersze tekstury klatek: 0..9 chód, 10..17 spoczynek, 18 skubanie */
@@ -192,14 +194,15 @@ interface Beast {
 /** Ile stad i jakich (kraina mapy) */
 const HERDS: Record<string, [Species, number, number, number][]> = {
   // [gatunek, liczba stad, najmniej w stadzie, najwięcej]
-  desert: [['camel', 7, 2, 4]],
-  meadow: [['deer', 9, 3, 6]],
-  highland: [['deer', 8, 2, 5]],
-  steppe: [['deer', 5, 2, 4]],
-  north: [['deer', 4, 2, 3]],
+  // dziki chodzą watahami, lisy pojedynczo, zające po dwa-trzy (przyszła zwierzyna dla myśliwego)
+  desert: [['camel', 7, 2, 4], ['fox', 2, 1, 1]],
+  meadow: [['deer', 9, 3, 6], ['boar', 5, 2, 4], ['fox', 4, 1, 1], ['rabbit', 7, 1, 3]],
+  highland: [['deer', 8, 2, 5], ['boar', 5, 2, 4], ['fox', 3, 1, 1], ['rabbit', 4, 1, 2]],
+  steppe: [['deer', 5, 2, 4], ['fox', 4, 1, 1], ['rabbit', 8, 1, 3]],
+  north: [['deer', 4, 2, 3], ['fox', 3, 1, 1], ['rabbit', 3, 1, 2]],
 };
 const FLEE = 6.5;       // człowiek bliżej niż tyle pól — zwierzę ucieka
-const MAX = 64;
+const MAX = 110;
 
 export class Wildlife {
   private beasts: Beast[] = [];
@@ -234,7 +237,7 @@ export class Wildlife {
     if (tx < 1 || ty < 1 || tx >= g.map.width - 1 || ty >= g.map.height - 1) return false;
     const t = ty * g.map.width + tx, tile = g.map.tiles[t];
     if (g.occupancy[t] !== 0) return false;
-    return tile === Terrain.Grass || (sp === 'deer' && tile === Terrain.Forest);
+    return tile === Terrain.Grass || ((sp === 'deer' || sp === 'boar' || sp === 'fox') && tile === Terrain.Forest);
   }
 
   private spawn(g: GameState): void {
@@ -296,7 +299,7 @@ export class Wildlife {
         const dx = b.tx - b.x, dy = b.ty - b.y, d = Math.hypot(dx, dy);
         if (d < 0.15) { if (b.state === 1) { b.state = 0; b.until = t + 4 + b.seed * 8; } }
         else {
-          want = b.state === 2 ? (b.sp === 'camel' ? 2.6 : 3.4) : (b.sp === 'camel' ? 0.55 : 0.7);
+          want = b.state === 2 ? (FLEE_SPEED[b.sp] ?? 3) : WALK_SPEED[b.sp];
           const h = Math.atan2(dx, dy);
           let dh = h - b.heading; dh -= Math.round(dh / (Math.PI * 2)) * Math.PI * 2;
           b.heading += dh * Math.min(1, dt * (b.state === 2 ? 6 : 2.5));
@@ -322,7 +325,9 @@ export class Wildlife {
       const near = (b.x - ctx.cam.x) ** 2 + (b.y - ctx.cam.y) ** 2 < 30 * 30;
       if (near && !ctx.calm) {
         const last = this.voiceAt.get(b) ?? -99, gap = b.state === 2 ? 4 : 14 + b.seed * 20;
-        if (t - last > gap && Math.sin(t * 1.7 + b.seed * 91) > 0.97) { this.voiceAt.set(b, t); play3d(b.sp === 'camel' ? 'camel' : 'deer', b.x - W2, b.y - H2, { y: ctx.height(b.x, b.y) + 0.4 }); }
+        // lis i zając milczą; dzik chrząka jak świnia, tylko niżej
+        const voice = b.sp === 'camel' ? 'camel' : b.sp === 'deer' ? 'deer' : b.sp === 'boar' ? 'pig' : null;
+        if (voice && t - last > gap && Math.sin(t * 1.7 + b.seed * 91) > 0.97) { this.voiceAt.set(b, t); play3d(voice, b.x - W2, b.y - H2, { y: ctx.height(b.x, b.y) + 0.4, rate: voice === 'pig' ? 0.75 : 1 }); }
       }
       this.q.setFromAxisAngle(this.up, b.heading);
       this.m.compose(this.v.set(b.x - W2, ctx.height(b.x, b.y), b.y - H2), this.q, this.s.setScalar(b.scale));
