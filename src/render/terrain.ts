@@ -1018,7 +1018,7 @@ function* terrainSteps(map: GameMap, models: ModelFactory, waterLevel: number): 
   const pines: Item[] = [], leafy: Item[] = [], rocks: Item[] = [], ores: Item[] = [], tufts: Item[] = [];
   // pustynia (0 A.D., src/render/desert0ad.ts): uschnięte palmy, suche krzewy, trawy; palmy przy wodzie dla ozdoby
   const DESERT = map.biome === 'desert';
-  const dDead: Item[] = [], dBush: Item[] = [], dGrass: Item[] = [], dPalm: Item[] = [];
+  const dDead: Item[] = [], dBush: Item[] = [], dGrass: Item[] = [], dDry: Item[] = [], dPalm: Item[] = [];
   const ferns: Item[] = [], deadwood: Item[] = [];
   // młode jodły w podroście (gotowy model z Poly Haven): w głębi lasu pod starymi drzewami, rzadziej na skraju
   const firs: Item[] = [];
@@ -1213,7 +1213,9 @@ function* terrainSteps(map: GameMap, models: ModelFactory, waterLevel: number): 
       if (DESERT && t === Terrain.Grass && !map.trails?.[y * w + x]) {
         // pustynia: suche trawy wszędzie po trochu, z rzadka krzew albo uschnięta palma, przy wodzie zielone palmy (oaza)
         // przy oazie gęsto (trawy, krzewy), pole dalej rzadziej, na gołym piachu tylko z rzadka kępa
-        if ((r >>> 12) % (gd <= 1 ? 4 : gd === 2 ? 8 : 70) === 0) put(dGrass, x, y, 72, 0.7 + ((r >>> 22) & 7) / 12, 0.95);
+        // żywa, zielona trawa tylko w oazie (Michał 11.11.2026: „trawa bez sensu na pustyni”); dalej z rzadka sucha kępa
+        if (gd <= 1) { if ((r >>> 12) % 4 === 0) put(dGrass, x, y, 72, 0.7 + ((r >>> 22) & 7) / 12, 0.95); }
+        else if ((r >>> 12) % (gd === 2 ? 12 : 320) === 0) put(dDry, x, y, 72, 0.6 + ((r >>> 22) & 7) / 14, 0.95);
         if (farFromKeeps(x, y)) {
           const k = (r >>> 3) % (gd <= 1 ? 131 : gd === 2 ? 300 : 2600);
           if (k === 0) put(dDead, x, y, 70, 0.8 + ((r >>> 20) & 7) / 14, 0.6);
@@ -1739,7 +1741,8 @@ function* terrainSteps(map: GameMap, models: ModelFactory, waterLevel: number): 
     plantDesert(dPalm, ['palm'], 5, true, false);
     plantDesert(dDead, ['deadpalm'], 6, true, false);
     plantDesert(dBush, ['bush', 'drybush', 'desertplant'], 7, false, false);
-    plantDesert(dGrass, ['grass', 'grass', 'drybush'], 8, false, false);
+    plantDesert(dGrass, ['grass', 'grass', 'bush'], 8, false, false);
+    plantDesert(dDry, ['drybush'], 9, false, false);
   }
   if (DESERT) flushDesert();
   label = 'kępy trawy';
