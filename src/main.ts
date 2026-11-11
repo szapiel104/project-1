@@ -360,7 +360,7 @@ const hud = createHud(document.getElementById('ui')!, {
   onPerson: (id) => {
     const s = game.soldiers.find((x) => x.id === id);
     if (s) { chooseSoldiers([id], false); play('select'); return; }
-    const u = game.units.find((x) => x.id === id); if (!u) return; selectUnit(id); renderer.lookAt(u.px / 256, u.py / 256, 18);
+    const u = game.units.find((x) => x.id === id); if (!u) return; selectUnit(id); renderer.lookAt(u.px / 256, u.py / 256, 18, true);
   },
   onSelectGarrison: (id) => { chooseSoldiers(game.soldiers.filter((s) => s.owner === ME && towerOf(game, s) === id).map((s) => s.id), false); play('select'); },
   onGate: (id, open) => { pending.push({ type: 'gate', player: ME, id, open }); play('click'); },
@@ -508,7 +508,7 @@ const pings = createPings({
     if (mine && game.players.some((p) => p.bot && p.team === mine.team && p.id !== ME && !p.defeated)) pending.push({ type: 'signal', player: ME, kind, x: Math.floor(x), y: Math.floor(y) });
   },
   screenOf: (x, y) => renderer.screenOf(x, y),
-  lookAt: (x, y) => renderer.lookAt(x, y, 30),
+  lookAt: (x, y) => renderer.lookAt(x, y, 30, true),
 });
 function showPing(from: number, kind: number, x: number, y: number): void {
   const p = PINGS[kind];
@@ -1144,7 +1144,7 @@ function jumpTo(kind: JumpKind): void {
   jumpAt[kind] = next;
   const b = list[next]!;
   const d = BUILDINGS[b.type]!;
-  renderer.lookAt(b.x + d.w / 2, b.y + d.h / 2, 22);
+  renderer.lookAt(b.x + d.w / 2, b.y + d.h / 2, 22, true);
   select(b.id);
   play('select');
   // okno budynku zasłania środek ekranu (i sam budynek): kamera przesuwa się tak, żeby budynek stał obok okna.
@@ -1879,8 +1879,8 @@ alarm.setAttribute('role', 'status');
 document.body.append(alarm);
 /** Środek nadciągającego oddziału wroga (klik w pasek ostrzeżeń przenosi tam kamerę) */
 let comingAt: { x: number; y: number } | null = null;
-alarm.addEventListener('click', () => { if (comingAt) renderer.lookAt(comingAt.x, comingAt.y, 30); });
-alarm.addEventListener('keydown', (e) => { if ((e.key === 'Enter' || e.key === ' ') && comingAt) { e.preventDefault(); renderer.lookAt(comingAt.x, comingAt.y, 30); } });
+alarm.addEventListener('click', () => { if (comingAt) renderer.lookAt(comingAt.x, comingAt.y, 30, true); });
+alarm.addEventListener('keydown', (e) => { if ((e.key === 'Enter' || e.key === ' ') && comingAt) { e.preventDefault(); renderer.lookAt(comingAt.x, comingAt.y, 30, true); } });
 function updateAlarm(): void {
   const me = game.players[ME]!;
   const enemies = game.players.filter((p) => p.team !== me.team && p.bot && !p.defeated);
@@ -2015,7 +2015,7 @@ function nearestDen(): { x: number; y: number; dir: string } | null {
   const dir = [tx('na północ', 'north'), tx('na północny wschód', 'north-east'), tx('na wschód', 'east'), tx('na południowy wschód', 'south-east'), tx('na południe', 'south'), tx('na południowy zachód', 'south-west'), tx('na zachód', 'west'), tx('na północny zachód', 'north-west')][k]!;
   return { ...best, dir };
 }
-const showAt = (x: number, y: number): ScribeAction => ({ label: tx('Pokaż', 'Show'), run: () => renderer.lookAt(x, y, 28) });
+const showAt = (x: number, y: number): ScribeAction => ({ label: tx('Pokaż', 'Show'), run: () => renderer.lookAt(x, y, 28, true) });
 function banditNotes(p: (typeof game.players)[number]): void {
   const b = p.bandit ?? { raids: 0, kills: 0, robbed: 0, razed: 0, loot: [] };
   // na początku gry skryba mówi, gdzie w puszczy siedzą zbóje (z przyciskiem, który pokazuje obóz)
@@ -2753,7 +2753,7 @@ function raiseAlert(x: number, y: number, kind: Alert['kind']): void {
   el.title = kind === 'wolf' ? tx('Wilki atakują — pokaż', 'Wolves attacking — show') : tx('Atak wroga — pokaż', 'Enemy attack — show');
   el.innerHTML = '<span class="alert-tri">!</span>';
   const a: Alert = { x, y, until: now + 4000, kind, el };
-  el.addEventListener('click', () => renderer.lookAt(a.x, a.y, 26));
+  el.addEventListener('click', () => renderer.lookAt(a.x, a.y, 26, true));
   alertLayer.append(el);
   alerts.push(a);
   play('error');
@@ -2835,7 +2835,7 @@ function groupAction(n: number, action: 'pick' | 'save' | 'clear'): void {
   const now = performance.now();
   if (lastGroup.n === n && now - lastGroup.at < 450) {
     const list = game.soldiers.filter((x) => ids.includes(x.id));
-    renderer.lookAt(list.reduce((a, x) => a + x.px, 0) / list.length / 256, list.reduce((a, x) => a + x.py, 0) / list.length / 256, 26);
+    renderer.lookAt(list.reduce((a, x) => a + x.px, 0) / list.length / 256, list.reduce((a, x) => a + x.py, 0) / list.length / 256, 26, true);
     lastGroup = { n: 0, at: 0 };
     return;
   }

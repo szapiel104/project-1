@@ -1501,10 +1501,18 @@ export class GameRenderer {
     return () => this.cam.setView(before);
   }
 
-  lookAt(x: number, y: number, dist = 40): void {
+  lookAt(x: number, y: number, dist = 40, glide = false): void {
     if (!this.state) return;
-    this.cam.lookAt(x - this.state.map.width / 2, y - this.state.map.height / 2, dist);
+    this.cam.lookAt(x - this.state.map.width / 2, y - this.state.map.height / 2, dist, glide);
   }
+  /** Wstrząs kamery od zdarzenia w świecie (x, z w układzie sceny): słabnie z odległością, dalej niż ~45 pól — nic */
+  private quake(x: number, z: number, power: number): void {
+    if (this.calm || this.walk) return;
+    const c = this.cam.camera.position, d = Math.hypot(x - c.x, z - c.z);
+    const f = Math.max(0, 1 - d / 45);
+    if (f > 0) this.cam.shake(power * f);
+  }
+  private ramQuakeAt = new Map<number, number>();
 
   /** Blokuje przesuwanie kamery myszą na czas malowania */
   /** Pokazuje planowaną drogę (pusta lista chowa podgląd) */
@@ -3602,6 +3610,8 @@ export class GameRenderer {
       this.rubble.collapse(mesh);
       // łoskot walącego się budynku z jego miejsca (nagrania 0 A.D.)
       this.playHere('collapse', mesh.position.x, mesh.position.z, 1, mesh.position.y);
+      // walący się budynek trzęsie kamerą (mur i wieża mocniej niż szopa) — Michał 11.11.2026
+      { const r = new THREE.Box3().setFromObject(mesh).getSize(new THREE.Vector3()); this.quake(mesh.position.x, mesh.position.z, Math.min(0.75, 0.3 + r.length() * 0.06)); }
       this.onCollapse();
       this.buildingMeshes.delete(id);
       this.lods.delete(id);
@@ -4986,6 +4996,8 @@ export class GameRenderer {
         this.armM.makeTranslation(0, 0, off).premultiply(m);
         this.ramBeams.setMatrixAt(rams, this.armM);
         if (hitting && k > 0.97 && !this.calm) this.sfxAt('plank', px - width / 2, pz - height / 2, `ram${s.id}`, 0.5, 1.2);
+        // uderzenie taranu w bramę: krótki wstrząs kamery (raz na uderzenie)
+        if (hitting && k > 0.97 && this.time - (this.ramQuakeAt.get(s.id) ?? -9) > 0.6) { this.ramQuakeAt.set(s.id, this.time); this.quake(px - width / 2, pz - height / 2, 0.3); }
         rams++;
       }
       let pos = this.soldierPos.get(s.id);

@@ -107,7 +107,25 @@ export class StrategyCamera {
   private cy: number | undefined;
   private snap(): void { this.goal = { x: this.target.x, z: this.target.z, yaw: this.yaw, dist: this.dist, pitch: this.pitch }; }
 
-  lookAt(x: number, z: number, dist = this.dist): void {
+  /** Wstrząs kamery (0..1, sumuje się): walący się budynek, uderzenie taranu. Gaśnie sam w ok. pół sekundy. */
+  private trauma = 0;
+  private shakeT = 0;
+  shake(amount: number): void { this.trauma = Math.min(1, this.trauma + amount); }
+  /** Lot w nowe miejsce (kronika, alarm, mapa): goal ustawiony, kamera dolatuje miękko zamiast skakać */
+  private travel = 0;
+  private gyGoal: number | undefined;
+
+  lookAt(x: number, z: number, dist = this.dist, glide = false): void {
+    // niedaleko: płynny dolot (ok. 0,6 s, z rozpędem i hamowaniem); daleko — skok, żeby nie przelatywać pół mapy
+    if (glide && Math.hypot(x - this.target.x, z - this.target.z) < 90) {
+      this.lift = 0;
+      [x, z] = this.clampGoal(x, z);
+      this.goal.x = x; this.goal.z = z; this.goal.dist = Math.max(StrategyCamera.MIN_DIST, Math.min(StrategyCamera.MAX_DIST, dist));
+      this.gyGoal = this.ground(x, z);
+      this.travel = 1;
+      return;
+    }
+    this.travel = 0; this.gyGoal = undefined;
     this.lift = 0;
     this.gy = undefined; // skok w nowe miejsce: wysokość lotu od terenu w tym miejscu
     // poza grywalnym środkiem (np. koniec spaceru przy krawędzi): od razu najbliższy dozwolony punkt, żeby kamera nie utknęła
@@ -142,18 +160,25 @@ export class StrategyCamera {
     if (k.has('PageUp') || k.has('KeyT')) tilt += 1;
     if (k.has('PageDown') || k.has('KeyG')) tilt -= 1;
     if (tilt) this.tilt(tilt * dt * 1.2);
+    if (fx || fz || rot || tilt || this.pointers.size) this.travel = 0; // gracz przejął kamerę w trakcie dolotu
     if (fx || fz) this.pan(fx * this.goal.dist * dt * 0.9 * this.speed, fz * this.goal.dist * dt * 0.9 * this.speed);
     if (rot) this.goal.yaw += rot * dt * 1.6 * this.speed;
-    // dojazd do celu: szybko, ale bez skoków (ok. 90% drogi w ~0,15 s)
-    const g = this.goal, kk = 1 - Math.exp(-Math.min(0.1, dt) * 16);
+    // dojazd do celu: przesuw szybko, ale bez skoków (ok. 90% drogi w ~0,15 s); zbliżenie miękciej (ok. 0,3 s), jak
+    // w nowych strategiach — kółko myszy nie szarpie widokiem; dolot w nowe miejsce jeszcze łagodniej (ok. 0,6 s)
+    const g = this.goal, t = Math.min(0.1, dt);
+    const kk = 1 - Math.exp(-t * (this.travel ? 6 : 16)), kz = 1 - Math.exp(-t * (this.travel ? 5 : 8));
     const d = Math.abs(g.x - this.target.x) + Math.abs(g.z - this.target.z) + Math.abs(g.yaw - this.yaw) + Math.abs(g.dist - this.dist) * 0.1 + Math.abs(g.pitch - this.pitch);
-    if (d < 1e-4) return;
+    if (this.trauma > 0) this.trauma = Math.max(0, this.trauma - t * 1.8);
+    if (d < 1e-4 && this.trauma <= 0 && !this.shakeT) return;
+    if (this.travel && d < 0.05) this.travel = 0;
     this.target.x += (g.x - this.target.x) * kk;
     this.target.z += (g.z - this.target.z) * kk;
     this.yaw += (g.yaw - this.yaw) * kk;
     // zbliżenie w skali logarytmicznej: tak samo płynne z daleka i z bliska
-    this.dist = Math.exp(Math.log(this.dist) + (Math.log(g.dist) - Math.log(this.dist)) * kk);
+    this.dist = Math.exp(Math.log(this.dist) + (Math.log(g.dist) - Math.log(this.dist)) * kz);
     this.pitch += (g.pitch - this.pitch) * kk;
+    if (this.gyGoal !== undefined && this.gy !== undefined) { this.gy += (this.gyGoal - this.gy) * kk; if (!this.travel) this.gyGoal = undefined; }
+    this.shakeT = this.trauma > 0 ? this.shakeT + t : 0;
     this.apply();
   }
 
@@ -233,6 +258,14 @@ export class StrategyCamera {
     const near = Math.max(0.12, Math.min(0.5, this.dist * 0.04));
     if (Math.abs(this.camera.near - near) > 0.01 && this.camera.fov < 60) { this.camera.near = near; this.camera.updateProjectionMatrix(); }
     this.camera.lookAt(this.target);
+    // wstrząs: przesunięcie i lekki przechył z kilku sinusów (bez szumu z klatki na klatkę), siła ~ kwadrat urazu
+    if (this.trauma > 0) {
+      const a = this.trauma * this.trauma, T = this.shakeT, m = a * Math.min(0.5, 0.012 * this.dist);
+      this.camera.position.x += (Math.sin(T * 37) * 0.6 + Math.sin(T * 71 + 1.3) * 0.4) * m;
+      this.camera.position.y += (Math.sin(T * 43 + 2.1) * 0.6 + Math.sin(T * 89) * 0.4) * m;
+      this.camera.position.z += (Math.sin(T * 53 + 0.7) * 0.6 + Math.sin(T * 61 + 2.9) * 0.4) * m;
+      this.camera.rotateZ(Math.sin(T * 29 + 0.4) * a * 0.012);
+    }
   }
 
   private onKey = (e: KeyboardEvent): void => {
