@@ -1122,7 +1122,9 @@ function blenderModel(g: THREE.Group, model: BlenderBuilding, flag: THREE.Materi
     if (ph && !phm) void loadPh(ph).then((r) => { if (r) { mesh.geometry = r.geo; mesh.material = r.mats; } });
     mesh.userData.fxProp = [p.g, pi, p.prop];   // edytor w podglądzie modeli może go potem przesunąć albo usunąć
     new THREE.Matrix4().fromArray(p.m).decompose(mesh.position, mesh.quaternion, mesh.scale);
-    mesh.castShadow = mesh.receiveShadow = true;
+    mesh.receiveShadow = true;
+    // cień rzucają tylko większe rzeczy (beczka, stół, skrzynia): cień kubka czy łyżki niewidoczny, a kosztuje przejście cieni
+    { const g = mesh.geometry; if (!g.boundingSphere) g.computeBoundingSphere(); mesh.castShadow = (g.boundingSphere?.radius ?? 1) * Math.max(mesh.scale.x, mesh.scale.y, mesh.scale.z) > 0.08; }
     // pochodnia z edytora świeci nocą jak pochodnie zrobione w modelu: znacznik światła na głowicy
     const ls = propLightSpot(p.prop);
     const host = p.g === 'interior' ? interior : p.g === 'shell' ? shell : g;

@@ -35,6 +35,8 @@ export interface LodLevel { obj: THREE.Group; lid: THREE.Group; tris: number; er
 export interface BuildingLod {
   /** Szczegółowe siatki, które z daleka chowamy */
   parts: THREE.Mesh[];
+  /** Drobiazgi dodane w edytorze (grupy 'fixProps': kubki, świeczniki, skrzynki) — z daleka ich nie widać, więc znikają */
+  extras?: THREE.Object3D[];
   /** Uproszczone wersje, od najbliższej do najdalszej (puste, dopóki się nie policzą) */
   levels: LodLevel[];
   /** Trójkąty pełnych brył zewnętrznych */
@@ -99,8 +101,10 @@ export function prepareLod(root: THREE.Object3D, kind: string): BuildingLod | nu
   const sig = kind + '|' + found.map((p) => (p.lid ? 'L' : 'R') + (p.mesh.material as THREE.Material).uuid.slice(0, 8) + ':' + p.mesh.geometry.attributes.position!.count).join(',');
   let lidRef: THREE.Object3D | null = null;
   root.traverse((o) => { if (!lidRef && o !== root && LIDS.has(o.name) && !(o as THREE.Mesh).isMesh) lidRef = o; });
+  const extras: THREE.Object3D[] = [];
+  root.traverse((o) => { if (o.name === 'fixProps') extras.push(o); });
   return {
-    parts: found.map((p) => p.mesh), levels: [], full, level: -1, sig,
+    parts: found.map((p) => p.mesh), extras, levels: [], full, level: -1, sig,
     center: box.getCenter(new THREE.Vector3()), radius: box.getSize(new THREE.Vector3()).length() / 2, lidRef,
   };
 }
@@ -330,6 +334,8 @@ export function showLod(lod: BuildingLod, level: number): void {
   level = Math.min(level, lod.levels.length - 1);
   if (level !== lod.level) {
     for (const p of lod.parts) p.visible = level < 0;
+    // Michał 11.11.2026: „FPS mało” — skany z paczek w każdym egzemplarzu budynku (np. świecznik 213 tys. trójkątów)
+    for (const e of lod.extras ?? []) e.visible = level < 0;
     lod.levels.forEach((l, i) => { l.obj.visible = i === level; });
     lod.level = level;
   }
