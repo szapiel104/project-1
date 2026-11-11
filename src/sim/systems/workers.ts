@@ -717,20 +717,31 @@ export function workerSystem(g: GameState): void {
   const byId = new Map<number, Building>();
   for (const b of g.buildings) byId.set(b.id, b);
 
+  // wolni (bez pracy) każdego gracza, w kolejności z g.units — szukamy tylko wśród nich, a nie wśród wszystkich ludzi przy
+  // każdym budynku (pomiar 11.11.2026: workerSystem ~6% kroku). Wynik ten sam: w tej pętli nikt nie traci pracy (spareKeeper
+  // zdejmuje magazyniera i od razu daje mu nową), więc pierwszy pasujący z listy = pierwszy pasujący z g.units
+  // (tools/check/simprint.mjs: odcisk stanu bez zmian)
+  const free = new Map<number, Unit[]>();
+  const freeOf = (owner: number): Unit[] => {
+    let l = free.get(owner);
+    if (!l) { l = []; for (const x of g.units) if (x.owner === owner && x.job === 0) l.push(x); free.set(owner, l); }
+    return l;
+  };
   for (const b of g.buildings) {
     const def = BUILDINGS[b.type]!;
     if (b.worker !== 0 || b.build || b.off || !(def.production || def.staff)) continue;
     // magazynier ma najniższy priorytet: bierze go tylko ktoś, kto naprawdę nic nie robi (czeka przy ognisku)
     if (def.keepers) {
-      const k = g.units.find((x) => x.owner === b.owner && x.job === 0 && x.phase === Phase.Idle && !x.path.length && x.carryRes < 0 && x.target === 0 && !x.riot);
+      const k = freeOf(b.owner).find((x) => x.job === 0 && x.phase === Phase.Idle && !x.path.length && x.carryRes < 0 && x.target === 0 && !x.riot);
       if (k) { k.job = b.id; k.phase = Phase.Returning; k.path = []; k.wait = 0; b.worker = k.id; }
       continue;
     }
     // najpierw ktoś, kto nic nie robi; budowniczego, latarnika czy tragarza gruzu zabieramy dopiero, gdy nie ma innych,
     // a nikogo z ładunkiem w rękach. Stare zadanie (target) się kasuje, żeby nie blokowało go później.
     // Na końcu wolny magazynier: warsztat bez rąk do pracy jest ważniejszy niż wnoszenie towaru spod drzwi.
-    const u = g.units.find((x) => x.owner === b.owner && x.job === 0 && x.phase === Phase.Idle && x.carryRes < 0)
-      ?? g.units.find((x) => x.owner === b.owner && x.job === 0 && x.carryRes < 0 && !x.riot && x.phase !== Phase.ToCorpse && x.phase !== Phase.Bearing && !OFF_DUTY.has(x.phase))
+    const fl = freeOf(b.owner);
+    const u = fl.find((x) => x.job === 0 && x.phase === Phase.Idle && x.carryRes < 0)
+      ?? fl.find((x) => x.job === 0 && x.carryRes < 0 && !x.riot && x.phase !== Phase.ToCorpse && x.phase !== Phase.Bearing && !OFF_DUTY.has(x.phase))
       ?? spareKeeper(g, b.owner);
     if (!u) continue;
     u.job = b.id; u.phase = Phase.Returning; u.path = []; u.wait = 0; u.target = 0;
