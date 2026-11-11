@@ -436,8 +436,8 @@ function planMarch(g: GameState, player: number, members: Soldier[], target: num
 
 /** Maruder dalej niż tyle pól od swojego miejsca zatrzymuje oddział */
 const LAG = 1.5 * FP;
-/** Zbiórka na starcie: najwyżej tyle ticków czekania, potem oddział rusza */
-const STALL = 40;
+/** Zbiórka na starcie: najwyżej tyle ticków czekania (1,5 s), potem oddział rusza, a maruderzy doganiają w marszu (Michał 11.11.2026: „mniej drewniana gra” — dawniej 4 s stania po rozkazie) */
+const STALL = 15;
 /** Maruder dalej niż tyle od miejsca w szyku przez LOST_TICKS ticków odłącza się i idzie sam */
 const FAR_LAG = 4 * FP, LOST_TICKS = 30;
 

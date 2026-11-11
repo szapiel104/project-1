@@ -2,6 +2,20 @@
 
 Tu trafia wszystko nowe, co nie należy do bieżącej partii. Do planu etapów (`plan.md`) przenosimy stąd, gdy przychodzi na to kolej.
 
+## Co dalej — lista z 11.11.2026 (Michał: „zapisz to wszystko”; odhaczać datą)
+**1. Mniej drewniana gra (płynność i reakcje)**
+- [ ] Ruch ludzi: płynne przejścia między animacjami (chód, praca, niesienie) bez przeskoków póz; skręt łukiem zamiast obrotu w miejscu; lekkie przyspieszanie i hamowanie.
+- [ ] Wojsko: wyraźna odpowiedź na rozkaz (okrzyk i dymek są — dołożyć gest: uniesiona broń, dowódca wskazuje kierunek); szyk w marszu jest (`army.ts`).
+- [x] (11.11.2026) Wojsko: zbiórka przed marszem skrócona z 4 s do 1,5 s (`STALL` w `army.ts`), maruderzy doganiają w drodze.
+- [ ] Kamera: miękkie dojazdy i zbliżenia; lekkie drganie przy zawaleniu budynku i uderzeniu taranu.
+- [ ] Pojawianie się rzeczy: budynek „osiada” z kurzem, towar znika w worku zamiast znikać; płynne przenikanie przy zmianie wersji z daleka (dither w shaderach budynków).
+- [ ] Dźwięk: prawdziwe nagrania kowadła, młyna, kroków konia, wiatru przy burzy; inny pogłos w chacie, karczmie i kopalni.
+**2. Nowe mechaniki** — strach albo łaska, myśliwy, złodzieje nocą, cmentarz i grabarz, pan zamku na polu bitwy (początek progresji), kronika meczu, katapulta i wieża oblężnicza (opisy niżej w tym pliku).
+**3. Technika**
+- [—] (11.11.2026, pomiar) Symulacja w osobnym wątku w zwykłej grze: **na razie nieopłacalna.** Krok symulacji kosztuje ok. 0,7 ms (zapis Michała, 198 budynków, 100 ludzi; `simprint.mjs` 4 na 4: 0,78 ms na tick), czyli ok. 7 ms na sekundę gry, a samo skopiowanie stanu do wątku i z powrotem to ok. 0,5 ms w każdą stronę. Do tego wątek (`?watek=1`) psuł obraz: porcje po kilka ticków → ludzie sunęli bez animacji, przeskakiwali i przenikali przez zamek (commit cbe33f54). Wracać do tego, gdy krok symulacji urośnie powyżej kilku ms (duże bitwy, więcej graczy) — wtedy: 1 tick na porcję, przesyłanie tylko zmian, renderer bez odwołań do obiektów stanu.
+- [ ] Szukanie wolnego chłopa raz na tick zamiast przy każdym budynku (`workerSystem`); pojemność magazynów liczona na bieżąco (`storeCapacity`, `roomLeft`).
+- [ ] Miecze żołnierzy ze skanu (antique_estoc) — żołnierze rysują się pulami sklejonymi po materiale (`peasants.ts`), skan wszedłby bez własnych tekstur; łuku na Poly Haven nie ma.
+
 ## Płynność wczytywania i gry — po przeglądzie 26.10.2026 (Claude podpowiada stąd przy „co dalej”)
 - **Plan optymalizacji z 28.10.2026 (8 punktów, Michał: „zapisz 8 punktów”; kolejność wg zysku):**
   1. [x] (28.10.2026, 0.54.7 — profil pokazał, że najwięcej brało szukanie wrogiego chłopa przez żołnierzy i rozglądanie się chłopów: kubełki `sim/spatial.ts`, symulacja 4 na 4 szybsza o 30–37%, stan identyczny wg `tools/check/simprint.mjs`; pozostałe drobne z tej linijki — `workerSystem`, `storeCapacity`, `storeDoors`, `idleCount` — w profilu po kilka procent, zostają na później) Logika gospodarki bez przeglądania wszystkiego w kółko: szukanie pracownika (`workerSystem`, `g.units.find` przy każdym budynku), miejsce w magazynach (`storeCapacity`, `roomLeft`), zbiór drzwi magazynów (`storeDoors`), licznik bezczynnych co klatkę (`idleCount`). Wynik gry ten sam (test odcisku stanu)
