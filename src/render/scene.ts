@@ -99,6 +99,8 @@ import { Standards } from './standards';
 import { bearerIds } from '../sim/systems/standards';
 import { Crowd, idle } from './motion';
 import { Village } from './village';
+import { Wildlife } from './fauna';
+import { EMPTY } from '../testmode';
 import { Family, yardModel } from './family';
 import { createLoads, tint, carryArms, plankBundle, ON_SHOULDER, loadMaterials } from './loads';
 import { FireCrewFx } from './firecrew';
@@ -544,6 +546,7 @@ export class GameRenderer {
   }
 
   private village: Village | null = null;
+  private wildlife: Wildlife | null = null;
   private family: Family | null = null;
   /** Kury, świnie, koń i pies w osadzie (tylko wygląd) */
   private syncVillage(g: GameState, view: TerrainView, dt: number): void {
@@ -559,6 +562,9 @@ export class GameRenderer {
       cam: { x: this.cam.camera.position.x + g.map.width / 2, y: this.cam.camera.position.z + g.map.height / 2, h: this.cam.camera.position.y },
       team: (o) => TEAM_COLORS[g.players[o]?.team ?? 0] ?? 0x888888,
     });
+    // dzikie zwierzęta (render/fauna.ts): wielbłądy na pustyni, jelenie na zielonych krainach; uciekają od ludzi
+    if (!this.wildlife) this.wildlife = new Wildlife(this.scene);
+    if (!EMPTY) this.wildlife.sync(g, { time: this.time, dt, calm: this.calm, height: (x, y) => view.heightAt(x, y), cam: { x: cam.position.x + width / 2, y: cam.position.z + height / 2 } }, people);
     this.village.sync(g, {
       time: this.time, dt, night: this.night, calm: this.calm, height: (x, y) => this.standY(view, x, y, -2),
       cam: { x: cam.position.x + width / 2, y: cam.position.z + height / 2, h: cam.position.y },

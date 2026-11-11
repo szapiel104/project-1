@@ -33,6 +33,7 @@ import { Figures, idWithHead, type FigureKind } from './render/peasants';
 import { normal, pattern } from './render/textures';
 import { ANIMAL_AT, animalGeo } from './render/village';
 import { HORSE_MORPH, horseObject } from './render/horse';
+import { faunaObject } from './render/fauna';
 import { watchRenderer } from './debug/errlog';
 import { streamWaterMaterial, waterfallModel } from './render/streams';
 import { mistNoise } from './render/highmist';
@@ -222,6 +223,8 @@ const GROUPS: [string, [string, string, Make][]][] = [
     ['hen', tx('Kura', 'Hen'), () => ({ obj: mesh(animalGeo('hen_brown')) })],
     ['pig', tx('Świnia', 'Pig'), () => ({ obj: mesh(animalGeo('pig')) })],
     ['horse', tx('Koń', 'Horse'), () => ({ obj: horse() })],
+    ['camel', tx('Wielbłąd', 'Camel'), () => ({ obj: faunaObject('camel') })],
+    ['deer', tx('Jeleń', 'Deer'), () => ({ obj: faunaObject('deer') })],
     ['horse-graze', tx('Koń skubie trawę', 'Horse, grazing'), () => ({ obj: horse('graze') })],
     ['horse-look', tx('Koń czujny', 'Horse, alert'), () => ({ obj: horse('look') })],
     ['dog', tx('Pies', 'Dog'), () => ({ obj: dog() })],
