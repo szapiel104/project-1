@@ -22,10 +22,55 @@ export function gameTagline(): string {
   return `<p class="game-tagline"><span class="game-tagline-what">${t('menu.tagline')}</span><span class="game-tagline-dev">${t('menu.taglineDev')}</span></p>`;
 }
 
-/** Pejzaż w tle ekranu wczytywania i menu (src/ui/vista.ts) */
-export function loadingScene(): string {
-  return vistaScene();
+/**
+ * Zdjęcia z gry w tle (Michał 11.11.2026: „porób parę zdjęć w trakcie gry — pustynia, zima, z boku… poprzerabiaj, żeby
+ * były ciemniejsze, ładniejsze; przy wczytywaniu niech się zmieniają, a w menu jeden, przy odświeżeniu kolejny”).
+ * Pliki w public/shots/ (zrzuty z gry w pełnej grafice, przyciemnione, z winietą, 1600 px, WebP). Pejzaż SVG zostaje pod
+ * spodem — widać go, póki zdjęcie się nie wczyta.
+ */
+export const SHOTS = ['1-osada', '2-brama', '3-mury', '4-wieza', '5-pustynia', '6-zima'];
+const shotUrl = (i: number): string => `${(import.meta as unknown as { env?: { BASE_URL?: string } }).env?.BASE_URL ?? './'}shots/${SHOTS[i]}.webp`;
+/** Pierwsze zdjęcie tego wejścia: losowe, ale inne niż przy poprzednim (odświeżenie menu = kolejne zdjęcie) */
+const firstShot = ((): number => {
+  let last = -1;
+  try { last = Number(localStorage.getItem('p1-shot') ?? -1); } catch { /* bez pamięci przeglądarki */ }
+  let i = Math.floor(Math.random() * SHOTS.length);
+  if (i === last) i = (i + 1 + Math.floor(Math.random() * (SHOTS.length - 1))) % SHOTS.length;
+  try { localStorage.setItem('p1-shot', String(i)); } catch { /* nic */ }
+  return i;
+})();
+let shotNow = firstShot;
+/** Pokazuje zdjęcie w warstwie, gdy już się wczytało (płynne przejście w CSS) */
+function showShot(layer: HTMLElement, i: number): void {
+  const img = new Image();
+  img.onload = () => { layer.style.backgroundImage = `url("${img.src}")`; layer.classList.add('on'); };
+  img.src = shotUrl(i);
 }
+
+/** Pejzaż w tle ekranu wczytywania i menu (src/ui/vista.ts) i zdjęcie z gry na nim */
+export function loadingScene(): string {
+  if (typeof document !== 'undefined') queueMicrotask(() => {
+    for (const box of document.querySelectorAll<HTMLElement>('.ld-shots:not([data-on])')) {
+      box.dataset.on = '1';
+      showShot(box.firstElementChild as HTMLElement, shotNow);
+    }
+  });
+  return `${vistaScene()}<div class="ld-shots" aria-hidden="true"><i></i><i></i></div>`;
+}
+
+// na ekranie wczytywania zdjęcia zmieniają się co kilka sekund (przenikanie dwóch warstw — sama przezroczystość,
+// liczy ją karta graficzna, wątek główny wczytujący grę nic nie traci)
+const SHOT_EVERY = 6500;
+if (typeof document !== 'undefined') window.setInterval(() => {
+  const box = document.querySelector<HTMLElement>('#loading .ld-shots');
+  if (!box || box.offsetParent === null) return;
+  const [a, b] = [...box.children] as HTMLElement[];
+  const next = a!.classList.contains('on') ? b! : a!, prev = next === a ? b! : a!;
+  shotNow = (shotNow + 1) % SHOTS.length;
+  const img = new Image();
+  img.onload = () => { next.style.backgroundImage = `url("${img.src}")`; next.classList.add('on'); prev.classList.remove('on'); };
+  img.src = shotUrl(shotNow);
+}, SHOT_EVERY);
 
 declare const __VERSION__: string;
 declare const __BUILD__: string;
