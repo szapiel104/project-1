@@ -34,7 +34,7 @@ export function createViewerAccount(host: HTMLElement): void {
     const field = (label: string, type: string, auto: string): HTMLInputElement => {
       const l = document.createElement('label'); l.style.cssText = 'display:flex;flex-direction:column;gap:3px';
       l.append(document.createTextNode(label));
-      const i = document.createElement('input'); i.type = type; i.autocomplete = auto; i.required = true;
+      const i = document.createElement('input'); i.type = type; i.setAttribute('autocomplete', auto); i.required = true;
       i.style.cssText = 'font:inherit;color:#e8e0cc;background:#1a1814;border:1px solid #4a4436;padding:7px 8px;min-height:34px';
       i.addEventListener('keydown', (e) => e.stopPropagation());   // bez lotu WASD i skrótów edytora przy pisaniu
       l.append(i); form.append(l);
