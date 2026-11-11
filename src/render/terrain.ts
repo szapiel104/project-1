@@ -282,7 +282,10 @@ function* terrainSteps(map: GameMap, models: ModelFactory, waterLevel: number): 
       const k = smoothstep(2, 5, greenDist[i]!) * smoothstep(16, 26, far);
       if (k <= 0) continue;
       const n = 1 - Math.abs(nz(x / 11 + y / 34, y / 7 - x / 40));
-      corners[y * (w + 1) + x] = corners[y * (w + 1) + x]! + (n * n * 1.1 + nz(x / 23, y / 23) * 0.35) * k;
+      // pustynia przeważnie płaska (Michał 11.11.2026: „bardziej płaskie, czasami góry”): niskie, rzadkie fałdy piachu,
+      // a tylko tu i ówdzie większe pole wydm — wielkie plamy szumu decydują, gdzie
+      const field = smoothstep(0.62, 0.86, nz(x / 70 + 31, y / 70 - 17));
+      corners[y * (w + 1) + x] = corners[y * (w + 1) + x]! + (n * n * (0.22 + 1.2 * field) + nz(x / 23, y / 23) * (0.08 + 0.3 * field)) * k;
     }
   }
   // Od strony morza (bok planszy, za którym jest plaża — ten sam los co seaSide niżej) góry i progi łagodnie schodzą do
