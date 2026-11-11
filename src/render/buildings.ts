@@ -4,6 +4,7 @@ import * as THREE from 'three';
 import { loadTexture } from './ktx';
 import { tx } from '../i18n';
 import { PH_TEXTURES } from './phTextures';
+import { parseMat } from './matSpec';
 import { basketAt, propAt, propGeometry, propGeometryFlat, propLightSpot, propMaterial, type PropName } from './props';
 import { assetModel } from './assets';
 import { BUILDINGS } from '../data/buildings';
@@ -944,11 +945,12 @@ const paneCache = new WeakMap<object, { shell: THREE.BufferGeometry | null; root
  */
 const PLAIN_KEYS = new Set(['wheat', 'iron', 'white', 'bread', 'ash', 'trousers', 'skin', 'gold', 'ore', 'crust', 'meat', 'meatDark', 'roast', 'roastDark', 'bone', 'fish']);
 const PLAIN = mat(0xffffff);
-const tintCache = new Map<THREE.BufferGeometry, Map<number, THREE.BufferGeometry>>();
+const tintCache = new Map<THREE.BufferGeometry, Map<string, THREE.BufferGeometry>>();
 function tinted(geo: THREE.BufferGeometry, color: THREE.Color): THREE.BufferGeometry {
   let byColor = tintCache.get(geo);
   if (!byColor) tintCache.set(geo, (byColor = new Map()));
-  const hex = color.getHex();
+  // klucz z dokładnych składowych (jasność z edytora daje barwy > 1, których getHex nie rozróżnia)
+  const hex = `${color.r.toFixed(4)},${color.g.toFixed(4)},${color.b.toFixed(4)}`;
   let t = byColor.get(hex);
   if (t) return t;
   t = new THREE.BufferGeometry();
@@ -968,6 +970,23 @@ function tinted(geo: THREE.BufferGeometry, color: THREE.Color): THREE.BufferGeom
  */
 const TINT_SKIP = new Set(['window', 'pane', 'orchardGrass', 'leaf', 'leafLight']);
 const patMats = new Map<string, THREE.MeshStandardMaterial>();
+/** wariant materiału z mocniejszą / słabszą głębią wzoru (mapa normalnych, wypukłość kamienia) — wspólny dla budynków */
+const depthMats = new WeakMap<THREE.Material, Map<number, THREE.Material>>();
+function depthVariant(m: THREE.Material, d: number): THREE.Material {
+  let byD = depthMats.get(m);
+  if (!byD) depthMats.set(m, (byD = new Map()));
+  let v = byD.get(d);
+  if (!v) {
+    v = cloneMaterial(m);
+    v.userData = { ...m.userData };
+    const s = v as THREE.MeshStandardMaterial;
+    if (s.normalScale) s.normalScale = (m as THREE.MeshStandardMaterial).normalScale.clone().multiplyScalar(d);
+    const pom = m.userData.parallax as { height: THREE.Texture; scale: number; steps: number } | undefined;
+    if (pom) v.userData.parallax = { ...pom, scale: pom.scale * d };
+    byD.set(d, v);
+  }
+  return v;
+}
 /** wspólne materiały wzorów, które mokną (setWetBuildings, isWetMat) */
 const wetShared: THREE.MeshStandardMaterial[] = [];
 function patMat(tex: Pattern, wet: boolean): THREE.MeshStandardMaterial {
@@ -997,19 +1016,24 @@ const PLAIN_ON = typeof location === 'undefined' || !/[?&]gladkie=0/.test(locati
 
 /** Jedna siatka modelu z Blendera (materiał po nazwie, jak w grze: barwa w kolorach wierzchołków, wspólne materiały);
  *  też dla edytora poprawek w podglądzie modeli (nowe bryły, kopie, zmiana tekstury) */
-export function partMesh(mat: string, pos: string | Uint8Array, ao: string | Uint8Array, q: number, flag?: THREE.Material): THREE.Mesh {
+export function partMesh(mat0: string, pos: string | Uint8Array, ao: string | Uint8Array, q: number, flag?: THREE.Material): THREE.Mesh {
+  // ustawienia z edytora w nazwie (matSpec.ts): skala tekstury i jasność bez kosztu, głębia jako wariant materiału
+  const spec = parseMat(mat0), mat = spec.base;
   const mats = M as unknown as Record<string, THREE.Material>;
   const base = mat === 'flag' && flag ? flag : mats[mat] ?? M.wood;
-  const k = (base.userData.tile as number) || 1;
+  const k = ((base.userData.tile as number) || 1) * spec.scale;
   const p = pos as string, a = ao as string;
-  if (PLAIN_ON && PLAIN_KEYS.has(mat)) return new THREE.Mesh(tinted(blenderGeo(p, a, q, k), (base as THREE.MeshStandardMaterial).color), withAo(PLAIN));
+  const tint = (c: THREE.Color): THREE.Color => (spec.bright !== 1 ? c.clone().multiplyScalar(spec.bright) : c);
+  const deep = (m: THREE.Material): THREE.Material => (spec.depth !== 1 ? depthVariant(m, spec.depth) : m);
+  if (PLAIN_ON && PLAIN_KEYS.has(mat)) return new THREE.Mesh(tinted(blenderGeo(p, a, q, k), tint((base as THREE.MeshStandardMaterial).color)), withAo(PLAIN));
   const tex = base.userData.pattern as Pattern | undefined;
   // skała zostaje osobno: kopalnie podmieniają ją na skałę krainy (scene.ts, pattern === 'rock')
   if (PLAIN_ON && tex && tex !== 'rock' && mat in M && !TINT_SKIP.has(mat) && base instanceof THREE.MeshStandardMaterial && !base.transparent) {
     const wet = (WET_KEYS as readonly string[]).includes(mat);
-    return new THREE.Mesh(tinted(blenderGeo(p, a, q, k), base.color), withAo(patMat(tex, wet)));
+    return new THREE.Mesh(tinted(blenderGeo(p, a, q, k), tint(base.color)), withAo(deep(patMat(tex, wet))));
   }
-  return new THREE.Mesh(blenderGeo(p, a, q, k), withAo(base));
+  const geo = blenderGeo(p, a, q, k);
+  return new THREE.Mesh(spec.bright !== 1 ? tinted(geo, new THREE.Color(spec.bright, spec.bright, spec.bright)) : geo, withAo(deep(base)));
 }
 /** Materiały budynków z wzorem i barwą (paleta tekstur w edytorze poprawek) */
 export const buildingMaterialInfo = (): { name: string; pattern: string | null; color: string; photo?: string; label?: string }[] => buildingMaterialNames().map((name) => {

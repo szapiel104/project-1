@@ -28,6 +28,31 @@ import FIXES from '../data/modelFixes.json';
 let live: Record<string, Fix[]> = {};
 /** Poprawki „na żywo” dla podglądu modeli (baza + ta przeglądarka) — ustawiane przed loadModels() w viewerboot.ts */
 export function setLiveFixes(map: Record<string, Fix[]>): void { live = map; }
+/**
+ * Poprawki z edytora prosto z bazy (model_fixes, odczyt publiczny, zapis tylko twórca) — gra i podgląd modeli biorą
+ * je przy wczytywaniu, więc zmiana z edytora widać w grze po odświeżeniu, bez wydania (Michał 11.11.2026: „zapisały
+ * się, ale w grze nie są zaktualizowane”). Z `local` dochodzą też zapisy z tej przeglądarki. Bez bazy (sieć, czas
+ * ponad 3 s) zostaje plik z repozytorium.
+ */
+export async function fetchLiveFixes(local: boolean): Promise<void> {
+  const map: Record<string, Fix[]> = {};
+  try {
+    const { supa } = await import('../net/supa');
+    const res = await Promise.race([supa.from('model_fixes').select('model,fixes'), new Promise<null>((r) => setTimeout(() => r(null), 3000))]);
+    for (const row of ((res as { data?: { model: string; fixes: Fix[] }[] } | null)?.data ?? [])) if (Array.isArray(row.fixes)) map[row.model] = row.fixes;
+  } catch { /* bez bazy */ }
+  if (local) {
+    try {
+      for (let k = 0; k < localStorage.length; k++) {
+        const key = localStorage.key(k);
+        if (!key?.startsWith('p1-model-fixes:')) continue;
+        const v = JSON.parse(localStorage.getItem(key) ?? 'null') as Fix[] | null, id = key.slice('p1-model-fixes:'.length);
+        if (Array.isArray(v) && v.length > (map[id]?.length ?? 0)) map[id] = v;
+      }
+    } catch { /* prywatne okno */ }
+  }
+  live = map;
+}
 /** poprawki zapisane przez pierwszą wersję edytora pod nazwą budynku zamiast pliku modelu */
 const OLD_KEY: Record<string, string> = { mine: 'oremine' };
 function fixesFor(name: string): Fix[] | undefined {

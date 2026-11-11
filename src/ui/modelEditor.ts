@@ -13,6 +13,7 @@ import { applyFix, islands, unitShape, type Fix, type Island } from '../render/m
 import { SHAPES, shapeLabel, type Shape } from '../render/shapes';
 import { icon } from './editorIcons';
 import { createGuides, snapBox } from './editorSnap';
+import { formatMat, parseMat } from '../render/matSpec';
 import type { MenuItem } from './menuBar';
 import { buildingMaterialInfo, partMesh } from '../render/buildings';
 import { photoUrlFor } from '../render/textures';
@@ -189,6 +190,34 @@ export function createModelEditor(ctx: Ctx): { onModel: () => void; guard: (go: 
   const opts = document.createElement('div'); opts.style.cssText = 'display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:4px';
   opts.append(snapLab, moveStep, rotStep, spaceLab);
   tr.append(title(tx('Przekształcenie', 'Transform')), info, row3(tx('Położenie', 'Position'), posIn), row3(tx('Obrót', 'Rotation'), rotIn), row3(tx('Skala %', 'Scale %'), sclIn, uniLab), opts);
+  // wygląd zaznaczonych części (matSpec.ts): skala tekstury, jasność, głębia wzoru — Michał 11.11.2026
+  const lookRow = (label: string, hint: string, min: number, max: number, step: number, key: 'scale' | 'bright' | 'depth'): HTMLInputElement => {
+    const d = document.createElement('div'); d.style.cssText = 'display:flex;gap:6px;align-items:center;margin:3px 0';
+    const l = document.createElement('span'); l.textContent = label; l.title = hint; l.style.cssText = 'width:96px';
+    const r = document.createElement('input'); r.type = 'range'; r.min = String(min); r.max = String(max); r.step = String(step); r.value = '100'; r.title = hint; r.setAttribute('aria-label', label); r.style.cssText = 'flex:1;min-width:80px;accent-color:#e9c766';
+    const v = document.createElement('span'); v.style.cssText = 'width:44px;text-align:right;color:#e9c766'; v.textContent = '100%';
+    r.addEventListener('input', () => { v.textContent = `${r.value}%`; });
+    r.addEventListener('change', () => { const val = Number(r.value) / 100; retexture((cur) => formatMat({ ...parseMat(cur), [key]: val })); });
+    r.addEventListener('dblclick', () => { r.value = '100'; v.textContent = '100%'; retexture((cur) => formatMat({ ...parseMat(cur), [key]: 1 })); });
+    r.addEventListener('keydown', (e) => e.stopPropagation());
+    d.append(l, r, v); look.append(d);
+    lookVals.set(r, v);
+    return r;
+  };
+  const look = document.createElement('div');
+  const lookVals = new Map<HTMLInputElement, HTMLElement>();
+  look.append(title(tx('Wygląd części', 'Part look')));
+  const lookScale = lookRow(tx('Wzór (drobny)', 'Pattern (fine)'), tx('Ile razy powtarza się tekstura: więcej = drobniejszy wzór, mniej = większy. Bez kosztu wydajności. Dwuklik — 100%.', 'How often the texture repeats: more = finer, less = bigger. No performance cost. Double-click — 100%.'), 25, 400, 25, 'scale');
+  const lookBright = lookRow(tx('Jasność', 'Brightness'), tx('Jaśniej albo ciemniej. Bez kosztu wydajności. Dwuklik — 100%.', 'Lighter or darker. No performance cost. Double-click — 100%.'), 40, 180, 5, 'bright');
+  const lookDepth = lookRow(tx('Głębia wzoru', 'Pattern depth'), tx('Wypukłość deseni (kamień, deski). Każda inna wartość to osobny materiał — jedno rysowanie więcej. Dwuklik — 100%.', 'Relief of the pattern (stone, planks). Each other value is a separate material — one more draw call. Double-click — 100%.'), 0, 300, 25, 'depth');
+  tr.append(look);
+  /** suwaki ← pierwsza zaznaczona część */
+  function syncLook(): void {
+    const p = sel.find((x) => x.mesh.userData.fx || (x.mesh.userData.temp && !['prop', 'f2p'].includes((x.mesh.userData.temp as Fix).k ?? '')));
+    const cur = p ? (p.mesh.userData.temp ? ((p.mesh.userData.temp as Fix).to ?? 'wood') : (p.mesh.userData.fx as [string, number, string])[2]) : null;
+    const sp = cur ? parseMat(cur) : { scale: 1, bright: 1, depth: 1 };
+    for (const [r, v] of [[lookScale, sp.scale], [lookBright, sp.bright], [lookDepth, sp.depth]] as const) { r.value = String(Math.round(v * 100)); r.disabled = !p; lookVals.get(r)!.textContent = `${Math.round(v * 100)}%`; }
+  }
   // 2) paleta tekstur: podgląd zdjęcia w barwie materiału; klik — nadaj zaznaczonym, przeciągnij na model — nadaj temu, na co upuścisz
   const pal = document.createElement('div');
   pal.style.cssText = 'display:flex;flex-direction:column;min-width:0;min-height:0;overflow:hidden';
@@ -618,6 +647,7 @@ export function createModelEditor(ctx: Ctx): { onModel: () => void; guard: (go: 
     start = proxy.matrixWorld.clone();
     tc.attach(proxy);
     syncFields();
+    syncLook();
   }
   /** pudełko zaznaczenia w świecie */
   function selBox(): THREE.Box3 {
@@ -1106,12 +1136,17 @@ export function createModelEditor(ctx: Ctx): { onModel: () => void; guard: (go: 
   }
   /** przekształcenie wierzchołków z naprawą kolejności przy odbiciu (tak samo jak w grze) */
   function applyM(P: Float32Array, m: number[]): void { applyFix(m, P); }
-  function retexture(mat: string): void {
+  /** nowa tekstura zaznaczonym: nazwa z palety (skala, jasność i głębia części zostają) albo przeróbka obecnej nazwy */
+  function retexture(mat0: string | ((cur: string) => string)): void {
     if (!sel.length) { say(tx('Zaznacz części, którym zmienić teksturę', 'Select parts to retexture')); return; }
+    const conv = typeof mat0 === 'function' ? mat0 : (cur: string): string => formatMat({ ...parseMat(cur), base: parseMat(mat0).base });
+    let mat = typeof mat0 === 'string' ? mat0 : '';
     const step: (() => void)[] = [], made: THREE.Mesh[] = [];
     for (const p of sel) {
       const temp = p.mesh.userData.temp as Fix | undefined;
-      if (temp?.k === 'prop' || p.mesh.userData.fxProp) continue;               // gotowe modele z paczek mają własną teksturę
+      if (temp?.k === 'prop' || temp?.k === 'f2p' || p.mesh.userData.fxProp) continue;               // gotowe modele z paczek mają własną teksturę
+      if (temp) mat = conv(temp.to ?? 'wood');
+      else mat = conv((p.mesh.userData.fx as [string, number, string])[2]);
       if (temp) {
         // tymczasowa część: nowa siatka z tym samym kształtem i nowym materiałem
         const old = p.mesh, parent = old.parent!, prevTo = temp.to;
@@ -1144,6 +1179,7 @@ export function createModelEditor(ctx: Ctx): { onModel: () => void; guard: (go: 
     for (const mesh of made) addPiece(mesh, wholeOf(mesh));
     placeProxy(); markPanel();
     say(tx(`Nowa tekstura: ${mat} (${made.length})`, `New texture: ${mat} (${made.length})`));
+    syncLook();
   }
   function addShape(shape: Shape, mat: string, g: string, where?: THREE.Vector3, size: [number, number, number] = [0.2, 0.2, 0.2], rotZ = 0): void {
     const cur = ctx.current();

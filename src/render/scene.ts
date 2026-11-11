@@ -1600,10 +1600,10 @@ export class GameRenderer {
         const mesh = o as THREE.Mesh;
         if (!mesh.isMesh) return;
         if (mesh.name === 'base') { mesh.visible = false; return; }
-        const m = cloneMaterial(mesh.material as THREE.MeshLambertMaterial);
-        // pełna bryła (bez prześwitywania siatki i trawy przez ściany); widoczność daje rozjaśnienie niżej
-        m.transparent = false; m.opacity = 1; m.depthWrite = true;
-        mesh.material = m;
+        // pełna bryła (bez prześwitywania siatki i trawy przez ściany); widoczność daje rozjaśnienie niżej;
+        // modele z Poly Haven mają listę materiałów (phAssets.ts) — każdy osobno (bez tego gra padała przy koszarach)
+        const one = (src: THREE.Material): THREE.Material => { const m = cloneMaterial(src as THREE.MeshLambertMaterial); m.transparent = false; m.opacity = 1; m.depthWrite = true; return m; };
+        mesh.material = Array.isArray(mesh.material) ? mesh.material.map(one) : one(mesh.material);
       });
       this.ghostModels.set(key, model);
       this.scene.add(model);
@@ -1615,7 +1615,7 @@ export class GameRenderer {
       const mesh = o as THREE.Mesh;
       // fundament dzieli materiał z prawdziwymi budynkami, więc go nie barwimy
       // w nocy podgląd lekko się podświetla, żeby budynek było widać na ciemnej trawie
-      if (mesh.isMesh && mesh.name !== 'base') (mesh.material as THREE.MeshLambertMaterial).emissive?.copy(g.ok ? lift : bad);
+      if (mesh.isMesh && mesh.name !== 'base') for (const m of Array.isArray(mesh.material) ? mesh.material : [mesh.material]) (m as THREE.MeshLambertMaterial).emissive?.copy(g.ok ? lift : bad);
     });
     model.visible = true;
     this.ghostModel = model;

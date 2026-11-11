@@ -63,8 +63,10 @@ async function load(): Promise<void> {
   // pobieranie z sieci rusza od razu i idzie w tle, równolegle z rysowaniem tekstur (wcześniej modele czekały na
   // tekstury, a duże tekstury KTX2 na wszystko inne): modele z Blendera, a z niższym priorytetem tekstury terenu
   // i zdjęciowe tekstury budynków (prefetch.ts). Kod gry pobiera się od otwarcia strony (modulepreload w index.html).
-  const { loadModels } = await import('./render/modelstore');
+  const { fetchLiveFixes, loadModels } = await import('./render/modelstore');
   let modelsDone = 0, modelsAll = 0;
+  // poprawki budynków z edytora prosto z bazy (najwyżej 3 s) — widać je w grze bez wydania
+  await fetchLiveFixes(false);
   const models = loadModels((n, all) => {
     modelsDone = n; modelsAll = all;
     if (lastText === modelsText) {
