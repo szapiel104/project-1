@@ -73,7 +73,11 @@ function frameTexture(sp: Species): THREE.DataTexture {
       data[on] = x / l; data[on + 1] = y / l; data[on + 2] = z / l; data[on + 3] = 0;
     }
   }
-  t = new THREE.DataTexture(data, V, FRAMES * 2, THREE.RGBAFormat, THREE.FloatType);
+  // półprecyzja (filtrowalna na każdej karcie; float32 bez rozszerzenia karta czytała jako zera — zwierzęta znikały)
+  const half = new Uint16Array(data.length);
+  for (let i = 0; i < data.length; i++) half[i] = THREE.DataUtils.toHalfFloat(data[i]!);
+  t = new THREE.DataTexture(half, V, FRAMES * 2, THREE.RGBAFormat, THREE.HalfFloatType);
+  t.magFilter = t.minFilter = THREE.NearestFilter; t.generateMipmaps = false;
   t.needsUpdate = true;
   texs.set(sp, t);
   return t;
