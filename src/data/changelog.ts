@@ -9,6 +9,15 @@ export type { ChangeEntry } from './changelogTypes';
  * — tak jak CHANGELOG.md dla nas. `tests/changelog.test.ts` pilnuje, że najnowszy wpis ma wersję z package.json.
  */
 const NEW: ChangeEntry[] = [
+  { v: '0.94.99', date: '2026-11-11', pl: [
+    'Kolejne gotowe przedmioty z Poly Haven (CC0): krzesła, stoły, komody, regały, wazy, kociołek, piła, szabla, topory, lichtarze, butelki, paproć, trawa i kamienie.',
+    'Nowe tekstury: bruki, mury kamienne, cegła zamkowa, piaskowiec, dachówki, łupek, trzcina, deski, tynki, ściółka i rdzawy metal.',
+    'Ulepszenia budynków z edytora twórcy.',
+  ], en: [
+    'More ready-made objects from Poly Haven (CC0): chairs, tables, chests of drawers, shelves, vases, a cauldron, a saw, a sabre, axes, candleholders, bottles, a fern, grass and stones.',
+    'New textures: cobbles, stone walls, castle brick, sandstone, roof tiles, slates, reed, planks, plaster, forest litter and rusty metal.',
+    'Building improvements from the creator’s editor.',
+  ] },
   { v: '0.94.98', date: '2026-11-11', pl: [
     'Naprawa: gra nie wyłącza się już przy stawianiu koszar.',
     'Ulepszenia budynków z edytora twórcy widać w grze od razu po odświeżeniu.',

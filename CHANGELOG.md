@@ -4,6 +4,11 @@
 
 
 
+
+## 0.94.99 — 2026-11-11
+- Druga paczka Poly Haven: 34 modele (`phAssets.ts`, bez `tree_small_02` 97 MB i `coast_rocks_01` 21 MB — za ciężkie), 28 tekstur 1K + KTX2 (`phTextures.ts`). Wpisy w `CREDITS.md`.
+- Poprawki z edytora bez powtórzeń (`fixKey`/`dedupeFixes`: jsonb zmienia kolejność pól); `pull_fixes.mjs` też je odsiewa.
+
 ## 0.94.98 — 2026-11-11
 - Podgląd budowy (`scene.ts setGhost`): listy materiałów (modele Poly Haven) — wcześniej `clone is not a function` i wyłączenie gry przy koszarach.
 - `fetchLiveFixes` (modelstore): gra i podgląd biorą poprawki z `model_fixes` przy wczytywaniu (3 s, potem plik z repo).
