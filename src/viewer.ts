@@ -34,8 +34,6 @@ import { normal, pattern } from './render/textures';
 import { HORSE_MORPH, horseObject } from './render/horse';
 import { faunaAnimated } from './render/fauna';
 import { watchRenderer } from './debug/errlog';
-import { streamWaterMaterial, waterfallModel } from './render/streams';
-import { mistNoise } from './render/highmist';
 import { createRenderer } from './render/glcontext';
 import { createMenuBar } from './ui/menuBar';
 import { createViewerAccount } from './ui/viewerAccount';
@@ -234,9 +232,6 @@ const GROUPS: [string, [string, string, Make][]][] = [
     ['wolf', tx('Wilk', 'Wolf'), () => ({ obj: wolf() })],
     ['crow', tx('Kruk', 'Raven'), () => ({ obj: mesh(crowParts().stand, crowParts().mat) })],
     ['crow-fly', tx('Kruk w locie', 'Raven in flight'), () => ({ obj: mesh(crowParts().fly[1]!, crowParts().mat) })],
-  ]],
-  [tx('Teren', 'Terrain'), [
-    ['waterfall', tx('Wodospad (próg 5 pól)', 'Waterfall (5-tile drop)'), () => ({ obj: waterfallModel(1, 1, streamWaterMaterial(mistNoise(1))) })],
   ]],
   [tx('Machiny', 'Siege engines'), [
     ['ram', 'Taran', () => {
