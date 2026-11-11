@@ -31,7 +31,6 @@ import { YARD_KEYS, yardModel } from './render/family';
 import { graveModel } from './render/graves';
 import { Figures, idWithHead, type FigureKind } from './render/peasants';
 import { normal, pattern } from './render/textures';
-import { ANIMAL_AT, animalGeo } from './render/village';
 import { HORSE_MORPH, horseObject } from './render/horse';
 import { faunaAnimated } from './render/fauna';
 import { watchRenderer } from './debug/errlog';
@@ -86,13 +85,6 @@ function carrier(res: string): Make {
 function horse(pose?: keyof typeof HORSE_MORPH): THREE.Object3D {
   const g = horseObject();
   if (pose) for (const m of g.children as THREE.Mesh[]) { m.updateMorphTargets(); m.morphTargetInfluences![HORSE_MORPH[pose]] = 1; }
-  return g;
-}
-function dog(): THREE.Object3D {
-  const g = new THREE.Group();
-  g.add(mesh(animalGeo('dog_body')));
-  ANIMAL_AT.dogHips.forEach((p, i) => { const l = mesh(animalGeo(i < 2 ? 'dog_leg' : 'dog_hind')); l.position.set(...p); g.add(l); });
-  const tail = mesh(animalGeo('dog_tail')); tail.position.set(...ANIMAL_AT.dogTail); tail.rotation.x = -1.1; g.add(tail);
   return g;
 }
 function wolf(): THREE.Object3D {
@@ -220,8 +212,10 @@ const GROUPS: [string, [string, string, Make][]][] = [
     ...RESOURCES.filter((r) => r !== 'wood' && r !== 'gold').map((r) => [`carry-${r}`, t(`res.${r}`), carrier(r)] as [string, string, Make]),
   ]],
   [tx('Zwierzęta', 'Animals'), [
-    ['hen', tx('Kura', 'Hen'), () => ({ obj: mesh(animalGeo('hen_brown')) })],
-    ['pig', tx('Świnia', 'Pig'), () => ({ obj: mesh(animalGeo('pig')) })],
+    ['hen', tx('Kura', 'Hen'), () => ({ obj: faunaAnimated('hen', 'idle') })],
+    ['hen-walk', tx('Kura idzie', 'Hen, walking'), () => ({ obj: faunaAnimated('hen', 'walk'), size: new THREE.Vector3(0.5, 0.15, 0.5) })],
+    ['pig', tx('Świnia', 'Pig'), () => ({ obj: faunaAnimated('pig', 'idle') })],
+    ['pig-walk', tx('Świnia idzie', 'Pig, walking'), () => ({ obj: faunaAnimated('pig', 'walk'), size: new THREE.Vector3(1.5, 0.35, 1.5) })],
     ['horse', tx('Koń', 'Horse'), () => ({ obj: horse() })],
     ['camel', tx('Wielbłąd', 'Camel'), () => ({ obj: faunaAnimated('camel', 'idle') })],
     ['camel-walk', tx('Wielbłąd idzie', 'Camel, walking'), () => ({ obj: faunaAnimated('camel', 'walk'), size: new THREE.Vector3(2.6, 0.9, 2.6) })],
@@ -229,7 +223,8 @@ const GROUPS: [string, [string, string, Make][]][] = [
     ['deer-walk', tx('Jeleń idzie', 'Deer, walking'), () => ({ obj: faunaAnimated('deer', 'walk'), size: new THREE.Vector3(1.6, 0.6, 1.6) })],
     ['horse-graze', tx('Koń skubie trawę', 'Horse, grazing'), () => ({ obj: horse('graze') })],
     ['horse-look', tx('Koń czujny', 'Horse, alert'), () => ({ obj: horse('look') })],
-    ['dog', tx('Pies', 'Dog'), () => ({ obj: dog() })],
+    ['dog', tx('Pies', 'Dog'), () => ({ obj: faunaAnimated('dog', 'idle') })],
+    ['dog-walk', tx('Pies idzie', 'Dog, walking'), () => ({ obj: faunaAnimated('dog', 'walk'), size: new THREE.Vector3(1.4, 0.35, 1.4) })],
     ['wolf', tx('Wilk', 'Wolf'), () => ({ obj: wolf() })],
     ['crow', tx('Kruk', 'Raven'), () => ({ obj: mesh(crowParts().stand, crowParts().mat) })],
     ['crow-fly', tx('Kruk w locie', 'Raven in flight'), () => ({ obj: mesh(crowParts().fly[1]!, crowParts().mat) })],

@@ -1,4 +1,3 @@
-import { touch } from './touch';
 import * as THREE from 'three';
 import { cat } from './cat';
 import { BUILDINGS, footprint } from '../data/buildings';
@@ -8,6 +7,7 @@ import { model } from './modelstore';
 import { dryLand } from './dryland';
 import { henCount, yardAnimal } from './yardanimals';
 import { horseGeometry, horseMaterial, horseWeights } from './horse';
+import { FaunaPool } from './fauna';
 // modele z Blendera (pobrane wcześniej przez loadModels; same pliki w src/render/models)
 const ANIMALS = model('animals');
 
@@ -41,16 +41,16 @@ const rand = (): number => Math.random();
 
 export class Village {
   /** Kury w trzech umaszczeniach (białe, rude, czarne) */
-  private hensBy: THREE.InstancedMesh[];
-  private pigs: THREE.InstancedMesh;
-  private horseBody: THREE.InstancedMesh;
-  private horseHair: THREE.InstancedMesh;
+  /** zwierzęta z 0 A.D. (render/fauna.ts): kury, świnie, pies — z animacją chodu i drugą pozą */
+  private henPool: FaunaPool;
+  private pigPool: FaunaPool;
+  private dogPool: FaunaPool;
+  /** faza kroku każdego zwierzęcia (klucz jak w mapach stanu) */
+  private steps = new Map<string, number>();
+  /** konie: osobne siatki z pozami (morph targets w puli instancji na WebGPU nie działały — koń stał jak posąg) */
+  private horses: THREE.Group[] = [];
+  private horseLayer = new THREE.Group();
   /** pomocnik do setMorphAt (wagi póz jednego konia) */
-  private horsePose = new THREE.Mesh(horseGeometry('body'));
-  private dogBody: THREE.InstancedMesh;
-  private dogLegF: THREE.InstancedMesh;
-  private dogLegH: THREE.InstancedMesh;
-  private dogTail: THREE.InstancedMesh;
   private hens = new Map<string, Critter>();
   private pigState = new Map<string, Critter>();
   private dogs = new Map<number, Dog>();
@@ -58,35 +58,20 @@ export class Village {
   private ground: (x: number, y: number) => number = () => 1;
   private frame = 0;
   private m = new THREE.Matrix4();
-  private p = new THREE.Matrix4();
   private q = new THREE.Quaternion();
   private e = new THREE.Euler(0, 0, 0, 'YXZ');
   private v = new THREE.Vector3();
   private s = new THREE.Vector3(1, 1, 1);
-  private c = new THREE.Color();
 
   constructor(scene: THREE.Scene) {
-    const inst = (geo: THREE.BufferGeometry, max: number, mat?: THREE.Material): THREE.InstancedMesh => {
-      const m = new THREE.InstancedMesh(geo, mat ?? new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.9 }), max);
-      m.count = 0; m.frustumCulled = false; m.castShadow = true; scene.add(cat(m, 'zwierzęta i wieś'));
-      return m;
-    };
-    this.hensBy = (['hen_white', 'hen_brown', 'hen_black'] as const).map((k) => inst(geo(k), MAX_HENS));
-    this.pigs = inst(geo('pig'), MAX_PIGS);
+    const herd = cat(new THREE.Group(), 'zwierzęta i wieś');
+    scene.add(herd);
+    this.henPool = new FaunaPool('hen', herd);
+    this.pigPool = new FaunaPool('pig', herd);
+    this.dogPool = new FaunaPool('dog', herd);
     // koń z 0 A.D. (src/render/horse.ts): sierść i włosie, pozy (skubanie, rozglądanie, ogon) osobno dla każdego
-    this.horseBody = inst(horseGeometry('body'), MAX_HORSES, horseMaterial('body'));
-    this.horseHair = inst(horseGeometry('hair'), MAX_HORSES, horseMaterial('hair'));
-    this.horseBody.receiveShadow = true;
-    this.horsePose.updateMorphTargets();
-    // pierwsze ustawienie póz, żeby morphTexture istniała od początku (jak instanceColor świń niżej); three robi ją
-    // na tyle instancji, ile wynosi `count` w chwili pierwszego wywołania — więc na chwilę pełna liczba
-    for (const m of [this.horseBody, this.horseHair]) { m.count = MAX_HORSES; for (let i = 0; i < MAX_HORSES; i++) m.setMorphAt(i, this.horsePose); m.count = 0; }
-    this.dogBody = inst(geo('dog_body'), MAX_DOGS);
-    this.dogLegF = inst(geo('dog_leg'), MAX_DOGS * 2);
-    this.dogLegH = inst(geo('dog_hind'), MAX_DOGS * 2);
-    this.dogTail = inst(geo('dog_tail'), MAX_DOGS);
-    // pierwsze ustawienie koloru, żeby instanceColor istniał (ubłocone świnie)
-    this.pigs.setColorAt(0, this.c.setHex(0xffffff));
+    scene.add(cat(this.horseLayer, 'zwierzęta i wieś'));
+
   }
 
   /** Czy zwierzę może tu stanąć: pole bez budynku, nie woda i nie góra */
@@ -145,7 +130,8 @@ export class Village {
       return undefined;
     };
     let hens = 0, pigs = 0, horses = 0;
-    const henN = [0, 0, 0];
+    /** faza kroku: pełny cykl chodu na ok. 1,1 długości ciała (nogi nie ślizgają się) */
+    const step = (key: string, sp: number, len: number): number => { const v = ((this.steps.get(key) ?? 0) + (sp * dt) / (len * 1.1) * FaunaPool.STEPS) % FaunaPool.STEPS; this.steps.set(key, v); return v; };
     const sleep = ctx.night > 0.55;
     for (const b of g.buildings) {
       if (b.build || b.ruined || b.door < 0) continue;
@@ -174,9 +160,9 @@ export class Village {
           else { sp = this.walk(g, c, dt, 0.45, 1.4); if (!sp) c.wait = 1 + rand() * 3; }
           if (time > c.next) { c.next = time + 8 + rand() * 18; ctx.sound('cluck', c.x, c.y); }
           const bob = sp > 0.1 && !hop ? Math.abs(Math.sin(time * 14 + k)) * 0.006 : 0;
-          this.place(c.x - W2, ctx.height(c.x, c.y) + bob + hop, c.y - H2, c.heading, peck);
-          const v = (b.id * 3 + k * 7) % 5, kind = v < 2 ? 0 : v < 4 ? 1 : 2;
-          this.hensBy[kind]!.setMatrixAt(henN[kind]!++, this.m);
+          this.place(c.x - W2, ctx.height(c.x, c.y) + hop, c.y - H2, c.heading);
+          void bob;
+          this.henPool.put(this.m, sp > 0.1, step(`h${key}`, sp, this.henPool.length), peck > 0.15 ? 1 : 0, (b.id * 3 + k * 7) % 10 / 10, time);
           hens++;
         }
       }
@@ -199,10 +185,8 @@ export class Village {
         else if (c.wait > 0) { c.wait -= dt; root = 0.12 + Math.sin(time * 5 + b.id) * 0.06; if (c.wait <= 0) this.wander(g, c, 1.5); }
         else if (!this.walk(g, c, dt, 0.3, 1.5)) c.wait = 2 + rand() * 5;
         if (!sleep && time > c.next) { c.next = time + 12 + rand() * 20; ctx.sound('grunt', c.x, c.y); }
-        this.place(c.x - W2, ctx.height(c.x, c.y) + (lie ? 0.05 : 0), c.y - H2, c.heading, root, lie);
-        this.pigs.setMatrixAt(pigs, this.m);
-        // co druga świnia ubłocona
-        this.pigs.setColorAt(pigs, this.c.setHex((b.id + k) % 2 ? 0xffffff : 0xa08070));
+        this.place(c.x - W2, ctx.height(c.x, c.y) + (lie ? 0.05 : 0), c.y - H2, c.heading, 0, lie);
+        { const moving = !sleep && c.wait <= 0; this.pigPool.put(this.m, moving, step(`p${key}`, moving ? 0.3 : 0, this.pigPool.length), root > 0 ? 1 : 0, (b.id + k) % 10 / 10, time); }
         pigs++;
       }
       // chlew: cztery świnie w zagrodzie (prostokąt `pen` z modelu, tools/models/pigsty.py) — ryją, chodzą od koryta
@@ -237,9 +221,8 @@ export class Village {
             }
           }
           if (!sleep && time > c.next) { c.next = time + 10 + rand() * 18; ctx.sound('grunt', c.x, c.y); }
-          this.place(c.x - W2, ctx.height(c.x, c.y) + (lie ? 0.05 : 0), c.y - H2, c.heading, root, lie);
-          this.pigs.setMatrixAt(pigs, this.m);
-          this.pigs.setColorAt(pigs, this.c.setHex(k % 2 ? 0xffffff : 0xa08070));
+          this.place(c.x - W2, ctx.height(c.x, c.y) + (lie ? 0.05 : 0), c.y - H2, c.heading, 0, lie);
+          { const moving = !sleep && c.wait <= 0; this.pigPool.put(this.m, moving, step(`pp${key}`, moving ? 0.25 : 0, this.pigPool.length), root > 0 ? 1 : 0, k / 4, time); }
           pigs++;
         }
       }
@@ -251,11 +234,16 @@ export class Village {
         const yaw = ((b.id * 1.7) % 1) * Math.PI * 2;
         const y = ctx.height(hx, hy);
         this.place(hx - W2, y, hy - H2, yaw + Math.sin(time * 0.1 + b.id) * 0.15);
-        this.horseBody.setMatrixAt(horses, this.m);
-        this.horseHair.setMatrixAt(horses, this.m);
-        horseWeights(time, b.id, ctx.calm, this.horsePose.morphTargetInfluences!);
-        this.horseBody.setMorphAt(horses, this.horsePose);
-        this.horseHair.setMorphAt(horses, this.horsePose);
+        let hg = this.horses[horses];
+        if (!hg) {
+          hg = new THREE.Group(); hg.matrixAutoUpdate = false;
+          for (const part of ['body', 'hair'] as const) { const mm = new THREE.Mesh(horseGeometry(part), horseMaterial(part)); mm.castShadow = true; mm.receiveShadow = part === 'body'; mm.updateMorphTargets(); hg.add(mm); }
+          this.horseLayer.add(hg); this.horses.push(hg);
+        }
+        hg.matrix.copy(this.m); hg.matrixWorldNeedsUpdate = true; hg.visible = true;
+        const wts = (hg.children[0] as THREE.Mesh).morphTargetInfluences!;
+        horseWeights(time, b.id, ctx.calm, wts);
+        (hg.children[1] as THREE.Mesh).morphTargetInfluences!.splice(0, wts.length, ...wts);
         horses++;
       }
     }
@@ -311,33 +299,18 @@ export class Village {
       d.stuck = sp < 0.05 && Math.hypot(d.tx - d.x, d.ty - d.y) > 0.6 ? d.stuck + dt : 0;
       d.run += (sp - d.run) * Math.min(1, dt * 6);
       const moving = d.run > 0.15;
-      const ph = time * (6 + d.run * 3);
       const sit = !moving && !wolf;
       const y = ctx.height(d.x, d.y);
-      // siedzi: zad nisko (pochylony do tyłu); w biegu podskakuje
-      this.place(d.x - W2, y + (moving ? Math.abs(Math.sin(ph)) * 0.015 : 0) - (sit ? 0.02 : 0), d.y - H2, d.heading, sit ? -0.32 : 0, 0, 1);
-      this.dogBody.setMatrixAt(dogs, this.m);
-      const body = this.p.copy(this.m);
-      ANIMAL_AT.dogHips.forEach(([hx, hy, hz], k) => {
-        const diag = k === 0 || k === 3 ? 1 : -1;
-        const ang = moving ? Math.sin(ph) * Math.min(0.7, 0.25 + d!.run * 0.2) * diag : sit && k >= 2 ? -1.2 : sit ? 0.32 : 0;
-        this.m.compose(this.v.set(hx, hy, hz), this.q.setFromEuler(this.e.set(ang, 0, 0)), this.s.setScalar(1));
-        (k < 2 ? this.dogLegF : this.dogLegH).setMatrixAt(dogs * 2 + (k & 1), this.m.premultiply(body));
-      });
-      // ogon w górze i merda (przy wilku sztywny)
-      const wag = ctx.calm || wolf ? 0 : Math.sin(time * (moving ? 14 : 8)) * 0.5;
-      this.m.compose(this.v.set(...ANIMAL_AT.dogTail), this.q.setFromEuler(this.e.set(wolf ? 2.1 : 2.5, 0, wag)), this.s.setScalar(1));
-      this.dogTail.setMatrixAt(dogs, this.m.premultiply(body));
+      // siedzi (poza z paczki), idzie albo biegnie (krok z przebytej drogi)
+      this.place(d.x - W2, y, d.y - H2, d.heading);
+      this.dogPool.put(this.m, moving, step(`d${pl.id}`, d.run, this.dogPool.length), sit ? 1 : 0, pl.id / 8, time);
       dogs++;
     }
     // zwierzęta zniknęłych budynków: precz
     for (const [k, c] of this.hens) if (this.frame - c.seen > 120) this.hens.delete(k);
     for (const [k, c] of this.pigState) if (this.frame - c.seen > 120) this.pigState.delete(k);
     for (const [k, c] of this.dogs) if (this.frame - c.seen > 120) this.dogs.delete(k);
-    const fin = (m: THREE.InstancedMesh, n: number): void => { m.count = n; m.visible = n > 0; touch(m); if (m.instanceColor) touch(m); };
-    this.hensBy.forEach((m, k) => fin(m, henN[k]!)); fin(this.pigs, pigs);
-    fin(this.horseBody, horses); fin(this.horseHair, horses);
-    if (horses) { this.horseBody.morphTexture!.needsUpdate = true; this.horseHair.morphTexture!.needsUpdate = true; }
-    fin(this.dogBody, dogs); fin(this.dogLegF, dogs * 2); fin(this.dogLegH, dogs * 2); fin(this.dogTail, dogs);
+    this.henPool.end(); this.pigPool.end(); this.dogPool.end();
+    for (let i = horses; i < this.horses.length; i++) this.horses[i]!.visible = false;
   }
 }

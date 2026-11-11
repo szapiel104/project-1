@@ -22,7 +22,9 @@ import { play3d } from '../audio/engine';
  */
 type Packed = { pos: string; nrm: string; uv: string; idx: string; morph: Record<string, { pos: string; nrm: string }> };
 type FaunaModel = { height: number; length: number; body: Packed };
-export type Species = 'camel' | 'deer';
+export type Species = 'camel' | 'deer' | 'pig' | 'hen' | 'dog';
+/** Prędkość chodu w polach na sekundę (podgląd modeli) */
+const WALK_SPEED: Record<Species, number> = { camel: 0.55, deer: 0.7, pig: 0.3, hen: 0.35, dog: 0.8 };
 const WALK = 10, IDLE = 8;
 const MORPHS = [...Array.from({ length: WALK }, (_, k) => `walk${k}`), ...Array.from({ length: IDLE }, (_, k) => `idle${k}`), 'graze'];
 /** wiersze tekstury klatek: 0..9 chód, 10..17 spoczynek, 18 skubanie */
@@ -132,7 +134,7 @@ function poseFor(walking: boolean, phase: number, t: number, seed: number, graze
 export function faunaAnimated(sp: Species, mode: 'walk' | 'idle'): THREE.Group {
   const g = new THREE.Group(), body = ownBody(sp);
   g.add(body);
-  const len = model<FaunaModel>(`fauna_${sp}`).length, R = len * 1.4, speed = sp === 'camel' ? 0.55 : 0.7;
+  const len = model<FaunaModel>(`fauna_${sp}`).length, R = len * 1.4, speed = WALK_SPEED[sp];
   let phase = 0, ang = 0, graze = 0;
   g.userData.tick = (dt: number, t: number): void => {
     if (mode === 'walk') {
@@ -149,6 +151,29 @@ export function faunaAnimated(sp: Species, mode: 'walk' | 'idle'): THREE.Group {
     }
   };
   return g;
+}
+
+/**
+ * Pula zwierząt jednego gatunku dla kodu, który sam prowadzi zwierzęta (village.ts: kury, świnie, pies): co klatkę
+ * `put(macierz, idzie, faza kroku, druga poza 0–1, ziarno)` dla każdego widocznego, na koniec `end()`.
+ * Druga poza: świnia ryje, kura dziobie, pies siedzi. Każde zwierzę to osobna siatka z mieszanymi klatkami.
+ */
+export class FaunaPool {
+  private list: THREE.Mesh[] = [];
+  private n = 0;
+  constructor(private sp: Species, private parent: THREE.Object3D) {}
+  put(matrix: THREE.Matrix4, walking: boolean, phase: number, alt: number, seed: number, time: number): void {
+    let m = this.list[this.n];
+    if (!m) { m = ownBody(this.sp); m.matrixAutoUpdate = false; this.parent.add(m); this.list.push(m); }
+    const [a, b, w] = poseFor(walking, phase % WALK, time, seed, alt);
+    blendFrames(m, this.sp, a, b, w);
+    m.matrix.copy(matrix); m.matrixWorldNeedsUpdate = true; m.visible = true;
+    this.n++;
+  }
+  end(): void { for (let i = this.n; i < this.list.length; i++) this.list[i]!.visible = false; this.n = 0; }
+  /** Długość ciała w polach (krok: pełny cykl chodu na ok. 1,1 długości) */
+  get length(): number { return model<FaunaModel>(`fauna_${this.sp}`).length; }
+  static readonly STEPS = WALK;
 }
 
 /** Pojedyncze zwierzę (podgląd modeli) */

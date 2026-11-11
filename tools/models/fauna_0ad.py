@@ -29,9 +29,14 @@ IDLE = 8     # klatki ruchu spoczynkowego (łeb, uszy, ogon) — gra zapętla je
 
 ANIMALS = {
     # wielbłąd jednogarbny: ok. 1,9 m w kłębie (0,36 pola na metr)
-    'camel': {'mesh': 'camel.dae', 'idle': 'camel_idle_01', 'graze': 'camel_idle_01', 'walk': 'camel_walk', 'tex': 'animal_camel_b', 'height': 0.68},
+    'camel': {'mesh': 'camel.dae', 'idle': 'camel_idle_01', 'graze': 'camel_idle_01', 'walk': 'camel_walk', 'tex': 'animal_camel_b', 'height': 0.68, 'subdiv': 0},   # 2,3 tys. trójkątów — dość gęsty
     # jeleń: ok. 1,1 m w kłębie
     'deer': {'mesh': 'deer_mesh.dae', 'idle': 'deer_idle_01', 'graze': 'deer_idle_04', 'walk': 'deer_walk_01', 'tex': 'animal_deer_02', 'height': 0.4},
+    # zwierzęta w osadzie (Michał 11.11.2026: „kura, pies, świnia wyglądają tragicznie”); `graze` = druga poza:
+    # świnia ryje (feeding), kura dziobie (idle_02), pies siedzi (idle_sit)
+    'pig': {'mesh': 'pig.dae', 'idle': 'animal_pig_idle_01', 'graze': 'animal_pig_feeding_01', 'walk': 'animal_pig_walk_01', 'tex': 'animal_pig_01', 'height': 0.27},
+    'hen': {'mesh': 'chicken.dae', 'idle': 'chicken_idle_01', 'graze': 'chicken_idle_02', 'walk': 'chicken_walk', 'tex': 'animal_chicken.dds', 'height': 0.1, 'up': 4},
+    'dog': {'mesh': 'wolfhound.dae', 'idle': 'wolfhound_idle1', 'graze': 'wolfhound_idle_sit', 'walk': 'wolfhound_walk', 'tex': 'brit/wolfhound', 'height': 0.27},
 }
 
 
@@ -41,6 +46,75 @@ def frames(anim):
 
 def to_game(p):
     return np.c_[p[:, 0], p[:, 2], -p[:, 1]]
+
+
+def loop_subdivide(res, idx, uv):
+    """Jeden poziom wygładzenia Loopa (Michał 11.11.2026: „z bliska mają być piękne”): siatki z paczki to kilkaset trójkątów,
+    po podziale sylwetka jest okrągła zamiast kanciastej. Nic nie jest obcinane — każdy trójkąt dzieli się na cztery,
+    wierzchołki przesuwają się wagami Loopa liczonymi raz na topologii (spawanej po położeniu, więc szwy UV się nie
+    rozchodzą), te same wagi dla każdej klatki animacji. UV nowych wierzchołków: średnia z końców krawędzi."""
+    import scipy.sparse as sp
+    base = res['base'][0]
+    key = np.round(np.hstack([res[pn][0] for pn in res]) / 1e-6).astype(np.int64)
+    _, weld = np.unique(key, axis=0, return_inverse=True)
+    weld = weld.ravel(); W = weld.max() + 1
+    tw = weld[idx]
+    # krawędzie spawanej siatki i ich przeciwległe wierzchołki
+    opp = {}
+    for t in tw:
+        for k in range(3):
+            a, b, c = t[k], t[(k + 1) % 3], t[(k + 2) % 3]
+            if a == b or b == c or a == c:
+                continue
+            opp.setdefault((min(a, b), max(a, b)), []).append(c)
+    nb = [set() for _ in range(W)]
+    bnd = [set() for _ in range(W)]
+    for (a, b), cs in opp.items():
+        nb[a].add(b); nb[b].add(a)
+        if len(cs) == 1:
+            bnd[a].add(b); bnd[b].add(a)
+    rows, cols, vals = [], [], []
+    def even_row(r, v):
+        if len(bnd[v]) == 2:
+            rows.extend([r, r, r]); cols.extend([v, *bnd[v]]); vals.extend([0.75, 0.125, 0.125]); return
+        n = len(nb[v])
+        if n < 3:
+            rows.append(r); cols.append(v); vals.append(1.0); return
+        beta = 3 / (8 * n) if n > 3 else 3 / 16
+        rows.append(r); cols.append(v); vals.append(1 - n * beta)
+        for u in nb[v]:
+            rows.append(r); cols.append(u); vals.append(beta)
+    def odd_row(r, a, b):
+        cs = opp.get((min(a, b), max(a, b)), [])
+        if len(cs) == 2:
+            rows.extend([r] * 4); cols.extend([a, b, cs[0], cs[1]]); vals.extend([0.375, 0.375, 0.125, 0.125])
+        else:
+            rows.extend([r, r]); cols.extend([a, b]); vals.extend([0.5, 0.5])
+    nv = len(weld)
+    for v in range(nv):
+        even_row(v, weld[v])
+    mid = {}
+    new_uv = [uv[:, :2]]
+    tris = []
+    def edge_v(a, b):
+        k = (min(a, b), max(a, b))
+        if k not in mid:
+            r = nv + len(mid)
+            mid[k] = r
+            odd_row(r, weld[a], weld[b])
+            new_uv.append(((uv[a, :2] + uv[b, :2]) / 2)[None])
+        return mid[k]
+    for a, b, c in idx:
+        ab, bc, ca = edge_v(a, b), edge_v(b, c), edge_v(c, a)
+        tris += [(a, ab, ca), (ab, b, bc), (ca, bc, c), (ab, bc, ca)]
+    S = sp.csr_matrix((vals, (rows, cols)), shape=(nv + len(mid), W))
+    first = np.zeros(W, dtype=np.int64); first[weld] = np.arange(nv)
+    out_idx = np.array(tris, dtype=np.int64)
+    out = {}
+    for pn, (p, _) in res.items():
+        q = S @ p[first]
+        out[pn] = (q, smooth(q, out_idx))
+    return out, out_idx, np.vstack(new_uv)
 
 
 def build(art, aid, cfg):
@@ -85,6 +159,8 @@ def build(art, aid, cfg):
     res = {pn: (p[first], n[first]) for pn, (p, n) in res.items()}
     idx = inv.ravel()[idx]
     uv = uv[first]
+    if cfg.get('subdiv', 1):
+        res, idx, uv = loop_subdivide(res, idx, uv)
     bp = res['base'][0]
     ground = bp[:, 1].min()
     zmin, zmax = bp[:, 2].min(), bp[:, 2].max()
@@ -106,12 +182,16 @@ def build(art, aid, cfg):
         json.dump(out, f, separators=(',', ':'))
     print(f'{aid}: {len(bpos)} wierzchołków, {len(idx)} trójkątów, długość {out["length"]:.2f} pola, klatka skubania {gf}/{nf}, chód {nw} klatek')
     from PIL import Image
-    im = Image.open(os.path.join(art, 'textures/skins/skeletal', cfg['tex'] + '.png')).convert('RGB')
-    im = im.resize((im.width * 2, im.height * 2), Image.LANCZOS)
+    tn = cfg['tex'] if '.' in cfg['tex'] else cfg['tex'] + '.png'
+    im = Image.open(os.path.join(art, 'textures/skins/skeletal', tn)).convert('RGB')
+    up = cfg.get('up', 2)      # mała tekstura z paczki (kura: 64 px) powiększona, żeby z bliska nie było pikseli
+    im = im.resize((im.width * up, im.height * up), Image.LANCZOS)
     im.save(os.path.join(TEX, f'fauna_{aid}.jpg'), quality=95)
 
 
 if __name__ == '__main__':
     art = sys.argv[1]
+    only = sys.argv[2:]
     for aid, cfg in ANIMALS.items():
-        build(art, aid, cfg)
+        if not only or aid in only:
+            build(art, aid, cfg)
