@@ -17,6 +17,13 @@ import { ruinRebuilt, wearStage } from './wear';
 
 const hash = (seed: number, i: number): number => { const v = Math.sin(seed * 12.9898 + i * 78.233) * 43758.5453; return v - Math.floor(v); };
 
+/** Kamienne budynki łączone z murem: odstęp od krawędzi działki do lica ściany po stronach modelu [+x, -x, +z (przód), -z]
+ *  (tools/models/barracks.py i armory.py: X0, X1, Z0, Z1; z lewej schody, z przodu wejście) */
+const HALL_GAPS: Record<string, [number, number, number, number]> = {
+  barracks: [1.5 - 1.44, 1.5 - 0.98, 1.5 - 0.72, 1.5 - 1.44],
+  armory: [1 - 0.94, 1 - 0.5, 1 - 0.62, 1 - 0.9],
+};
+
 export class WallLayer {
   constructor(private scene: THREE.Scene) {}
   /** Nowa mapa: mury liczą się od nowa przy najbliższej klatce */
@@ -60,7 +67,8 @@ export class WallLayer {
     // stopień zużycia też w kluczu: rozbity częstokół ma złamane i przekrzywione bale
     // w kluczu także drabiny oblężnicze i wejścia na wieże (wejście przechodzi na inny bok, gdy przed frontem coś stanie)
     const key = walls.map((b) => `${b.id}:${b.build ? Math.ceil((1 - b.build / buildWork(b.type)) * 16) : 99}:${buildingMeshes.has(b.id) ? 1 : 0}:${b.build ? 0 : wearStage(b.hp, maxHp(b.type))}${isTower(BUILDINGS[b.type]!.id) && !b.build ? `:${towerEntry(g, b)[0]}` : ''}`).join(',')
-      + '|' + (g.siegeLadders ?? []).map((l) => `${l.id}`).join(',') + '|' + this.ghostOwner;
+      + '|' + (g.siegeLadders ?? []).map((l) => `${l.id}`).join(',') + '|' + this.ghostOwner
+      + '|' + g.buildings.filter((b) => HALL_GAPS[BUILDINGS[b.type]!.id]).map((b) => `${b.id}:${b.rot}:${b.build || b.ruined ? 0 : 1}`).join(',');
     if (key === this.key) return;
     this.key = key;
     const solid = new Map<number, GameState['buildings'][number]>();
@@ -151,6 +159,24 @@ export class WallLayer {
       if (!o || o.build || o.ruined || !isStoneTower(BUILDINGS[o.type]!.id)) return -1;
       const id = BUILDINGS[o.type]!.id;
       return id === 'stoneTower' ? 0.26 : id === 'stoneTowerBig' ? 0.35 : 0.45;
+    };
+    /** Kamienne koszary i zbrojownia (Michał 11.11.2026: „mają być równe z murem i łączyć się z nim jak wieże”):
+     *  pole → budynek; mur dochodzi koroną do ich ściany, jak do kamiennej wieży */
+    const halls = new Map<number, GameState['buildings'][number]>();
+    for (const o of g.buildings) {
+      if (!HALL_GAPS[BUILDINGS[o.type]!.id] || o.build || o.ruined) continue;
+      const fp = footprint(BUILDINGS[o.type]!, o.rot);
+      for (let y = o.y; y < o.y + fp.h; y++) for (let x = o.x; x < o.x + fp.w; x++) halls.set(y * width + x, o);
+    }
+    /** Odległość od krawędzi działki budynku do lica jego ściany po stronie, z której (dx, dz) przychodzi mur; -1 = brak */
+    const hallGap = (x: number, y: number, dx: number, dz: number): number => {
+      const o = halls.get(y * width + x);
+      if (!o) return -1;
+      const gp = HALL_GAPS[BUILDINGS[o.type]!.id]!;
+      // normalna ściany w świecie (-dx, -dz) → w układzie modelu (obrót o rot·90°, jak mesh.rotation.y)
+      const th = ((((o.rot % 4) + 4) % 4) * Math.PI) / 2, nx = -dx, nz = -dz;
+      const lx = Math.round(nx * Math.cos(th) - nz * Math.sin(th)), lz = Math.round(nx * Math.sin(th) + nz * Math.cos(th));
+      return lx > 0 ? gp[0] : lx < 0 ? gp[1] : lz > 0 ? gp[2] : gp[3];
     };
     /** Obrót drabiny z zestawu muru: drabina stoi od strony (dx, dz) pola, o które się opiera */
     const ladderRot = (dx: number, dz: number): number => (dz > 0 ? 0 : dz < 0 ? Math.PI : dx > 0 ? Math.PI / 2 : -Math.PI / 2);
@@ -307,7 +333,8 @@ export class WallLayer {
         const edges: [number, number, number][] = [];
         for (const [dx, dz, rot] of [[0, 1, 0], [0, -1, Math.PI], [1, 0, Math.PI / 2], [-1, 0, -Math.PI / 2]] as const) {
           // obok kamienna wieża: mur łączy się z nią (korona aż do ściany), a w ścianie wieży ciemne wejście na wysokości korony
-          const gap = built >= 1 && !b.ruined ? towerGap(b.x + dx, b.y + dz) : -1;
+          const hg = built >= 1 && !b.ruined && BUILDINGS[b.type]!.id === 'stoneWall' ? hallGap(b.x + dx, b.y + dz, dx, dz) : -1;
+          const gap = built >= 1 && !b.ruined ? (hg >= 0 ? hg : towerGap(b.x + dx, b.y + dz)) : -1;
           if (gap >= 0 && this.doorKit && dn.bridge < 1024) {
             const ex = cx + dx * 0.5, ez = cz + dz * 0.5;
             e.set(0, rot, 0); q.setFromEuler(e);
@@ -322,6 +349,7 @@ export class WallLayer {
             M4.compose(p.set(ex - width / 2, y0, ez - height / 2), q, sc.set(1, 1, 1));
             if (br && br.n < 1024) br.mesh.setMatrixAt(br.n++, M4);
             dn.bridge++;
+            if (hg >= 0) continue;   // koszary, zbrojownia: korona dochodzi do przedpiersia na dachu, bez drzwi
             // wejście: jedno na każdy bok wieży, na środku boku (gruby mur dochodzi do wieży kilkoma polami naraz)
             const tw = solid.get((b.y + dz) * width + b.x + dx)!, side = `${tw.id}:${dx}:${dz}`;
             const d = doors.get(side);

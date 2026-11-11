@@ -346,9 +346,10 @@ const PILES: Record<string, { geo: THREE.BufferGeometry; tex?: Pattern; metal?: 
     // łuki oparte o kozioł, cięciwy jasne
     geo: merge([
       ...[-0.16, 0.16].map((x) => paint(part(new THREE.BoxGeometry(0.04, 0.12, 0.3), x, -0.1, 0), 0x6b4a2e)),
+      // łuki leżą płasko na kozłach jeden na drugim (stojące wystawały w zbrojowni przez dach — Michał 11.11.2026)
       ...[0, 1, 2, 3].flatMap((k) => [
-        paint(new THREE.TorusGeometry(0.2, 0.012, 4, 12, Math.PI * 0.9).rotateZ(Math.PI * 0.05).translate(0, 0.02, -0.09 + k * 0.06), 0x7a5232),
-        paint(new THREE.CylinderGeometry(0.004, 0.004, 0.39, 3).rotateZ(Math.PI / 2).translate(0, 0.03, -0.09 + k * 0.06), 0xe8e0c8),
+        paint(new THREE.TorusGeometry(0.2, 0.012, 4, 12, Math.PI * 0.9).rotateZ(Math.PI * 0.05).rotateX(Math.PI / 2).translate(0, -0.025 + k * 0.026, -0.1 + (k % 2) * 0.03), 0x7a5232),
+        paint(new THREE.CylinderGeometry(0.004, 0.004, 0.39, 3).rotateZ(Math.PI / 2).translate(0, -0.025 + k * 0.026, -0.07 + (k % 2) * 0.03), 0xe8e0c8),
       ]),
     ]),
   },
@@ -465,6 +466,9 @@ export function setStockFill(model: THREE.Object3D, ratio: number, stock: { id: 
         // warstwa leży wprost na niższej (Michał 29.10.2026: „jeden na drugim, a nie przerwa”): co wysokość tej porcji,
         // a nie co stałe 0,31 — niskie sztaby i deski wisiały wcześniej nad sobą w powietrzu
         if (typeof mesh.userData.y0 === 'number') mesh.position.y = mesh.userData.y0 + layer * pileHeight(r.id, pile.geo) * mesh.scale.y;
+        // pod stropem (zbrojownia): warstwa, która przebiłaby dach, zostaje pusta
+        const maxY = fill.userData.maxY as number | undefined;
+        if (maxY !== undefined && layer > 0) { const bb = mesh.geometry.boundingBox ?? (mesh.geometry.computeBoundingBox(), mesh.geometry.boundingBox!); if (mesh.position.y + bb.max.y * mesh.scale.y > maxY) continue; }
         mesh.material = mat;
         mesh.visible = true;
       }
@@ -1376,6 +1380,7 @@ const BUILDERS: Record<string, Builder> = {
     const inside = g.getObjectByName('interior') as THREE.Group;
     const arms = fillSlots('armsfill', 0.12, 0.02, 0.34);
     arms.position.y = (ARMORY_MODEL as unknown as { floorY: number }).floorY - 0.06;
+    arms.userData.maxY = STONE_WALL_TOP - 0.16 - arms.position.y;   // strop pod płytami dachu
     inside.add(arms);
     const p = (ARMORY_MODEL as unknown as { pennant: [number, number, number] }).pennant;
     pennant(g.getObjectByName('shell') as THREE.Group, flag, p[0], p[1], p[2]);
