@@ -1627,6 +1627,7 @@ body.walking .minimap, body.walking .minimap-show { display: none !important; }
 .help-toc-group:first-child { margin-top: 0; }
 .menu .help-toc-item { display: grid; grid-template-columns: 30px 1fr; align-items: center; gap: 10px; min-height: 44px; padding: 6px 10px; text-align: left; cursor: pointer;
   font-family: var(--label); font-size: 16px; font-weight: 600; letter-spacing: .03em; color: #d8c49a; background: none; border: 0; border-left: 3px solid transparent; box-shadow: none; text-transform: none; }
+.menu .help-toc-t { line-height: 1.2; text-wrap: balance; }
 .menu .help-toc-item:hover { color: #ffe7a6; background: #1f1710; }
 .menu .help-toc-item[aria-selected='true'] { color: #fff0c8; background: linear-gradient(90deg, rgba(176, 38, 28, .45), rgba(176, 38, 28, 0)); border-left-color: #e9c766; }
 .menu .help-toc-item:focus-visible { outline: 2px solid #e9c766; outline-offset: -2px; }

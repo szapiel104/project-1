@@ -864,7 +864,7 @@ export function createMenu(root: HTMLElement, events: MenuEvents): Menu {
         return [
           intro(tx('Gotowy poziom ustawia wszystkie opcje grafiki naraz. Potem na kolejnych stronach możesz poprawić pojedyncze rzeczy.', 'A preset sets every graphics option at once. You can fine-tune single things on the following pages.')),
           presets,
-          tip(tx('Na dobrej karcie graficznej wybierz Ultra albo Wysoka. Automatyczna jakość i inne oszczędzanie są na ostatniej stronie, „Tylko dla słabych komputerów”.', 'On a good graphics card pick Ultra or High. Automatic quality and other savers are on the last page, “Weak computers only”.')),
+          tip(tx('Na dobrej karcie graficznej wybierz Ultra albo Wysoka. Automatyczna jakość i inne oszczędzanie są na ostatniej stronie, „Słabsze komputery”.', 'On a good graphics card pick Ultra or High. Automatic quality and other savers are on the last page, “Weaker computers”.')),
         ];
       }],
       [tx('Ostrość i krawędzie', 'Sharpness and edges'), () => [
@@ -892,7 +892,7 @@ export function createMenu(root: HTMLElement, events: MenuEvents): Menu {
         check(tx('Mgła', 'Fog'), settings.fog ?? true, (v) => { settings.fog = v; save(); }),
         tip(tx('Pora dnia, deszcz i mgła to klimat, a nie wydajność — wyłączaj je tylko, gdy przeszkadzają w grze.', 'Time of day, rain and fog are atmosphere, not performance — switch them off only if they get in the way.')),
       ]],
-      [tx('Tylko dla słabych komputerów', 'Weak computers only'), () => [
+      [tx('Słabsze komputery', 'Weaker computers'), () => [
         intro(tx('Te opcje nie poprawiają wyglądu — robią odwrotnie: obniżają jakość obrazu, żeby gra chodziła płynniej na słabym sprzęcie.', 'These options do not improve the look — the opposite: they lower image quality so the game runs smoother on weak hardware.')),
         tip(tx('Na mocnym komputerze zostaw automatyczną jakość i dynamiczną rozdzielczość wyłączone. Automat przy każdym spadku płynności sam ścina grafikę (i nigdy nie wchodzi na Ultra), a dynamiczna rozdzielczość zmniejsza obraz — przez to gra potrafi wyglądać brzydziej.', 'On a strong computer leave automatic quality and dynamic resolution off. Auto cuts the graphics on every drop in smoothness (and never goes to Ultra), and dynamic resolution shrinks the image — that is why the game can look worse.'), true),
         check(tx('Automatyczna jakość (gra sama obniża grafikę, gdy przycina)', 'Automatic quality (the game lowers graphics itself when it stutters)'), settings.auto, (v) => { settings.auto = v; save(); }),
