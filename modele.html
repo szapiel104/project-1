@@ -35,6 +35,8 @@
   .brand { color: var(--gold); font-weight: 600; padding: 0 12px 0 6px; align-self: center; letter-spacing: .03em; }
   .menu-top { font: inherit; font-size: 13.5px; color: var(--text); background: none; border: 0; padding: 0 11px; cursor: pointer; }
   .menu-top:hover, .menu-top[aria-expanded="true"] { background: #2e2b24; color: #fff3d0; }
+  .menu-top.acct { margin-left: auto; color: var(--gold); }
+  .menu-top:focus-visible { outline: 2px solid var(--gold); outline-offset: -2px; }
   .menu-list { position: fixed; z-index: 30; min-width: 230px; background: #24221d; border: 1px solid #5a4a2c; box-shadow: 0 6px 18px rgba(0,0,0,.45); padding: 4px 0; display: flex; flex-direction: column; }
   .menu-list .menu-sub { position: absolute; left: 100%; margin-left: -2px; }
   .menu-list > button { font: inherit; font-size: 13px; color: var(--text); background: none; border: 0; display: grid; grid-template-columns: 18px 1fr auto; gap: 8px; align-items: center; text-align: left; padding: 6px 12px 6px 8px; min-height: 30px; cursor: pointer; }

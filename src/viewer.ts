@@ -38,6 +38,7 @@ import { streamWaterMaterial, waterfallModel } from './render/streams';
 import { mistNoise } from './render/highmist';
 import { createRenderer } from './render/glcontext';
 import { createMenuBar } from './ui/menuBar';
+import { createViewerAccount } from './ui/viewerAccount';
 import { icon } from './ui/editorIcons';
 import { createNightLights } from './ui/viewerLights';
 import { createModelEditor } from './ui/modelEditor';
@@ -555,6 +556,8 @@ function syncBar(): void {
 // edytor poprawek (Michał 10.11.2026): „Edytuj” → klik w część, uchwyt do przesuwania i obracania, „Zapisz”
 const editor = createModelEditor({ renderer, scene, camera, canvas, orbit: controls, bar: barEl, current: () => current, id: () => state.id });
 
+// konto po prawej stronie górnej belki (zalogowany twórca dostaje „Edytuj”)
+createViewerAccount(document.querySelector('.menubar') as HTMLElement);
 // górne menu jak w programach graficznych (Michał 10.11.2026): Plik, Edycja, Narzędzia, Dodaj, Widok, Pomoc
 createMenuBar(document.getElementById('menus')!, [
   { label: tx('Plik', 'File'), items: () => editor.menus().file },
