@@ -109,3 +109,49 @@ export function peasantGear(): Record<GearName | `${GearName}Far`, THREE.BufferG
   for (const n of GEAR_NAMES) { out[n] = toolGeometry(n); out[`${n}Far`] = toolGeometry(`${n}Far`); }
   return out;
 }
+
+/**
+ * Prawdziwe narzędzie ze skanu (Poly Haven) w miejscu narzędzia z Blendera (Michał 11.11.2026: „niech chłopi kopią
+ * prawdziwym szpadlem i dobrze go trzymają”): skan obracamy i skalujemy tak, żeby leżał jak dotychczasowe narzędzie —
+ * stylisko w tej samej osi i tej samej długości, ciężki koniec (ostrze, głowica) tam, gdzie był, płaszczyzna ostrza tak samo.
+ * Chwyt dłoni zostaje więc w tym samym miejscu, a animacje kopania, rąbania i kucia się nie zmieniają.
+ */
+export function fitTool(scan: THREE.BufferGeometry, ref: THREE.BufferGeometry): THREE.BufferGeometry {
+  type Frame = { long: number; head: 1 | -1; spread: number; len: number; center: THREE.Vector3 };
+  const frame = (g: THREE.BufferGeometry): Frame => {
+    g.computeBoundingBox();
+    const b = g.boundingBox!, size = b.getSize(new THREE.Vector3()), center = b.getCenter(new THREE.Vector3());
+    const ext = [size.x, size.y, size.z], long = ext.indexOf(Math.max(...ext));
+    const p = g.getAttribute('position') as THREE.BufferAttribute;
+    const lo = b.min.getComponent(long), hi = b.max.getComponent(long), q = (hi - lo) * 0.25;
+    // zasięg w poprzek przy obu końcach: szerszy koniec to ostrze albo głowica
+    const others = [0, 1, 2].filter((a) => a !== long);
+    const box = (sel: (v: number) => boolean): number[] => {
+      const mn = [Infinity, Infinity], mx = [-Infinity, -Infinity];
+      for (let i = 0; i < p.count; i++) {
+        if (!sel(p.getComponent(i, long))) continue;
+        others.forEach((a, k) => { const v = p.getComponent(i, a); mn[k] = Math.min(mn[k]!, v); mx[k] = Math.max(mx[k]!, v); });
+      }
+      return [Math.max(0, mx[0]! - mn[0]!), Math.max(0, mx[1]! - mn[1]!)];
+    };
+    const top = box((v) => v > hi - q), bot = box((v) => v < lo + q);
+    const head = top[0]! * top[1]! >= bot[0]! * bot[1]! ? 1 : -1;
+    const hb = head > 0 ? top : bot;
+    return { long, head, spread: hb[0]! >= hb[1]! ? others[0]! : others[1]!, len: hi - lo, center };
+  };
+  const r = frame(ref), s = frame(scan);
+  const axis = (i: number, sign = 1): THREE.Vector3 => new THREE.Vector3().setComponent(i, sign);
+  // osie skanu → osie narzędzia: długa (z ciężkim końcem), szerokość ostrza, trzecia z iloczynu (bez lustra)
+  const sL = axis(s.long, s.head), sS = axis(s.spread), sT = new THREE.Vector3().crossVectors(sL, sS);
+  const rL = axis(r.long, r.head), rS = axis(r.spread), rT = new THREE.Vector3().crossVectors(rL, rS);
+  const from = new THREE.Matrix4().makeBasis(sL, sS, sT), to = new THREE.Matrix4().makeBasis(rL, rS, rT);
+  const rot = to.multiply(from.transpose());
+  const k = r.len / Math.max(1e-6, s.len);
+  const g = scan.clone();
+  g.translate(-s.center.x, -s.center.y, -s.center.z);
+  g.applyMatrix4(rot);
+  g.scale(k, k, k);
+  g.translate(r.center.x, r.center.y, r.center.z);
+  g.computeBoundingSphere();
+  return g;
+}

@@ -335,7 +335,7 @@ export function showLod(lod: BuildingLod, level: number): void {
   if (level !== lod.level) {
     for (const p of lod.parts) p.visible = level < 0;
     // Michał 11.11.2026: „FPS mało” — skany z paczek w każdym egzemplarzu budynku (np. świecznik 213 tys. trójkątów)
-    for (const e of lod.extras ?? []) e.visible = level < 0;
+    for (const e of lod.extras ?? []) e.visible = level < 1;   // dopiero na drugim progu: na pierwszym drobiazg ma jeszcze kilka pikseli i znikałby na oczach
     lod.levels.forEach((l, i) => { l.obj.visible = i === level; });
     lod.level = level;
   }

@@ -78,7 +78,8 @@ import { towerEntry, towerUnder } from '../sim/systems/stonewalls';
 import { GREAT_FLIGHT } from '../sim/systems/greatspell';
 import { CLIMB_TICKS, fireArrow, high, peasantWeapon } from '../sim/systems/army';
 import { firstBlock } from '../sim/systems/sight';
-import { partsGeometry, peasantGear, toolMaterials } from './gear';
+import { fitTool, partsGeometry, peasantGear, toolMaterials } from './gear';
+import { loadPh } from './phAssets';
 import { clockAt, rainAt } from '../sim/clock';
 import { COLD, seasonAt, weatherOf, yearPos } from '../sim/weather';
 import { applySeason, SEASON_U, SnowTrails } from './season';
@@ -123,6 +124,8 @@ import { rockMaterial } from './rocks0ad';
 // fill (zapasy w składach) i life (życie podwórka) też razem: same siatki z wspólnymi geometriami, w zapisie Michała ok. 46 osobnych rysowań (7.11.2026)
 // skrzydła drzwi i bram (leafL/leafR) i drabiny wież też razem: pakiet bierze macierz świata każdej części co klatkę,
 // więc otwierane drzwi dalej się ruszają, a schowana drabina znika (widoczność sprawdzana co klatkę) — Michał 9.11.2026
+/** Z jakiej odległości kamery (w polach) rysujemy wnętrza pod zamkniętym dachem — bliżej widać je przez drzwi i okna */
+const INTERIOR_NEAR = 11;
 const BATCH_ALSO = /^(torch|lod\d+|fill|grainfill|crop|life|leafL|leafR|ladder|warBrazier|yardlog|interior|foodfill|armsfill|fixProps)$/; // fixProps: modele z paczek dodane w edytorze (osobno każdy był jednym rysowaniem na sztukę — 87 na farmie, Michał 11.11.2026: „FPS mało”) // wnętrza zawsze widoczne (10.11.2026): też razem // koksowniki i kłody na podwórku: nieruchome, tylko pokazywane i chowane
 /**
  * Część z kilkoma materiałami (np. zapasy w składzie: towar + skrzynka) dzielimy na kawałki po grupach geometrii —
@@ -1082,6 +1085,10 @@ export class GameRenderer {
     this.hammers = pool('hammer');
     this.spades = pool('spade');
     this.rods = pool('rod');
+    // z bliska prawdziwe narzędzia ze skanów (Poly Haven, CC0) zamiast narzędzi z Blendera; z daleka zostaje lekka wersja
+    for (const [p, id, name] of [[this.spades, 'rusted_spade_01', 'spade'], [this.picks, 'picke_dirty_01', 'pick'], [this.axes, 'hatchet', 'axe'], [this.hammers, 'cross_pein_hammer', 'hammer']] as const) {
+      void loadPh(id).then((r) => { if (r) p.useNear(fitTool(r.geo, gear[name]), r.mats); });
+    }
     // pochodnia w ręce: kij, drut i szmaty ze smołą (płomień dokłada system ognia)
     this.handTorches = pool('torch', 'pochodnie w rękach');
     this.guardTorches = pool('torch', 'pochodnie strażników');
@@ -4106,7 +4113,9 @@ export class GameRenderer {
       // Wyjątek: sale zamku — tam bryła donżonu zasłaniałaby wnętrze sal, więc zdejmujemy ją, ale od środka i tak tego nie
       // widać, bo nad salą kładziemy sufit ('ceiling'); bez tego w zamku znikały sprzęty sal (Michał 10.11.2026)
       const hallCeil = inHall && !!named(mesh, 'ceiling');
-      animateBuilding(mesh, this.walk ? hallCeil : open || inHall, this.time, dt);
+      // wnętrze pod dachem: tylko z bliska (przez drzwi i okna) albo spacerem; z daleka pod zamkniętym dachem go nie rysujemy
+      const near = this.walk ? Math.hypot(cp.x - mp.x, cp.z - mp.z) < 14 : cp.distanceTo(mp) < INTERIOR_NEAR;
+      animateBuilding(mesh, this.walk ? hallCeil : open || inHall, this.time, dt, near);
       if (this.walk && busy && !inHall) {
         const inn = named(mesh, 'interior'); if (inn) inn.visible = true;
         const fl = named(mesh, 'flame'); if (fl) fl.visible = true;

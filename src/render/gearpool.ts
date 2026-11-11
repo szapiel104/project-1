@@ -38,6 +38,9 @@ export class GearPool {
     this.far = far ? make(far, false) : null;
   }
 
+  /** Podmienia siatkę z bliska (np. na prawdziwy skan narzędzia z Poly Haven, gdy się wczyta) */
+  useNear(geo: THREE.BufferGeometry, mat: THREE.Material | THREE.Material[]): void { this.near.geometry = geo; this.near.material = mat; }
+
   /** Pozycja kamery (to samo, co dostają postacie) */
   setView(p: THREE.Vector3): void { this.view = p; }
 

@@ -678,13 +678,15 @@ export function torchModel(): THREE.Group {
 }
 
 /** Animacje budynków: kręcące się skrzydła młyna i dym z komina, tylko gdy ktoś w środku pracuje. */
-export function animateBuilding(model: THREE.Object3D, active: boolean, time: number, dt: number): void {
+export function animateBuilding(model: THREE.Object3D, active: boolean, time: number, dt: number, inside = true): void {
   const interior = named(model, 'interior');
   if (interior) {
     // ktoś pracuje w środku: zdejmujemy dach i ściany, żeby było go widać
     // wnętrze jest zawsze (Michał 10.11.2026: „po co ma znikać i się przeliczać — niech zawsze będzie wnętrze”); przez
     // drzwi i okna widać je z ulicy, a to, czego kamera nie widzi, odrzuca rysowanie (paczki budynków: kadr i cienie)
-    interior.visible = !debugDraw.noInterior;
+    // Michał 11.11.2026: „to, co jest pod dachem, niech się nie rysuje, dopiero jak kliknę” — pod zamkniętym dachem i z daleka
+    // wnętrza nie widać (przez drzwi i okna widać je tylko z bliska), więc wtedy go nie rysujemy: ani w kadrze, ani w cieniach
+    interior.visible = !debugDraw.noInterior && (active || inside);
     // budynek bez wnętrza w modelu (np. siedziby magów ognia i wody): pusta grupa — dachu nie zdejmujemy,
     // bo pod nim nic nie ma i zostają same dziurawe mury
     // wyjątek: wieże (openTop w modelu) nie mają wnętrza, ale po zdjęciu dachu widać pomost z łucznikami i ich sprzętem
