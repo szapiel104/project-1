@@ -183,7 +183,14 @@ def build(art, aid, cfg):
     print(f'{aid}: {len(bpos)} wierzchołków, {len(idx)} trójkątów, długość {out["length"]:.2f} pola, klatka skubania {gf}/{nf}, chód {nw} klatek')
     from PIL import Image
     tn = cfg['tex'] if '.' in cfg['tex'] else cfg['tex'] + '.png'
-    im = Image.open(os.path.join(art, 'textures/skins/skeletal', tn)).convert('RGB')
+    src_im = Image.open(os.path.join(art, 'textures/skins/skeletal', tn))
+    if 'A' in src_im.getbands():
+        # przezroczyste miejsca w paczce to barwa gracza (obroża psa) — w grze bez niej byłyby czarne łaty; kładziemy skórę
+        rgba = src_im.convert('RGBA')
+        bg = Image.new('RGBA', rgba.size, (96, 66, 40, 255))
+        im = Image.alpha_composite(bg, rgba).convert('RGB')
+    else:
+        im = src_im.convert('RGB')
     up = cfg.get('up', 2)      # mała tekstura z paczki (kura: 64 px) powiększona, żeby z bliska nie było pikseli
     im = im.resize((im.width * up, im.height * up), Image.LANCZOS)
     im.save(os.path.join(TEX, f'fauna_{aid}.jpg'), quality=95)
