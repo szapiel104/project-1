@@ -16,7 +16,9 @@ const file = new URL('../../src/data/modelFixes.json', import.meta.url);
 const cur = JSON.parse(readFileSync(file, 'utf8'));
 for (const r of rows) {
   if (only.length && !only.includes(r.model)) continue;
-  cur[r.model] = r.fixes;
-  console.log(`${r.model}: ${r.fixes.length} poprawek (${r.updated_at})`);
+  // bez powtórzeń (jak dedupeFixes w modelfix.ts: klucz niezależny od kolejności pól jsonb)
+  const seen = new Set();
+  cur[r.model] = r.fixes.filter((f) => { const k = JSON.stringify(Object.keys(f).sort().map((x) => [x, f[x]])); if (seen.has(k)) return false; seen.add(k); return true; });
+  console.log(`${r.model}: ${cur[r.model].length} poprawek (${r.fixes.length} w bazie, ${r.updated_at})`);
 }
 writeFileSync(file, JSON.stringify(cur, null, 1) + '\n');

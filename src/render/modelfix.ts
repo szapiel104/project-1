@@ -107,6 +107,19 @@ function mul4(a: number[], b: number[]): number[] {
   for (let c = 0; c < 4; c++) for (let r = 0; r < 4; r++) { let v = 0; for (let k = 0; k < 4; k++) v += a[k * 4 + r]! * b[c * 4 + k]!; o[c * 4 + r] = v; }
   return o;
 }
+/**
+ * Klucz poprawki niezależny od kolejności pól (baza jsonb układa klucze po swojemu — porównanie zwykłym JSON.stringify
+ * brało tę samą poprawkę za nową i przy każdym zapisie lista rosła o kopie: farma 548 zamiast 88, Michał 11.11.2026)
+ */
+export function fixKey(f: Fix): string {
+  const o = f as unknown as Record<string, unknown>;
+  return JSON.stringify(Object.keys(o).sort().map((k) => [k, o[k]]));
+}
+/** lista bez powtórzeń (pierwsze wystąpienie zostaje) */
+export function dedupeFixes(list: Fix[]): Fix[] {
+  const seen = new Set<string>();
+  return list.filter((f) => { const k = fixKey(f); if (seen.has(k)) return false; seen.add(k); return true; });
+}
 /** wyznacznik części obrotowo-skalującej macierzy 4×4 (ujemny = odbicie lustrzane) */
 export const det3 = (m: number[]): number =>
   m[0]! * (m[5]! * m[10]! - m[6]! * m[9]!) - m[4]! * (m[1]! * m[10]! - m[2]! * m[9]!) + m[8]! * (m[1]! * m[6]! - m[2]! * m[5]!);
@@ -178,7 +191,7 @@ export function applyModelFixes(name: string, data: Record<string, unknown>, fix
   };
   let miss = 0;
   const ghosts: { g: string; i: number; n: number; c: [number, number, number]; P: number[]; A: number[] }[] = [];
-  for (const f of fixes) {
+  for (const f of dedupeFixes(fixes)) {
     const kind = f.k ?? 'move';
     if (kind === 'prop') {
       // gotowy model z paczki: dopisany do listy rekwizytów modelu (blenderModel w buildings.ts stawia go w grupie g)

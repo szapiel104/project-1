@@ -9,7 +9,7 @@
 import * as THREE from 'three';
 import { TransformControls } from 'three/examples/jsm/controls/TransformControls.js';
 import type { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
-import { applyFix, islands, unitShape, type Fix, type Island } from '../render/modelfix';
+import { applyFix, dedupeFixes, islands, unitShape, type Fix, type Island } from '../render/modelfix';
 import { SHAPES, shapeLabel, type Shape } from '../render/shapes';
 import { icon } from './editorIcons';
 import { createGuides, snapBox } from './editorSnap';
@@ -1529,10 +1529,8 @@ export function createModelEditor(ctx: Ctx): { onModel: () => void; guard: (go: 
       const { data: row } = await supa.from('model_fixes').select('fixes').eq('model', id).maybeSingle();
       const remote = (row as { fixes?: Fix[] } | null)?.fixes;
       if (Array.isArray(remote)) {
-        const key = (f: Fix): string => JSON.stringify(f);
-        const have = new Set(remote.map(key));
         const prev = list.slice(0, list.length - mine.length);
-        list = [...remote, ...prev.filter((f) => !have.has(key(f))), ...mine.filter((f) => !have.has(key(f)))];
+        list = dedupeFixes([...remote, ...prev, ...mine]);
         try { localStorage.setItem(LS(id), JSON.stringify(list)); } catch { /* prywatne okno */ }
       }
       const { data: s } = await supa.auth.getSession();
