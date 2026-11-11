@@ -9,6 +9,17 @@ export type { ChangeEntry } from './changelogTypes';
  * — tak jak CHANGELOG.md dla nas. `tests/changelog.test.ts` pilnuje, że najnowszy wpis ma wersję z package.json.
  */
 const NEW: ChangeEntry[] = [
+  { v: '0.95.5', date: '2026-11-11', pl: [
+    'Nowy wilk: prawdziwa sierść, chód, postój i skok do ataku; zabity leży na boku.',
+    'Wieża Płomienia: w misach i koszach żar z popiołu i węgla, a ogień płonie nad nim; łupkowy daszek drewutni.',
+    'Woda w sadzawkach, fontannach i studniach faluje i odbija niebo.',
+    'Szybsza gra przy dużych osadach i bitwach (stawianie budynków przez boty, szukanie dróg, przydział pracy).',
+  ], en: [
+    'A new wolf: a proper coat, walking, standing and a leap to attack; a slain wolf lies on its side.',
+    'Tower of Flame: the bowls and baskets hold embers of ash and coal with fire above them; a slate roof on the woodshed.',
+    'Water in pools, fountains and wells ripples and mirrors the sky.',
+    'Smoother play in large settlements and battles (bot building checks, pathfinding, job assignment).',
+  ] },
   { v: '0.95.4', date: '2026-11-11', pl: [
     'Nowa zwierzyna: dziki chodzą watahami, lisy i zające na łąkach, w lasach i na stepie — uciekają przed ludźmi.',
     'Nowe, realistyczne modele jelenia, wielbłąda z derką i świni; pies, lis i zając z poprawioną sierścią.',

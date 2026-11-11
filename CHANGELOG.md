@@ -6,6 +6,13 @@
 
 
 
+## 0.95.5 — 2026-11-11
+- Wilk z 0 A.D. (`fauna_0ad.py` 'wolf', `wolves.ts` na `FaunaPool`), bez świecących oczu; test `wolves-render` na siatkach puli.
+- `magefire.py`: `coals()` (miał, węgiel, żar) zamiast krążków 'ember', daszek drewutni 'slate'; kolejność materiałów zachowana dla poprawek z edytora.
+- Woda w budynkach: `waterMaterial` + `tickBuildingWater` (mapa zmarszczek, przesuwana).
+- Symulacja: `floodUntil` w `wouldBlock`, kopiec `findPath` na Float64Array, `workerSystem` przez `buildingById` — odcisk `simprint` bez zmian.
+- Podgląd modeli: bez wodospadu.
+
 ## 0.95.4 — 2026-11-11
 - Dzika zwierzyna (dzik, lis, zając z 0 A.D.; `fauna.ts` HERDS), `window.__fauna()`; jeleń, wielbłąd, świnia ze Sketchfaba (CC BY 4.0, `fauna_gltf.py`: skórowanie glTF w numpy, atlas tekstur i map normalnych, ruch z korzenia usunięty); pierwszy zestaw UV z paczek (`horse_0ad.py`), dzik z ręcznym kierunkiem.
 - Zwierzęta: mieszanie wielu klatek (`poseFor` → lista wag), chód ↔ postój ↔ skubanie płynnie, `STRIDE` (zając), limit 2,5 cyklu/s.
