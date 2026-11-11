@@ -6,19 +6,14 @@
 import * as THREE from 'three';
 import type { WorldSound } from '../audio/sfx';
 import { FP, TICKS_PER_SECOND, type GameState } from '../sim/state';
-import { cat } from './cat';
-import { WOLF_HIPS, WOLF_TAIL, wolfParts } from './creatures';
+import { FaunaPool } from './fauna';
 import type { TerrainView } from './terrain';
-import { touch } from './touch';
-
-const ZERO = new THREE.Matrix4().makeScale(0, 0, 0);
 
 export class WolfLayer {
   /** Położenia wilków w świecie z ostatniej klatki (paski zdrowia nad nimi) */
   readonly wolfPos = new Map<number, THREE.Vector3>();
   private time = 0;
   private calm = false;
-  private night = 0;
   private prevPos = new Map<number, [number, number]>();
   private tmp = new THREE.Object3D();
 
@@ -27,15 +22,12 @@ export class WolfLayer {
     private sfxAt: (kind: WorldSound, x: number, z: number, key: string | number, every: number, gain?: number) => void,
   ) {}
 
-  private wolfMesh: THREE.InstancedMesh | null = null;
-  private wolfEyes: THREE.InstancedMesh | null = null;
-  private wolfLegs!: THREE.InstancedMesh;
-  private wolfHindLegs!: THREE.InstancedMesh;
-  private wolfTails!: THREE.InstancedMesh;
-  private wolfPart = new THREE.Matrix4();
+  /** Wilki z 0 A.D. (Michał 11.11.2026: „nowy obiekt wilka”): każdy osobna siatka z mieszanymi klatkami chodu, spoczynku
+   *  i skoku do ataku (fauna.ts, FaunaPool); bez świecących oczu (wyglądały nocą jak latające oczy) */
+  private pool: FaunaPool | null = null;
   private wolfRot = new THREE.Matrix4();
   private wolfHeading = new Map<number, number>();
-  /** Wilki: szare, przygarbione, w kłusie; nocą świecą im oczy */
+  private steps = new Map<number, { x: number; y: number; ph: number }>();
   /** Znaczki nad wilkami: łapa nad łbem (czerwona, gdy poluje; szara, gdy odchodzi), cienka linia do celu i kółko na ofierze */
   private wolfIcons: THREE.Sprite[] = [];
   private wolfAims: THREE.Sprite[] = [];
@@ -111,18 +103,9 @@ export class WolfLayer {
   }
 
   sync(g: GameState, view: TerrainView, alpha: number, ctx: { time: number; calm: boolean; night: number; prevPos: Map<number, [number, number]> }): void {
-    this.time = ctx.time; this.calm = ctx.calm; this.night = ctx.night; this.prevPos = ctx.prevPos;
-    if (!this.wolfMesh) {
-      const { body, leg, hindLeg, tail, eyes, mat } = wolfParts();
-      this.wolfMesh = new THREE.InstancedMesh(body, mat, 64);
-      this.wolfLegs = new THREE.InstancedMesh(leg, mat, 128);
-      this.wolfHindLegs = new THREE.InstancedMesh(hindLeg, mat, 128);
-      this.wolfTails = new THREE.InstancedMesh(tail, mat, 64);
-      for (const m of [this.wolfMesh, this.wolfLegs, this.wolfHindLegs, this.wolfTails]) { m.castShadow = true; m.frustumCulled = false; this.scene.add(cat(m, 'wilki')); }
-      this.wolfEyes = new THREE.InstancedMesh(eyes, new THREE.MeshBasicMaterial({ color: 0xffd24a }), 64);
-      this.wolfEyes.frustumCulled = false;
-      this.scene.add(this.wolfEyes);
-    }
+    this.time = ctx.time; this.calm = ctx.calm; this.prevPos = ctx.prevPos;
+    this.pool ??= new FaunaPool('wolf', this.scene);
+    const pool = this.pool, len = pool.length;
     const { width, height } = g.map;
     const t = this.tmp;
     let n = 0;
@@ -147,28 +130,17 @@ export class WolfLayer {
           lunge = Math.max(0, Math.sin(this.time * 9 + w.id));
         }
       }
-      const bob = run ? Math.abs(Math.sin(this.time * 12 + w.id)) * 0.05 : 0;
-      t.position.set(fx - width / 2 + Math.sin(h) * lunge * 0.3, view.heightAt(fx, fy) + bob + lunge * 0.12, fy - height / 2 + Math.cos(h) * lunge * 0.3);
-      t.rotation.set(run ? Math.sin(this.time * 12 + w.id) * 0.06 : -lunge * 0.25, h, 0, 'YXZ');
+      t.position.set(fx - width / 2, view.heightAt(fx, fy), fy - height / 2);
+      t.rotation.set(0, h, 0, 'YXZ');
       t.scale.setScalar(1.0);
       t.updateMatrix();
-      this.wolfMesh.setMatrixAt(n, t.matrix);
       { let wp = this.wolfPos.get(w.id); if (!wp) { wp = new THREE.Vector3(); this.wolfPos.set(w.id, wp); } wp.copy(t.position); }
-      // kłus: łapy po przekątnej razem; w ataku przednie wyrzucone do przodu
-      const ph = this.time * 12 + w.id;
-      const hips = WOLF_HIPS;
-      hips.forEach(([hx, hy, hz], k) => {
-        const diag = k === 0 || k === 3 ? 1 : -1;
-        const front = hz > 0;
-        const ang = run ? Math.sin(ph) * 0.55 * diag : lunge ? (front ? -0.7 * lunge : 0.35 * lunge) : 0;
-        this.wolfRot.makeRotationX(ang).setPosition(hx, hy, hz);
-        (k < 2 ? this.wolfLegs : this.wolfHindLegs).setMatrixAt(n * 2 + (k & 1), this.wolfPart.multiplyMatrices(t.matrix, this.wolfRot));
-      });
-      // ogon: w biegu prosto za sobą i lekko faluje, w miejscu zwieszony, w ataku sztywno
-      const tailUp = run ? 1.9 + Math.sin(ph * 0.5) * 0.15 : lunge ? 2.2 : 0.5;
-      this.wolfRot.makeRotationX(tailUp).setPosition(...WOLF_TAIL);
-      this.wolfTails.setMatrixAt(n, this.wolfPart.multiplyMatrices(t.matrix, this.wolfRot));
-      this.wolfEyes!.setMatrixAt(n, this.night > 0.2 ? t.matrix : ZERO);
+      // krok z przebytej drogi (łapy nie ślizgają się), atak: skok z łbem nisko (druga poza)
+      let st = this.steps.get(w.id);
+      if (!st) { st = { x: fx, y: fy, ph: w.id % FaunaPool.STEPS }; this.steps.set(w.id, st); }
+      st.ph = (st.ph + Math.min(0.5, Math.hypot(fx - st.x, fy - st.y)) / (len * 1.1) * FaunaPool.STEPS) % FaunaPool.STEPS;
+      st.x = fx; st.y = fy;
+      pool.put(t.matrix, run, st.ph, lunge, w.id, this.time);
       // warczenie z bliska, kłapnięcie przy ataku
       if (!this.calm && w.target) this.sfxAt('growl', t.position.x, t.position.z, `w${w.id}`, 4.5 + (w.id % 3) * 1.5, 1);
       this.wolfMarker(n, w, g, t.position.x, t.position.y, t.position.z, view);
@@ -181,27 +153,17 @@ export class WolfLayer {
       const fx = body.px / FP, fy = body.py / FP;
       const fall = this.calm ? 1 : Math.max(0, Math.min(1, (g.tick + alpha - body.at) / (TICKS_PER_SECOND * 0.6))); // z ułamkiem ticku: płynnie, nie skokami
       const yaw = this.wolfHeading.get(body.id) ?? ((body.id * 2.39) % 6.28);
-      const k = n + dead;
       t.position.set(fx - width / 2, view.heightAt(fx, fy), fy - height / 2);
       t.rotation.set(0, yaw, 0, 'YXZ');
       t.scale.setScalar(1);
       t.updateMatrix();
       // obrót na bok wokół osi grzbietu: ciało kładzie się na ziemi
-      this.wolfRot.makeTranslation(0, 0.075 * fall, 0).multiply(new THREE.Matrix4().makeRotationZ(fall * Math.PI / 2)).multiply(new THREE.Matrix4().makeTranslation(0, -0.33 * fall, 0));
+      this.wolfRot.makeTranslation(0, 0.06 * fall, 0).multiply(new THREE.Matrix4().makeRotationZ(fall * Math.PI / 2)).multiply(new THREE.Matrix4().makeTranslation(0, -0.15 * fall, 0));
       const bodyM = new THREE.Matrix4().multiplyMatrices(t.matrix, this.wolfRot);
-      this.wolfMesh.setMatrixAt(k, bodyM);
-      WOLF_HIPS.forEach(([hx, hy, hz], j) => {
-        this.wolfRot.makeRotationX((j < 2 ? -0.35 : 0.35) * fall).setPosition(hx, hy, hz);
-        (j < 2 ? this.wolfLegs : this.wolfHindLegs).setMatrixAt(k * 2 + (j & 1), this.wolfPart.multiplyMatrices(bodyM, this.wolfRot));
-      });
-      this.wolfRot.makeRotationX(1.5).setPosition(...WOLF_TAIL);
-      this.wolfTails.setMatrixAt(k, this.wolfPart.multiplyMatrices(bodyM, this.wolfRot));
-      this.wolfEyes!.setMatrixAt(k, ZERO);
+      pool.put(bodyM, false, 0, 0, 1e6 + body.id, this.time);
       dead++;
     }
     this.wolfMarkersFinish(n);
-    this.wolfMesh.count = n + dead; this.wolfEyes!.count = n + dead; this.wolfTails.count = n + dead; this.wolfLegs.count = this.wolfHindLegs.count = (n + dead) * 2;
-    touch(this.wolfLegs); touch(this.wolfHindLegs); touch(this.wolfTails);
-    touch(this.wolfMesh); touch(this.wolfEyes!);
+    pool.end();
   }
 }

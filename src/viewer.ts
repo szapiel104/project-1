@@ -26,7 +26,7 @@ import { rockMaterial, rocks0ad } from './render/rocks0ad';
 import { desertPlants, plantMaterial } from './render/desert0ad';
 import { model } from './render/modelstore';
 import { clutterObject } from './render/clutter';
-import { crowParts, wolfParts, WOLF_HIPS, WOLF_TAIL } from './render/creatures';
+import { crowParts } from './render/creatures';
 import { YARD_KEYS, yardModel } from './render/family';
 import { graveModel } from './render/graves';
 import { Figures, idWithHead, type FigureKind } from './render/peasants';
@@ -83,13 +83,6 @@ function carrier(res: string): Make {
 function horse(pose?: keyof typeof HORSE_MORPH): THREE.Object3D {
   const g = horseObject();
   if (pose) for (const m of g.children as THREE.Mesh[]) { m.updateMorphTargets(); m.morphTargetInfluences![HORSE_MORPH[pose]] = 1; }
-  return g;
-}
-function wolf(): THREE.Object3D {
-  const w = wolfParts(), g = new THREE.Group();
-  g.add(new THREE.Mesh(w.body, w.mat), new THREE.Mesh(w.eyes, new THREE.MeshBasicMaterial({ color: 0xd8a040 })));
-  WOLF_HIPS.forEach((p, i) => { const l = new THREE.Mesh(i < 2 ? w.leg : w.hindLeg, w.mat); l.position.set(...p); g.add(l); });
-  const tail = new THREE.Mesh(w.tail, w.mat); tail.position.set(...WOLF_TAIL); tail.rotation.x = -1.2; g.add(tail);
   return g;
 }
 
@@ -229,7 +222,8 @@ const GROUPS: [string, [string, string, Make][]][] = [
     ['horse-look', tx('Koń czujny', 'Horse, alert'), () => ({ obj: horse('look') })],
     ['dog', tx('Pies', 'Dog'), () => ({ obj: faunaAnimated('dog', 'idle') })],
     ['dog-walk', tx('Pies idzie', 'Dog, walking'), () => ({ obj: faunaAnimated('dog', 'walk'), size: new THREE.Vector3(1.4, 0.35, 1.4) })],
-    ['wolf', tx('Wilk', 'Wolf'), () => ({ obj: wolf() })],
+    ['wolf', tx('Wilk', 'Wolf'), () => ({ obj: faunaAnimated('wolf', 'idle') })],
+    ['wolf-walk', tx('Wilk idzie', 'Wolf, walking'), () => ({ obj: faunaAnimated('wolf', 'walk'), size: new THREE.Vector3(1.6, 0.4, 1.6) })],
     ['crow', tx('Kruk', 'Raven'), () => ({ obj: mesh(crowParts().stand, crowParts().mat) })],
     ['crow-fly', tx('Kruk w locie', 'Raven in flight'), () => ({ obj: mesh(crowParts().fly[1]!, crowParts().mat) })],
   ]],

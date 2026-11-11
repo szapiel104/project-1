@@ -40,6 +40,8 @@ ANIMALS = {
     'boar': {'mesh': 'animal_boar.dae', 'idle': 'animal_boar_idle_01', 'graze': 'animal_boar_idle_02', 'walk': 'animal_boar_walk_01', 'tex': 'animal_boar_01', 'height': 0.3, 'flip': False},
     'fox': {'mesh': 'fox.dae', 'idle': 'fox_idle', 'graze': 'fox_feeding', 'walk': 'fox_walk', 'tex': 'animal_fox_red', 'height': 0.15},
     'rabbit': {'mesh': 'rabbit_01.dae', 'idle': 'rabbit_idle_01', 'graze': 'rabbit_idle_02', 'walk': 'rabbit_walk', 'tex': 'animal_rabbit_01', 'height': 0.08},
+    # wilk (Michał 11.11.2026: „nowy obiekt wilka”) — druga poza to skok do ataku (łeb nisko, z przodu)
+    'wolf': {'mesh': 'wolf.dae', 'idle': 'wolf_idle_01', 'graze': 'wolf_attack_01', 'walk': 'wolf_walk', 'tex': 'animal_wolf_grey', 'height': 0.3},
     'dog': {'mesh': 'wolfhound.dae', 'idle': 'wolfhound_idle1', 'graze': 'wolfhound_idle_sit', 'walk': 'wolfhound_walk', 'tex': 'brit/wolfhound', 'height': 0.27},
 }
 

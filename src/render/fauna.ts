@@ -22,9 +22,9 @@ import { play3d } from '../audio/engine';
  */
 type Packed = { pos: string; nrm: string; uv: string; idx: string; morph: Record<string, { pos: string; nrm: string }> };
 type FaunaModel = { height: number; length: number; normalMap?: boolean; body: Packed };
-export type Species = 'camel' | 'deer' | 'pig' | 'hen' | 'dog' | 'boar' | 'fox' | 'rabbit';
+export type Species = 'camel' | 'deer' | 'pig' | 'hen' | 'dog' | 'boar' | 'fox' | 'rabbit' | 'wolf';
 /** Prędkość chodu w polach na sekundę (podgląd modeli) */
-const WALK_SPEED: Record<Species, number> = { camel: 0.55, deer: 0.7, pig: 0.3, hen: 0.35, dog: 0.8, boar: 0.45, fox: 0.6, rabbit: 0.35 };
+const WALK_SPEED: Record<Species, number> = { camel: 0.55, deer: 0.7, pig: 0.3, hen: 0.35, dog: 0.8, boar: 0.45, fox: 0.6, rabbit: 0.35, wolf: 0.9 };
 /** bieg przy ucieczce (pola na sekundę) */
 const FLEE_SPEED: Partial<Record<Species, number>> = { camel: 2.6, deer: 3.4, boar: 2.8, fox: 3.6, rabbit: 4 };
 const WALK = 10, IDLE = 8;
