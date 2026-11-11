@@ -2,6 +2,12 @@
 
 Tu trafia wszystko nowe, co nie należy do bieżącej partii. Do planu etapów (`plan.md`) przenosimy stąd, gdy przychodzi na to kolej.
 
+## Kolejka Michała z 11.11.2026, 16:15 (robić po kolei, odhaczać datą)
+- [ ] Wilk: nowy model (obecny z części wygląda źle) — gotowy z paczki, z animacją chodu i biegu.
+- [ ] Sanktuarium źródła: popsute — woda jako gładkie ciemne bryły (fontanna, sadzawka), gołe pudła; poprawić, ładniej i lżej.
+- [ ] Wieża maga płomieni: płomienie jako pomarańczowe krążki (ulep) — tylko znaczniki ognia; czerwona łata na dziedzińcu.
+- [ ] Podgląd modeli: usunąć „Wodospad (próg 5 pól)” z grupy Teren.
+
 ## Kolejka Michała z 11.11.2026, 12:43 (robić po kolei, odhaczać datą)
 - [x] (11.11.2026) Zwierzęta w osadzie (kura, pies, świnia) wyglądają tragicznie — modele z 0 A.D. (CC BY-SA), wygładzone podziałem Loopa, chód / rycie / dziobanie / siadanie, `render/fauna.ts`. Dalej: osobna lżejsza wersja z daleka (na razie ta sama siatka; postaci jest mało, więc FPS nie spada).
 - [x] (11.11.2026) Koń: pozy przez morph targets w puli instancji na WebGPU nie działały — konie to teraz osobne siatki z `morphTargetInfluences` (skubanie, ogon).
