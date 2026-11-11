@@ -29,7 +29,7 @@ export function gameTagline(): string {
  * spodem — widać go, póki zdjęcie się nie wczyta.
  */
 export const SHOTS = ['1-osada', '2-brama', '3-mury', '4-wieza', '5-pustynia', '6-zima'];
-const shotUrl = (i: number): string => `${(import.meta as unknown as { env?: { BASE_URL?: string } }).env?.BASE_URL ?? './'}shots/${SHOTS[i]}.webp`;
+const shotUrl = (i: number): string => `${(import.meta as unknown as { env?: { BASE_URL?: string } }).env?.BASE_URL ?? './'}shots/${SHOTS[i]}.webp?v=2`;   // v: nowe przerobienie zdjęć (przeglądarka nie bierze starych z pamięci)
 /** Pierwsze zdjęcie tego wejścia: losowe, ale inne niż przy poprzednim (odświeżenie menu = kolejne zdjęcie) */
 const firstShot = ((): number => {
   let last = -1;
