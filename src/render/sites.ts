@@ -66,6 +66,8 @@ export class SiteLayer {
   }
 
   private dustAt = new Map<number, number>();
+  /** Budynki właśnie ukończone: od kiedy „osiadają” (Michał 11.11.2026: budynek osiada z kurzem, a nie po prostu staje) */
+  private settling = new Map<number, number>();
   /** Gruzowiska na miejscu zniszczonych budynków (do odbudowy) */
   private ruinPiles = new Map<number, THREE.Group>();
   /**
@@ -187,7 +189,13 @@ export class SiteLayer {
       // ruina po zniszczeniu: kupa gruzu i resztki ścian; dopiero odbudowa podnosi budynek z gruzowiska
       const pile = this.ruinPiles.get(b.id);
       const ruinShown = !!b.ruined && !def.wall && !def.gate;
-      if (mesh.scale.y !== 1) mesh.scale.y = 1;
+      // osiadanie po ukończeniu: bryła lekko się unosi i siada na ziemi z wytłumionym sprężynowaniem (~0,6 s)
+      const st = this.settling.get(b.id);
+      if (st !== undefined) {
+        const t = (this.time - st) / 0.6;
+        if (t >= 1 || this.calm) { this.settling.delete(b.id); if (mesh.scale.y !== 1) mesh.scale.y = 1; }
+        else mesh.scale.y = 1 + 0.035 * Math.exp(-t * 4) * Math.cos(t * Math.PI * 2.5);
+      } else if (mesh.scale.y !== 1) mesh.scale.y = 1;
       if (b.build && def.line) {
         // ruina muru czeka na zapłatę albo na ludzi: bez rusztowania, sam gruz (damage.ts)
         if (b.ruined && !crew.has(b.id)) continue;
@@ -205,7 +213,19 @@ export class SiteLayer {
       }
       if (k >= 1 || def.line) {
         if (pile && !b.build) { this.layer.remove(pile); this.ruinPiles.delete(b.id); }
-        if (this.sites.has(b.id)) { this.endSite(b.id); mesh.visible = true; this.dust(b.x, b.y, false); }
+        if (this.sites.has(b.id)) {
+          this.endSite(b.id); mesh.visible = true;
+          // kurz spod ścian dookoła budynku, gdy siada na fundamencie
+          if (!this.calm && !def.line) {
+            this.settling.set(b.id, this.time);
+            const fp = footprint(def, b.rot), n = Math.min(10, 2 * (fp.w + fp.h));
+            for (let i = 0; i < n; i++) {
+              const u = (i + 0.5) / n * 2 * (fp.w + fp.h);
+              const [px, py] = u < fp.w ? [b.x + u, b.y - 0.3] : u < fp.w + fp.h ? [b.x + fp.w - 0.7, b.y + u - fp.w] : u < 2 * fp.w + fp.h ? [b.x + 2 * fp.w + fp.h - u, b.y + fp.h - 0.7] : [b.x - 0.3, b.y + 2 * (fp.w + fp.h) - u];
+              this.dust(Math.floor(px), Math.floor(py), false, true);
+            }
+          } else this.dust(b.x, b.y, false);
+        }
         continue;
       }
       live.add(b.id);

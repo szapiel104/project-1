@@ -1513,6 +1513,10 @@ export class GameRenderer {
     if (f > 0) this.cam.shake(power * f);
   }
   private ramQuakeAt = new Map<number, number>();
+  /** Ostatnio niesiony ładunek każdego chłopa (do płynnego oddania) i ładunki właśnie oddawane */
+  private lastLoad = new Map<number, { res: number; m: THREE.Matrix4; frame: number; target: number }>();
+  private loadDrops: { res: number; m: THREE.Matrix4; t0: number; to: THREE.Vector3 | null }[] = [];
+  private dropP = new THREE.Vector3(); private dropQ = new THREE.Quaternion(); private dropS = new THREE.Vector3(); private dropM = new THREE.Matrix4();
 
   /** Blokuje przesuwanie kamery myszą na czas malowania */
   /** Pokazuje planowaną drogę (pusta lista chowa podgląd) */
@@ -6470,6 +6474,20 @@ export class GameRenderer {
         t.scale.setScalar(FIG * loadSz);
         t.updateMatrix();
         loadMesh.setMatrixAt(j, t.matrix);
+        let ll = this.lastLoad.get(u.id);
+        if (!ll) { ll = { res: u.carryRes, m: new THREE.Matrix4(), frame: 0, target: u.target }; this.lastLoad.set(u.id, ll); }
+        ll.res = u.carryRes; ll.m.copy(t.matrix); ll.frame = this.frameCounter; ll.target = u.target;
+      } else {
+        // ładunek właśnie oddany (skład, spiżarnia, warsztat): nie znika w jednej klatce, tylko w ok. 0,35 s wędruje
+        // do budynku i maleje — jakby szedł do worka i za próg (Michał 11.11.2026: „towar znika w worku zamiast znikać”)
+        const ll = this.lastLoad.get(u.id);
+        if (ll && ll.frame >= this.frameCounter - 2 && !this.calm) {
+          const tb = buildingById(g, ll.target);
+          let to: THREE.Vector3 | null = null;
+          if (tb) { const fpT = footprint(BUILDINGS[tb.type]!, tb.rot); to = new THREE.Vector3(tb.x + fpT.w / 2 - width / 2, 0, tb.y + fpT.h / 2 - height / 2); }
+          this.loadDrops.push({ res: ll.res, m: ll.m.clone(), t0: this.time, to });
+        }
+        if (ll) this.lastLoad.delete(u.id);
       }
       // pochylenie i kołysanie zerujemy dopiero po ładunkach: kłoda, deski i kosz liczą się z tym samym obrotem co tułów
       // (wcześniej obrót zerował się razem z kierunkiem i ładunek trafiał w bok, nie w dłonie)
@@ -6563,6 +6581,22 @@ export class GameRenderer {
     // pule narzędzi: `count` zamyka klatkę (liczba bez znaczenia) i same oznaczają swoje bufory
     for (const p of [this.rods, this.bedrolls, this.hammers, this.spades, this.axes, this.picks, this.clubs, this.forks, this.backPicks, this.beltClubs, this.handTorches, this.buckets, this.bucketWater]) p.count = n;
     this.fireFx.end(this.calm ? 0 : Math.min(0.05, this.frameDt), (x, z) => this.standY(view, x + width / 2, z + height / 2));
+    // oddawane ładunki (zob. wyżej): przesunięcie do budynku i zmniejszanie z przyspieszeniem
+    if (this.lastLoad.size > 1500) for (const [id, l] of this.lastLoad) if (l.frame < this.frameCounter - 60) this.lastLoad.delete(id);
+    for (let di = this.loadDrops.length - 1; di >= 0; di--) {
+      const d = this.loadDrops[di]!, k = (this.time - d.t0) / 0.35;
+      const mesh = this.loads.get(d.res);
+      if (k >= 1 || !mesh) { this.loadDrops.splice(di, 1); continue; }
+      const j = loadUsed.get(d.res) ?? 0;
+      if (j >= mesh.instanceMatrix.count) continue;
+      loadUsed.set(d.res, j + 1);
+      const e = k * k;
+      d.m.decompose(this.dropP, this.dropQ, this.dropS);
+      if (d.to) { this.dropP.x += (d.to.x - this.dropP.x) * e * 0.35; this.dropP.z += (d.to.z - this.dropP.z) * e * 0.35; }
+      this.dropP.y -= e * 0.12;
+      this.dropS.multiplyScalar(1 - e);
+      mesh.setMatrixAt(j, this.dropM.compose(this.dropP, this.dropQ, this.dropS));
+    }
     for (const [res, m] of this.loads) {
       m.count = loadUsed.get(res) ?? 0;
       touch(m);
