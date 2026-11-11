@@ -6,6 +6,7 @@ let dist = new Int32Array(0);
 let prev = new Int32Array(0);
 let mark = new Int32Array(0);
 let generation = 0;
+let heapBuf = new Float64Array(4096);
 
 /** Czy po polu da się przejść (teren i brak budynku). */
 /** Gracz -2 = wilk: chodzi też przez las */
@@ -59,31 +60,34 @@ export function findPath(g: GameState, from: number, isGoal: (tile: number) => b
   const size = w * h;
   if (dist.length < size) { dist = new Int32Array(size); prev = new Int32Array(size); mark = new Int32Array(size); }
   generation++;
-  const heap: number[] = [];
+  // kopiec na tablicy liczb (Float64Array, wspólnej dla wszystkich wywołań): klucze są różne (koszt·K + pole), więc
+  // kolejność zdejmowania jest ta sama co w zwykłej tablicy — tylko bez przydzielania pamięci przy każdym szukaniu
+  let n = 0;
   const push = (key: number): void => {
-    let i = heap.length;
-    heap.push(key);
+    if (n >= heapBuf.length) { const nb = new Float64Array(heapBuf.length * 2); nb.set(heapBuf); heapBuf = nb; }
+    const hp = heapBuf;
+    let i = n++;
     while (i > 0) {
       const p = (i - 1) >> 1;
-      if (heap[p]! <= key) break;
-      heap[i] = heap[p]!; i = p;
+      if (hp[p]! <= key) break;
+      hp[i] = hp[p]!; i = p;
     }
-    heap[i] = key;
+    hp[i] = key;
   };
   const pop = (): number => {
-    const top = heap[0]!;
-    const last = heap.pop()!;
-    const n = heap.length;
+    const hp = heapBuf;
+    const top = hp[0]!;
+    const last = hp[--n]!;
     if (n > 0) {
       let i = 0;
       for (;;) {
         let c = i * 2 + 1;
         if (c >= n) break;
-        if (c + 1 < n && heap[c + 1]! < heap[c]!) c++;
-        if (heap[c]! >= last) break;
-        heap[i] = heap[c]!; i = c;
+        if (c + 1 < n && hp[c + 1]! < hp[c]!) c++;
+        if (hp[c]! >= last) break;
+        hp[i] = hp[c]!; i = c;
       }
-      heap[i] = last;
+      hp[i] = last;
     }
     return top;
   };
@@ -99,7 +103,8 @@ export function findPath(g: GameState, from: number, isGoal: (tile: number) => b
   const K = 1 << 20; // klucz = koszt * K + pole (do 1024 x 1024 pól; koszt najwyżej kilka tysięcy, więc mieści się w liczbie)
   dist[from] = 0; mark[from] = generation; prev[from] = -1;
   push(est(from) * K + from);
-  while (heap.length) {
+  const walls = g.walls, roads = g.roads;
+  while (n > 0) {
     const key = pop();
     const tile = key % K;
     const cost = dist[tile]!;
@@ -120,10 +125,10 @@ export function findPath(g: GameState, from: number, isGoal: (tile: number) => b
         const nt = ny * w + nx;
         if (!ok(nt)) continue;
         if (dx && dy && (!ok(y * w + nx) || !ok(ny * w + x))) continue;
-        if ((g.walls[tile] || g.walls[nt] || g.walls[y * w + nx] || g.walls[ny * w + x]) && wallBetween(g, tile, dx, dy)) continue;
+        if ((walls[tile] || walls[nt] || walls[y * w + nx] || walls[ny * w + x]) && wallBetween(g, tile, dx, dy)) continue;
         // po drodze idzie się taniej, więc ścieżka chętnie nią prowadzi
         // bez drogi: leśna ścieżka tańsza, gęsty las droższy (wilk w lesie jak u siebie)
-        const rd = g.roads[nt]!, pc = rd ? RP[rd]! : trails[nt] ? TRAIL : afoot && tiles[nt] === Terrain.Forest ? FOREST : 100;
+        const rd = roads[nt]!, pc = rd ? RP[rd]! : trails[nt] ? TRAIL : afoot && tiles[nt] === Terrain.Forest ? FOREST : 100;
         const nc = cost + Math.round(((dx && dy ? 14 : 10) * pc) / 100);
         if (mark[nt] === generation && dist[nt]! <= nc) continue;
         mark[nt] = generation; dist[nt] = nc; prev[nt] = tile;

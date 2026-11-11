@@ -139,6 +139,36 @@ function terrainWalk(g: GameState): Uint8Array {
   if (!a) { a = new Uint8Array(g.map.tiles.length); for (let i = 0; i < a.length; i++) a[i] = TERRAIN[g.map.tiles[i] as Terrain].walkable ? 1 : 0; walkCache.set(g.map, a); }
   return a;
 }
+/**
+ * Jak flood, ale kończy wcześniej, gdy dojdzie do wszystkich pól `targets` (zwraca wtedy true; `out` jest niepełne).
+ * Używane w wouldBlock: nowa działka zabiera tylko swoje pola, więc jeśli wszystkie osiągalne wcześniej pola tuż przy niej
+ * (i drzwi) dalej są osiągalne, to osiągalne zostaje wszystko, co było — każdą starą drogę przez działkę da się obejść
+ * od pola wejścia do pola wyjścia. Bez tego bot zalewał całą mapę przy każdym sprawdzanym miejscu (pomiar 11.11.2026).
+ */
+function floodUntil(g: GameState, start: number, out: Uint8Array, player: number, targets: Uint8Array, need: number): boolean {
+  const { width, height } = g.map;
+  const tw = terrainWalk(g), occ = g.occupancy, gates = g.gates, walls = g.walls, me = player + 1;
+  out.fill(0, 0, width * height);
+  let head = 0, tail = 0, got = 0;
+  if (g.occupancy[start] === 0 || g.gates[start] === player + 1) { queue[tail++] = start; out[start] = 1; if (targets[start]) got++; }
+  if (need > 0 && got >= need) return true;
+  while (head < tail) {
+    const t = queue[head++]!;
+    const cx = t % width, cy = (t - cx) / width;
+    for (let d = 0; d < 4; d++) {
+      const nx = cx + (d === 0 ? 1 : d === 1 ? -1 : 0), ny = cy + (d === 2 ? 1 : d === 3 ? -1 : 0);
+      if (nx < 0 || ny < 0 || nx >= width || ny >= height) continue;
+      const nt = ny * width + nx;
+      if (out[nt] || (occ[nt] !== 0 && gates[nt] !== me) || !tw[nt]) continue;
+      if ((walls[t]! & WALL_BIT[d]!) || (walls[nt]! & WALL_BIT[d ^ 1]!)) continue;
+      out[nt] = 1; queue[tail++] = nt;
+      if (targets[nt] && ++got >= need) return true;
+    }
+  }
+  return false;
+}
+let targetMap = new Uint8Array(0);
+
 function flood(g: GameState, start: number, out: Uint8Array, player: number): void {
   const { width, height } = g.map;
   const tw = terrainWalk(g), occ = g.occupancy, gates = g.gates, walls = g.walls, me = player + 1;
@@ -175,7 +205,25 @@ function wouldBlock(g: GameState, player: number, x: number, y: number, w: numbe
   if (!key || key !== beforeKey) { flood(g, keep.door, before, player); beforeKey = key; }
   if (!passable) for (let ty = y; ty < y + h; ty++) for (let tx = x; tx < x + w; tx++) g.occupancy[ty * width + tx] = -1;
   const door = findDoor(g, x, y, w, h, rot);
-  flood(g, keep.door, seen, player);
+  // cele: osiągalne wcześniej pola tuż przy działce (4 strony) i drzwi nowego budynku
+  if (targetMap.length < size) targetMap = new Uint8Array(size);
+  const tl: number[] = [];
+  const mark = (t: number): void => { if (!targetMap[t]) { targetMap[t] = 1; tl.push(t); } };
+  for (let tx = x; tx < x + w; tx++) {
+    if (y > 0 && before[(y - 1) * width + tx]) mark((y - 1) * width + tx);
+    if (y + h < height && before[(y + h) * width + tx]) mark((y + h) * width + tx);
+  }
+  for (let ty = y; ty < y + h; ty++) {
+    if (x > 0 && before[ty * width + x - 1]) mark(ty * width + x - 1);
+    if (x + w < width && before[ty * width + x + w]) mark(ty * width + x + w);
+  }
+  if (door >= 0) mark(door);
+  const early = !passable && tl.length > 0 && floodUntil(g, keep.door, seen, player, targetMap, tl.length);
+  for (const t of tl) targetMap[t] = 0;
+  if (early) {
+    seen.set(before.subarray(0, size));
+    for (let ty = y; ty < y + h; ty++) seen.fill(0, ty * width + x, ty * width + x + w);
+  } else if (passable || !tl.length) flood(g, keep.door, seen, player);
   const lost = (t: number): boolean => before[t] === 1 && seen[t] === 0;
   let blocked = needDoor && (door < 0 || !seen[door]);
   if (!blocked) for (const b of g.buildings) if (b.owner === player && b.door >= 0 && lost(b.door)) { blocked = true; break; }

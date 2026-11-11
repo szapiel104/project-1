@@ -714,8 +714,8 @@ export function move(g: GameState, u: Unit): void {
 
 /** Przydziela bezrobotnych do budynków bez pracownika i prowadzi chłopów przez cykl pracy. */
 export function workerSystem(g: GameState): void {
-  const byId = new Map<number, Building>();
-  for (const b of g.buildings) byId.set(b.id, b);
+  // budynek po numerze: wspólny indeks stanu (buildingById) zamiast nowej mapy wszystkich budynków w każdym ticku
+  const byId = { get: (id: number): Building | undefined => buildingById(g, id) };
 
   // wolni (bez pracy) każdego gracza, w kolejności z g.units — szukamy tylko wśród nich, a nie wśród wszystkich ludzi przy
   // każdym budynku (pomiar 11.11.2026: workerSystem ~6% kroku). Wynik ten sam: w tej pętli nikt nie traci pracy (spareKeeper
