@@ -624,6 +624,8 @@ renderer.setAnimationLoop(() => {
   nightLights.update(current, state.night, camera, Math.max(size.x, size.z, 0.3));
   renderer.render(scene, camera);
 });
+// do sprawdzania z konsoli: window.__cur() — obiekt obecnie oglądanego modelu
+(window as unknown as { __cur: () => THREE.Object3D | null }).__cur = () => current ?? null;
 // do zrzutów z testów: window.__view('tavern', yawStopnie, nachylenieStopnie, dalekaWersja 0..3, przybliżenie)
 (window as unknown as { __view: (id: string, yaw?: number, pitch?: number, far?: number, zoom?: number, lift?: number) => void }).__view = (id, yaw = 40, pitch = 25, far, zoom = 1, lift = 0) => {
   if (id !== state.id) show(id);
