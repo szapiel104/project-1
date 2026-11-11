@@ -159,6 +159,10 @@ export class Wildlife {
     if (h) return h;
     const geo = faunaGeometry(sp).clone();
     geo.morphAttributes = {};
+    // normalne jako float (int8 w trzech składowych WebGPU nie przyjmuje — pula była niewidoczna)
+    const n8 = geo.getAttribute('normal') as THREE.BufferAttribute, nf = new Float32Array(n8.count * 3);
+    for (let i = 0; i < n8.count; i++) { nf[i * 3] = n8.getX(i); nf[i * 3 + 1] = n8.getY(i); nf[i * 3 + 2] = n8.getZ(i); }
+    geo.setAttribute('normal', new THREE.BufferAttribute(nf, 3));
     const pose = new THREE.InstancedBufferAttribute(new Float32Array(MAX * 3), 3);
     pose.setUsage(THREE.DynamicDrawUsage);
     geo.setAttribute('pose', pose);
