@@ -9,6 +9,17 @@ export type { ChangeEntry } from './changelogTypes';
  * — tak jak CHANGELOG.md dla nas. `tests/changelog.test.ts` pilnuje, że najnowszy wpis ma wersję z package.json.
  */
 const NEW: ChangeEntry[] = [
+  { v: '0.95.0', date: '2026-11-11', pl: [
+    'Podgląd modeli: konto w górnej belce — logowanie, zmiana nazwy i hasła, wylogowanie.',
+    'Edytor modeli: barwa, zagłębienia, matowość, metal i świecenie każdej części.',
+    'Edytor modeli: ta sama wersja budynków na każdym komputerze.',
+    'Ulepszenia budynków z edytora twórcy.',
+  ], en: [
+    'Model viewer: account in the top bar — sign in, change name and password, sign out.',
+    'Model editor: tint, crevices, roughness, metalness and glow for every part.',
+    'Model editor: the same version of buildings on every computer.',
+    'Building improvements from the creator’s editor.',
+  ] },
   { v: '0.94.99', date: '2026-11-11', pl: [
     'Kolejne gotowe przedmioty z Poly Haven (CC0): krzesła, stoły, komody, regały, wazy, kociołek, piła, szabla, topory, lichtarze, butelki, paproć, trawa i kamienie.',
     'Nowe tekstury: bruki, mury kamienne, cegła zamkowa, piaskowiec, dachówki, łupek, trzcina, deski, tynki, ściółka i rdzawy metal.',

@@ -5,6 +5,12 @@
 
 
 
+
+## 0.95.0 — 2026-11-11
+- Podgląd modeli: `viewerAccount.ts` (logowanie, nick, hasło, reset, wylogowanie).
+- `matSpec.ts`: zapis `nazwa|s=|b=|t=|ao=|d=|r=|m=|e=` (barwa i AO w kolorach wierzchołków, reszta jako wariant materiału `materialVariant`), stary `@^~` czytany dalej.
+- `fetchLiveFixes(true)`: baza jako podstawa, zmiany z przeglądarki dołączane i wysyłane, kopia lokalna nadpisywana bazą.
+
 ## 0.94.99 — 2026-11-11
 - Druga paczka Poly Haven: 34 modele (`phAssets.ts`, bez `tree_small_02` 97 MB i `coast_rocks_01` 21 MB — za ciężkie), 28 tekstur 1K + KTX2 (`phTextures.ts`). Wpisy w `CREDITS.md`.
 - Poprawki z edytora bez powtórzeń (`fixKey`/`dedupeFixes`: jsonb zmienia kolejność pól); `pull_fixes.mjs` też je odsiewa.
