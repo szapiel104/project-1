@@ -695,15 +695,17 @@ function rippleTex(): THREE.DataTexture | null {
 }
 function waterMaterial(): THREE.MeshStandardMaterial {
   const m = new THREE.MeshStandardMaterial({ color: 0x1e4a52, roughness: 0.06, metalness: 0.0, transparent: true, opacity: 0.88, depthWrite: true });
-  const rt = rippleTex();
-  if (rt) { m.normalMap = rt; m.normalScale = new THREE.Vector2(0.55, 0.55); }
+  // mapa zmarszczek dochodzi przy pierwszym tickBuildingWater (materiał powstaje w M, zanim reszta modułu się wczyta)
+  m.normalScale = new THREE.Vector2(0.55, 0.55);
   m.userData.tile = 2.2;
   return m;
 }
 /** Zmarszczki na wodzie w budynkach płyną wolno w jedną stronę (scene.ts woła co klatkę) */
 export function tickBuildingWater(time: number): void {
   const rt = rippleTex();
-  if (rt) rt.offset.set(time * 0.018, time * 0.011);
+  if (!rt) return;
+  if (M.water.normalMap !== rt) { M.water.normalMap = rt; M.water.needsUpdate = true; }
+  rt.offset.set(time * 0.018, time * 0.011);
 }
 
 export function setNight(k: number): void {
