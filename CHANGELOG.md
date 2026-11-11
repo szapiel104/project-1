@@ -3,6 +3,13 @@
 
 
 
+
+## 0.94.98 — 2026-11-11
+- Podgląd budowy (`scene.ts setGhost`): listy materiałów (modele Poly Haven) — wcześniej `clone is not a function` i wyłączenie gry przy koszarach.
+- `fetchLiveFixes` (modelstore): gra i podgląd biorą poprawki z `model_fixes` przy wczytywaniu (3 s, potem plik z repo).
+- Edytor: `matSpec.ts` — `nazwa@skala^jasność~głębia` (skala w UV, jasność w kolorach wierzchołków, głębia jako wariant materiału).
+- Ustawienia: „Słabsze komputery”.
+
 ## 0.94.97 — 2026-11-10
 - Edytor: zapis scala listę z bazą (`model_fixes`) + poprawki tylko z tej przeglądarki + zmiany sesji, zamiast nadpisywać.
 - `blenderModel`: puste siatki (po `mat` wszystkich części) pomijane — bufor zerowej długości psuł potok cieni WebGPU.

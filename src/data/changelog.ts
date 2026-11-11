@@ -9,6 +9,17 @@ export type { ChangeEntry } from './changelogTypes';
  * — tak jak CHANGELOG.md dla nas. `tests/changelog.test.ts` pilnuje, że najnowszy wpis ma wersję z package.json.
  */
 const NEW: ChangeEntry[] = [
+  { v: '0.94.98', date: '2026-11-11', pl: [
+    'Naprawa: gra nie wyłącza się już przy stawianiu koszar.',
+    'Ulepszenia budynków z edytora twórcy widać w grze od razu po odświeżeniu.',
+    'Edytor modeli: skala tekstury, jasność i głębia wzoru dla każdej części.',
+    'Nazwa strony ustawień „Słabsze komputery” mieści się w jednej linii.',
+  ], en: [
+    'Fix: the game no longer crashes when placing barracks.',
+    'Building improvements from the creator’s editor show up in the game right after a refresh.',
+    'Model editor: texture scale, brightness and pattern depth for every part.',
+    'The “Weaker computers” settings page name fits on one line.',
+  ] },
   { v: '0.94.97', date: '2026-11-10', pl: [
     'Edytor modeli: zapis łączy poprawki z różnych komputerów i przeglądarek zamiast nadpisywać wcześniejsze.',
     'Naprawa błędów cieni przy budynkach, w których wszystkie części jednego materiału dostały inną teksturę.',
