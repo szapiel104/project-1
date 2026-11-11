@@ -50,7 +50,6 @@ import { WallLayer } from './walls';
 import { SiteLayer } from './sites';
 import { TorchGlow } from './torchglow';
 import { CrowLayer } from './crows';
-import { ForestEyes } from './foresteyes';
 import { PuddleLayer } from './puddles';
 import { SpawnFx } from './spawnfx';
 import { KEEP_GATE, KEEP_SIZE, keepRoom, keepTile, keepWalk } from '../data/keep';
@@ -2839,7 +2838,7 @@ export class GameRenderer {
       this.syncCrowdSound(g, v);
       T('wojsko', () => { this.syncSoldiers(g, v, alpha); this.placeFoeMark(); });
       T('klimat', () => { this.syncAmbience(g, v, dt); this.syncFlames(g); });
-      T('zwierzęta', () => { this.wolves.sync(g, v, alpha, { time: this.time, calm: this.calm, night: this.night, prevPos: this.prevPos }); this.wolfBlood(g); this.crowLayer.sync(g, v, { time: this.time, calm: this.calm }); this.forestEyes.sync(g, v, { time: this.time, calm: this.calm, night: this.night }); this.syncVillage(g, v, dt); });
+      T('zwierzęta', () => { this.wolves.sync(g, v, alpha, { time: this.time, calm: this.calm, night: this.night, prevPos: this.prevPos }); this.wolfBlood(g); this.crowLayer.sync(g, v, { time: this.time, calm: this.calm }); this.syncVillage(g, v, dt); });
       // macierze świata całej sceny RAZ na klatkę, tuż przed paczkami budynków (wszystko, co rusza obiekty, już się
       // wykonało); paczki i rysowanie (obraz, cienie, odbicie) biorą je stąd — wcześniej scena była przeliczana 2–4 razy
       T('macierze', () => { this.scene.updateMatrixWorld(); this.matrixFrame = this.frameCounter; });
@@ -3474,8 +3473,6 @@ export class GameRenderer {
   /** Iskry i „+1” przy nowym żołnierzu (src/render/spawnfx.ts) */
   private spawnFx = new SpawnFx(this.scene);
 
-  /** Oczy w puszczy (src/render/foresteyes.ts) */
-  private forestEyes = new ForestEyes(this.scene);
 
   /** Do kiedy (czas sceny) pali się uszkodzony budynek */
   private burnUntil = new Map<number, number>();
