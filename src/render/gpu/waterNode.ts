@@ -118,10 +118,10 @@ export function waterNodeMaterial(waves: THREE.Texture, waterY: number, clear = 
   const shore = float(1).sub(smoothstep(0.0, 0.16, depth0));
   const fn = g1.x.mul(0.35).add(g3.y.mul(0.3)).add(0.5);
   const bands = pow(sin(depth0.mul(55).sub(time.mul(1.4)).add(g2.x.mul(1.6))).mul(0.5).add(0.5), 5);
-  const foam = clamp(shore.mul(shore).mul(bands.mul(0.9).add(shore.mul(0.6))).mul(smoothstep(0.3, 0.7, fn.add(shore.mul(0.25)))), 0, 1)
+  const foam = clamp(shore.mul(shore).mul(bands.mul(0.95).add(pow(shore, 4).mul(0.3))).mul(smoothstep(0.35, 0.75, fn.add(shore.mul(0.15)))), 0, 1)
     .mul(smoothstep(0.002, 0.012, depth0)).mul(float(1).sub(smoothstep(40, 140, camD)));
   const foamC = mix(vec3(0.62, 0.66, 0.66), vec3(0.95, 0.96, 0.94), clamp(sunCol.r.add(sunCol.g).mul(0.25).add(0.4), 0, 1));
-  col = mix(col, foamC, foam.mul(0.85));
+  col = mix(col, foamC, foam.mul(0.75));
   // tafla od spodu (kamera pod wodą): świat nad wodą widać przez falującą powierzchnię, przyćmiony i zielonkawy;
   // pod ostrym kątem całkowite odbicie — tafla jak ciemne lustro toni (okno Snella)
   const under = cameraPosition.y.lessThan(waterY);
