@@ -24,7 +24,7 @@ Tu trafia wszystko nowe, co nie należy do bieżącej partii. Do planu etapów (
 **2. Nowe mechaniki** — strach albo łaska, myśliwy, złodzieje nocą, cmentarz i grabarz, pan zamku na polu bitwy (początek progresji), kronika meczu, katapulta i wieża oblężnicza (opisy niżej w tym pliku).
 **3. Technika**
 - [—] (11.11.2026, pomiar) Symulacja w osobnym wątku w zwykłej grze: **na razie nieopłacalna.** Krok symulacji kosztuje ok. 0,7 ms (zapis Michała, 198 budynków, 100 ludzi; `simprint.mjs` 4 na 4: 0,78 ms na tick), czyli ok. 7 ms na sekundę gry, a samo skopiowanie stanu do wątku i z powrotem to ok. 0,5 ms w każdą stronę. Do tego wątek (`?watek=1`) psuł obraz: porcje po kilka ticków → ludzie sunęli bez animacji, przeskakiwali i przenikali przez zamek (commit cbe33f54). Wracać do tego, gdy krok symulacji urośnie powyżej kilku ms (duże bitwy, więcej graczy) — wtedy: 1 tick na porcję, przesyłanie tylko zmian, renderer bez odwołań do obiektów stanu.
-- [ ] Szukanie wolnego chłopa raz na tick zamiast przy każdym budynku (`workerSystem`); pojemność magazynów liczona na bieżąco (`storeCapacity`, `roomLeft`).
+- [x] (11.11.2026) Szukanie wolnego chłopa tylko wśród ludzi bez pracy (`workerSystem`, lista wolnych na gracza); stan identyczny wg `simprint.mjs`, 4 na 4 szybciej o ok. 2%, 1 na 1 o ok. 15%. `storeCapacity`/`roomLeft` w profilu poniżej 1% — bez zmian. Profil kroku (11.11.2026): szukanie dróg 16%, `armySystem` 11%, zalewanie (`flood`) 6,5% — tam jest dalszy zysk.
 - [ ] Miecze żołnierzy ze skanu (antique_estoc) — żołnierze rysują się pulami sklejonymi po materiale (`peasants.ts`), skan wszedłby bez własnych tekstur; łuku na Poly Haven nie ma.
 
 ## Płynność wczytywania i gry — po przeglądzie 26.10.2026 (Claude podpowiada stąd przy „co dalej”)
