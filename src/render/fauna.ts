@@ -231,6 +231,11 @@ export class Wildlife {
     return m;
   }
 
+  /** do sprawdzania z konsoli (window.__fauna()): gatunek, miejsce na mapie, stan (0 pasie się, 1 idzie, 2 ucieka), czy widoczne */
+  list(): { sp: Species; x: number; y: number; state: number; shown: boolean }[] {
+    return this.beasts.map((b) => ({ sp: b.sp, x: +b.x.toFixed(1), y: +b.y.toFixed(1), state: b.state, shown: !!this.bodies.get(b)?.visible }));
+  }
+
   /** Miejsce, po którym zwierzę może chodzić: łąka/piach (jeleń także las), bez budynków, wody i gór */
   private ok(g: GameState, sp: Species, x: number, y: number): boolean {
     const tx = Math.floor(x), ty = Math.floor(y);

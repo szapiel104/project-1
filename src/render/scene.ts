@@ -563,7 +563,11 @@ export class GameRenderer {
       team: (o) => TEAM_COLORS[g.players[o]?.team ?? 0] ?? 0x888888,
     });
     // dzikie zwierzęta (render/fauna.ts): wielbłądy na pustyni, jelenie na zielonych krainach; uciekają od ludzi
-    if (!this.wildlife) this.wildlife = new Wildlife(this.scene);
+    if (!this.wildlife) {
+      this.wildlife = new Wildlife(this.scene);
+      const wl = this.wildlife;
+      (window as unknown as { __fauna: () => unknown }).__fauna = () => wl.list();
+    }
     if (!EMPTY) this.wildlife.sync(g, { time: this.time, dt, calm: this.calm, height: (x, y) => view.heightAt(x, y), cam: { x: cam.position.x + width / 2, y: cam.position.z + height / 2 } }, people);
     this.village.sync(g, {
       time: this.time, dt, night: this.night, calm: this.calm, height: (x, y) => this.standY(view, x, y, -2),
