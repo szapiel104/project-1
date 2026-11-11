@@ -43,6 +43,15 @@ export function modelPacks(inline) {
       return `export default {\n${rows.join('\n')}\n};\n`;
     },
     configureServer(server) {
+      // nowy albo usunięty plik modelu: lista modeli od nowa i przeładowanie strony (bez restartu serwera)
+      const relist = (f) => {
+        if (!f.startsWith(dir) || !f.endsWith('.json')) return;
+        const mod = server.moduleGraph.getModuleById(ID);
+        if (mod) server.moduleGraph.invalidateModule(mod);
+        server.ws.send({ type: 'full-reload' });
+      };
+      server.watcher.on('add', relist);
+      server.watcher.on('unlink', relist);
       server.middlewares.use((req, res, next) => {
         const m = /^\/@mpack\/([\w-]+)\.bin(?:\?|$)/.exec(req.url ?? '');
         if (!m || !names().includes(m[1])) { next(); return; }
