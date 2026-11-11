@@ -3,9 +3,9 @@
 Tu trafia wszystko nowe, co nie należy do bieżącej partii. Do planu etapów (`plan.md`) przenosimy stąd, gdy przychodzi na to kolej.
 
 ## Kolejka Michała z 11.11.2026, 12:43 (robić po kolei, odhaczać datą)
-- [ ] Zwierzęta w osadzie (kura, pies, świnia) wyglądają tragicznie — modele z internetu (0 A.D.: kura, świnia, pies), z bliska pełna jakość, z daleka lżejsze.
-- [ ] Koń: pozy przez morph targets w puli instancji na WebGPU nie działają (jak u wielbłądów) — mieszanie klatek na procesorze.
-- [ ] Ognisko (camp): kociołek, pokrywa i kabłąk nie dają się zaznaczyć w edytorze.
+- [x] (11.11.2026) Zwierzęta w osadzie (kura, pies, świnia) wyglądają tragicznie — modele z 0 A.D. (CC BY-SA), wygładzone podziałem Loopa, chód / rycie / dziobanie / siadanie, `render/fauna.ts`. Dalej: osobna lżejsza wersja z daleka (na razie ta sama siatka; postaci jest mało, więc FPS nie spada).
+- [x] (11.11.2026) Koń: pozy przez morph targets w puli instancji na WebGPU nie działały — konie to teraz osobne siatki z `morphTargetInfluences` (skubanie, ogon).
+- [x] (11.11.2026) Ognisko (camp): kociołek, pokrywa i kabłąk — były to kilkanaście osobnych, niestykających się brył, więc klik łapał jeden kawałek. Edytor skleja teraz w jeden przedmiot drobne bryły (do 0,3 pola), które zachodzą na siebie pudełkami, o ile całość ma do 0,6 pola; Alt+klik dalej bierze pojedynczy kawałek. Uwaga: w kotle leży ryba z paczki i wystaje przez ściankę — klik w to miejsce bierze rybę.
 - [ ] Sprawdzić nową mgłę (ładniejsza, profesjonalna, zaczyna się tam, gdzie obiekty znikają) i wygląd dzikich zwierząt z bliska („zmniejszyłeś grafikę”).
 - [x] (11.11.2026) Dzikie zwierzęta: płynna animacja, łeb i ogon na postoju, odgłosy; podgląd modeli jako szybka scena testowa (`modele.html?id=camel-walk`).
 - [ ] Wydanie na main po skończeniu kolejki.
