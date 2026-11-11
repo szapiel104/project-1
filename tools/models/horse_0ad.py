@@ -96,8 +96,11 @@ class Dae:
         pl = geom.find('.//c:polylist', NS)
         if pl is None:
             pl = geom.find('.//c:triangles', NS)
-        inputs = {i.get('semantic'): (i.get('source'), int(i.get('offset'))) for i in pl.findall('c:input', NS)}
-        stride = max(o for _, o in inputs.values()) + 1
+        # pierwszy zestaw UV (set 0): lis i zając mają drugi zestaw na tym samym miejscu, a słownik brał ostatni
+        inputs = {}
+        for i in pl.findall('c:input', NS):
+            inputs.setdefault(i.get('semantic'), (i.get('source'), int(i.get('offset'))))
+        stride = max(int(i.get('offset')) for i in pl.findall('c:input', NS)) + 1
         vc = pl.find('c:vcount', NS)
         assert vc is None or set(vc.text.split()) == {'3'}, 'tylko trójkąty'
         p = np.array(pl.find('c:p', NS).text.split(), dtype=np.int64).reshape(-1, stride)
