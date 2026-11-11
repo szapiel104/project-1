@@ -6,6 +6,9 @@
 
 
 
+## 0.95.6 — 2026-11-11
+- `building.py`: `coals()` (miał, węgiel `coal`, grudki 'ember'); użyte w banditcamp, magehut, smithy; kolejność materiałów zachowana (testy poprawek z edytora).
+
 ## 0.95.5 — 2026-11-11
 - Wilk z 0 A.D. (`fauna_0ad.py` 'wolf', `wolves.ts` na `FaunaPool`), bez świecących oczu; test `wolves-render` na siatkach puli.
 - `magefire.py`: `coals()` (miał, węgiel, żar) zamiast krążków 'ember', daszek drewutni 'slate'; kolejność materiałów zachowana dla poprawek z edytora.

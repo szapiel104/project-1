@@ -9,6 +9,11 @@ export type { ChangeEntry } from './changelogTypes';
  * — tak jak CHANGELOG.md dla nas. `tests/changelog.test.ts` pilnuje, że najnowszy wpis ma wersję z package.json.
  */
 const NEW: ChangeEntry[] = [
+  { v: '0.95.6', date: '2026-11-11', pl: [
+    'W ogniskach i paleniskach obozu zbójców, chaty maga i kuźni leży prawdziwy żar: węgiel i rozżarzone grudki zamiast płaskich krążków.',
+  ], en: [
+    'The fire pits and hearths of the brigands\' camp, the mage\'s hut and the smithy hold real embers: coal and glowing lumps instead of flat discs.',
+  ] },
   { v: '0.95.5', date: '2026-11-11', pl: [
     'Nowy wilk: prawdziwa sierść, chód, postój i skok do ataku; zabity leży na boku.',
     'Wieża Płomienia: w misach i koszach żar z popiołu i węgla, a ogień płonie nad nim; łupkowy daszek drewutni.',
