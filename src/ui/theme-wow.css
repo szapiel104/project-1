@@ -1316,8 +1316,12 @@ body:not(.menu-open) #ui ~ .dev-open, body:not(.menu-open) .dev-open { top: 58px
 .stock-modal { z-index: 70 !important; }
 body.menu-open .report { display: none !important; }
 /* ===== Rynek na pergaminie jak okna budynków (Michał 9.11.2026) ===== */
+@keyframes market-fade { from { opacity: 0; transform: scale(.98); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { #ui .market-panel, .market-panel { animation: none !important; } }
 #ui .market-panel, .market-panel {
-  top: 60px; bottom: 70px; right: 13px; width: min(760px, calc(100vw - 40px)); padding: 0; gap: 0;
+  /* na środku ekranu, 80% szerokości i wysokości (Michał 11.11.2026: „nie na całą szerokość”) */
+  top: calc(10vh / var(--ui, 1)) !important; left: calc(10vw / var(--ui, 1)) !important; right: auto !important; bottom: auto !important; width: calc(80vw / var(--ui, 1)) !important; height: calc(80vh / var(--ui, 1)) !important; max-width: none !important; padding: 0; gap: 0;
+  animation: market-fade .18s ease-out !important;
   background-color: #eddcb5 !important; background-image: var(--parch-img) !important; background-size: 100% 100%, auto, 420px auto !important;
   background-repeat: no-repeat, no-repeat, repeat !important; background-blend-mode: normal, normal, multiply !important;
   border: 0 !important; border-radius: 4px !important; color: #2a1b0c;
