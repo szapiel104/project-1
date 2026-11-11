@@ -4355,6 +4355,19 @@ export class GameRenderer {
   }
 
   /** Rozkaz marszu: rozchodząca się złota fala w klikniętym miejscu */
+  /** Kierunek, w którym postać jest narysowana (id → kąt): każda zmiana kierunku idzie obrotem, nie skokiem */
+  private drawYaw = new Map<number, number>();
+  /** Płynny obrót postaci do kąta `want` (Michał 11.11.2026: „mniej drewniana gra” — zwrot do pracy, do wroga, do szyku
+   *  bywał natychmiastowy); ok. 0,15 s na pół obrotu, przy wyłączonych animacjach od razu */
+  private smoothYaw(id: number, want: number): number {
+    const cur = this.drawYaw.get(id);
+    if (cur === undefined || this.calm) { this.drawYaw.set(id, want); return want; }
+    let d = want - cur;
+    d -= Math.round(d / (Math.PI * 2)) * Math.PI * 2;
+    const out = cur + d * (1 - Math.exp(-this.frameDt * 16));
+    this.drawYaw.set(id, out);
+    return out;
+  }
   /** Do kiedy zaznaczeni żołnierze unoszą broń na znak, że przyjęli rozkaz */
   private ackUntil = 0;
   orderMarker(tile: { x: number; y: number }): void {
@@ -4605,7 +4618,9 @@ export class GameRenderer {
         while (diff < -Math.PI) diff += Math.PI * 2;
         if (Math.abs(diff) > 0.01) { heading += this.calm ? diff : diff * 0.15; this.facing.set(s.id, heading); }
       }
-      const swing = walking ? Math.sin(st.phase) * 0.5 : 0;
+      // ruszanie i zatrzymywanie płynnie, jak u chłopów: zamach rąk i nóg rośnie i gaśnie w ok. ćwierć sekundy
+      st.amp = (st.amp ?? 0) + ((walking ? 1 : 0) - (st.amp ?? 0)) * (this.calm ? 1 : Math.min(1, this.frameDt * 8));
+      const swing = st.amp > 0.02 ? Math.sin(st.phase) * 0.5 * st.amp : 0;
       const udef = UNITS[s.kind]!;
       const ranged = !!udef.range;
       // potwierdzenie rozkazu (Michał 11.11.2026: „mniej drewniana gra”): zaznaczeni na chwilę unoszą broń, zanim ruszą
@@ -4828,7 +4843,7 @@ export class GameRenderer {
       // stojący bez walki: przenosi ciężar, rozgląda się, przestępuje, opiera o włócznię; w marszu kołysze się z krokiem
       const ia = !walking && !striking && !foe && !wall && !victim && !this.calm ? idle(s.id, this.time, true) : undefined;
       const sway = ia ? ia.roll : walking ? Math.sin(st.phase) * 0.025 : 0;
-      t.rotation.set(-flinch * 0.32 + (walking ? 0.04 : 0) + towerLean, heading + (towerAt ? 0 : ia?.yaw ?? 0) + (swordPose?.[2] ?? bowPose?.[5] ?? 0), sway, 'YXZ');
+      t.rotation.set(-flinch * 0.32 + (walking ? 0.04 : 0) + towerLean, this.smoothYaw(s.id, heading) + (towerAt ? 0 : ia?.yaw ?? 0) + (swordPose?.[2] ?? bowPose?.[5] ?? 0), sway, 'YXZ');
       if (ia) t.position.y += ia.dy;
       t.scale.setScalar(1.08 * FIG);
       t.updateMatrix();
@@ -5813,7 +5828,7 @@ export class GameRenderer {
       if ((u.hp ?? PEASANT_HP) < PEASANT_HP || this.bloodFx.knows(u.id)) this.bloodFx.track(u.id, u.hp ?? PEASANT_HP, PEASANT_HP, cv.sx, footY, cv.sy, heading, walking, this.time, this.bloodGround, 0.24, true);
       { const frac = (u.hp ?? PEASANT_HP) / PEASANT_HP, lvl = frac < 0.25 ? 3 : frac < 0.45 ? 2 : frac < 0.7 ? 1 : 0; if (lvl) this.woundMarks.set(u.id, [lvl, false]); else if (this.woundMarks.has(u.id)) this.woundMarks.delete(u.id); }
       if (!this.calm) this.breath.breathe(u.id, t.position.x, footY + 0.4, t.position.z, heading, this.time, this.camPos, false);
-      t.rotation.set(0, heading, 0);
+      t.rotation.set(0, this.smoothYaw(u.id, heading), 0);
       if (walking && tipsy && this.drank.has(u.id)) {
         // zatacza się: znosi go na boki (prostopadle do drogi), kiwa się i kręci głową
         const w = Math.sin(this.time * 1.7 + u.id) * 0.13 + Math.sin(this.time * 4.1 + u.id * 3) * 0.04;
