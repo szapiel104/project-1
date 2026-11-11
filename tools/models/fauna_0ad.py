@@ -153,9 +153,14 @@ def build(art, aid, cfg):
         poses[f'idle{k}'] = pose(joints, arm, idle, int(round(k * ni / IDLE)) % ni)
     poses['graze'] = pose(joints, arm, gra, gf)
     res = {}
+    # ruch z korzenia (zając przesuwa się w skoku do przodu i wraca na początek pętli): każda klatka cofnięta w poziomie
+    # do środka pozy stojącej — gra przesuwa zwierzę sama
+    c0 = fix(to_game(skin(m, poses['base'])[0])).mean(0)
     for pn, w in poses.items():
         p, _ = skin(m, w)
         p = fix(to_game(p))
+        c = p.mean(0)
+        p = p - np.array([c[0] - c0[0], 0, c[2] - c0[2]])
         res[pn] = (p, smooth(p, m['idx']))
     idx = m['idx']; uv = m['uv']
     sig = np.hstack([np.round(res[pn][0] / 1e-5) for pn in res] + [np.round(uv[:, :2] * 1e5)])
