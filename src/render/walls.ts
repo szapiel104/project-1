@@ -176,8 +176,13 @@ export class WallLayer {
       // normalna ściany w świecie (-dx, -dz) → w układzie modelu (obrót o rot·90°, jak mesh.rotation.y)
       const th = ((((o.rot % 4) + 4) % 4) * Math.PI) / 2, nx = -dx, nz = -dz;
       const lx = Math.round(nx * Math.cos(th) - nz * Math.sin(th)), lz = Math.round(nx * Math.sin(th) + nz * Math.cos(th));
+      // przedpiersie na dachu po tej stronie znika: korona muru przechodzi wprost w dach (Michał 11.11.2026: „nie usunęło ścianki”)
+      let open = hallOpen.get(o.id);
+      if (!open) { open = new Set(); hallOpen.set(o.id, open); }
+      open.add(lx > 0 ? 'parR' : lx < 0 ? 'parL' : lz > 0 ? 'parF' : 'parB');
       return lx > 0 ? gp[0] : lx < 0 ? gp[1] : lz > 0 ? gp[2] : gp[3];
     };
+    const hallOpen = new Map<number, Set<string>>();
     /** Obrót drabiny z zestawu muru: drabina stoi od strony (dx, dz) pola, o które się opiera */
     const ladderRot = (dx: number, dz: number): number => (dz > 0 ? 0 : dz < 0 ? Math.PI : dx > 0 ? Math.PI / 2 : -Math.PI / 2);
     /** Drabina z zestawu muru oparta o pole (tx, tz) od strony (dx, dz): stopa na wysokości `base`, sięga `h` w górę */
@@ -482,6 +487,11 @@ export class WallLayer {
       e.set(0, d.rot, 0); q.setFromEuler(e);
       M4.compose(p.set(fx - width / 2, y, fz - height / 2), q, sc.setScalar(0.85));
       putDoor(false);
+    }
+    for (const o of halls.values()) {
+      const mesh = buildingMeshes.get(o.id), open = hallOpen.get(o.id);
+      if (!mesh) continue;
+      for (const n of ['parF', 'parB', 'parL', 'parR']) mesh.traverse((c) => { if (c.name === n) c.visible = !open?.has(n); });
     }
     this.doorKit.bridge.count = 0;
     for (const b of this.bridges.values()) { b.mesh.count = b.n; b.mesh.visible = b.n > 0; touch(b.mesh); }

@@ -40,7 +40,10 @@ def quoins(b, x0, x1, z0, z1, y0, y1):
                       z - math.copysign(d / 2 - 0.008, z - (z0 + z1) / 2))
 
 
-def parapet(b, x0, x1, z0, z1, y, skip=None, step=0.27):
+PARAPET_GROUP = {'front': 'parF', 'back': 'parB', 'left': 'parL', 'right': 'parR'}
+
+
+def parapet(b, x0, x1, z0, z1, y, skip=None, step=0.27, split=False):
     """Przedpiersie z blankami na koronie ścian (zostaje, gdy dach zdjęty). skip = bok bez przedpiersia (np. przy schodach
     zostaje przerwa na wejście): ('right', z_od, z_do)"""
     W = WALL
@@ -58,20 +61,22 @@ def parapet(b, x0, x1, z0, z1, y, skip=None, step=0.27):
                 parts = [(ax, az, ax, skip[1]), (ax, skip[2], ax, bz)]
             else:
                 parts = [(ax, az, skip[1], az), (skip[2], az, bx, bz)]
+        # split: każdy bok w swojej grupie ('parF'…), gra chowa bok, do którego dochodzi mur obronny (walls.ts)
+        grp = PARAPET_GROUP[name] if split else 'base'
         for px0, pz0, px1, pz1 in parts:
             L = math.hypot(px1 - px0, pz1 - pz0)
             if L < 0.06:
                 continue
             cx, cz = (px0 + px1) / 2, (pz0 + pz1) / 2
             if px0 == px1:
-                b.box('base', 'castle', W, PAR, L, cx, y, cz)
-                b.box('base', 'castleDark', W + 0.025, 0.03, L + 0.02, cx, y + PAR - 0.025, cz)
+                b.box(grp, 'castle', W, PAR, L, cx, y, cz)
+                b.box(grp, 'castleDark', W + 0.025, 0.03, L + 0.02, cx, y + PAR - 0.025, cz)
             else:
-                b.box('base', 'castle', L, PAR, W, cx, y, cz)
-                b.box('base', 'castleDark', L + 0.02, 0.03, W + 0.025, cx, y + PAR - 0.025, cz)
+                b.box(grp, 'castle', L, PAR, W, cx, y, cz)
+                b.box(grp, 'castleDark', L + 0.02, 0.03, W + 0.025, cx, y + PAR - 0.025, cz)
             if L > 0.3:
                 rough_merlons(b, px0 + (0.1 if px0 != px1 else 0), pz0 + (0.1 if pz0 != pz1 else 0),
-                              px1 - (0.1 if px0 != px1 else 0), pz1 - (0.1 if pz0 != pz1 else 0), y + PAR, step, W)
+                              px1 - (0.1 if px0 != px1 else 0), pz1 - (0.1 if pz0 != pz1 else 0), y + PAR, step, W, grp)
     # narożne wypusty (Michał 10.11.2026: „na rogach powinien być wypust”): masywny, wyższy słup z kamienia wysunięty
     # poza lico na trzech kamiennych wspornikach, z nakrywą — jak małe narożne baszty na murach
     C, CH = 0.24, PAR + 0.2
@@ -96,7 +101,7 @@ def _rnd(k):
     return v - math.floor(v)
 
 
-def rough_merlons(b, x0, z0, x1, z1, y, step, W):
+def rough_merlons(b, x0, z0, x1, z1, y, step, W, grp='base'):
     """Blanki jak z ręcznie kładzionego kamienia (Michał 10.11.2026: równe klocki = ulep): każda trochę innej szerokości
     i wysokości, lekko przechylona, z ciemniejszą, obtłuczoną nakrywą z kamienia wystającą kilka mm"""
     L = math.hypot(x1 - x0, z1 - z0)
@@ -108,8 +113,8 @@ def rough_merlons(b, x0, z0, x1, z1, y, step, W):
         cx, cz = x0 + (x1 - x0) * f, z0 + (z1 - z0) * f
         r1, r2, r3 = _rnd(seed + i), _rnd(seed + i + 0.37), _rnd(seed + i + 0.71)
         w, h = 0.14 + 0.03 * r1, 0.13 + 0.035 * r2
-        b.box('base', 'castle', w, h, W, cx, y, cz, rot, tilt=(r3 - 0.5) * 0.05, roll=(r1 - 0.5) * 0.04)
-        b.box('base', 'castleDark', w + 0.012, 0.028, W + 0.014, cx, y + h - 0.012, cz, rot + (r2 - 0.5) * 0.08, tilt=(r3 - 0.5) * 0.06)
+        b.box(grp, 'castle', w, h, W, cx, y, cz, rot, tilt=(r3 - 0.5) * 0.05, roll=(r1 - 0.5) * 0.04)
+        b.box(grp, 'castleDark', w + 0.012, 0.028, W + 0.014, cx, y + h - 0.012, cz, rot + (r2 - 0.5) * 0.08, tilt=(r3 - 0.5) * 0.06)
 
 
 def flat_roof(b, x0, x1, z0, z1, y, beams_along_x=False, nbeams=4):

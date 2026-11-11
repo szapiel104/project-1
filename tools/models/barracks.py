@@ -104,7 +104,7 @@ t.block(SX - SW / 2, SX + SW / 2, Z0 + 0.08, Z0 + 0.48, 0.0, TOP - 0.02)
 
 # ---------------- dach, przedpiersie, komin ----------------
 flat_roof(b, X0, X1, Z0, Z1, TOP, beams_along_x=False, nbeams=5)
-parapet(b, X0, X1, Z0, Z1, TOP, skip=('left', Z0 + 0.1, Z0 + 0.48))
+parapet(b, X0, X1, Z0, Z1, TOP, skip=('left', Z0 + 0.1, Z0 + 0.48), split=True)
 CX, CZ = X1 - 0.34, Z0 + 0.17
 SMOKE_Y = chimney(b, CX, CZ, TOP, w=0.3, d=0.26, h=0.66)
 

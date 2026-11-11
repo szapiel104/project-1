@@ -128,7 +128,7 @@ import { rockMaterial } from './rocks0ad';
 const INTERIOR_NEAR = 11;
 /** Od jakiej odległości (w polach) drobiazgi z edytora rysują się w lżejszej wersji (uproszczone skany) */
 const PROPS_NEAR = 9;
-const BATCH_ALSO = /^(torch|lod\d+|fill|grainfill|crop|life|leafL|leafR|ladder|warBrazier|yardlog|interior|foodfill|armsfill|fixProps|fixPropsFar)$/; // fixProps: modele z paczek dodane w edytorze (osobno każdy był jednym rysowaniem na sztukę — 87 na farmie, Michał 11.11.2026: „FPS mało”) // wnętrza zawsze widoczne (10.11.2026): też razem // koksowniki i kłody na podwórku: nieruchome, tylko pokazywane i chowane
+const BATCH_ALSO = /^(torch|lod\d+|fill|grainfill|crop|life|leafL|leafR|ladder|warBrazier|yardlog|interior|foodfill|armsfill|fixProps|fixPropsFar|parF|parB|parL|parR)$/; // fixProps: modele z paczek dodane w edytorze (osobno każdy był jednym rysowaniem na sztukę — 87 na farmie, Michał 11.11.2026: „FPS mało”) // wnętrza zawsze widoczne (10.11.2026): też razem // koksowniki i kłody na podwórku: nieruchome, tylko pokazywane i chowane
 /**
  * Część z kilkoma materiałami (np. zapasy w składzie: towar + skrzynka) dzielimy na kawałki po grupach geometrii —
  * każdy kawałek idzie do pakietu swojego materiału. Wcześniej takie części rysowały się osobno (38 rysowań zapasów

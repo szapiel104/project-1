@@ -102,7 +102,7 @@ t.block(SX - SW / 2, SX + SW / 2, Z0 + 0.08, Z0 + 0.42, 0.0, TOP - 0.02)
 
 # ---------------- dach z płyt, przedpiersie z blankami ----------------
 flat_roof(b, X0, X1, Z0, Z1, TOP, beams_along_x=False, nbeams=3)
-parapet(b, X0, X1, Z0, Z1, TOP, skip=('left', Z0 + 0.1, Z0 + 0.42))
+parapet(b, X0, X1, Z0, Z1, TOP, skip=('left', Z0 + 0.1, Z0 + 0.42), split=True)
 # komin kuźniczki w tylnym prawym rogu (dym rysuje gra)
 SMOKE_Y = chimney(b, X1 - 0.42, Z0 + 0.2, TOP, w=0.24, d=0.22, h=0.52)
 
