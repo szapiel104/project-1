@@ -3,25 +3,32 @@ import type { GameState } from '../sim/state';
 import { Terrain } from '../data/terrain';
 import { model, bytes } from './modelstore';
 import { cat } from './cat';
+import { gpuMods } from './gpu/webgpu';
+import { play3d } from '../audio/engine';
+/* eslint-disable @typescript-eslint/no-explicit-any */
 
 /**
  * Dzikie zwierzęta (Michał 11.11.2026: „wielbłądy na pustyni, jelenie i sarny na zielonych terenach, uciekają od ludzi;
  * w przyszłości mięso dla myśliwego”). Modele z gry 0 A.D. (Wildfire Games, CC BY-SA 3.0), przeniesione bez odchudzania
- * skryptem tools/models/fauna_0ad.py: dziesięć klatek chodu i skubanie. Każda klatka to osobna gotowa siatka w puli
- * instancji (morph targets w puli instancji WebGPU nie działały — nogi stały), więc zwierzę w danej chwili rysuje się
- * w klatce swojego kroku; jedno wywołanie rysowania na każdą klatkę, która akurat jest w użyciu.
+ * skryptem tools/models/fauna_0ad.py: dziesięć klatek chodu, osiem klatek ruchu spoczynkowego (łeb, uszy, ogon)
+ * i skubanie trawy.
+ *
+ * Animacja płynna (Michał: „animacja musi być płynna”): wszystkie klatki leżą w jednej teksturze (wiersz położeń i wiersz
+ * normalnych na klatkę), a karta graficzna miesza dwie sąsiednie klatki według ułamka — osobno dla każdego zwierzęcia
+ * (atrybut instancji: klatka A, klatka B, waga). Cały gatunek to jedno wywołanie rysowania. (Morph targets w puli
+ * instancji na WebGPU nie działały — nogi stały w miejscu.)
  *
  * Na razie tylko wygląd (symulacja o nich nie wie, gra przez sieć zostaje zgodna): stada pasą się wokół swojego miejsca,
- * chodzą od kępy do kępy, a gdy podejdzie człowiek (chłop, żołnierz), uciekają biegiem. Myśliwy i mięso — osobna partia
- * (docs/pomysly.md), wtedy zwierzęta przejdą do symulacji.
+ * chodzą od kępy do kępy, porykują, a gdy podejdzie człowiek (chłop, żołnierz), uciekają biegiem. Myśliwy i mięso —
+ * osobna partia (docs/pomysly.md), wtedy zwierzęta przejdą do symulacji.
  */
 type Packed = { pos: string; nrm: string; uv: string; idx: string; morph: Record<string, { pos: string; nrm: string }> };
 type FaunaModel = { height: number; length: number; body: Packed };
 export type Species = 'camel' | 'deer';
-const WALK = 10;
-const MORPHS = [...Array.from({ length: WALK }, (_, k) => `walk${k}`), 'graze'];
-/** Pozy w puli: 0..WALK-1 klatki chodu, potem stoi, w pół drogi do skubania, skubie */
-const STAND = WALK, HALF = WALK + 1, GRAZEP = WALK + 2, POSES = WALK + 3;
+const WALK = 10, IDLE = 8;
+const MORPHS = [...Array.from({ length: WALK }, (_, k) => `walk${k}`), ...Array.from({ length: IDLE }, (_, k) => `idle${k}`), 'graze'];
+/** wiersze tekstury klatek: 0..9 chód, 10..17 spoczynek, 18 skubanie */
+const IDLE0 = WALK, GRAZE = WALK + IDLE, FRAMES = WALK + IDLE + 1;
 
 const b64 = (s: string | Uint8Array): ArrayBuffer => bytes(s).buffer as ArrayBuffer;
 const geos = new Map<Species, THREE.BufferGeometry>();
@@ -50,30 +57,26 @@ export function faunaGeometry(sp: Species): THREE.BufferGeometry {
   return g;
 }
 
-const poseGeos = new Map<string, THREE.BufferGeometry>();
-/** Gotowa siatka jednej pozy (pozycje i normalne = stojąca + różnica pozy razy waga), wspólna dla wszystkich sztuk */
-function poseGeometry(sp: Species, k: number): THREE.BufferGeometry {
-  const key = `${sp}:${k}`;
-  let g = poseGeos.get(key);
-  if (g) return g;
-  const src = faunaGeometry(sp);
-  const morph = k < WALK ? k : WALK, w = k < WALK ? 1 : k === STAND ? 0 : k === HALF ? 0.5 : 1;
-  const P = (src.getAttribute('position').array as Float32Array).slice();
-  const N0 = src.getAttribute('normal') as THREE.BufferAttribute, N = new Float32Array(N0.count * 3);
-  const dP = src.morphAttributes.position![morph]!.array as Float32Array, dN = src.morphAttributes.normal![morph]!.array as Float32Array;
-  for (let i = 0; i < N0.count; i++) {
-    for (let c = 0; c < 3; c++) P[i * 3 + c]! += dP[i * 3 + c]! * w;
-    const x = N0.getX(i) + dN[i * 3]! * w, y = N0.getY(i) + dN[i * 3 + 1]! * w, z = N0.getZ(i) + dN[i * 3 + 2]! * w, l = Math.hypot(x, y, z) || 1;
-    N[i * 3] = x / l; N[i * 3 + 1] = y / l; N[i * 3 + 2] = z / l;
+const texs = new Map<Species, THREE.DataTexture>();
+/** Tekstura klatek: szerokość = liczba wierzchołków, wiersz 2f = położenia klatki f, wiersz 2f+1 = normalne */
+function frameTexture(sp: Species): THREE.DataTexture {
+  let t = texs.get(sp);
+  if (t) return t;
+  const src = faunaGeometry(sp), P0 = src.getAttribute('position') as THREE.BufferAttribute, N0 = src.getAttribute('normal') as THREE.BufferAttribute;
+  const V = P0.count, data = new Float32Array(V * FRAMES * 2 * 4);
+  for (let f = 0; f < FRAMES; f++) {
+    const dP = src.morphAttributes.position![f]!.array as Float32Array, dN = src.morphAttributes.normal![f]!.array as Float32Array;
+    for (let i = 0; i < V; i++) {
+      const o = ((2 * f) * V + i) * 4, on = ((2 * f + 1) * V + i) * 4;
+      data[o] = P0.getX(i) + dP[i * 3]!; data[o + 1] = P0.getY(i) + dP[i * 3 + 1]!; data[o + 2] = P0.getZ(i) + dP[i * 3 + 2]!; data[o + 3] = 1;
+      const x = N0.getX(i) + dN[i * 3]!, y = N0.getY(i) + dN[i * 3 + 1]!, z = N0.getZ(i) + dN[i * 3 + 2]!, l = Math.hypot(x, y, z) || 1;
+      data[on] = x / l; data[on + 1] = y / l; data[on + 2] = z / l; data[on + 3] = 0;
+    }
   }
-  g = new THREE.BufferGeometry();
-  g.setAttribute('position', new THREE.BufferAttribute(P, 3));
-  g.setAttribute('normal', new THREE.BufferAttribute(N, 3));
-  g.setAttribute('uv', src.getAttribute('uv'));
-  g.setIndex(src.getIndex());
-  g.boundingSphere = src.boundingSphere!.clone();
-  poseGeos.set(key, g);
-  return g;
+  t = new THREE.DataTexture(data, V, FRAMES * 2, THREE.RGBAFormat, THREE.FloatType);
+  t.needsUpdate = true;
+  texs.set(sp, t);
+  return t;
 }
 
 const mats = new Map<Species, THREE.MeshStandardMaterial>();
@@ -90,6 +93,25 @@ export function faunaMaterial(sp: Species): THREE.MeshStandardMaterial {
   }
   mats.set(sp, m);
   return m;
+}
+
+/** Materiał puli z płynną animacją: położenie i normalna z dwóch klatek tekstury, mieszane wagą z atrybutu `pose` */
+function herdMaterial(sp: Species): THREE.Material {
+  const base = faunaMaterial(sp);
+  if (!gpuMods) return base;
+  const T = gpuMods.TSL as any, Wm = gpuMods.W as any;
+  const { attribute, textureLoad, ivec2, int, vertexIndex, mix, normalize, Fn, normalLocal } = T;
+  const tex = frameTexture(sp);
+  const pose = attribute('pose', 'vec3');
+  const a = int(pose.x), b = int(pose.y), w = pose.z, vi = int(vertexIndex);
+  const row = (f: any, k: number): any => textureLoad(tex, ivec2(vi, f.mul(2).add(k))).xyz;
+  const m = new Wm.MeshStandardNodeMaterial({ roughness: 0.8, metalness: 0 });
+  m.map = base.map;
+  m.positionNode = Fn(() => {
+    normalLocal.assign(normalize(mix(row(a, 1), row(b, 1), w)));
+    return mix(row(a, 0), row(b, 0), w);
+  })();
+  return m as THREE.Material;
 }
 
 /** Pojedyncze zwierzę (podgląd modeli) */
@@ -119,8 +141,10 @@ const MAX = 64;
 
 export class Wildlife {
   private beasts: Beast[] = [];
-  /** gatunek → pula na każdą pozę */
-  private meshes = new Map<Species, THREE.InstancedMesh[]>();
+  /** gatunek → pula instancji i atrybut pozy (klatka A, klatka B, waga) */
+  private meshes = new Map<Species, { im: THREE.InstancedMesh; pose: THREE.InstancedBufferAttribute }>();
+  /** kiedy zwierzę ostatnio się odezwało */
+  private voiceAt = new Map<Beast, number>();
   private key = '';
   private m = new THREE.Matrix4();
   private q = new THREE.Quaternion();
@@ -130,18 +154,20 @@ export class Wildlife {
 
   constructor(private scene: THREE.Scene) {}
 
-  private pools(sp: Species): THREE.InstancedMesh[] {
-    let l = this.meshes.get(sp);
-    if (l) return l;
-    l = [];
-    for (let k = 0; k < POSES; k++) {
-      const im = new THREE.InstancedMesh(poseGeometry(sp, k), faunaMaterial(sp), MAX);
-      im.frustumCulled = false; im.castShadow = true; im.receiveShadow = true; im.count = 0; im.visible = false;
-      this.scene.add(cat(im, 'dzikie zwierzęta'));
-      l.push(im);
-    }
-    this.meshes.set(sp, l);
-    return l;
+  private herd(sp: Species): { im: THREE.InstancedMesh; pose: THREE.InstancedBufferAttribute } {
+    let h = this.meshes.get(sp);
+    if (h) return h;
+    const geo = faunaGeometry(sp).clone();
+    geo.morphAttributes = {};
+    const pose = new THREE.InstancedBufferAttribute(new Float32Array(MAX * 3), 3);
+    pose.setUsage(THREE.DynamicDrawUsage);
+    geo.setAttribute('pose', pose);
+    const im = new THREE.InstancedMesh(geo, herdMaterial(sp), MAX);
+    im.frustumCulled = false; im.castShadow = true; im.receiveShadow = true; im.count = 0; im.visible = false;
+    this.scene.add(cat(im, 'dzikie zwierzęta'));
+    h = { im, pose };
+    this.meshes.set(sp, h);
+    return h;
   }
 
   /** Miejsce, po którym zwierzę może chodzić: łąka/piach (jeleń także las), bez budynków, wody i gór */
@@ -224,24 +250,40 @@ export class Wildlife {
       }
       // daleko od kamery nie liczymy pozy ani macierzy
       if ((b.x - ctx.cam.x) ** 2 + (b.y - ctx.cam.y) ** 2 > 90 * 90) continue;
-      const pools = this.pools(b.sp);
+      const herd = this.herd(b.sp);
       const len = model<FaunaModel>(`fauna_${b.sp}`).length;
       // klatka chodu z przebytej drogi (nogi nie ślizgają się): pełny cykl na ok. 1,1 długości ciała
       b.phase = (b.phase + (b.speed * dt) / (len * 1.1) * WALK) % WALK;
-      b.graze += ((b.state === 0 && !ctx.calm ? 1 : 0) * (0.5 + 0.5 * Math.max(0, Math.sin(t * 0.25 + b.seed * 40))) - b.graze) * Math.min(1, dt * 1.5);
-      const k = b.speed > 0.08 ? Math.floor(b.phase) % WALK : b.graze > 0.7 ? GRAZEP : b.graze > 0.3 ? HALF : STAND;
-      const ckey = `${b.sp}:${k}`, n = counts.get(ckey) ?? 0;
+      b.graze += ((b.state === 0 && !ctx.calm ? 1 : 0) * (0.5 + 0.5 * Math.max(0, Math.sin(t * 0.25 + b.seed * 40))) - b.graze) * Math.min(1, dt * 1.2);
+      const n = counts.get(b.sp) ?? 0;
       if (n >= MAX) continue;
-      const im = pools[k]!;
+      let fa: number, fb: number, fw: number;
+      if (b.speed > 0.06) {
+        // chód: dwie sąsiednie klatki, mieszane ułamkiem kroku
+        fa = Math.floor(b.phase) % WALK; fb = (fa + 1) % WALK; fw = b.phase - Math.floor(b.phase);
+      } else {
+        // stoi: zapętlony ruch spoczynkowy (łeb, uszy, ogon), a przy skubaniu przejście do łba przy ziemi
+        const ip = (t * 0.9 + b.seed * IDLE) % IDLE, i0 = Math.floor(ip);
+        if (b.graze > 0.02) { fa = IDLE0 + i0; fb = GRAZE; fw = Math.min(1, b.graze); }
+        else { fa = IDLE0 + i0; fb = IDLE0 + (i0 + 1) % IDLE; fw = ip - i0; }
+      }
+      herd.pose.setXYZ(n, fa, fb, fw);
+      // odgłosy: od czasu do czasu z bliska, przy ucieczce częściej
+      const near = (b.x - ctx.cam.x) ** 2 + (b.y - ctx.cam.y) ** 2 < 30 * 30;
+      if (near && !ctx.calm) {
+        const last = this.voiceAt.get(b) ?? -99, gap = b.state === 2 ? 4 : 14 + b.seed * 20;
+        if (t - last > gap && Math.sin(t * 1.7 + b.seed * 91) > 0.97) { this.voiceAt.set(b, t); play3d(b.sp === 'camel' ? 'camel' : 'deer', b.x - W2, b.y - H2, { y: ctx.height(b.x, b.y) + 0.4 }); }
+      }
+      const im = herd.im;
       this.q.setFromAxisAngle(this.up, b.heading);
       this.m.compose(this.v.set(b.x - W2, ctx.height(b.x, b.y), b.y - H2), this.q, this.s.setScalar(b.scale));
       im.setMatrixAt(n, this.m);
-      counts.set(ckey, n + 1);
+      counts.set(b.sp, n + 1);
     }
-    for (const [sp, list] of this.meshes) list.forEach((im, k) => {
-      const n = counts.get(`${sp}:${k}`) ?? 0;
-      im.count = n; im.visible = n > 0;
-      if (n) im.instanceMatrix.needsUpdate = true;
-    });
+    for (const [sp, h] of this.meshes) {
+      const n = counts.get(sp) ?? 0;
+      h.im.count = n; h.im.visible = n > 0;
+      if (n) { h.im.instanceMatrix.needsUpdate = true; h.pose.needsUpdate = true; }
+    }
   }
 }

@@ -6,6 +6,7 @@ tutaj, skórowanie szkieletu w numpy, pozy wypieczone jako morph targets).
 
 Pozy (morph targets, różnice względem pozy stojącej):
   walk0..walk9 — dziesięć klatek chodu z animacji „walk” (gra przechodzi płynnie z klatki na klatkę, osobno każde zwierzę),
+  idle0..idle7 — osiem klatek ruchu spoczynkowego (łeb, uszy, ogon),
   graze        — łeb przy ziemi (klatka animacji spoczynkowej z łbem najniżej).
 Wynik: src/render/models/fauna_<id>.json (body: pos, nrm, uv, idx, morph) i public/textures/cc0/fauna_<id>.jpg.
 Układ gry: y w górę, łeb w +z, kopyta na y = 0, środek tułowia w (0, 0); `height` = wysokość w kłębie w polach.
@@ -24,6 +25,7 @@ from horse_0ad import Dae, clip, pose, skin, smooth  # noqa: E402
 ROOT = os.path.join(HERE, '..', '..')
 TEX = os.path.join(ROOT, 'public', 'textures', 'cc0')
 WALK = 10
+IDLE = 8     # klatki ruchu spoczynkowego (łeb, uszy, ogon) — gra zapętla je, gdy zwierzę stoi
 
 ANIMALS = {
     # wielbłąd jednogarbny: ok. 1,9 m w kłębie (0,36 pola na metr)
@@ -68,6 +70,9 @@ def build(art, aid, cfg):
     poses = {'base': pose(joints, arm, idle, 0)}
     for k in range(WALK):
         poses[f'walk{k}'] = pose(joints, arm, walk, int(round(k * nw / WALK)) % nw)
+    ni = frames(idle)
+    for k in range(IDLE):
+        poses[f'idle{k}'] = pose(joints, arm, idle, int(round(k * ni / IDLE)) % ni)
     poses['graze'] = pose(joints, arm, gra, gf)
     res = {}
     for pn, w in poses.items():
@@ -93,7 +98,7 @@ def build(art, aid, cfg):
     assert len(bpos) < 65536
     body = {'pos': e(bpos.astype('<f4').tobytes()), 'nrm': q8(bnrm), 'uv': e(uv[:, :2].astype('<f4').tobytes()),
             'idx': e(idx.astype('<u2').tobytes()), 'morph': {}}
-    for pn in [f'walk{k}' for k in range(WALK)] + ['graze']:
+    for pn in [f'walk{k}' for k in range(WALK)] + [f'idle{k}' for k in range(IDLE)] + ['graze']:
         p, n = res[pn]
         body['morph'][pn] = {'pos': e((((p + shift) * scale) - bpos).astype('<f4').tobytes()), 'nrm': q8(n - bnrm)}
     out = {'height': cfg['height'], 'length': float((zmax - zmin) * scale), 'credit': '0 A.D. (Wildfire Games), CC BY-SA 3.0', 'body': body}

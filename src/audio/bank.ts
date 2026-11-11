@@ -72,6 +72,9 @@ export const DEFS = {
   cow: D(oad('cow'), { vol: 0.45, ref: 6, max: 34, voices: 2 }),
   sheep: D(oad('sheep'), { vol: 0.4, ref: 5, max: 28, voices: 2, pitch: [0.9, 1.15] }),
   horse: D(oad('horse'), { vol: 0.45, ref: 6, max: 30, voices: 2 }),
+  // dzikie zwierzęta (render/fauna.ts): wielbłąd — pomruk i ryk z 0 A.D.; jeleń — prychnięcie (nagrania konia wyżej)
+  camel: D(['0ad/camel-00', '0ad/camel-01'], { vol: 0.5, ref: 6, max: 34, voices: 2, pitch: [0.88, 1.08] }),
+  deer: D(oad('horse'), { vol: 0.3, ref: 5, max: 28, voices: 2, pitch: [1.35, 1.6] }),
   hen: D(['hen-0', 'hen-1', 'hen-2', 'hen-3'], { vol: 0.42, ref: 4, max: 22, voices: 2, pitch: [0.92, 1.1] }),
   // warczenie wilka przy ataku: prawdziwe nagrania psów (OpenGameArt: bonebrah CC0, congusbongus CC BY 3.0), lekko obniżone (28.10.2026)
   growl: D(['wolf-growl-0', 'wolf-growl-1', 'wolf-growl-2', 'wolf-growl-3', 'wolf-growl-4', 'wolf-growl-5', 'wolf-growl-6'], { vol: 0.5, ref: 5, max: 28, voices: 2, gap: 0.5, pitch: [0.82, 0.95], wet: 0.12 }),
