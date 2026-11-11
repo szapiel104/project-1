@@ -64,7 +64,7 @@ import { tx } from '../i18n';
 import { GearPool } from './gearpool';
 import { propGeometry, propMaterial } from './props';
 import { enableShadowLayer } from './shadowlayer';
-import { animateBuilding, isWindowMat, roadMaterials, setNight, STONE_WALL_TOP, TOWER_TOP, WATCH_TOWER_TOP, setStockFill, torchModel } from './buildings';
+import { animateBuilding, isWindowMat, roadMaterials, setNight, STONE_WALL_TOP, TOWER_TOP, WATCH_TOWER_TOP, setStockFill, setFillFar, torchModel } from './buildings';
 import { RESOURCES, RESOURCE_DEFS } from '../data/resources';
 import { Terrain } from '../data/terrain';
 import { BANDIT_COLOR, TEAM_COLORS } from '../data/teams';
@@ -3630,7 +3630,9 @@ export class GameRenderer {
       }
       // drobiazgi z edytora (skany z paczek): dalej niż PROPS_NEAR pól od kamery lżejsza wersja
       const pd = pinned ? 0 : this.lodW.copy(lod.center).applyMatrix4(mesh.matrixWorld).distanceTo(cp) - lod.radius;
-      showLod(lod, want, pd > PROPS_NEAR * (lod.propsKey !== undefined && lod.propsKey >= 2 ? 0.9 : 1));
+      const propsFar = pd > PROPS_NEAR * (lod.propsKey !== undefined && lod.propsKey >= 2 ? 0.9 : 1);
+      showLod(lod, want, propsFar);
+      setFillFar(mesh, propsFar);
       counts[lod.level + 1]!++;
       if (lod.level >= 0) saved += lod.full - lod.levels[lod.level]!.tris;
     }

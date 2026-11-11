@@ -119,20 +119,25 @@ type Loaded = { geo: THREE.BufferGeometry; mats: THREE.Material[]; far: THREE.Bu
 
 /** Powyżej tylu trójkątów model z paczki dostaje lżejszą wersję do oglądania z dalszej odległości */
 const FAR_ABOVE = 6000;
+/** Moduł upraszczania gotowy (WebAssembly) — przed pierwszym farVersion */
+export const farReady: Promise<void> = MS.supported ? MS.ready : Promise.resolve();
 /**
  * Wersja z daleka (Michał 11.11.2026: „stosuj techniki z gier AAA”; zasada z 19.10: z bliska oryginał, upraszczać wolno
  * tylko wersję z daleka): każda grupa materiału osobno, spawanie wierzchołków po położeniu i UV, upraszczanie
  * meshoptimizerem do ok. 1/8 trójkątów z błędem do 1% wielkości modelu — z kilkunastu pól różnicy nie widać, a świecznik
  * ze skanu ma 213 tys. trójkątów. Normalne liczone na nowo z zachowaniem ostrych krawędzi.
  */
-function farVersion(geo: THREE.BufferGeometry): THREE.BufferGeometry | null {
+export function farVersion(src: THREE.BufferGeometry, above = FAR_ABOVE): THREE.BufferGeometry | null {
   if (!MS.supported) return null;
+  const geo = src.index ? src.toNonIndexed() : src;
   const tris = geo.getAttribute('position').count / 3;
-  if (tris < FAR_ABOVE) return null;
+  if (tris < above) return null;
   const parts: THREE.BufferGeometry[] = [];
-  for (const gr of geo.groups) {
+  const names = (['position', 'normal', 'uv', 'color'] as const).filter((n) => geo.getAttribute(n));
+  const groups = geo.groups.length ? geo.groups : [{ start: 0, count: tris * 3, materialIndex: 0 }];
+  for (const gr of groups) {
     const sub = new THREE.BufferGeometry();
-    for (const name of ['position', 'normal', 'uv'] as const) {
+    for (const name of names) {
       const a = geo.getAttribute(name) as THREE.BufferAttribute;
       sub.setAttribute(name, new THREE.BufferAttribute((a.array as Float32Array).slice(gr.start * a.itemSize, (gr.start + gr.count) * a.itemSize), a.itemSize));
     }
@@ -142,15 +147,13 @@ function farVersion(geo: THREE.BufferGeometry): THREE.BufferGeometry | null {
     const target = Math.max(36, Math.floor(idx.length / 8 / 3) * 3);
     const [res] = MS.simplify(idx, pos, 3, target, 0.01, ['LockBorder']);
     const out = new THREE.BufferGeometry();
-    out.setAttribute('position', w.getAttribute('position'));
-    out.setAttribute('normal', w.getAttribute('normal'));
-    out.setAttribute('uv', w.getAttribute('uv'));
+    for (const name of names) out.setAttribute(name, w.getAttribute(name));
     out.setIndex(new THREE.BufferAttribute(res, 1));
     parts.push(out.toNonIndexed());
   }
-  const m = mergeGeometries(parts, true);
+  const m = mergeGeometries(parts, geo.groups.length > 0);
   if (!m) return null;
-  m.groups.forEach((g, i) => { g.materialIndex = geo.groups[i]!.materialIndex; });
+  if (geo.groups.length) m.groups.forEach((g, i) => { g.materialIndex = geo.groups[i]!.materialIndex; });
   m.computeBoundingBox(); m.computeBoundingSphere();
   return m;
 }

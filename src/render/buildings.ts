@@ -14,7 +14,7 @@ import { applyParallax } from './parallax';
 import { boxUv, modelGeo } from './peasants';
 import { beam, rng } from './craft';
 import { model, model as model_, bytes, modelNameOf } from './modelstore';
-import { loadPh, phLoaded } from './phAssets';
+import { farReady, farVersion, loadPh, phLoaded } from './phAssets';
 import { wheatDepthMat, wheatMat, wheatRow } from './wheat';
 import { addModelBanners, bannerGeometry, bannerMaterial, flagTime } from './banners';
 import { PLANK } from './plank';
@@ -436,6 +436,31 @@ function pileHeight(id: string, geo: THREE.BufferGeometry): number {
  * Układa w składzie stosy surowców. Każdy surowiec dostaje własne miejsca i rośnie w górę,
  * więc widać osobno deski, kamień, żelazo, zboże i mąkę.
  */
+/** Lżejsze wersje towarów w składach (kosze z jabłkami, bochenki ze skanów) — od średniej odległości kamery */
+const pileFars = new Map<string, THREE.BufferGeometry | null>();
+let farOk = false;
+void farReady.then(() => { farOk = true; });
+function pileFar(id: string, geo: THREE.BufferGeometry): THREE.BufferGeometry | null {
+  if (!farOk) return null;
+  let f = pileFars.get(id);
+  if (f === undefined) { f = farVersion(geo, 3000); pileFars.set(id, f); }
+  return f;
+}
+/** Towary w składach budynku w wersji z bliska albo z daleka (scene.ts, updateLods; ta sama odległość co drobiazgi z edytora) */
+export function setFillFar(model: THREE.Object3D, far: boolean): void {
+  if (model.userData.fillFar === far) return;
+  model.userData.fillFar = far;
+  for (const name of ['fill', 'foodfill', 'armsfill', 'grainfill']) {
+    const fill = model.getObjectByName(name);
+    if (!fill) continue;
+    fill.userData.far = far;
+    for (const c of fill.children) {
+      const m = c as THREE.Mesh, n = m.userData.near as THREE.BufferGeometry | undefined, f = m.userData.far as THREE.BufferGeometry | null | undefined;
+      if (n) m.geometry = far && f ? f : n;
+    }
+  }
+}
+
 export function setStockFill(model: THREE.Object3D, ratio: number, stock: { id: string; share: number }[], group = 'fill'): void {
   const fill = model.getObjectByName(group);
   if (!fill) return;
@@ -462,7 +487,7 @@ export function setStockFill(model: THREE.Object3D, ratio: number, stock: { id: 
     while (items > 0 && slot < STOCK_SLOTS) {
       for (let layer = 0; layer < STOCK_LAYERS && items > 0; layer++, items--) {
         const mesh = fill.children[layer * STOCK_SLOTS + slot] as THREE.Mesh;
-        if (pile.geo) mesh.geometry = pile.geo;
+        if (pile.geo) { mesh.userData.near = pile.geo; mesh.userData.far = pileFar(r.id, pile.geo); mesh.geometry = fill.userData.far && mesh.userData.far ? mesh.userData.far : pile.geo; }
         // warstwa leży wprost na niższej (Michał 29.10.2026: „jeden na drugim, a nie przerwa”): co wysokość tej porcji,
         // a nie co stałe 0,31 — niskie sztaby i deski wisiały wcześniej nad sobą w powietrzu
         if (typeof mesh.userData.y0 === 'number') mesh.position.y = mesh.userData.y0 + layer * pileHeight(r.id, pile.geo) * mesh.scale.y;
