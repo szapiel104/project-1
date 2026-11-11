@@ -78,8 +78,11 @@ export function groundNodeMaterial(t: GroundTextures, season?: SeasonU): { mater
   let wDirt: N = clamp(splat.w.mul(1.15).add(ss(1.0, 1.08, nS.r.mul(0.6).add(nD.g.mul(0.5))).mul(0.5)), 0, 1);
   wDirt = wDirt.mul(mix(float(1), ss(0.18, 0.52, nD.r.mul(0.8).add(nS.a.mul(0.35))), 0.4));
   const wRock = max(clamp(splat.z, 0, 1), ss(0.82, 0.62, wn.y));
-  let sandC: V3 = tx(t.sand, rot(w, 0.8).div(4)).mul(mix(vec3(0.98, 0.9, 0.72), vec3(1.1, 0.98, 0.78), uDry));
-  sandC = sandC.mul(mix(float(1), nM.g.mul(0.2).add(0.9), uDry));
+  const sandT: V3 = tx(t.sand, rot(w, 0.8).div(4));
+  // pustynia (Michał 11.11.2026: „dramatyczna, ciężka, nie wygląda jak czysty piasek”): jasny, czysty piach w jednym
+  // ciepłym kolorze, faktura tekstury tylko lekko (ziarno, drobne zmarszczki), bez rudych i ciemnych plam
+  const sandDry: V3 = vec3(0.74, 0.6, 0.4).mul(mix(float(1), lum(sandT).div(0.42), 0.3)).mul(nM.g.mul(0.08).add(0.96));
+  let sandC: V3 = mix(sandT.mul(vec3(0.98, 0.9, 0.72)), sandDry, uDry);
   const wSand = clamp(sandA.mul(1.1), 0, 1).mul(float(1).sub(wRock));
   wPeb = wPeb.mul(float(1).sub(wSand.mul(0.7))); wDirt = wDirt.mul(float(1).sub(wSand)); wForest = wForest.mul(float(1).sub(wSand));
 
@@ -107,7 +110,7 @@ export function groundNodeMaterial(t: GroundTextures, season?: SeasonU): { mater
   const nrm = (m: THREE.Texture, uv: V2): V3 => unN(texture(m, uv).xy);
   const tnG = nrm(t.grassN, w.div(3.1)), tnF = nrm(t.forestN, rot(w, 1.3).div(4.2)), tnP = nrm(t.pebbleN, rot(w, 2.6).div(2.9));
   const tnR = normalize(nrm(t.cliffN, uX.div(8.5)).mul(bw.x).add(nrm(t.cliffN, uT.div(8.5)).mul(bw.y)).add(nrm(t.cliffN, uZ.div(8.5)).mul(bw.z)));
-  let gN: V3 = normalize(tnG.mul(bG.add(bM.mul(0.6))).add(tnF.mul(bF.add(bD.mul(0.4)).add(bM.mul(0.4)))).add(tnP.mul(bP.mul(1.4).add(bD.mul(0.9)).add(bS.mul(0.5)))).add(tnR.mul(bR.mul(1.3))).add(vec3(0, 0, 1).mul(bS.mul(0.6))).div(sum));
+  let gN: V3 = normalize(tnG.mul(bG.add(bM.mul(0.6))).add(tnF.mul(bF.add(bD.mul(0.4)).add(bM.mul(0.4)))).add(tnP.mul(bP.mul(1.4).add(bD.mul(0.9)).add(bS.mul(float(0.5).sub(uDry.mul(0.38)))))).add(tnR.mul(bR.mul(1.3))).add(vec3(0, 0, 1).mul(bS.mul(0.6))).div(sum));
   const tnDet = nrm(t.grassN, rot(w, 1.7).div(0.85));
   gN = normalize(gN.add(vec3(tnDet.xy.mul(near.mul(0.8).mul(dg)), 0)));
 

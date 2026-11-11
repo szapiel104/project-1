@@ -52,7 +52,7 @@ export function waterNodeMaterial(waves: THREE.Texture, waterY: number, clear = 
   const { W, TSL } = gpuMods!;
   const T = TSL as any;
   const {
-    uniform, texture, vec2, vec3, vec4, float, mix, smoothstep, clamp, max, min, pow, exp, dot, normalize, length, reflect,
+    uniform, texture, vec2, vec3, vec4, float, mix, smoothstep, clamp, max, min, pow, exp, dot, normalize, length, reflect, sin,
     positionWorld, positionView, cameraPosition, cameraViewMatrix, cameraWorldMatrix, cameraProjectionMatrixInverse,
     screenUV, viewportSharedTexture, viewportDepthTexture, getViewPosition, output, reflector, select,
   } = T;
@@ -113,6 +113,15 @@ export function waterNodeMaterial(waves: THREE.Texture, waterY: number, clear = 
   let col: any = refl.rgb.mul(F).add(body.mul(float(1).sub(F))).add(spec);
   // przy samym brzegu woda wygasa w obraz dna (bez kantu)
   col = mix(viewportSharedTexture(screenUV).rgb, col, smoothstep(0, 0.035, depth0));
+  // piana przy brzegu (Michał 11.11.2026: „fale przy morzu, piana”): pasy piany biegną do brzegu i gasną na płyciźnie,
+  // poszarpane szumem zmarszczek; najgęstsza tuż przy linii wody, dalej tylko grzbiety fal
+  const shore = float(1).sub(smoothstep(0.0, 0.16, depth0));
+  const fn = g1.x.mul(0.35).add(g3.y.mul(0.3)).add(0.5);
+  const bands = pow(sin(depth0.mul(55).sub(time.mul(1.4)).add(g2.x.mul(1.6))).mul(0.5).add(0.5), 5);
+  const foam = clamp(shore.mul(shore).mul(bands.mul(0.9).add(shore.mul(0.6))).mul(smoothstep(0.3, 0.7, fn.add(shore.mul(0.25)))), 0, 1)
+    .mul(smoothstep(0.002, 0.012, depth0)).mul(float(1).sub(smoothstep(40, 140, camD)));
+  const foamC = mix(vec3(0.62, 0.66, 0.66), vec3(0.95, 0.96, 0.94), clamp(sunCol.r.add(sunCol.g).mul(0.25).add(0.4), 0, 1));
+  col = mix(col, foamC, foam.mul(0.85));
   // tafla od spodu (kamera pod wodą): świat nad wodą widać przez falującą powierzchnię, przyćmiony i zielonkawy;
   // pod ostrym kątem całkowite odbicie — tafla jak ciemne lustro toni (okno Snella)
   const under = cameraPosition.y.lessThan(waterY);
@@ -122,7 +131,7 @@ export function waterNodeMaterial(waves: THREE.Texture, waterY: number, clear = 
   col = select(under, fromBelow, col);
 
   const m = new Wm.MeshStandardNodeMaterial({ roughness: 0.45, metalness: 0 });
-  m.colorNode = clear ? vec3(0.035, 0.16, 0.165) : vec3(0.045, 0.1, 0.085); // barwa rozproszona w toni
+  m.colorNode = clear ? vec3(0.03, 0.19, 0.2) : vec3(0.045, 0.1, 0.085); // barwa rozproszona w toni
   m.normalNode = nV;
   m.outputNode = vec4(min(col, vec3(30)), 1);
   // rysowana po całej nieprzezroczystej scenie (obraz spod tafli), ale sama zapisuje głębię jak bryła
