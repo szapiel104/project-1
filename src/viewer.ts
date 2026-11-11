@@ -15,7 +15,7 @@ import { BUILDINGS } from './data/buildings';
 import { RESOURCES } from './data/resources';
 import { carryArms, loadGeometry, loadMaterials, ON_SHOULDER, plankBundle } from './render/loads';
 import { lang, t, tx } from './i18n';
-import { buildingModel, isWetMat, isWindowMat, mineLevelModel, setNight, towerDoorKit } from './render/buildings';
+import { buildingModel, isWetMat, isWindowMat, mineLevelModel, setNight, tickBuildingWater, towerDoorKit } from './render/buildings';
 import { createThumbs } from './ui/viewerThumbs';
 import { attachLod, lodReady, prepareLod, showLod, type BuildingLod } from './render/lod';
 import { partsGeometry, toolGeometry, toolMaterials } from './render/gear';
@@ -620,6 +620,7 @@ renderer.setAnimationLoop(() => {
   }
   controls.update();
   // modele, które się ruszają (zwierzęta w podglądzie: chód, ruch spoczynkowy)
+  tickBuildingWater(now / 1000);
   (current?.userData.tick as ((dt: number, t: number) => void) | undefined)?.(dt, now / 1000);
   thumbs.step();
   nightLights.update(current, state.night, camera, Math.max(size.x, size.z, 0.3));
