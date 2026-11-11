@@ -156,7 +156,7 @@ def build(base, aid, cfg):
         return np.vstack(out)
 
     walk, idle, gra = g.anim(cfg['walk']), g.anim(cfg['idle']), g.anim(cfg['graze'])
-    base_p = posed(idle or walk, 0)
+    base_p = posed(idle or walk, 0)  # tylko do kierunku łba
     # przód tam, gdzie łeb (wyżej): glTF ma y w górę jak gra; łeb kierujemy w +z
     ext = base_p.max(0) - base_p.min(0)
     ax = 0 if ext[0] > ext[2] else 2
@@ -173,16 +173,22 @@ def build(base, aid, cfg):
         p = fix(posed(gra, t))
         z0, z1 = p[:, 2].min(), p[:, 2].max()
         return p[p[:, 2] > z1 - (z1 - z0) * 0.12][:, 1].min()
-    poses = {'base': (idle or walk, 0.0)}
+    # bez animacji spoczynku: stoi w klatce chodu z nogami najbliżej siebie (najkrótszy rozkrok przy ziemi)
+    def spread(t):
+        p = fix(posed(walk, t))
+        low = p[p[:, 1] < p[:, 1].min() + (p[:, 1].max() - p[:, 1].min()) * 0.12]
+        return low[:, 2].max() - low[:, 2].min()
+    still = 0.0 if idle else min(np.linspace(0, walk[1], 30, endpoint=False), key=spread)
+    poses = {'base': (idle, 0.0) if idle else (walk, still)}
     for k in range(WALK):
         poses[f'walk{k}'] = (walk, walk[1] * k / WALK)
     for k in range(IDLE):
-        poses[f'idle{k}'] = (idle, idle[1] * k / IDLE) if idle else (walk, 0.0)
+        poses[f'idle{k}'] = (idle, idle[1] * k / IDLE) if idle else (walk, still)
     if gra:
         gt = min(np.linspace(0, gra[1], 40), key=head_y)
         poses['graze'] = (gra, gt)
     else:
-        poses['graze'] = (walk, 0.0)
+        poses['graze'] = (walk, still)
     offs = np.cumsum([0] + [len(p['pos']) for p in prims])
     idx = np.vstack([p['idx'] + offs[k] for k, p in enumerate(prims)])
     res = {}
