@@ -92,7 +92,7 @@ export function faunaMaterial(sp: Species): THREE.MeshStandardMaterial {
   let m = mats.get(sp);
   if (m) return m;
   m = new THREE.MeshStandardMaterial({ roughness: 0.8, metalness: 0 });
-  if (typeof document !== 'undefined') {
+  if (typeof document !== 'undefined' && typeof document.createElementNS === 'function') {
     const map = new THREE.TextureLoader().load(`${texBase()}fauna_${sp}.jpg`);
     map.colorSpace = THREE.SRGBColorSpace; map.anisotropy = 8;
     m.map = map;

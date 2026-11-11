@@ -23,15 +23,15 @@ describe('wilki w obrazie (src/render/wolves.ts)', () => {
     const view = { heightAt: () => 0 } as unknown as TerrainView;
     w.target = g.units[0]!.id; // poluje — warczy i ma znaczek celu
     layer.sync(g, view, 1, { time: 1, calm: false, night: 0.5, prevPos: new Map() });
-    const meshes = scene.children.filter((c): c is THREE.InstancedMesh => (c as THREE.InstancedMesh).isInstancedMesh);
-    expect(meshes.length).toBe(5); // tułów, przednie łapy, tylne łapy, ogon, oczy
-    expect(meshes[0]!.count).toBe(g.wolves.length + 1); // dwa żywe i jeden zabity
+    // każdy wilk to osobna siatka z mieszanymi klatkami (fauna.ts, FaunaPool)
+    const bodies = (): THREE.Mesh[] => scene.children.filter((c): c is THREE.Mesh => (c as THREE.Mesh).isMesh && !(c as THREE.Sprite).isSprite && c.visible && !(c as THREE.LineSegments).isLineSegments);
+    expect(bodies().length).toBe(g.wolves.length + 1); // dwa żywe i jeden zabity
     expect(layer.wolfPos.size).toBe(g.wolves.length);
     expect(scene.children.some((c) => (c as THREE.Sprite).isSprite && c.visible)).toBe(true);
     expect(sounds).toContain('growl');
     // druga klatka bez wilków: wszystko chowa się bez błędów
     g.wolves = []; g.corpses = [];
     layer.sync(g, view, 1, { time: 2, calm: true, night: 0, prevPos: new Map() });
-    expect(meshes[0]!.count).toBe(0);
+    expect(bodies().length).toBe(0);
   });
 });
