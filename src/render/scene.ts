@@ -4355,8 +4355,11 @@ export class GameRenderer {
   }
 
   /** Rozkaz marszu: rozchodząca się złota fala w klikniętym miejscu */
+  /** Do kiedy zaznaczeni żołnierze unoszą broń na znak, że przyjęli rozkaz */
+  private ackUntil = 0;
   orderMarker(tile: { x: number; y: number }): void {
     if (!this.state || !this.view) return;
+    this.ackUntil = this.time + 0.55;
     const { width, height } = this.state.map;
     this.wave.position.set(tile.x + 0.5 - width / 2, this.view.heightAt(tile.x + 0.5, tile.y + 0.5) + 0.04, tile.y + 0.5 - height / 2);
     this.waveAge = 0;
@@ -4605,7 +4608,9 @@ export class GameRenderer {
       const swing = walking ? Math.sin(st.phase) * 0.5 : 0;
       const udef = UNITS[s.kind]!;
       const ranged = !!udef.range;
-      const striking = !udef.sapper && !udef.ladderman && (!!foe || !!wall || !!victim) && !walking && (ranged ? s.cd > udef.cooldown - 8 : s.cd > 6);
+      // potwierdzenie rozkazu (Michał 11.11.2026: „mniej drewniana gra”): zaznaczeni na chwilę unoszą broń, zanim ruszą
+      const ack = this.time < this.ackUntil && this.soldierSel.has(s.id) && !udef.ram && !udef.magic;
+      const striking = !udef.sapper && !udef.ladderman && (((!!foe || !!wall || !!victim) && !walking && (ranged ? s.cd > udef.cooldown - 8 : s.cd > 6)) || ack);
       // łucznik na wieży stoi na pomoście
       let lift = s.up ? (s.post ? TOWER_TOP[BUILDINGS[bById.get(s.post)?.type ?? 0]!.id] ?? WATCH_TOWER_TOP : WATCH_TOWER_TOP) : 0;
       // życie na wieży: bez walki każdy zajęty czym innym (oparty o barierkę, siedzi, wypatruje, czwarty pod wieżą);
