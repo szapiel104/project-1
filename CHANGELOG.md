@@ -6,6 +6,17 @@
 
 
 
+## 0.95.4 — 2026-11-11
+- Dzika zwierzyna (dzik, lis, zając z 0 A.D.; `fauna.ts` HERDS), `window.__fauna()`; jeleń, wielbłąd, świnia ze Sketchfaba (CC BY 4.0, `fauna_gltf.py`: skórowanie glTF w numpy, atlas tekstur i map normalnych, ruch z korzenia usunięty); pierwszy zestaw UV z paczek (`horse_0ad.py`), dzik z ręcznym kierunkiem.
+- Zwierzęta: mieszanie wielu klatek (`poseFor` → lista wag), chód ↔ postój ↔ skubanie płynnie, `STRIDE` (zając), limit 2,5 cyklu/s.
+- Ruch ludzi: sprężyna krytycznie tłumiona w `motion.ts`; przejścia póz kończyn w `peasants.ts` (`blends`).
+- Kamera (`camera.ts`): osobne tempo zbliżenia, `lookAt(..., glide)`, `shake`; `scene.ts` quake przy zawaleniu i taranie.
+- Budowa: osiadanie (`sites.ts` settling) z kurzem; oddawany ładunek (`loadDrops`).
+- LOD: `showProps` — drobiazgi według wielkości na ekranie; `INTERIOR_NEAR` 20.
+- Edytor: sklejanie drobnych brył zachodzących na siebie (`computeObjects`).
+- Wczytywanie: bez pejzażu SVG pod zdjęciem, pierwsze zdjęcie bez przenikania, zegar od pokazania; murki najwyżej 2 na mapę; bez `ForestEyes`.
+- Symulacja: `workerSystem` szuka wśród wolnych (odcisk stanu bez zmian).
+
 ## 0.95.3 — 2026-11-11
 - Zwierzęta w osadzie: świnia, kura i pies z 0 A.D. (`fauna_0ad.py`, podział Loopa) w `FaunaPool` (fauna.ts) — mieszanie klatek na procesorze, bo morph targets w InstancedMesh i węzłowy materiał z atrybutem instancji na WebGPU nie działają. Jelenie i wielbłądy tak samo; odgłosy `camel`/`deer` w `bank.ts`.
 - Konie: osobne siatki z `morphTargetInfluences` zamiast puli instancji (village.ts).

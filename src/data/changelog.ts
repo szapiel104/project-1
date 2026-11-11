@@ -9,6 +9,25 @@ export type { ChangeEntry } from './changelogTypes';
  * — tak jak CHANGELOG.md dla nas. `tests/changelog.test.ts` pilnuje, że najnowszy wpis ma wersję z package.json.
  */
 const NEW: ChangeEntry[] = [
+  { v: '0.95.4', date: '2026-11-11', pl: [
+    'Nowa zwierzyna: dziki chodzą watahami, lisy i zające na łąkach, w lasach i na stepie — uciekają przed ludźmi.',
+    'Nowe, realistyczne modele jelenia, wielbłąda z derką i świni; pies, lis i zając z poprawioną sierścią.',
+    'Zwierzęta poruszają się płynnie: bez przeskoków łba, cofania co krok i szalonego kicania.',
+    'Ludzie ruszają z rozpędem, hamują miękko i skręcają łukiem; ręce i nogi przechodzą płynnie między chodem, pracą i niesieniem.',
+    'Kamera: miękkie zbliżanie, płynny dolot do miejsc z kroniki i alarmu, wstrząs przy walącym się budynku i uderzeniu taranu.',
+    'Ukończony budynek osiada z kurzem, a oddawany towar trafia do budynku zamiast znikać.',
+    'Drobiazgi przy budynkach nie wyskakują przy oddalaniu kamery.',
+    'Ekran wczytywania od razu ze zdjęciem; mniej starych murków na mapie; bez czerwonych oczu w lesie nocą.',
+  ], en: [
+    'New game: wild boar roam in packs, foxes and hares live in meadows, woods and steppe — all flee from people.',
+    'New lifelike models for the stag, the blanketed camel and the pig; the dog, fox and hare have their proper coats.',
+    'Beasts move smoothly: no more snapping heads, backward lurches or frantic hopping.',
+    'Folk set off with momentum, slow down gently and turn in arcs; arms and legs flow between walking, working and carrying.',
+    'Camera: gentle zoom, a smooth glide to places from the chronicle and alarms, and a shake when a building falls or a ram strikes.',
+    'A finished building settles in a puff of dust, and delivered goods go into the building instead of vanishing.',
+    'Small items around buildings no longer pop in and out as the camera pulls back.',
+    'The loading screen opens straight on a picture; fewer old field walls on maps; no more red eyes in the woods at night.',
+  ] },
   { v: '0.95.3', date: '2026-11-11', pl: [
     'Zwierzęta w osadzie — kury, świnie i pies — mają nowe, ładne modele: kury dziobią, świnie ryją, pies siada i chodzi za chłopami.',
     'Konie znów skubią trawę i machają ogonem.',
