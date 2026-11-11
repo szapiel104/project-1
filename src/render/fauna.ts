@@ -21,7 +21,7 @@ import { play3d } from '../audio/engine';
  * osobna partia (docs/pomysly.md), wtedy zwierzęta przejdą do symulacji.
  */
 type Packed = { pos: string; nrm: string; uv: string; idx: string; morph: Record<string, { pos: string; nrm: string }> };
-type FaunaModel = { height: number; length: number; body: Packed };
+type FaunaModel = { height: number; length: number; normalMap?: boolean; body: Packed };
 export type Species = 'camel' | 'deer' | 'pig' | 'hen' | 'dog' | 'boar' | 'fox' | 'rabbit';
 /** Prędkość chodu w polach na sekundę (podgląd modeli) */
 const WALK_SPEED: Record<Species, number> = { camel: 0.55, deer: 0.7, pig: 0.3, hen: 0.35, dog: 0.8, boar: 0.45, fox: 0.6, rabbit: 0.35 };
@@ -92,6 +92,13 @@ export function faunaMaterial(sp: Species): THREE.MeshStandardMaterial {
     const map = new THREE.TextureLoader().load(`${texBase()}fauna_${sp}.jpg`);
     map.colorSpace = THREE.SRGBColorSpace; map.anisotropy = 8;
     m.map = map;
+    // zwierzęta z glTF (fauna_gltf.py): mapa normalnych z paczki — sierść, fałdy skóry i mięśnie z bliska
+    if (model<FaunaModel>(`fauna_${sp}`).normalMap) {
+      const nm = new THREE.TextureLoader().load(`${texBase()}fauna_${sp}_n.jpg`);
+      nm.anisotropy = 8;
+      m.normalMap = nm;
+      m.roughness = 0.88;
+    }
   }
   mats.set(sp, m);
   return m;
