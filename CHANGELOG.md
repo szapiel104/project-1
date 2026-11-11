@@ -6,6 +6,13 @@
 
 
 
+## 0.95.3 — 2026-11-11
+- Zwierzęta w osadzie: świnia, kura i pies z 0 A.D. (`fauna_0ad.py`, podział Loopa) w `FaunaPool` (fauna.ts) — mieszanie klatek na procesorze, bo morph targets w InstancedMesh i węzłowy materiał z atrybutem instancji na WebGPU nie działają. Jelenie i wielbłądy tak samo; odgłosy `camel`/`deer` w `bank.ts`.
+- Konie: osobne siatki z `morphTargetInfluences` zamiast puli instancji (village.ts).
+- Mgła: `scene.fogNode` (odległość, wysokość, domknięta na granicy widoku), krótsze near/far.
+- Edytor modeli (`modelEditor.ts`, `computeObjects`): drobne bryły zachodzące na siebie pudełkami sklejane w jeden przedmiot (do 0,6 pola), także wyspy tej samej siatki stykające się wierzchołkami. Podgląd modeli: `__cur()`, `__cam()`, `__three` do sprawdzania z konsoli.
+- Poprawki modeli z edytora ściągnięte (`pull_fixes.mjs`).
+
 ## 0.95.2 — 2026-11-11
 - `render/fauna.ts` + `tools/models/fauna_0ad.py`: wielbłąd i jeleń z 0 A.D. (10 klatek chodu i skubanie jako osobne siatki w pulach — morph targets w InstancedMesh nie działają na WebGPU), stada tylko w wyglądzie, ucieczka przed ludźmi.
 - Pustynia: `sandDry` w `groundNode.ts`, płaskie wydmy w `terrain.ts`, `dDry` (sucha kępa) zamiast zielonej trawy poza oazą.

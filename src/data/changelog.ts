@@ -9,6 +9,19 @@ export type { ChangeEntry } from './changelogTypes';
  * — tak jak CHANGELOG.md dla nas. `tests/changelog.test.ts` pilnuje, że najnowszy wpis ma wersję z package.json.
  */
 const NEW: ChangeEntry[] = [
+  { v: '0.95.3', date: '2026-11-11', pl: [
+    'Zwierzęta w osadzie — kury, świnie i pies — mają nowe, ładne modele: kury dziobią, świnie ryją, pies siada i chodzi za chłopami.',
+    'Konie znów skubią trawę i machają ogonem.',
+    'Dzikie zwierzęta poruszają się płynnie, na postoju ruszają łbem i ogonem, wielbłądy i jelenie wydają odgłosy.',
+    'Mgła jak w nowych grach: miękko gęstnieje z odległością i przy ziemi, dalekie góry i palmy wyłaniają się sylwetką.',
+    'Edytor modeli: kocioł z pokrywą i kabłąkiem (i inne rzeczy złożone z drobnych części) zaznacza się jednym kliknięciem.',
+  ], en: [
+    'Village animals — hens, pigs and the dog — have fine new models: hens peck, pigs root about, the dog sits and trots after the peasants.',
+    'Horses graze and swish their tails again.',
+    'Wild beasts move smoothly, turn their heads and flick their tails at rest, and camels and deer call out.',
+    'Fog as in modern games: it thickens softly with distance and near the ground, far hills and palms loom as silhouettes.',
+    'Model editor: a cauldron with its lid and handle (and other things made of small pieces) is selected with a single click.',
+  ] },
   { v: '0.95.2', date: '2026-11-11', pl: [
     'Dzikie zwierzęta: wielbłądy na pustyni, jelenie na zielonych krainach — pasą się stadami i uciekają przed ludźmi.',
     'Pustynia: jasny, czysty piach, przeważnie płasko, wydmy tylko miejscami; zielona trawa tylko w oazach.',
