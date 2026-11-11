@@ -7,8 +7,9 @@ import { cat } from './cat';
 /**
  * Dzikie zwierzęta (Michał 11.11.2026: „wielbłądy na pustyni, jelenie i sarny na zielonych terenach, uciekają od ludzi;
  * w przyszłości mięso dla myśliwego”). Modele z gry 0 A.D. (Wildfire Games, CC BY-SA 3.0), przeniesione bez odchudzania
- * skryptem tools/models/fauna_0ad.py: sześć klatek chodu i skubanie jako morph targets, więc każde zwierzę w stadzie
- * idzie i je po swojemu, a cały gatunek to jedno wywołanie rysowania.
+ * skryptem tools/models/fauna_0ad.py: dziesięć klatek chodu i skubanie. Każda klatka to osobna gotowa siatka w puli
+ * instancji (morph targets w puli instancji WebGPU nie działały — nogi stały), więc zwierzę w danej chwili rysuje się
+ * w klatce swojego kroku; jedno wywołanie rysowania na każdą klatkę, która akurat jest w użyciu.
  *
  * Na razie tylko wygląd (symulacja o nich nie wie, gra przez sieć zostaje zgodna): stada pasą się wokół swojego miejsca,
  * chodzą od kępy do kępy, a gdy podejdzie człowiek (chłop, żołnierz), uciekają biegiem. Myśliwy i mięso — osobna partia
@@ -17,8 +18,10 @@ import { cat } from './cat';
 type Packed = { pos: string; nrm: string; uv: string; idx: string; morph: Record<string, { pos: string; nrm: string }> };
 type FaunaModel = { height: number; length: number; body: Packed };
 export type Species = 'camel' | 'deer';
-const MORPHS = ['walk0', 'walk1', 'walk2', 'walk3', 'walk4', 'walk5', 'graze'];
-const WALK = 6, GRAZE = 6;
+const WALK = 10;
+const MORPHS = [...Array.from({ length: WALK }, (_, k) => `walk${k}`), 'graze'];
+/** Pozy w puli: 0..WALK-1 klatki chodu, potem stoi, w pół drogi do skubania, skubie */
+const STAND = WALK, HALF = WALK + 1, GRAZEP = WALK + 2, POSES = WALK + 3;
 
 const b64 = (s: string | Uint8Array): ArrayBuffer => bytes(s).buffer as ArrayBuffer;
 const geos = new Map<Species, THREE.BufferGeometry>();
@@ -44,6 +47,32 @@ export function faunaGeometry(sp: Species): THREE.BufferGeometry {
   g.boundingSphere = g.boundingBox.getBoundingSphere(new THREE.Sphere());
   g.boundingSphere.radius *= 1.25;
   geos.set(sp, g);
+  return g;
+}
+
+const poseGeos = new Map<string, THREE.BufferGeometry>();
+/** Gotowa siatka jednej pozy (pozycje i normalne = stojąca + różnica pozy razy waga), wspólna dla wszystkich sztuk */
+function poseGeometry(sp: Species, k: number): THREE.BufferGeometry {
+  const key = `${sp}:${k}`;
+  let g = poseGeos.get(key);
+  if (g) return g;
+  const src = faunaGeometry(sp);
+  const morph = k < WALK ? k : WALK, w = k < WALK ? 1 : k === STAND ? 0 : k === HALF ? 0.5 : 1;
+  const P = (src.getAttribute('position').array as Float32Array).slice();
+  const N0 = src.getAttribute('normal') as THREE.BufferAttribute, N = new Float32Array(N0.count * 3);
+  const dP = src.morphAttributes.position![morph]!.array as Float32Array, dN = src.morphAttributes.normal![morph]!.array as Float32Array;
+  for (let i = 0; i < N0.count; i++) {
+    for (let c = 0; c < 3; c++) P[i * 3 + c]! += dP[i * 3 + c]! * w;
+    const x = N0.getX(i) + dN[i * 3]! * w, y = N0.getY(i) + dN[i * 3 + 1]! * w, z = N0.getZ(i) + dN[i * 3 + 2]! * w, l = Math.hypot(x, y, z) || 1;
+    N[i * 3] = x / l; N[i * 3 + 1] = y / l; N[i * 3 + 2] = z / l;
+  }
+  g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.BufferAttribute(P, 3));
+  g.setAttribute('normal', new THREE.BufferAttribute(N, 3));
+  g.setAttribute('uv', src.getAttribute('uv'));
+  g.setIndex(src.getIndex());
+  g.boundingSphere = src.boundingSphere!.clone();
+  poseGeos.set(key, g);
   return g;
 }
 
@@ -90,8 +119,8 @@ const MAX = 64;
 
 export class Wildlife {
   private beasts: Beast[] = [];
-  private meshes = new Map<Species, THREE.InstancedMesh>();
-  private pose = new Map<Species, THREE.Mesh>();
+  /** gatunek → pula na każdą pozę */
+  private meshes = new Map<Species, THREE.InstancedMesh[]>();
   private key = '';
   private m = new THREE.Matrix4();
   private q = new THREE.Quaternion();
@@ -101,18 +130,18 @@ export class Wildlife {
 
   constructor(private scene: THREE.Scene) {}
 
-  private mesh(sp: Species): THREE.InstancedMesh {
-    let im = this.meshes.get(sp);
-    if (im) return im;
-    im = new THREE.InstancedMesh(faunaGeometry(sp), faunaMaterial(sp), MAX);
-    im.frustumCulled = false; im.castShadow = true; im.receiveShadow = true;
-    const p = new THREE.Mesh(faunaGeometry(sp));
-    p.updateMorphTargets();
-    // pierwsze ustawienie póz na pełną liczbę (three robi teksturę póz na `count` z chwili pierwszego wywołania)
-    im.count = MAX; for (let i = 0; i < MAX; i++) im.setMorphAt(i, p); im.count = 0;
-    this.scene.add(cat(im, 'dzikie zwierzęta'));
-    this.meshes.set(sp, im); this.pose.set(sp, p);
-    return im;
+  private pools(sp: Species): THREE.InstancedMesh[] {
+    let l = this.meshes.get(sp);
+    if (l) return l;
+    l = [];
+    for (let k = 0; k < POSES; k++) {
+      const im = new THREE.InstancedMesh(poseGeometry(sp, k), faunaMaterial(sp), MAX);
+      im.frustumCulled = false; im.castShadow = true; im.receiveShadow = true; im.count = 0; im.visible = false;
+      this.scene.add(cat(im, 'dzikie zwierzęta'));
+      l.push(im);
+    }
+    this.meshes.set(sp, l);
+    return l;
   }
 
   /** Miejsce, po którym zwierzę może chodzić: łąka/piach (jeleń także las), bez budynków, wody i gór */
@@ -154,7 +183,7 @@ export class Wildlife {
     if (key !== this.key) { this.key = key; this.spawn(g); }
     const dt = Math.min(0.1, ctx.dt), t = ctx.time;
     const W2 = g.map.width / 2, H2 = g.map.height / 2;
-    const counts = new Map<Species, number>();
+    const counts = new Map<string, number>();
     for (const b of this.beasts) {
       // kto najbliżej z ludzi
       let nd = FLEE * FLEE, px = 0, py = 0;
@@ -195,28 +224,24 @@ export class Wildlife {
       }
       // daleko od kamery nie liczymy pozy ani macierzy
       if ((b.x - ctx.cam.x) ** 2 + (b.y - ctx.cam.y) ** 2 > 90 * 90) continue;
-      const im = this.mesh(b.sp), p = this.pose.get(b.sp)!, n = counts.get(b.sp) ?? 0;
-      if (n >= MAX) continue;
+      const pools = this.pools(b.sp);
       const len = model<FaunaModel>(`fauna_${b.sp}`).length;
       // klatka chodu z przebytej drogi (nogi nie ślizgają się): pełny cykl na ok. 1,1 długości ciała
       b.phase = (b.phase + (b.speed * dt) / (len * 1.1) * WALK) % WALK;
-      const w = p.morphTargetInfluences!;
-      w.fill(0);
-      const walkK = Math.min(1, b.speed / 0.3);
-      const i0 = Math.floor(b.phase), f = b.phase - i0;
-      w[i0] = (1 - f) * walkK; w[(i0 + 1) % WALK] = f * walkK;
       b.graze += ((b.state === 0 && !ctx.calm ? 1 : 0) * (0.5 + 0.5 * Math.max(0, Math.sin(t * 0.25 + b.seed * 40))) - b.graze) * Math.min(1, dt * 1.5);
-      w[GRAZE] = b.graze * (1 - walkK);
+      const k = b.speed > 0.08 ? Math.floor(b.phase) % WALK : b.graze > 0.7 ? GRAZEP : b.graze > 0.3 ? HALF : STAND;
+      const ckey = `${b.sp}:${k}`, n = counts.get(ckey) ?? 0;
+      if (n >= MAX) continue;
+      const im = pools[k]!;
       this.q.setFromAxisAngle(this.up, b.heading);
       this.m.compose(this.v.set(b.x - W2, ctx.height(b.x, b.y), b.y - H2), this.q, this.s.setScalar(b.scale));
       im.setMatrixAt(n, this.m);
-      im.setMorphAt(n, p);
-      counts.set(b.sp, n + 1);
+      counts.set(ckey, n + 1);
     }
-    for (const [sp, im] of this.meshes) {
-      const n = counts.get(sp) ?? 0;
+    for (const [sp, list] of this.meshes) list.forEach((im, k) => {
+      const n = counts.get(`${sp}:${k}`) ?? 0;
       im.count = n; im.visible = n > 0;
-      if (n) { im.instanceMatrix.needsUpdate = true; if (im.morphTexture) im.morphTexture.needsUpdate = true; }
-    }
+      if (n) im.instanceMatrix.needsUpdate = true;
+    });
   }
 }

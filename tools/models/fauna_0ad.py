@@ -5,7 +5,7 @@ tutaj, skórowanie szkieletu w numpy, pozy wypieczone jako morph targets).
     python3 tools/models/fauna_0ad.py <katalog 0 A.D.: binaries/data/mods/public/art>
 
 Pozy (morph targets, różnice względem pozy stojącej):
-  walk0..walk5 — sześć klatek chodu z animacji „walk” (gra przechodzi płynnie z klatki na klatkę, osobno każde zwierzę),
+  walk0..walk9 — dziesięć klatek chodu z animacji „walk” (gra przechodzi płynnie z klatki na klatkę, osobno każde zwierzę),
   graze        — łeb przy ziemi (klatka animacji spoczynkowej z łbem najniżej).
 Wynik: src/render/models/fauna_<id>.json (body: pos, nrm, uv, idx, morph) i public/textures/cc0/fauna_<id>.jpg.
 Układ gry: y w górę, łeb w +z, kopyta na y = 0, środek tułowia w (0, 0); `height` = wysokość w kłębie w polach.
@@ -23,7 +23,7 @@ from horse_0ad import Dae, clip, pose, skin, smooth  # noqa: E402
 
 ROOT = os.path.join(HERE, '..', '..')
 TEX = os.path.join(ROOT, 'public', 'textures', 'cc0')
-WALK = 6
+WALK = 10
 
 ANIMALS = {
     # wielbłąd jednogarbny: ok. 1,9 m w kłębie (0,36 pola na metr)
