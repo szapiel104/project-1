@@ -32,7 +32,7 @@ AP = R * math.cos(PH)    # odległość ściany od osi
 def coals(b, x, y, z, r, seed=0.0):
     """Żar w misie albo koszu (zakaz „ulepów”, Michał 6.11.2026): zamiast płaskiego pomarańczowego krążka popiół, bryłki
     węgla i kilka rozżarzonych grudek; sam ogień rysuje gra ze znacznika `flames`"""
-    b.prism('base', 'ash', r, r * 0.92, 0.012, x, y, z, seg=10)
+    b.prism('base', 'dark', r, r * 0.92, 0.012, x, y, z, seg=10)   # warstwa zwęglonego miału (ash pojawia się dopiero dalej — kolejność materiałów trzyma poprawki z edytora)
     n = max(4, int(r * 70))
     for k in range(n):
         a = seed + k * 2.39996
