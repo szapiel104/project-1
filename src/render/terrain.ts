@@ -1228,10 +1228,18 @@ function* terrainSteps(map: GameMap, models: ModelFactory, waterLevel: number): 
   yield;
   // murki z polnych kamieni: stare miedze na łąkach — proste odcinki po kilka pól, z przerwą na przejście,
   // tylko na łące (nie przez las, wodę, ścieżki ani plac pod zamkiem)
+  // Michał 11.11.2026: „zbyt często na mapach te ruiny, dwie max na mapę” — najwyżej dwa odcinki, w losowych miejscach
+  // (kolejność bloków z ziarna mapy, więc u każdego gracza te same)
   const walls: Item[] = [];
-  for (let by = 0; by < h; by += 18) for (let bx = 0; bx < w; bx += 18) {
+  const blocks: [number, number][] = [];
+  for (let by = 0; by < h; by += 18) for (let bx = 0; bx < w; bx += 18) blocks.push([bx, by]);
+  blocks.sort((a, b) => hash2(a[0], a[1], map.seed ^ 0x51ab) - hash2(b[0], b[1], map.seed ^ 0x51ab));
+  let segs = 0;
+  for (const [bx, by] of blocks) {
+    if (segs >= 2) break;
     const r = hash2(bx, by, map.seed ^ 0x4d55524b);
     if ((r & 3) !== 0) continue;
+    const before = walls.length;
     let x = bx + ((r >>> 4) % 18), y = by + ((r >>> 9) % 18);
     const alongX = ((r >>> 14) & 1) === 1, len = 4 + ((r >>> 15) % 8), gap = 1 + ((r >>> 19) % Math.max(1, len - 2));
     for (let k = 0; k < len; k++, alongX ? x++ : y++) {
@@ -1245,6 +1253,8 @@ function* terrainSteps(map: GameMap, models: ModelFactory, waterLevel: number): 
       const sc = new THREE.Vector3(1, 0.9 + (hash2(x, y, 11) & 7) / 30, 1);
       walls.push({ m: new THREE.Matrix4().compose(pos, qq, sc), shade: 0.85 + (hash2(x, y, 13) & 15) / 60, tile: i, pos, q: qq, s: sc });
     }
+    if (walls.length - before >= 2) segs++;
+    else walls.length = before;   // jeden kamień w szczerym polu to nie murek
   }
   const tint = new THREE.Color();
   yield;

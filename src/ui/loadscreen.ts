@@ -10,7 +10,6 @@
  *
  * Ten sam układ ma ekran przy starcie strony (boot.ts) i przy wejściu do meczu (main.ts → enterGame).
  */
-import { vistaScene } from './vista';
 import { t, tx } from '../i18n';
 import { stepTip } from '../data/tips';
 import { logoSvg } from './logo';
@@ -40,14 +39,18 @@ const firstShot = ((): number => {
   return i;
 })();
 let shotNow = firstShot;
-/** Pokazuje zdjęcie w warstwie, gdy już się wczytało (płynne przejście w CSS) */
+// pierwsze zdjęcie pobiera się od razu przy starcie skryptu, zanim powstanie ekran wczytywania
+const firstImg = typeof Image !== 'undefined' ? Object.assign(new Image(), { src: shotUrl(firstShot) }) : null;
+/** Pokazuje zdjęcie w warstwie, gdy już się wczytało; pierwsze od razu, bez przenikania (Michał 11.11.2026: na ułamek
+ *  sekundy wskakiwał narysowany pejzaż, a zaraz potem zdjęcie) */
 function showShot(layer: HTMLElement, i: number): void {
-  const img = new Image();
-  img.onload = () => { layer.style.backgroundImage = `url("${img.src}")`; layer.classList.add('on'); };
-  img.src = shotUrl(i);
+  const img = i === firstShot && firstImg ? firstImg : new Image();
+  const put = (): void => { layer.style.transition = 'none'; layer.style.backgroundImage = `url("${img.src}")`; layer.classList.add('on'); void layer.offsetWidth; layer.style.transition = ''; scheduleNext(); };
+  if (img.complete && img.naturalWidth) put(); else img.onload = put;
+  if (!img.src) img.src = shotUrl(i);
 }
 
-/** Pejzaż w tle ekranu wczytywania i menu (src/ui/vista.ts) i zdjęcie z gry na nim */
+/** Tło ekranu wczytywania i menu: zdjęcie z gry na ciemnym tle (bez rysowanego pejzażu pod spodem) */
 export function loadingScene(): string {
   if (typeof document !== 'undefined') queueMicrotask(() => {
     for (const box of document.querySelectorAll<HTMLElement>('.ld-shots:not([data-on])')) {
@@ -55,22 +58,28 @@ export function loadingScene(): string {
       showShot(box.firstElementChild as HTMLElement, shotNow);
     }
   });
-  return `${vistaScene()}<div class="ld-shots" aria-hidden="true"><i></i><i></i></div>`;
+  return `<div class="ld-shots" aria-hidden="true"><i></i><i></i></div>`;
 }
 
 // na ekranie wczytywania zdjęcia zmieniają się co kilka sekund (przenikanie dwóch warstw — sama przezroczystość,
-// liczy ją karta graficzna, wątek główny wczytujący grę nic nie traci)
+// liczy ją karta graficzna). Odliczanie od chwili, gdy poprzednie zdjęcie się pokazało — wcześniej zegar szedł od startu
+// strony i pierwsze zdjęcie potrafiło zniknąć po ułamku sekundy
 const SHOT_EVERY = 6500;
-if (typeof document !== 'undefined') window.setInterval(() => {
-  const box = document.querySelector<HTMLElement>('#loading .ld-shots');
-  if (!box || box.offsetParent === null) return;
-  const [a, b] = [...box.children] as HTMLElement[];
-  const next = a!.classList.contains('on') ? b! : a!, prev = next === a ? b! : a!;
-  shotNow = (shotNow + 1) % SHOTS.length;
-  const img = new Image();
-  img.onload = () => { next.style.backgroundImage = `url("${img.src}")`; next.classList.add('on'); prev.classList.remove('on'); };
-  img.src = shotUrl(shotNow);
-}, SHOT_EVERY);
+let nextAt = 0;
+function scheduleNext(): void {
+  if (typeof window === 'undefined') return;
+  window.clearTimeout(nextAt);
+  nextAt = window.setTimeout(() => {
+    const box = document.querySelector<HTMLElement>('#loading .ld-shots');
+    if (!box || box.offsetParent === null) return;
+    const [a, b] = [...box.children] as HTMLElement[];
+    const next = a!.classList.contains('on') ? b! : a!, prev = next === a ? b! : a!;
+    shotNow = (shotNow + 1) % SHOTS.length;
+    const img = new Image();
+    img.onload = () => { next.style.backgroundImage = `url("${img.src}")`; next.classList.add('on'); prev.classList.remove('on'); scheduleNext(); };
+    img.src = shotUrl(shotNow);
+  }, SHOT_EVERY);
+}
 
 declare const __VERSION__: string;
 declare const __BUILD__: string;
