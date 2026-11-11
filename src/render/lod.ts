@@ -335,16 +335,53 @@ export function attachLod(root: THREE.Object3D, lod: BuildingLod, o: LodOptions 
 }
 
 /** Przełącza widoczny poziom (−1 = pełny model); wieko dalekiej wersji idzie za dachem pełnego modelu */
-export function showLod(lod: BuildingLod, level: number, propsFar = false): void {
-  level = Math.min(level, lod.levels.length - 1);
-  // drobiazgi z edytora: z bliska pełne, od średniej odległości uproszczone skany, na drugim progu znikają
-  // (na pierwszym drobiazg ma jeszcze kilka pikseli i znikałby na oczach)
-  const pk = (level < 1 ? 1 : 0) + (propsFar ? 2 : 0);
-  if (pk !== lod.propsKey) {
-    lod.propsKey = pk;
-    for (const e of lod.extras ?? []) e.visible = level < 1 && !propsFar;
-    for (const e of lod.extrasFar ?? []) e.visible = level < 1 && propsFar;
+/** Drobiazg na ekranie większy niż tyle pikseli: pełny skan; mniejszy: uproszczony (różnicy już nie widać) */
+const PROP_FULL_PX = 28;
+/** Drobiazg mniejszy niż tyle pikseli znika — tak mały, że nie widać, kiedy go nie ma */
+const PROP_GONE_PX = 2;
+type PropPair = { near: THREE.Object3D; far: THREE.Object3D | null; r: number; geo: THREE.BufferGeometry | null; state: number };
+const propPairs = new WeakMap<BuildingLod, PropPair[]>();
+function pairsOf(lod: BuildingLod): PropPair[] {
+  let list = propPairs.get(lod);
+  if (list) return list;
+  list = [];
+  const meshesIn = (gs: THREE.Object3D[] | undefined): THREE.Mesh[] => (gs ?? []).flatMap((g) => g.children.filter((c) => (c as THREE.Mesh).isMesh) as THREE.Mesh[]);
+  const near = meshesIn(lod.extras), far = meshesIn(lod.extrasFar);
+  near.forEach((m, i) => list!.push({ near: m, far: far[i] ?? null, r: 0, geo: null, state: -1 }));
+  for (const g of [...(lod.extras ?? []), ...(lod.extrasFar ?? [])]) g.visible = true;
+  propPairs.set(lod, list);
+  return list;
+}
+
+/**
+ * Drobiazgi z edytora (skany z paczek) według swojej wielkości na ekranie, a nie progu całego budynku (Michał 11.11.2026:
+ * „nic nie może wyskakiwać na ekranie”): pełny skan, dopóki ma ponad ~28 pikseli; potem uproszczony; znika dopiero poniżej
+ * 2 pikseli. Dotąd wszystkie znikały razem z drugim progiem budynku — beczka miała wtedy jeszcze ok. 10 pikseli.
+ * d — odległość budynku od kamery (pola), pxPerUnit — ile pikseli ma 1 pole w odległości 1 (wysokość obrazu / 2·tg(fov/2)).
+ */
+export function showProps(lod: BuildingLod, d: number, pxPerUnit: number): void {
+  if (!lod.extras?.length) return;
+  for (const p of pairsOf(lod)) {
+    const m = p.near as THREE.Mesh;
+    if (p.geo !== m.geometry) {
+      // skan z paczki dochodzi chwilę później (wcześniej zastępcze pudełko) — promień liczymy od nowa
+      p.geo = m.geometry;
+      if (!m.geometry.boundingSphere) m.geometry.computeBoundingSphere();
+      p.r = (m.geometry.boundingSphere?.radius ?? 0.1) * Math.max(m.scale.x, m.scale.y, m.scale.z);
+    }
+    const px = (2 * p.r * pxPerUnit) / Math.max(0.5, d);
+    // z zapasem 10%, żeby drobiazg na granicy nie mrugał
+    const h = (s: number): number => (p.state === s ? 0.9 : 1);
+    const state = px > PROP_FULL_PX * h(0) ? 0 : px > PROP_GONE_PX * h(1) ? 1 : 2;
+    if (state === p.state) continue;
+    p.state = state;
+    m.visible = state === 0 || (state === 1 && !p.far);
+    if (p.far) p.far.visible = state === 1;
   }
+}
+
+export function showLod(lod: BuildingLod, level: number): void {
+  level = Math.min(level, lod.levels.length - 1);
   if (level !== lod.level) {
     for (const p of lod.parts) p.visible = level < 0;
     // Michał 11.11.2026: „FPS mało” — skany z paczek w każdym egzemplarzu budynku (np. świecznik 213 tys. trójkątów)

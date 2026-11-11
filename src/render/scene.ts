@@ -57,7 +57,7 @@ import { KEEP_GATE, KEEP_SIZE, keepRoom, keepTile, keepWalk } from '../data/keep
 import { wallBetween } from '../sim/path';
 import { Ambience, collectFx, type BuildingFx, type FxSource } from './ambience';
 import { isWetMat, setWetBuildings } from './buildings';
-import { attachLod, LOD_STEPS, prepareLod, showLod, lodStats, type BuildingLod } from './lod';
+import { attachLod, LOD_STEPS, prepareLod, showLod, showProps, lodStats, type BuildingLod } from './lod';
 import { cloudShade, setCloudShadows } from './ground';
 import { cat } from './cat';
 import { tx } from '../i18n';
@@ -127,7 +127,9 @@ import { rockMaterial } from './rocks0ad';
 // skrzydła drzwi i bram (leafL/leafR) i drabiny wież też razem: pakiet bierze macierz świata każdej części co klatkę,
 // więc otwierane drzwi dalej się ruszają, a schowana drabina znika (widoczność sprawdzana co klatkę) — Michał 9.11.2026
 /** Z jakiej odległości kamery (w polach) rysujemy wnętrza pod zamkniętym dachem — bliżej widać je przez drzwi i okna */
-const INTERIOR_NEAR = 11;
+// 20 zamiast 11 (Michał 11.11.2026: „nic nie może wyskakiwać”): przy 11 polach drzwi miały ~27 pikseli i wnętrze pojawiało się
+// w nich na oczach; przy 20 to kilkanaście pikseli ciemnego otworu. Wnętrza i tak idą wspólnymi paczkami, bez cienia
+const INTERIOR_NEAR = 20;
 /** Od jakiej odległości (w polach) drobiazgi z edytora rysują się w lżejszej wersji (uproszczone skany) */
 const PROPS_NEAR = 9;
 const BATCH_ALSO = /^(torch|lod\d+|fill|grainfill|crop|life|leafL|leafR|ladder|warBrazier|yardlog|interior|foodfill|armsfill|fixProps|fixPropsFar|parF|parB|parL|parR)$/; // fixProps: modele z paczek dodane w edytorze (osobno każdy był jednym rysowaniem na sztukę — 87 na farmie, Michał 11.11.2026: „FPS mało”) // wnętrza zawsze widoczne (10.11.2026): też razem // koksowniki i kłody na podwórku: nieruchome, tylko pokazywane i chowane
@@ -3639,10 +3641,13 @@ export class GameRenderer {
           if (d > D) { want = i; break; }
         }
       }
-      // drobiazgi z edytora (skany z paczek): dalej niż PROPS_NEAR pól od kamery lżejsza wersja
+      // drobiazgi z edytora (skany z paczek): każdy według swojej wielkości na ekranie (lod.ts, showProps);
+      // zapasy w składach: dalej niż PROPS_NEAR pól od kamery lżejsza wersja
       const pd = pinned ? 0 : this.lodW.copy(lod.center).applyMatrix4(mesh.matrixWorld).distanceTo(cp) - lod.radius;
       const propsFar = pd > PROPS_NEAR * (lod.propsKey !== undefined && lod.propsKey >= 2 ? 0.9 : 1);
-      showLod(lod, want, propsFar);
+      lod.propsKey = propsFar ? 2 : 1;
+      showLod(lod, want);
+      showProps(lod, Math.max(0, pd), k * this.lodPx);
       setFillFar(mesh, propsFar);
       counts[lod.level + 1]!++;
       if (lod.level >= 0) saved += lod.full - lod.levels[lod.level]!.tris;
