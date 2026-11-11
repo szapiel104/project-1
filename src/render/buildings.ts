@@ -4,7 +4,7 @@ import * as THREE from 'three';
 import { loadTexture } from './ktx';
 import { tx } from '../i18n';
 import { PH_TEXTURES } from './phTextures';
-import { parseMat } from './matSpec';
+import { needsVariant, parseMat, variantKey, type MatSpec } from './matSpec';
 import { basketAt, propAt, propGeometry, propGeometryFlat, propLightSpot, propMaterial, type PropName } from './props';
 import { assetModel } from './assets';
 import { BUILDINGS } from '../data/buildings';
@@ -970,22 +970,51 @@ function tinted(geo: THREE.BufferGeometry, color: THREE.Color): THREE.BufferGeom
  */
 const TINT_SKIP = new Set(['window', 'pane', 'orchardGrass', 'leaf', 'leafLight']);
 const patMats = new Map<string, THREE.MeshStandardMaterial>();
-/** wariant materiału z mocniejszą / słabszą głębią wzoru (mapa normalnych, wypukłość kamienia) — wspólny dla budynków */
-const depthMats = new WeakMap<THREE.Material, Map<number, THREE.Material>>();
-function depthVariant(m: THREE.Material, d: number): THREE.Material {
-  let byD = depthMats.get(m);
-  if (!byD) depthMats.set(m, (byD = new Map()));
-  let v = byD.get(d);
+/** wariant materiału z ustawień edytora (głębia, chropowatość, metal, świecenie) — wspólny dla wszystkich budynków */
+const variantMats = new WeakMap<THREE.Material, Map<string, THREE.Material>>();
+function materialVariant(m: THREE.Material, sp: MatSpec): THREE.Material {
+  let byK = variantMats.get(m);
+  if (!byK) variantMats.set(m, (byK = new Map()));
+  const key = variantKey(sp);
+  let v = byK.get(key);
   if (!v) {
     v = cloneMaterial(m);
     v.userData = { ...m.userData };
-    const s = v as THREE.MeshStandardMaterial;
-    if (s.normalScale) s.normalScale = (m as THREE.MeshStandardMaterial).normalScale.clone().multiplyScalar(d);
-    const pom = m.userData.parallax as { height: THREE.Texture; scale: number; steps: number } | undefined;
-    if (pom) v.userData.parallax = { ...pom, scale: pom.scale * d };
-    byD.set(d, v);
+    const s = v as THREE.MeshStandardMaterial, src = m as THREE.MeshStandardMaterial;
+    if (sp.depth !== 1) {
+      if (s.normalScale && src.normalScale) s.normalScale = src.normalScale.clone().multiplyScalar(sp.depth);
+      const pom = m.userData.parallax as { height: THREE.Texture; scale: number; steps: number } | undefined;
+      if (pom) v.userData.parallax = { ...pom, scale: pom.scale * sp.depth };
+    }
+    if (sp.rough !== null && 'roughness' in s) s.roughness = sp.rough;
+    if (sp.metal !== null && 'metalness' in s) s.metalness = sp.metal;
+    if (sp.glow > 0 && s.emissive) {
+      // świeci barwą własnej tekstury (żar, okna), a nie płaskim kolorem
+      s.emissive = new THREE.Color(1, 0.85, 0.65);
+      s.emissiveIntensity = sp.glow * 1.6;
+      if (src.map) s.emissiveMap = src.map;
+    }
+    byK.set(key, v);
   }
   return v;
+}
+/** zagłębienia: siła wypieczonego AO (kolory wierzchołków podniesione do potęgi) — ta sama bryła, nowe kolory */
+const aoCache = new WeakMap<THREE.BufferGeometry, Map<number, THREE.BufferGeometry>>();
+function aoGeo(geo: THREE.BufferGeometry, k: number): THREE.BufferGeometry {
+  if (k === 1) return geo;
+  let byK = aoCache.get(geo);
+  if (!byK) aoCache.set(geo, (byK = new Map()));
+  let t = byK.get(k);
+  if (t) return t;
+  t = new THREE.BufferGeometry();
+  for (const n of Object.keys(geo.attributes)) if (n !== 'color') t.setAttribute(n, geo.attributes[n]!);
+  if (geo.index) t.setIndex(geo.index);
+  const src = geo.getAttribute('color') as THREE.BufferAttribute, C = new Float32Array(src.count * 3);
+  for (let i = 0; i < src.count * 3; i++) C[i] = Math.pow(Math.max(0, (src.array as ArrayLike<number>)[i]!), k);
+  t.setAttribute('color', new THREE.BufferAttribute(C, 3));
+  t.boundingBox = geo.boundingBox; t.boundingSphere = geo.boundingSphere;
+  byK.set(k, t);
+  return t;
 }
 /** wspólne materiały wzorów, które mokną (setWetBuildings, isWetMat) */
 const wetShared: THREE.MeshStandardMaterial[] = [];
@@ -1023,17 +1052,22 @@ export function partMesh(mat0: string, pos: string | Uint8Array, ao: string | Ui
   const base = mat === 'flag' && flag ? flag : mats[mat] ?? M.wood;
   const k = ((base.userData.tile as number) || 1) * spec.scale;
   const p = pos as string, a = ao as string;
-  const tint = (c: THREE.Color): THREE.Color => (spec.bright !== 1 ? c.clone().multiplyScalar(spec.bright) : c);
-  const deep = (m: THREE.Material): THREE.Material => (spec.depth !== 1 ? depthVariant(m, spec.depth) : m);
-  if (PLAIN_ON && PLAIN_KEYS.has(mat)) return new THREE.Mesh(tinted(blenderGeo(p, a, q, k), tint((base as THREE.MeshStandardMaterial).color)), withAo(PLAIN));
+  // barwa i jasność mnożą kolor wierzchołków, zagłębienia zmieniają wypieczone AO — bez nowych materiałów
+  const mul = new THREE.Color(1, 1, 1).multiplyScalar(spec.bright);
+  if (spec.tint) mul.multiply(new THREE.Color(`#${spec.tint}`));
+  const plainMul = spec.bright !== 1 || !!spec.tint;
+  const tint = (c: THREE.Color): THREE.Color => (plainMul ? c.clone().multiply(mul) : c);
+  const deep = (m: THREE.Material): THREE.Material => (needsVariant(spec) ? materialVariant(m, spec) : m);
+  const geoOf = (): THREE.BufferGeometry => aoGeo(blenderGeo(p, a, q, k), spec.ao);
+  if (PLAIN_ON && PLAIN_KEYS.has(mat)) return new THREE.Mesh(tinted(geoOf(), tint((base as THREE.MeshStandardMaterial).color)), withAo(needsVariant(spec) ? materialVariant(PLAIN, spec) : PLAIN));
   const tex = base.userData.pattern as Pattern | undefined;
   // skała zostaje osobno: kopalnie podmieniają ją na skałę krainy (scene.ts, pattern === 'rock')
   if (PLAIN_ON && tex && tex !== 'rock' && mat in M && !TINT_SKIP.has(mat) && base instanceof THREE.MeshStandardMaterial && !base.transparent) {
     const wet = (WET_KEYS as readonly string[]).includes(mat);
-    return new THREE.Mesh(tinted(blenderGeo(p, a, q, k), tint(base.color)), withAo(deep(patMat(tex, wet))));
+    return new THREE.Mesh(tinted(geoOf(), tint(base.color)), withAo(deep(patMat(tex, wet))));
   }
-  const geo = blenderGeo(p, a, q, k);
-  return new THREE.Mesh(spec.bright !== 1 ? tinted(geo, new THREE.Color(spec.bright, spec.bright, spec.bright)) : geo, withAo(deep(base)));
+  const geo = geoOf();
+  return new THREE.Mesh(plainMul ? tinted(geo, mul) : geo, withAo(deep(base)));
 }
 /** Materiały budynków z wzorem i barwą (paleta tekstur w edytorze poprawek) */
 export const buildingMaterialInfo = (): { name: string; pattern: string | null; color: string; photo?: string; label?: string }[] => buildingMaterialNames().map((name) => {
