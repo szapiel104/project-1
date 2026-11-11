@@ -17,7 +17,7 @@
 import PACKS from 'virtual:model-packs';
 import { tx } from '../i18n';
 import { unpackModel } from './modelpack';
-import { applyModelFixes, type Fix } from './modelfix';
+import { applyModelFixes, dedupeFixes, type Fix } from './modelfix';
 import { loadPh, phUsed } from './phAssets';
 import FIXES from '../data/modelFixes.json';
 
@@ -36,20 +36,37 @@ export function setLiveFixes(map: Record<string, Fix[]>): void { live = map; }
  */
 export async function fetchLiveFixes(local: boolean): Promise<void> {
   const map: Record<string, Fix[]> = {};
+  let dbOk = false;
   try {
     const { supa } = await import('../net/supa');
     const res = await Promise.race([supa.from('model_fixes').select('model,fixes'), new Promise<null>((r) => setTimeout(() => r(null), 3000))]);
-    for (const row of ((res as { data?: { model: string; fixes: Fix[] }[] } | null)?.data ?? [])) if (Array.isArray(row.fixes)) map[row.model] = row.fixes;
+    const rows = (res as { data?: { model: string; fixes: Fix[] }[] | null } | null)?.data;
+    if (rows) { dbOk = true; for (const row of rows) if (Array.isArray(row.fixes)) map[row.model] = row.fixes; }
   } catch { /* bez bazy */ }
   if (local) {
+    // Ta sama wersja lokalnie i na produkcji (Michał 11.11.2026): podstawą jest baza; zmiany zapisane tylko w tej
+    // przeglądarce (np. bez logowania) dochodzą na końcu, a zalogowany twórca od razu wysyła wynik do bazy —
+    // wtedy localhost i produkcja pokazują dokładnie to samo. Przeglądarka dostaje kopię z bazy.
+    const upload: [string, Fix[]][] = [];
     try {
       for (let k = 0; k < localStorage.length; k++) {
         const key = localStorage.key(k);
         if (!key?.startsWith('p1-model-fixes:')) continue;
         const v = JSON.parse(localStorage.getItem(key) ?? 'null') as Fix[] | null, id = key.slice('p1-model-fixes:'.length);
-        if (Array.isArray(v) && v.length > (map[id]?.length ?? 0)) map[id] = v;
+        if (!Array.isArray(v)) continue;
+        const merged = dedupeFixes([...(map[id] ?? []), ...v]);
+        if (dbOk && merged.length > (map[id]?.length ?? 0)) upload.push([id, merged]);
+        map[id] = merged;
       }
+      if (dbOk) for (const [id, list] of Object.entries(map)) localStorage.setItem(`p1-model-fixes:${id}`, JSON.stringify(list));
     } catch { /* prywatne okno */ }
+    if (upload.length) {
+      try {
+        const { supa } = await import('../net/supa');
+        const { data: s } = await supa.auth.getSession();
+        if (s.session) for (const [model, fixes] of upload) await supa.from('model_fixes').upsert({ model, fixes, updated_by: s.session.user.id, updated_at: new Date().toISOString() });
+      } catch { /* zostaje w przeglądarce, wyśle następny zapis */ }
+    }
   }
   live = map;
 }
