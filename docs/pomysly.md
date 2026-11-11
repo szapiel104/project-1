@@ -3,10 +3,10 @@
 Tu trafia wszystko nowe, co nie należy do bieżącej partii. Do planu etapów (`plan.md`) przenosimy stąd, gdy przychodzi na to kolej.
 
 ## Kolejka Michała z 11.11.2026, 16:15 (robić po kolei, odhaczać datą)
-- [ ] Wilk: nowy model (obecny z części wygląda źle) — gotowy z paczki, z animacją chodu i biegu.
-- [ ] Sanktuarium źródła: popsute — woda jako gładkie ciemne bryły (fontanna, sadzawka), gołe pudła; poprawić, ładniej i lżej.
-- [ ] Wieża maga płomieni: płomienie jako pomarańczowe krążki (ulep) — tylko znaczniki ognia; czerwona łata na dziedzińcu.
-- [ ] Podgląd modeli: usunąć „Wodospad (próg 5 pól)” z grupy Teren.
+- [x] (11.11.2026) Wilk: model z 0 A.D. (chód, spoczynek, skok do ataku, płynne przejścia), bez świecących oczu.
+- [x] (11.11.2026) Sanktuarium źródła: woda w budynkach z falującymi zmarszczkami i odbiciem nieba (`waterMaterial`, `tickBuildingWater`). Na zrzucie Michała budynki były bez dachów — w podglądzie z dachami wyglądają dobrze (sprawdzić, czy to nie przycisk „Bez dachu”).
+- [x] (11.11.2026) Wieża Płomienia: żar z popiołu i węgla (`coals` w magefire.py) zamiast krążków; daszek drewutni łupkowy.
+- [x] (11.11.2026) Podgląd modeli: bez wodospadu.
 
 ## Kolejka Michała z 11.11.2026, 12:43 (robić po kolei, odhaczać datą)
 - [x] (11.11.2026) Zwierzęta w osadzie (kura, pies, świnia) wyglądają tragicznie — modele z 0 A.D. (CC BY-SA), wygładzone podziałem Loopa, chód / rycie / dziobanie / siadanie, `render/fauna.ts`. Dalej: osobna lżejsza wersja z daleka (na razie ta sama siatka; postaci jest mało, więc FPS nie spada).
