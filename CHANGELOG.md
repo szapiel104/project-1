@@ -6,6 +6,13 @@
 
 
 
+## 0.95.1 — 2026-11-11
+- Wydajność: `fixProps` w `BATCH_ALSO` (scene.ts), chowane z daleka w `showLod` (lod.ts, `extras`), cień tylko od promienia > 0,08 (buildings.ts). Zapis Michała: 2926 → 2450 wywołań, 11,2 → 5,3 mln trójkątów.
+- `walls.ts`: `HALL_GAPS` — mur kamienny dochodzi mostkiem do lica koszar i zbrojowni (bez drzwi).
+- Zbrojownia: łuki w `PILES.bow` leżą płasko, `fill.userData.maxY` nie pozwala warstwie przebić dachu.
+- `loadscreen.ts`: `SHOTS` (public/shots/*.webp, 6 zrzutów z gry, przyciemnione), przenikanie co 6,5 s, w menu jedno zdjęcie, kolejne przy odświeżeniu (`p1-shot` w localStorage).
+- Trzecia paczka Poly Haven: 24 modele (`phAssets.ts`, CREDITS.md).
+
 ## 0.95.0 — 2026-11-11
 - Podgląd modeli: `viewerAccount.ts` (logowanie, nick, hasło, reset, wylogowanie).
 - `matSpec.ts`: zapis `nazwa|s=|b=|t=|ao=|d=|r=|m=|e=` (barwa i AO w kolorach wierzchołków, reszta jako wariant materiału `materialVariant`), stary `@^~` czytany dalej.

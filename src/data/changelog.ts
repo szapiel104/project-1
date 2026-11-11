@@ -9,6 +9,21 @@ export type { ChangeEntry } from './changelogTypes';
  * — tak jak CHANGELOG.md dla nas. `tests/changelog.test.ts` pilnuje, że najnowszy wpis ma wersję z package.json.
  */
 const NEW: ChangeEntry[] = [
+  { v: '0.95.1', date: '2026-11-11', pl: [
+    'Płynniejsza gra w dużych osadach: przedmioty dodane do budynków rysują się razem, z daleka znikają, a drobne nie rzucają cienia.',
+    'Mur kamienny łączy się z koszarami i zbrojownią tak jak z wieżą.',
+    'W zbrojowni łuki leżą na kozłach i nic już nie przebija dachu.',
+    'Ekran wczytywania i menu: zdjęcia z gry w tle, przy wczytywaniu zmieniają się same.',
+    'Edytor modeli: 24 nowe przedmioty — broń, narzędzia, latarnia, stoły, beczka wina, wrota, krata, palenisko, działo.',
+    'Ulepszenia budynków z edytora twórcy.',
+  ], en: [
+    'Smoother play in large settlements: items added to buildings are drawn together, vanish at a distance, and small ones cast no shadow.',
+    'Stone walls now join the barracks and armoury just as they join a tower.',
+    'In the armoury the bows lie on their racks and nothing pokes through the roof any more.',
+    'Loading screen and menu: pictures from the game in the background, changing while it loads.',
+    'Model editor: 24 new items — weapons, tools, a lantern, tables, a wine cask, castle doors, a portcullis, a fire pit, a cannon.',
+    'Building improvements from the creator’s editor.',
+  ] },
   { v: '0.95.0', date: '2026-11-11', pl: [
     'Podgląd modeli: konto w górnej belce — logowanie, zmiana nazwy i hasła, wylogowanie.',
     'Edytor modeli: barwa, zagłębienia, matowość, metal i świecenie każdej części.',
