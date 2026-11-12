@@ -491,7 +491,8 @@ function goalFor(g: GameState, u: Unit, job: Building | undefined, prod: Product
         if (!beast) { u.hunting = 0; u.wait = RETRY_TICKS; return null; }
         u.hunting = beast.id;
         const w = g.map.width, bx = (beast.px / FP) | 0, by = (beast.py / FP) | 0;
-        const lo = beast.hp > 0 ? 2 : 0, hi = beast.hp > 0 ? 4 : 1;
+        // żywe: podchodzi na strzał (2–4 pola); truchło: staje na jego polu (pochyla się nad nim)
+        const lo = beast.hp > 0 ? 2 : 0, hi = beast.hp > 0 ? 4 : 0;
         return (t) => {
           if (g.occupancy[t] !== 0) return false;
           const x = t % w, y = (t - x) / w, d = Math.max(Math.abs(x - bx), Math.abs(y - by));
