@@ -9,6 +9,23 @@ export type { ChangeEntry } from './changelogTypes';
  * — tak jak CHANGELOG.md dla nas. `tests/changelog.test.ts` pilnuje, że najnowszy wpis ma wersję z package.json.
  */
 const NEW: ChangeEntry[] = [
+  { v: '0.95.7', date: '2026-11-12', pl: [
+    'Nowy budynek: chata myśliwego. Myśliwy podchodzi zwierzynę, sięga do kołczanu, naciąga łuk i strzela; ubite zwierzę patroszy na miejscu, tuszę niesie do chaty, oprawia ją i porcjami odnosi mięso do spichlerza.',
+    'Nowy surowiec: skóry. Z jelenia i dzika myśliwy zanosi wyprawione skóry do składu, a rynek dobrze za nie płaci.',
+    'Jelenie, dziki i zające żyją teraz w grze naprawdę: pasą się stadami, uciekają przed ludźmi, a wybite stado odnawia się zwierzętami, które przychodzą z krańców mapy. Przy trafieniu leje się krew, a ubite zwierzę leży na boku.',
+    'Przeciwnik też stawia chatę myśliwego, gdy w okolicy jego zamku pasie się zwierzyna.',
+    'Nowy wilk i płynniejsze ruchy wszystkich zwierząt; dzik ma wreszcie zamknięty pysk.',
+    'Kliknięcie w zwierzę (dzikie, w osadzie, kruki) mówi, co to za stworzenie.',
+    'Krótsze wczytywanie: modele zwierząt doczytują się w tle już po wejściu do gry.',
+  ], en: [
+    'A new building: the hunter\'s lodge. The hunter stalks game, reaches for his quiver, draws his bow and looses; he dresses the kill where it fell, carries the carcass home, butchers it and takes the meat to the granary a portion at a time.',
+    'A new good: hides. From deer and boar the hunter brings cured hides to the stockpile, and the market pays handsomely for them.',
+    'Deer, boar and hares now truly live in the realm: they graze in herds, flee from people, and a hunted-out herd recovers as new beasts wander in from the edges of the map. A struck beast bleeds, and the slain lie on their side.',
+    'Your rivals raise hunter\'s lodges too, whenever game roams near their castle.',
+    'A new wolf and smoother movement for every animal; the boar finally keeps its jaw shut.',
+    'Clicking an animal (wild, in the village, or a crow) tells you what manner of creature it is.',
+    'Shorter loading: animal models finish loading in the background once you are in the game.',
+  ] },
   { v: '0.95.6', date: '2026-11-11', pl: [
     'W ogniskach i paleniskach obozu zbójców, chaty maga i kuźni leży prawdziwy żar: węgiel i rozżarzone grudki zamiast płaskich krążków.',
   ], en: [

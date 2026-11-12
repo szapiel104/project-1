@@ -6,6 +6,13 @@
 
 
 
+## 0.95.7 — 2026-11-12
+- Myśliwy: `sim/systems/wildgame.ts` (zwierzyna w stanie gry: stada z ziarna mapy, ucieczka, `gone` = pamięć stada, odradzanie z krańca mapy `entry()`), `hunter` w `BUILDINGS` (site `'game'`, `processTicks`), `workers.ts`: strzał → truchło → patroszenie na polu truchła → tusza do chaty → partie mięsa + skóra; `Unit.hunting`, `Unit.hide`; bot (`ORDER` po pierwszych domach, gdy stado do 60 pól od twierdzy); test `hunter.test.ts`.
+- Nowy surowiec `hides` (skład, rynek 30, bot sprzedaje nadwyżkę), model `tools/models/hides.py`, ikona w HUD.
+- Obraz: `Wildlife` rysuje `g.beasts` (płynne doganianie, upadek na bok, bez pór roku), myśliwy w postaci łucznika (`hunters` Figures, `bowShot`, `workArms` do niesienia), krew zwierzyny (`beastBlood`, plamy pod truchłem).
+- Zwierzęta: 24/16 klatek, int16, wilk Roo (Sketchfab, CC BY 4.0), żuchwa dzika, kliknięcie w zwierzę, leniwe wczytywanie modeli zwierząt (`modelstore` `later`).
+- Tryb testowy: `__test.beasts(gatunek, x, y, n)`.
+
 ## 0.95.6 — 2026-11-11
 - `building.py`: `coals()` (miał, węgiel `coal`, grudki 'ember'); użyte w banditcamp, magehut, smithy; kolejność materiałów zachowana (testy poprawek z edytora).
 
