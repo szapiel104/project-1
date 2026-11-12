@@ -255,7 +255,8 @@ export class Wildlife {
   private side = new THREE.Quaternion();
   private fwd = new THREE.Vector3(0, 0, 1);
 
-  constructor(scene: THREE.Scene) { scene.add(cat(this.group, 'dzikie zwierzęta')); }
+  // bez śniegu pór roku (season.ts): ubite zwierzę leży na boku i przysypany „wierzch” robił z jelenia białego
+  constructor(scene: THREE.Scene) { this.group.userData.noSeason = true; scene.add(cat(this.group, 'dzikie zwierzęta')); }
 
   /** Siatka zwierzęcia w scenie (własne położenia i normalne, mieszane co klatkę) */
   private body(b: Beast): THREE.Mesh {
