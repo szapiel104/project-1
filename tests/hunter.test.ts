@@ -1,0 +1,34 @@
+import { expect, it } from 'vitest';
+import { resIndex } from '../src/data/resources';
+import { deserialize, serialize } from '../src/sim/save';
+import { addPeasants, emptyScene, placeReady, setHour } from '../src/sim/emptyscene';
+import { createGame, FP, stateHash, type GameState } from '../src/sim/state';
+import { step } from '../src/sim/step';
+
+function scene(): { g: GameState; id: number } {
+  const g = createGame(11, '1v1', 2, true);
+  emptyScene(g);
+  const k = g.buildings[0]!, W = g.map.width;
+  const hx = k.door % W, hy = Math.floor(k.door / W);
+  const id = placeReady(g, 'hunter', hx - 1, hy + 8)!;
+  placeReady(g, 'granary', hx + 4, hy + 4);
+  // małe stado jeleni kilkanaście pól od chaty
+  const x = hx + 12, y = hy + 16;
+  for (let i = 0; i < 3; i++) g.beasts!.push({ id: g.nextId++, sp: 0, herd: 1, size: 3, px: (x + i) * FP, py: y * FP, hx: x * FP, hy: y * FP, tx: (x + i) * FP, ty: y * FP, state: 0, until: 0, hp: 1 });
+  // pusta scena daje po 5000 wszystkiego (pełne magazyny); tu mało, żeby mięso miało gdzie trafić
+  g.players[0]!.res.fill(50);
+  addPeasants(g, 2);
+  setHour(g, 7);
+  return { g, id };
+}
+
+it('myśliwy poluje na jelenie i przynosi mięso; deterministycznie i z zapisem gry', () => {
+  const run = (): GameState => { const { g } = scene(); for (let i = 0; i < 3000; i++) step(g, []); return g; };
+  const { g } = scene();
+  const meat0 = g.players[0]!.res[resIndex('meat')]!;
+  for (let i = 0; i < 3000; i++) step(g, []);
+  expect(g.players[0]!.res[resIndex('meat')]!).toBeGreaterThan(meat0);
+  expect(stateHash(run())).toBe(stateHash(g));
+  const back = deserialize(JSON.parse(JSON.stringify(serialize(g, '1v1'))))!;
+  expect(back.beasts!.length).toBe(g.beasts!.length);
+}, 60000);

@@ -10,6 +10,7 @@ import { economySystem } from './systems/economy';
 import { demolish, placeBuilding, removeRoad } from './systems/placement';
 import { relocate } from './systems/relocate';
 import { wolfSystem } from './systems/wolves';
+import { wildGameSystem } from './systems/wildgame';
 import { guardSystem } from './systems/guards';
 import { campSystem } from './systems/minecamp';
 import { GUARD } from '../data/units';
@@ -257,6 +258,7 @@ export function step(g: GameState, commands: readonly Command[]): void {
   gateSystem(g);
   stoneWallSystem(g);
   wolfSystem(g);
+  wildGameSystem(g);
   guardSystem(g);
   campSystem(g);
   economySystem(g);

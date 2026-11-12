@@ -66,6 +66,7 @@ const CARPENTER_MODEL = model('carpenter');
 const PIGSTY_MODEL = model('pigsty');
 const CEMETERY_MODEL = model('cemetery');
 const FORESTER_MODEL = model('forester');
+const HUNTER_MODEL = model('hunter');
 const FIELD_TENT_MODEL = model('fieldtent');
 const SMITHY_MODEL = model('smithy');
 const ARMORER_MODEL = model('armorer');
@@ -1797,6 +1798,13 @@ const BUILDERS: Record<string, Builder> = {
     // z wikliny, kopczyk z łopatą, sadzonki w płótnie, wiadro i worek z nasionami; w izbie stół z siewkami i prycza
     blenderModel(g, FORESTER_MODEL as unknown as BlenderBuilding, flag);
     const p = (FORESTER_MODEL as unknown as { pennant: [number, number, number] }).pennant;
+    pennant(g.getObjectByName('shell') as THREE.Group, flag, p[0], p[1], p[2]);
+  },
+  hunter(g, _team, flag) {
+    // chata myśliwego z Blendera (tools/models/hunter.py): chata z bali z porożem nad drzwiami, ramy ze skórami,
+    // żerdź z mięsem nad paleniskiem, pieniek z toporkiem, kosz ze strzałami i łuk o ścianę
+    blenderModel(g, HUNTER_MODEL as unknown as BlenderBuilding, flag);
+    const p = (HUNTER_MODEL as unknown as { pennant: [number, number, number] }).pennant;
     pennant(g.getObjectByName('shell') as THREE.Group, flag, p[0], p[1], p[2]);
   },
   fieldTent(g, _team, flag) {

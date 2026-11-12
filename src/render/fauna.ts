@@ -1,6 +1,6 @@
 import * as THREE from 'three';
-import type { GameState } from '../sim/state';
-import { Terrain } from '../data/terrain';
+import { FP, type GameState } from '../sim/state';
+import { GAME_SPECIES } from '../sim/systems/wildgame';
 import { model, bytes, modelReady } from './modelstore';
 import { cat } from './cat';
 import { play3d } from '../audio/engine';
@@ -16,17 +16,14 @@ import { play3d } from '../audio/engine';
  * na postoju. Każde widoczne zwierzę to jedno wywołanie rysowania; poza kadrem odrzuca je kamera. (Morph targets
  * i pozy z tekstury w puli instancji na WebGPU nie działały — nogi stały albo zwierzęta znikały.)
  *
- * Na razie tylko wygląd (symulacja o nich nie wie, gra przez sieć zostaje zgodna): stada pasą się wokół swojego miejsca,
- * chodzą od kępy do kępy, porykują, a gdy podejdzie człowiek (chłop, żołnierz), uciekają biegiem. Myśliwy i mięso —
- * osobna partia (docs/pomysly.md), wtedy zwierzęta przejdą do symulacji.
+ * Od 12.11.2026 stada żyją w symulacji (sim/systems/wildgame.ts — myśliwy na nie poluje, gra przez sieć zostaje zgodna);
+ * tu tylko płynne rysowanie: położenie, kierunek, krok, skubanie, odgłosy, a ubite zwierzę leży na boku.
  */
 type Packed = { pos: string; nrm: string; uv: string; idx: string; morph: Record<string, { pos?: string; pq?: string; s?: number; nrm: string }> };
 type FaunaModel = { height: number; length: number; normalMap?: boolean; walkN?: number; idleN?: number; body: Packed };
 export type Species = 'camel' | 'deer' | 'pig' | 'hen' | 'dog' | 'boar' | 'fox' | 'rabbit' | 'wolf';
 /** Prędkość chodu w polach na sekundę (podgląd modeli) */
 const WALK_SPEED: Record<Species, number> = { camel: 0.55, deer: 0.7, pig: 0.3, hen: 0.35, dog: 0.8, boar: 0.45, fox: 0.6, rabbit: 0.35, wolf: 0.9 };
-/** bieg przy ucieczce (pola na sekundę) */
-const FLEE_SPEED: Partial<Record<Species, number>> = { camel: 2.6, deer: 3.4, boar: 2.8, fox: 3.6, rabbit: 4 };
 /** Faza chodu liczona w „krokach” 0..WALK (pełny cykl = WALK) — wspólna dla gry; ile klatek naprawdę ma zwierzę, mówi
  *  jego model (walkN, idleN: od 12.11.2026 24 i 16 dla płynności; starsze pliki 10 i 8) */
 const WALK = 10, IDLE = 8;
@@ -236,36 +233,27 @@ export function faunaObject(sp: Species): THREE.Mesh {
 
 interface Beast {
   sp: Species; x: number; y: number; hx: number; hy: number; heading: number;
-  /** 0 pasie się, 1 idzie, 2 ucieka */
+  /** 0 pasie się, 1 idzie, 2 ucieka, 3 ubite (leży na boku) */
   state: number; until: number; tx: number; ty: number; speed: number; phase: number; graze: number; scale: number; seed: number;
+  /** przewracanie ubitego zwierzęcia 0..1 */
+  fall?: number;
 }
 
-/** Ile stad i jakich (kraina mapy) */
-const HERDS: Record<string, [Species, number, number, number][]> = {
-  // [gatunek, liczba stad, najmniej w stadzie, najwięcej]
-  // dziki chodzą watahami, lisy pojedynczo, zające po dwa-trzy (przyszła zwierzyna dla myśliwego)
-  desert: [['camel', 7, 2, 4], ['fox', 2, 1, 1]],
-  meadow: [['deer', 9, 3, 6], ['boar', 5, 2, 4], ['fox', 4, 1, 1], ['rabbit', 7, 1, 3]],
-  highland: [['deer', 8, 2, 5], ['boar', 5, 2, 4], ['fox', 3, 1, 1], ['rabbit', 4, 1, 2]],
-  steppe: [['deer', 5, 2, 4], ['fox', 4, 1, 1], ['rabbit', 8, 1, 3]],
-  north: [['deer', 4, 2, 3], ['fox', 3, 1, 1], ['rabbit', 3, 1, 2]],
-};
-const FLEE = 6.5;       // człowiek bliżej niż tyle pól — zwierzę ucieka
-const MAX = 110;
-
 export class Wildlife {
-  private beasts: Beast[] = [];
+  /** zwierzę z symulacji (wildgame.ts, po id) → stan obrazu: płynne położenie, kierunek, krok, skubanie, upadek */
+  private beasts = new Map<number, Beast>();
   /** zwierzę → jego siatka (jedno wywołanie rysowania na widoczne zwierzę, poza kadrem odrzuca je kamera) */
   private bodies = new Map<Beast, THREE.Mesh>();
   private group = new THREE.Group();
   /** kiedy zwierzę ostatnio się odezwało */
   private voiceAt = new Map<Beast, number>();
-  private key = '';
   private m = new THREE.Matrix4();
   private q = new THREE.Quaternion();
   private v = new THREE.Vector3();
   private s = new THREE.Vector3();
   private up = new THREE.Vector3(0, 1, 0);
+  private side = new THREE.Quaternion();
+  private fwd = new THREE.Vector3(0, 0, 1);
 
   constructor(scene: THREE.Scene) { scene.add(cat(this.group, 'dzikie zwierzęta')); }
 
@@ -280,117 +268,70 @@ export class Wildlife {
     return m;
   }
 
-  /** do sprawdzania z konsoli (window.__fauna()): gatunek, miejsce na mapie, stan (0 pasie się, 1 idzie, 2 ucieka), czy widoczne */
+  /** do sprawdzania z konsoli (window.__fauna()): gatunek, miejsce na mapie, stan (0 pasie się, 1 idzie, 2 ucieka, 3 ubite), czy widoczne */
   list(): { sp: Species; x: number; y: number; state: number; shown: boolean }[] {
-    return this.beasts.map((b) => ({ sp: b.sp, x: +b.x.toFixed(1), y: +b.y.toFixed(1), state: b.state, shown: !!this.bodies.get(b)?.visible }));
+    return [...this.beasts.values()].map((b) => ({ sp: b.sp, x: +b.x.toFixed(1), y: +b.y.toFixed(1), state: b.state, shown: !!this.bodies.get(b)?.visible }));
   }
 
-  /** Miejsce, po którym zwierzę może chodzić: łąka/piach (jeleń także las), bez budynków, wody i gór */
-  private ok(g: GameState, sp: Species, x: number, y: number): boolean {
-    const tx = Math.floor(x), ty = Math.floor(y);
-    if (tx < 1 || ty < 1 || tx >= g.map.width - 1 || ty >= g.map.height - 1) return false;
-    const t = ty * g.map.width + tx, tile = g.map.tiles[t];
-    if (g.occupancy[t] !== 0) return false;
-    return tile === Terrain.Grass || ((sp === 'deer' || sp === 'boar' || sp === 'fox') && tile === Terrain.Forest);
-  }
-
-  private spawn(g: GameState): void {
-    for (const m of this.bodies.values()) this.group.remove(m);
-    this.bodies.clear();
-    this.beasts = [];
-    const herds = HERDS[g.map.biome ?? 'meadow'] ?? [];
-    let s = (g.map.seed ^ 0x5eed1) >>> 0;
-    const rnd = (): number => { s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296; };
-    const W = g.map.width, H = g.map.height;
-    for (const [sp, n, lo, hi] of herds) {
-      for (let k = 0; k < n; k++) {
-        // miejsce stada: z dala od zamków (ponad 22 pola), na dozwolonym polu
-        let hx = 0, hy = 0, found = false;
-        for (let tries = 0; tries < 60 && !found; tries++) {
-          hx = 6 + rnd() * (W - 12); hy = 6 + rnd() * (H - 12);
-          found = this.ok(g, sp, hx, hy) && g.map.starts.every((st) => Math.hypot(st.x - hx, st.y - hy) > 22);
-        }
-        if (!found) continue;
-        const cnt = lo + Math.floor(rnd() * (hi - lo + 1));
-        for (let i = 0; i < cnt && this.beasts.length < MAX; i++) {
-          const x = hx + (rnd() - 0.5) * 3, y = hy + (rnd() - 0.5) * 3;
-          if (!this.ok(g, sp, x, y)) continue;
-          this.beasts.push({ sp, x, y, hx, hy, heading: rnd() * Math.PI * 2, state: 0, until: rnd() * 8, tx: x, ty: y, speed: 0, phase: rnd() * WALK, graze: 0, scale: 0.9 + rnd() * 0.2, seed: rnd() });
-        }
-      }
-    }
-  }
-
-  sync(g: GameState, ctx: { time: number; dt: number; calm: boolean; height: (x: number, y: number) => number; cam: { x: number; y: number } }, people: { x: number; y: number }[]): void {
-    const key = `${g.map.seed}:${g.map.biome}:${g.map.width}`;
-    if (key !== this.key) { this.key = key; this.spawn(g); }
+  /**
+   * Zwierzyna z symulacji (Michał 12.11.2026: myśliwy na nią poluje, więc stada żyją w stanie gry — wildgame.ts).
+   * Obraz tylko płynnie dogania położenie z ticków, obraca zwierzę w stronę ruchu, liczy krok z przebytej drogi,
+   * a ubite zwierzę przewraca na bok.
+   */
+  sync(g: GameState, ctx: { time: number; dt: number; calm: boolean; height: (x: number, y: number) => number; cam: { x: number; y: number } }): void {
     const dt = Math.min(0.1, ctx.dt), t = ctx.time;
     const W2 = g.map.width / 2, H2 = g.map.height / 2;
     const seen = new Set<Beast>();
-    for (const b of this.beasts) {
-      // kto najbliżej z ludzi
-      let nd = FLEE * FLEE, px = 0, py = 0;
-      for (const p of people) { const d = (p.x - b.x) ** 2 + (p.y - b.y) ** 2; if (d < nd) { nd = d; px = p.x; py = p.y; } }
-      if (nd < FLEE * FLEE) {
-        // ucieczka: biegiem w przeciwną stronę, kawałek dalej niż zasięg
-        if (b.state !== 2) b.phase = b.phase % WALK;
-        const a = Math.atan2(b.x - px, b.y - py) + (b.seed - 0.5) * 0.6;
-        b.state = 2; b.until = t + 2.5; b.tx = b.x + Math.sin(a) * 9; b.ty = b.y + Math.cos(a) * 9;
-      } else if (t > b.until) {
-        if (b.state === 0) {
-          // idzie do nowej kępy niedaleko swojego miejsca (stado nie rozłazi się po mapie)
-          const a = b.seed * 100 + t * 0.37, r = 1 + ((Math.sin(a * 3.1) + 1) / 2) * 5;
-          b.tx = b.hx + Math.cos(a) * r; b.ty = b.hy + Math.sin(a) * r;
-          b.state = 1; b.until = t + 14;
-        } else {
-          // po ucieczce stado osiada w nowym miejscu
-          if (b.state === 2) { b.hx = b.x; b.hy = b.y; }
-          b.state = 0; b.until = t + 5 + ((Math.sin(b.seed * 77 + t) + 1) / 2) * 9;
-        }
+    for (const sb of g.beasts ?? []) {
+      const sp = GAME_SPECIES[sb.sp] as Species | undefined;
+      if (!sp || sb.gone) continue;
+      const sx = sb.px / FP, sy = sb.py / FP;
+      let b = this.beasts.get(sb.id);
+      if (!b) {
+        const r = ((sb.id * 2654435761) >>> 0) / 4294967296;
+        b = { sp, x: sx, y: sy, hx: sx, hy: sy, heading: r * Math.PI * 2, state: 0, until: 0, tx: sx, ty: sy, speed: 0, phase: r * WALK, graze: 0, scale: 0.9 + r * 0.2, seed: r, fall: 0 };
+        this.beasts.set(sb.id, b);
       }
-      let want = 0;
-      if (b.state !== 0) {
-        const dx = b.tx - b.x, dy = b.ty - b.y, d = Math.hypot(dx, dy);
-        if (d < 0.15) { if (b.state === 1) { b.state = 0; b.until = t + 4 + b.seed * 8; } }
-        else {
-          want = b.state === 2 ? (FLEE_SPEED[b.sp] ?? 3) : WALK_SPEED[b.sp];
-          const h = Math.atan2(dx, dy);
+      seen.add(b);
+      b.state = sb.hp <= 0 ? 3 : sb.state;
+      // płynne doganianie położenia z symulacji (ticki co 0,1 s)
+      const k = 1 - Math.exp(-dt * 8), ox = b.x, oy = b.y;
+      b.x += (sx - b.x) * k; b.y += (sy - b.y) * k;
+      const mv = Math.hypot(b.x - ox, b.y - oy), sp1 = dt > 0 ? mv / dt : 0;
+      if (b.state !== 3) {
+        b.speed += (sp1 - b.speed) * Math.min(1, dt * 6);
+        if (mv > 0.0005) {
+          const h = Math.atan2(b.x - ox, b.y - oy);
           let dh = h - b.heading; dh -= Math.round(dh / (Math.PI * 2)) * Math.PI * 2;
-          b.heading += dh * Math.min(1, dt * (b.state === 2 ? 6 : 2.5));
+          b.heading += dh * Math.min(1, dt * (b.state === 2 ? 7 : 3));
         }
-      }
-      b.speed += (want - b.speed) * Math.min(1, dt * 3);
-      if (b.speed > 0.02) {
-        const nx = b.x + Math.sin(b.heading) * b.speed * dt, ny = b.y + Math.cos(b.heading) * b.speed * dt;
-        if (this.ok(g, b.sp, nx, ny)) { b.x = nx; b.y = ny; }
-        else { b.heading += Math.PI * 0.5 * (b.seed > 0.5 ? 1 : -1); if (b.state === 1) b.until = t; }
-      }
+      } else { b.speed = 0; b.fall = Math.min(1, (b.fall ?? 0) + dt * 2.2); }
       // daleko od kamery nie liczymy pozy ani macierzy
       if ((b.x - ctx.cam.x) ** 2 + (b.y - ctx.cam.y) ** 2 > 90 * 90) continue;
       if (!faunaReady(b.sp)) continue;   // model jeszcze się doczytuje — chodzi, ale go nie widać
       const len = model<FaunaModel>(`fauna_${b.sp}`).length;
-      // klatka chodu z przebytej drogi (nogi nie ślizgają się): pełny cykl na ok. 1,1 długości ciała
-      // przy ucieczce nogi nie młócą szybciej niż ~2,5 cyklu na sekundę (małe zwierzęta wyglądały jak nakręcane)
+      // klatka chodu z przebytej drogi (nogi nie ślizgają się); przy ucieczce nie szybciej niż ~2,5 cyklu na sekundę
       b.phase = (b.phase + Math.min(2.5, b.speed / (len * strideOf(b.sp))) * dt * WALK) % WALK;
       b.graze += ((b.state === 0 && !ctx.calm ? 1 : 0) * (0.5 + 0.5 * Math.max(0, Math.sin(t * 0.25 + b.seed * 40))) - b.graze) * Math.min(1, dt * 1.2);
-      const mix = poseFor(b.sp, Math.min(1, b.speed / (WALK_SPEED[b.sp] * 0.7)), b.phase, t, b.seed, b.graze);
-      // mieszanie dwóch klatek na procesorze: zwierząt jest kilkanaście, a gotowa siatka rysuje się zwykłym materiałem
+      const mix = poseFor(b.sp, b.state === 3 ? 0 : Math.min(1, b.speed / (WALK_SPEED[b.sp] * 0.7)), b.phase, t, b.seed, b.state === 3 ? 0 : b.graze);
       const mesh = this.body(b);
       blendFrames(mesh, b.sp, mix);
       // odgłosy: od czasu do czasu z bliska, przy ucieczce częściej
       const near = (b.x - ctx.cam.x) ** 2 + (b.y - ctx.cam.y) ** 2 < 30 * 30;
-      if (near && !ctx.calm) {
+      if (near && !ctx.calm && b.state !== 3) {
         const last = this.voiceAt.get(b) ?? -99, gap = b.state === 2 ? 4 : 14 + b.seed * 20;
         // lis i zając milczą; dzik chrząka jak świnia, tylko niżej
         const voice = b.sp === 'camel' ? 'camel' : b.sp === 'deer' ? 'deer' : b.sp === 'boar' ? 'pig' : null;
         if (voice && t - last > gap && Math.sin(t * 1.7 + b.seed * 91) > 0.97) { this.voiceAt.set(b, t); play3d(voice, b.x - W2, b.y - H2, { y: ctx.height(b.x, b.y) + 0.4, rate: voice === 'pig' ? 0.75 : 1 }); }
       }
       this.q.setFromAxisAngle(this.up, b.heading);
-      this.m.compose(this.v.set(b.x - W2, ctx.height(b.x, b.y), b.y - H2), this.q, this.s.setScalar(b.scale));
+      // ubite: przewraca się na bok wokół osi grzbietu
+      if (b.state === 3) this.q.multiply(this.side.setFromAxisAngle(this.fwd, (b.fall ?? 0) * Math.PI / 2));
+      this.m.compose(this.v.set(b.x - W2, ctx.height(b.x, b.y) + (b.state === 3 ? (b.fall ?? 0) * 0.04 * b.scale : 0), b.y - H2), this.q, this.s.setScalar(b.scale));
       mesh.matrix.copy(this.m); mesh.matrixWorldNeedsUpdate = true;
       mesh.visible = true;
-      seen.add(b);
     }
-    for (const [b, m] of this.bodies) if (!seen.has(b)) m.visible = false;
+    for (const [id, b] of this.beasts) if (!seen.has(b)) { this.beasts.delete(id); const m = this.bodies.get(b); if (m) { this.group.remove(m); this.bodies.delete(b); } }
+    for (const [b, m] of this.bodies) if (!seen.has(b) || (b.x - ctx.cam.x) ** 2 + (b.y - ctx.cam.y) ** 2 > 90 * 90) m.visible = false;
   }
 }

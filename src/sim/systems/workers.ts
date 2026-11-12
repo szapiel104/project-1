@@ -7,6 +7,7 @@ import { WALL_TOP } from '../../data/keep';
 import { findPath, walkable } from '../path';
 import { clockAt, hourStarts, rainAt } from '../clock';
 import { FP, Phase, playerKeep, storeRoom, type Building, type GameState, type Unit } from '../state';
+import { GAME_MEAT, GAME_SPECIES, HUNT_RANGE, nearestGame } from './wildgame';
 import { CAMP_HOLD, campOf, holdTotal, putInHold } from './minecamp';
 import { mineWalkTicks } from '../../data/minewalk';
 import { plantSapling } from './forestry';
@@ -479,6 +480,22 @@ function goalFor(g: GameState, u: Unit, job: Building | undefined, prod: Product
     case Phase.ToSite: {
       const site = prod?.site;
       if (site === undefined || site === 'home') return null;
+      if (site === 'game') {
+        // myśliwy: najbliższa zwierzyna z mięsem do 30 pól od chaty (ta sama, jeśli jeszcze żyje); podchodzi na 2–4 pola
+        const jd = job ? BUILDINGS[job.type]! : null;
+        const lodge = job && jd ? [job.x + (job.rot % 2 ? jd.h : jd.w) / 2, job.y + (job.rot % 2 ? jd.w : jd.h) / 2] as const : null;
+        if (!lodge) return null;
+        let beast = u.hunting ? g.beasts?.find((x) => x.id === u.hunting && x.hp > 0) : undefined;
+        beast ??= nearestGame(g, lodge[0], lodge[1], HUNT_RANGE, u.id);
+        if (!beast) { u.hunting = 0; u.wait = RETRY_TICKS; return null; }
+        u.hunting = beast.id;
+        const w = g.map.width, bx = (beast.px / FP) | 0, by = (beast.py / FP) | 0;
+        return (t) => {
+          if (g.occupancy[t] !== 0) return false;
+          const x = t % w, y = (t - x) / w, d = Math.max(Math.abs(x - bx), Math.abs(y - by));
+          return d >= 2 && d <= 4;
+        };
+      }
       if (site === 'shore') {
         // brzeg: wolne pole, które sąsiaduje z wodą
         const w = g.map.width, h = g.map.height;
@@ -859,6 +876,16 @@ export function workerSystem(g: GameState): void {
         // złoże się zużywa: po kilku wydobyciach pole jest puste i zostaje zwykła ziemia
         const tile = tileOf(g, u);
         if (g.map.tiles[tile] === prod.site && ++g.wear[tile]! >= RULES.depositYields) { g.map.tiles[tile] = Terrain.Grass; g.cut.push(tile); }
+      }
+      if (u.phase === Phase.WorkingSite && prod.site === 'game') {
+        // strzał: zwierzę jeszcze w zasięgu łuku (8 pól) — pada, myśliwy niesie mięso; uciekło — szuka dalej
+        const beast = g.beasts?.find((x) => x.id === u.hunting && x.hp > 0);
+        const meat = beast ? GAME_MEAT[GAME_SPECIES[beast.sp]!] : 0;
+        if (!beast || meat <= 0 || (beast.px - u.px) ** 2 + (beast.py - u.py) ** 2 > (8 * FP) ** 2) { u.phase = Phase.ToSite; u.path = []; continue; }
+        beast.hp = 0; beast.dead = g.tick; beast.state = 0;
+        u.hunting = 0;
+        u.carryRes = resIndex('meat'); u.carryAmt = meat; u.phase = Phase.ToStore;
+        continue;
       }
       u.carryRes = resIndex(prod.output.res);
       // susza: sad i pole bez studni obok rodzą o połowę mniej (storms.ts)

@@ -26,7 +26,7 @@ export function emptyScene(g: GameState): void {
   // nowy obiekt mapy: podręczne tablice przechodniości (trzymane per mapa) liczą się od nowa
   g.map = { ...g.map, tiles, elevation, trails: new Uint8Array(tiles.length), ...(g.map.relief ? { relief: new Uint8Array(tiles.length), crag: new Uint8Array(tiles.length) } : {}) };
   const keeps = g.buildings.filter((b) => BUILDINGS[b.type]!.id === 'keep');
-  g.buildings = []; g.units = []; g.soldiers = []; g.corpses = []; g.travelers = []; g.wolves = []; g.cut = []; g.saplings = []; g.rubble = []; g.marches = []; g.graves = [];
+  g.buildings = []; g.units = []; g.soldiers = []; g.corpses = []; g.travelers = []; g.wolves = []; g.cut = []; g.saplings = []; g.rubble = []; g.marches = []; g.graves = []; g.beasts = [];
   for (const a of [g.occupancy, g.gates, g.walls, g.reserved, g.wear, g.roads, g.roadPlan, g.roadOwner]) a.fill(0);
   for (const k of keeps) addBuilding(g, k.type, k.owner, k.x, k.y, k.rot);
   // bez botów i bez napadów: poziom pokojowy, nikt nie gra za przeciwnika

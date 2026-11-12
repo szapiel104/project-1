@@ -317,6 +317,8 @@ export const enum Phase {
 export interface Unit {
   id: number;
   owner: number;
+  /** Myśliwy: id zwierzęcia, na które poluje (wildgame.ts); zwierzę ucieka przed nim dopiero z bliska */
+  hunting?: number;
   /** Gaszenie: 1 = idzie do studni (`target` = studnia), 2 = niesie wiadro do pożaru (`target` = płonący budynek) */
   bucket?: number;
   /** Gaszący bez studni: pole na brzegu jeziora albo rzeki, z którego czerpie wodę (+1; fire.ts) */
@@ -638,6 +640,33 @@ export interface Caravan {
 /** Co się stało z wozem (dla powiadomień w interfejsie; ostatnie kilkanaście wpisów) */
 export interface CaravanNote { id: number; owner: number; to: number; res: number; amount: number; tick: number; captured: boolean; by: number }
 
+/** Dzika zwierzyna (wildgame.ts): pasie się wokół miejsca stada, ucieka przed ludźmi, myśliwy na nią poluje */
+export interface Beast {
+  id: number;
+  /** gatunek: indeks w GAME_SPECIES */
+  sp: number;
+  /** numer stada (nowe sztuki dochodzą do stad mniejszych niż na początku) */
+  herd: number;
+  /** liczebność stada na początku */
+  size: number;
+  px: number;
+  py: number;
+  /** miejsce stada */
+  hx: number;
+  hy: number;
+  /** cel marszu albo ucieczki */
+  tx: number;
+  ty: number;
+  /** 0 pasie się, 1 idzie, 2 ucieka */
+  state: number;
+  until: number;
+  /** 0 = ubita (leży do CARCASS_TICKS od `dead`) */
+  hp: number;
+  dead?: number;
+  /** 1 = truchło już zniknęło; wpis zostaje jako pamięć stada, z niego odradza się nowa sztuka */
+  gone?: number;
+}
+
 /** Wilk z lasu: poluje nocą, o świcie wraca za mapę */
 export interface Wolf {
   id: number;
@@ -670,6 +699,8 @@ export interface GameState {
   caravans?: Caravan[];
   caravanLog?: CaravanNote[];
   wolves: Wolf[];
+  /** Dzika zwierzyna (wildgame.ts; brak = jeszcze nie wypuszczona, rodzi się przy pierwszym ticku) */
+  beasts?: Beast[];
   /** Brama na polu: właściciel + 1 (0 = brak). Swoi przechodzą, obcy nie */
   gates: Uint8Array;
   /** Ściany między polami (w zamku): bity 1 = ku -y, 2 = ku +x, 4 = ku +y, 8 = ku -x; przez taką krawędź nie da się przejść */
@@ -1056,6 +1087,7 @@ export function stateHash(g: GameState): number {
   for (const q of g.orders ?? []) { add(q.grp); add(q.owner); add(q.patrol ? 1 : 0); for (const m of q.steps) { add(m.tile); add(m.face ?? 9); add(m.form ?? 0); add(m.width ?? 0); add(m.amove ? 1 : 0); } }
   for (const m of g.marches ?? []) { add(m.grp); add(m.px); add(m.py); add(m.dir); add(m.stall); add(m.go ? 1 : 0); add(m.path.length); }
   for (const w of g.wolves) { add(w.id); add(w.px); add(w.py); add(w.hp); }
+  for (const b of g.beasts ?? []) { add(b.id); add(b.sp); add(b.px); add(b.py); add(b.hp); add(b.state); add(b.gone ?? 0); }
   for (const t of g.travelers) { add(t.id); add(t.px); add(t.py); add(t.leaving ? 1 : 0); add(t.path.length); }
   for (const c of g.corpses) { add(c.id); add(c.px); add(c.py); add(c.at); add(c.taken ? 1 : 0); add(c.post ?? 0); for (const b of c.by ?? []) add(b); add(c.since ?? 0); }
   for (const c of g.caravans ?? []) { add(c.id); add(c.px); add(c.py); add(c.amount); add(c.path.length); for (const [r, n] of c.more ?? []) { add(r); add(n); } for (const e of c.escort ?? []) add(e); }

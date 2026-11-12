@@ -7,7 +7,7 @@ export interface ProductionDef {
   output: { res: ResourceId; amount: number };
   /** 'home' = praca w budynku, teren = chłop idzie do najbliższego pola tego typu */
   /** 'shore' = chłop idzie nad najbliższą wodę i pracuje na brzegu */
-  site: 'home' | 'shore' | Terrain;
+  site: 'home' | 'shore' | 'game' | Terrain;
   /** Czas pracy w tickach */
   workTicks: number;
   /** Po pracy w terenie chłop wraca do budynku i tyle ticków przerabia surowiec (np. kłody na deski) */
@@ -134,6 +134,12 @@ export const BUILDINGS: readonly BuildingDef[] = [
     id: 'fisher', category: 'food', name: 'b.fisher', w: 2, h: 2, cost: { wood: 50, gold: 20 }, buildable: true,
     needsTerrain: { terrain: Terrain.Water, radius: 7 },
     production: { output: { res: 'fish', amount: 8 }, site: 'shore', workTicks: 110 },
+  },
+  // Chata myśliwego (Michał 12.11.2026): myśliwy podchodzi do dzikiej zwierzyny (jeleń, dzik, zając — wildgame.ts),
+  // strzela z łuku i przynosi mięso do spichlerza. Bez zwierzyny w okolicy (30 pól) czeka.
+  {
+    id: 'hunter', category: 'food', name: 'b.hunter', w: 2, h: 2, cost: { wood: 40 }, buildable: true,
+    production: { output: { res: 'meat', amount: 8 }, site: 'game', workTicks: 45 },
   },
   // Wolnostojąca pochodnia: gracz stawia ją, gdzie chce, żeby rozświetlić osadę nocą
   { id: 'torch', category: 'settlement', name: 'b.torch', w: 1, h: 1, cost: { wood: 3 }, buildable: true },

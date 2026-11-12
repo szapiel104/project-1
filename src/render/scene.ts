@@ -99,7 +99,6 @@ import { bearerIds } from '../sim/systems/standards';
 import { Crowd, idle } from './motion';
 import { Village } from './village';
 import { Wildlife } from './fauna';
-import { EMPTY } from '../testmode';
 import { Family, yardModel } from './family';
 import { createLoads, tint, carryArms, plankBundle, ON_SHOULDER, loadMaterials } from './loads';
 import { FireCrewFx } from './firecrew';
@@ -569,7 +568,7 @@ export class GameRenderer {
       const wl = this.wildlife;
       (window as unknown as { __fauna: () => unknown }).__fauna = () => wl.list();
     }
-    if (!EMPTY) this.wildlife.sync(g, { time: this.time, dt, calm: this.calm, height: (x, y) => view.heightAt(x, y), cam: { x: cam.position.x + width / 2, y: cam.position.z + height / 2 } }, people);
+    this.wildlife.sync(g, { time: this.time, dt, calm: this.calm, height: (x, y) => view.heightAt(x, y), cam: { x: cam.position.x + width / 2, y: cam.position.z + height / 2 } });
     this.village.sync(g, {
       time: this.time, dt, night: this.night, calm: this.calm, height: (x, y) => this.standY(view, x, y, -2),
       cam: { x: cam.position.x + width / 2, y: cam.position.z + height / 2, h: cam.position.y },
