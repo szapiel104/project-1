@@ -878,13 +878,15 @@ export function workerSystem(g: GameState): void {
         if (g.map.tiles[tile] === prod.site && ++g.wear[tile]! >= RULES.depositYields) { g.map.tiles[tile] = Terrain.Grass; g.cut.push(tile); }
       }
       if (u.phase === Phase.WorkingSite && prod.site === 'game') {
-        // strzał: zwierzę jeszcze w zasięgu łuku (8 pól) — pada, myśliwy niesie mięso; uciekło — szuka dalej
+        // strzał: zwierzę jeszcze w zasięgu łuku (8 pól) — pada, myśliwy niesie tuszę do chaty; uciekło — szuka dalej
         const beast = g.beasts?.find((x) => x.id === u.hunting && x.hp > 0);
         const meat = beast ? GAME_MEAT[GAME_SPECIES[beast.sp]!] : 0;
         if (!beast || meat <= 0 || (beast.px - u.px) ** 2 + (beast.py - u.py) ** 2 > (8 * FP) ** 2) { u.phase = Phase.ToSite; u.path = []; continue; }
         beast.hp = 0; beast.dead = g.tick; beast.state = 0;
         u.hunting = 0;
-        u.carryRes = resIndex('meat'); u.carryAmt = meat; u.phase = Phase.ToStore;
+        // tuszę niesie do chaty i tam ją oprawia: kilka partii mięsa, każda osobno do spichlerza (jak drwal z kłodą)
+        u.carryRes = resIndex('meat'); u.carryAmt = meat; u.phase = Phase.ToHome;
+        u.batches = Math.max(1, Math.round(meat / prod.output.amount));
         continue;
       }
       u.carryRes = resIndex(prod.output.res);

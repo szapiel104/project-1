@@ -139,5 +139,5 @@ Nad grą pracuje kilka czatów naraz, więc:
 - **Nie wypychamy od razu na `main`.** Zmiany testujemy lokalnie i wypychamy na `dev`; `main` (wydanie, wersja + „Co nowego”) tylko gdy Michał o to poprosi.
 - **Przed każdym wydaniem na `main`: `node tools/models/pull_fixes.mjs`** (Michał 10.11.2026) — poprawki modeli z edytora w podglądzie modeli (tabela `model_fixes` w Supabase) → `src/data/modelFixes.json`, commit razem z wydaniem. Inaczej to, co Michał poprawił lokalnie, nie trafi do graczy.
 - **Po pushu na `dev` nie sprawdzamy, czy już trafił** (bez `fetch`/`rev-parse`/`gh run list` — to nic nie wnosi).
-- **Nie zamykamy kart w Chrome Michała** (nadpisuje punkt 8 w „Testy”). Po sprawdzeniu wracamy w tej samej karcie do menu gry (adres gry bez `?test=1`), zamiast ją zamykać.
+- **Nie zamykamy kart w Chrome Michała** (nadpisuje punkt 8 w „Testy”). **Michał 12.11.2026: po sprawdzeniu przełączamy tę samą kartę na `https://www.google.com/`** (gra ma nie zostać włączona i nie zjadać karty graficznej), ale karty nie zamykamy.
 - **Najpierw `tabs_context_mcp`: jeśli gra jest już otwarta w Chrome (localhost:5173 lub strona gry), przejmujemy tę kartę** (nawigacja w niej, `__test`), zamiast otwierać nową. Dwie gry naraz zjadają kartę graficzną; nową kartę otwieramy tylko, gdy żadnej gry nie ma.

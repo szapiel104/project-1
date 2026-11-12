@@ -32,3 +32,16 @@ it('myśliwy poluje na jelenie i przynosi mięso; deterministycznie i z zapisem 
   const back = deserialize(JSON.parse(JSON.stringify(serialize(g, '1v1'))))!;
   expect(back.beasts!.length).toBe(g.beasts!.length);
 }, 60000);
+
+it('wybite stado odnawia się zwierzętami, które przychodzą z krańca mapy', () => {
+  const { g } = scene();
+  for (const b of g.beasts!) { b.hp = 0; b.dead = 0; }
+  // truchła znikają, potem (REGROW_TICKS) pierwsza nowa sztuka staje na skraju mapy, a nie w miejscu stada
+  for (let i = 0; i < 1801; i++) { step(g, []); if (g.tick % 1800 === 0) break; }
+  const fresh = g.beasts!.filter((b) => b.hp > 0);
+  expect(fresh.length).toBe(1);
+  const b = fresh[0]!, W = g.map.width, H = g.map.height;
+  const edge = Math.min(b.px / FP, b.py / FP, W - b.px / FP, H - b.py / FP);
+  expect(Math.hypot(b.px - b.hx, b.py - b.hy) / FP).toBeGreaterThan(10);
+  expect(edge).toBeLessThan(20);
+});

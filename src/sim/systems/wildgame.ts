@@ -3,7 +3,7 @@
  *
  * Wcześniej jelenie, dziki, lisy i zające żyły tylko w obrazie (render/fauna.ts). Żeby myśliwy mógł na nie polować tak samo
  * u wszystkich graczy, stada są teraz częścią stanu gry: rodzą się z ziarna mapy przy pierwszym ticku, pasą się wokół
- * swojego miejsca, uciekają przed ludźmi i żołnierzami, a ubite znikają i z czasem dochodzą nowe. Obraz tylko je rysuje.
+ * swojego miejsca, uciekają przed ludźmi i żołnierzami, a ubite znikają i z czasem nowe przychodzą z krańców mapy. Obraz tylko je rysuje.
  *
  * Losowanie z własnego skrótu (ziarno mapy, id zwierzęcia, tick) — główne `g.rng` zostaje nietknięte.
  */
@@ -13,8 +13,8 @@ import { FP, type Beast, type GameState } from '../state';
 /** Gatunki zwierzyny (indeks = Beast.sp; ta sama kolejność w render/fauna.ts) */
 export const GAME_SPECIES = ['deer', 'boar', 'rabbit', 'fox', 'camel'] as const;
 export type GameSpecies = typeof GAME_SPECIES[number];
-/** Mięso z ubitej sztuki (lis i wielbłąd: nie poluje się na nie) */
-export const GAME_MEAT: Record<GameSpecies, number> = { deer: 10, boar: 12, rabbit: 3, fox: 0, camel: 0 };
+/** Mięso z ubitej sztuki, oprawiane w chacie partiami po 4 (lis i wielbłąd: nie poluje się na nie) */
+export const GAME_MEAT: Record<GameSpecies, number> = { deer: 12, boar: 16, rabbit: 4, fox: 0, camel: 0 };
 /** stada: [gatunek, ile stad, najmniej, najwięcej] na krainę */
 const HERDS: Record<string, [GameSpecies, number, number, number][]> = {
   desert: [['camel', 7, 2, 4], ['fox', 2, 1, 1]],
@@ -118,19 +118,50 @@ export function wildGameSystem(g: GameState): void {
     if (beastCan(g, b.sp, nx, ny)) { b.px = Math.round(nx * FP); b.py = Math.round(ny * FP); }
     else if (beastCan(g, b.sp, nx, y)) b.px = Math.round(nx * FP);
     else if (beastCan(g, b.sp, x, ny)) b.py = Math.round(ny * FP);
-    else { b.state = 0; b.until = tick + 30; }
+    else {
+      // przeszkoda (woda, budynek, skała): krok w bok i po chwili znów w stronę stada — tak obchodzi zawady po drodze z krańca mapy
+      const a = Math.atan2(dy, dx) + (hash(seed, b.id, tick + 5) < 0.5 ? 1 : -1) * Math.PI / 2;
+      b.tx = Math.round((x + Math.cos(a) * 4) * FP); b.ty = Math.round((y + Math.sin(a) * 4) * FP);
+      b.state = 1; b.until = tick + 40;
+    }
   }
-  // nowe sztuki: co REGROW_TICKS każde przetrzebione stado dostaje jedną sztukę z powrotem, w swoim miejscu (jeśli nikt tam nie mieszka)
+  // nowe sztuki (Michał 12.11.2026: „nie z niczego, tylko z mapy przychodzą”): co REGROW_TICKS każde przetrzebione stado
+  // dostaje jedną sztukę, która wchodzi z najbliższego skraju mapy i idzie do swojego stada
   if (tick % REGROW_TICKS === 0 && tick > 0) {
     const done = new Set<number>();
     for (const b of list) {
       if (!b.gone || done.has(b.herd)) continue;
       done.add(b.herd);
-      if (!beastCan(g, b.sp, b.hx / FP, b.hy / FP)) continue;
+      const at = entry(g, b, tick);
+      if (!at) continue;
+      const [ex, ey] = at, d = Math.hypot(b.hx / FP - ex, b.hy / FP - ey);
       // nowe id: obraz traktuje ją jak nowe zwierzę (bez upadku i doganiania starego miejsca)
-      Object.assign(b, { id: g.nextId++, px: b.hx, py: b.hy, tx: b.hx, ty: b.hy, state: 0, until: tick + 50, hp: 1, dead: undefined, gone: undefined });
+      Object.assign(b, { id: g.nextId++, px: Math.round(ex * FP), py: Math.round(ey * FP), tx: b.hx, ty: b.hy, state: 1, until: tick + Math.ceil(d / WALK[GAME_SPECIES[b.sp]!]) + 100, hp: 1, dead: undefined, gone: undefined });
     }
   }
+}
+
+/**
+ * Skąd przychodzi nowa sztuka: z czterech skrajów mapy na wysokości stada (najbliższy pierwszy, z lekkim rozrzutem)
+ * idziemy od krawędzi do środka, aż trafimy na pole, po którym zwierzę może chodzić (na krańcach zwykle są góry).
+ */
+function entry(g: GameState, b: Beast, tick: number): [number, number] | null {
+  const { width: W, height: H } = g.map, seed = g.map.seed >>> 0;
+  const hx = b.hx / FP, hy = b.hy / FP;
+  const jx = (hash(seed, b.herd, tick) - 0.5) * 16, jy = (hash(seed, b.herd, tick + 7) - 0.5) * 16;
+  const clampY = (v: number): number => Math.min(H - 3, Math.max(2, v)), clampX = (v: number): number => Math.min(W - 3, Math.max(2, v));
+  // [start x, start y, krok x, krok y, odległość skraju od stada]
+  const sides: [number, number, number, number, number][] = [
+    [1.5, clampY(hy + jy), 1, 0, hx], [W - 1.5, clampY(hy + jy), -1, 0, W - hx],
+    [clampX(hx + jx), 1.5, 0, 1, hy], [clampX(hx + jx), H - 1.5, 0, -1, H - hy],
+  ];
+  sides.sort((p, q) => p[4] - q[4]);
+  for (const [sx, sy, dx, dy, dist] of sides)
+    for (let k = 0; k < Math.min(60, dist); k++) {
+      const x = sx + dx * k, y = sy + dy * k;
+      if (beastCan(g, b.sp, x, y)) return [x, y];
+    }
+  return null;
 }
 
 /** Najbliższa żywa zwierzyna z mięsem w zasięgu (pola) od punktu; nie ta, na którą już poluje inny myśliwy */

@@ -139,7 +139,7 @@ export const BUILDINGS: readonly BuildingDef[] = [
   // strzela z łuku i przynosi mięso do spichlerza. Bez zwierzyny w okolicy (30 pól) czeka.
   {
     id: 'hunter', category: 'food', name: 'b.hunter', w: 2, h: 2, cost: { wood: 40 }, buildable: true,
-    production: { output: { res: 'meat', amount: 8 }, site: 'game', workTicks: 45 },
+    production: { output: { res: 'meat', amount: 4 }, site: 'game', workTicks: 45, processTicks: 70 },
   },
   // Wolnostojąca pochodnia: gracz stawia ją, gdzie chce, żeby rozświetlić osadę nocą
   { id: 'torch', category: 'settlement', name: 'b.torch', w: 1, h: 1, cost: { wood: 3 }, buildable: true },
