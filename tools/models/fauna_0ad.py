@@ -24,8 +24,8 @@ from horse_0ad import Dae, clip, pose, skin, smooth  # noqa: E402
 
 ROOT = os.path.join(HERE, '..', '..')
 TEX = os.path.join(ROOT, 'public', 'textures', 'cc0')
-WALK = 10
-IDLE = 8     # klatki ruchu spoczynkowego (łeb, uszy, ogon) — gra zapętla je, gdy zwierzę stoi
+WALK = 24    # klatki chodu (Michał 12.11.2026: płynniejsze animacje — było 10)
+IDLE = 16    # klatki ruchu spoczynkowego (łeb, uszy, ogon) — gra zapętla je, gdy zwierzę stoi
 
 ANIMALS = {
     # wielbłąd jednogarbny: ok. 1,9 m w kłębie (0,36 pola na metr)
@@ -40,8 +40,6 @@ ANIMALS = {
     'boar': {'mesh': 'animal_boar.dae', 'idle': 'animal_boar_idle_01', 'graze': 'animal_boar_idle_02', 'walk': 'animal_boar_walk_01', 'tex': 'animal_boar_01', 'height': 0.3, 'flip': False, 'freeze': ['Jaw'], 'closeJaw': ['Jaw']},
     'fox': {'mesh': 'fox.dae', 'idle': 'fox_idle', 'graze': 'fox_feeding', 'walk': 'fox_walk', 'tex': 'animal_fox_red', 'height': 0.15},
     'rabbit': {'mesh': 'rabbit_01.dae', 'idle': 'rabbit_idle_01', 'graze': 'rabbit_idle_02', 'walk': 'rabbit_walk', 'tex': 'animal_rabbit_01', 'height': 0.08},
-    # wilk (Michał 11.11.2026: „nowy obiekt wilka”) — druga poza to skok do ataku (łeb nisko, z przodu)
-    'wolf': {'mesh': 'wolf.dae', 'idle': 'wolf_idle_01', 'graze': 'wolf_attack_01', 'walk': 'wolf_walk', 'tex': 'animal_wolf_grey', 'height': 0.3},
     'dog': {'mesh': 'wolfhound.dae', 'idle': 'wolfhound_idle1', 'graze': 'wolfhound_idle_sit', 'walk': 'wolfhound_walk', 'tex': 'brit/wolfhound', 'height': 0.27},
 }
 
@@ -194,10 +192,10 @@ def build(art, aid, cfg):
     nw = frames(walk)
     poses = {'base': pose_(joints, arm, idle, 0)}
     for k in range(WALK):
-        poses[f'walk{k}'] = pose_(joints, arm, walk, int(round(k * nw / WALK)) % nw)
+        poses[f'walk{k}'] = pose_(joints, arm, walk, float(k * nw / WALK))
     ni = frames(idle)
     for k in range(IDLE):
-        poses[f'idle{k}'] = pose_(joints, arm, idle, int(round(k * ni / IDLE)) % ni)
+        poses[f'idle{k}'] = pose_(joints, arm, idle, float(k * ni / IDLE))
     poses['graze'] = pose_(joints, arm, gra, gf)
     res = {}
     # ruch z korzenia (zając przesuwa się w skoku do przodu i wraca na początek pętli): każda klatka cofnięta w poziomie
@@ -232,8 +230,10 @@ def build(art, aid, cfg):
             'idx': e(idx.astype('<u2').tobytes()), 'morph': {}}
     for pn in [f'walk{k}' for k in range(WALK)] + [f'idle{k}' for k in range(IDLE)] + ['graze']:
         p, n = res[pn]
-        body['morph'][pn] = {'pos': e((((p + shift) * scale) - bpos).astype('<f4').tobytes()), 'nrm': q8(n - bnrm)}
-    out = {'height': cfg['height'], 'length': float((zmax - zmin) * scale), 'credit': '0 A.D. (Wildfire Games), CC BY-SA 3.0', 'body': body}
+        d = ((p + shift) * scale) - bpos
+        sc = float(np.abs(d).max()) / 32767 or 1e-9   # różnica klatki w int16 ze skalą (połowa rozmiaru float32)
+        body['morph'][pn] = {'pq': e(np.round(d / sc).astype('<i2').tobytes()), 's': sc, 'nrm': q8(n - bnrm)}
+    out = {'walkN': WALK, 'idleN': IDLE, 'height': cfg['height'], 'length': float((zmax - zmin) * scale), 'credit': '0 A.D. (Wildfire Games), CC BY-SA 3.0', 'body': body}
     with open(os.path.join(ROOT, 'src', 'render', 'models', f'fauna_{aid}.json'), 'w') as f:
         json.dump(out, f, separators=(',', ':'))
     print(f'{aid}: {len(bpos)} wierzchołków, {len(idx)} trójkątów, długość {out["length"]:.2f} pola, klatka skubania {gf}/{nf}, chód {nw} klatek')

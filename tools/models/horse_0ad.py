@@ -164,7 +164,12 @@ def pose(joints, armature, anim=None, frame=0, extra=None, pin=()):
         parent, local, nid = joints[sid]
         if anim is not None and nid in anim:
             a = anim[nid]
-            local = a[min(frame, len(a) - 1)]
+            if isinstance(frame, float):
+                # klatka między kluczami (płynniejsze próbkowanie): liniowo między sąsiednimi macierzami, pętla zawija
+                f0 = int(np.floor(frame)) % len(a); f1 = (f0 + 1) % len(a); w = frame - np.floor(frame)
+                local = a[f0] * (1 - w) + a[f1] * w
+            else:
+                local = a[min(frame, len(a) - 1)]
         if extra and sid in extra:
             local = local @ extra[sid]
         if sid in pin:

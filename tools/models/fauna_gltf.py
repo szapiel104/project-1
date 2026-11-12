@@ -29,6 +29,10 @@ ANIMALS = {
     'camel': {'dir': 'camel', 'walk': 'Armature|WalkCycle', 'idle': 'Armature|Idle_01', 'graze': 'Armature|Idle_02',
               'height': 0.68, 'skip': ['CamelHair'], 'credit': 'Camel — eb78 (Sketchfab), CC BY 4.0'},
     # prosiak (grs): w paczce jest tylko chód, więc spoczynek i rycie to klatki chodu bez ruchu nóg
+    # wilk (Roo, „Animated Wolf Scene”): chód, bieg, spoczynek, skradanie — druga poza to przyczajenie do skoku;
+    # sierść z kart przezroczystych pominięta jak grzywa wielbłąda (gra rysuje zwierzęta bez przezroczystości)
+    'wolf': {'dir': 'animated_wolf_scene', 'walk': 'Wolf_Walk_cycle_', 'idle': 'Wolf_Idle_', 'graze': 'Wolf_creep_cycle',
+             'height': 0.3, 'skip': ['Wolf_Fur'], 'credit': 'Animated Wolf Scene — Roo (Sketchfab), CC BY 4.0'},
     'pig': {'dir': 'piglet', 'walk': 'PigletWalk', 'idle': None, 'graze': None,
             'height': 0.27, 'skip': [], 'credit': 'Piglet — grs (Sketchfab), CC BY 4.0'},
 }
@@ -216,7 +220,7 @@ def build(base, aid, cfg):
     n = len(used)
     cols = 1 if n == 1 else 2
     rows = (n + cols - 1) // cols
-    big = max(Image.open(tex[mi][0]).width for mi in used)
+    big = max((Image.open(tex[mi][0]).width for mi in used if tex[mi][0]), default=512)
     cell = min(2048, big)
     atlas = Image.new('RGB', (cols * cell, rows * cell), (128, 110, 90))
     natlas = Image.new('RGB', (cols * cell, rows * cell), (128, 128, 255))
@@ -224,7 +228,11 @@ def build(base, aid, cfg):
     for k, mi in enumerate(used):
         cx, cy = k % cols, k // cols
         place[mi] = (cx, cy)
-        atlas.paste(Image.open(tex[mi][0]).convert('RGB').resize((cell, cell), Image.LANCZOS), (cx * cell, cy * cell))
+        if tex[mi][0]:
+            atlas.paste(Image.open(tex[mi][0]).convert('RGB').resize((cell, cell), Image.LANCZOS), (cx * cell, cy * cell))
+        else:   # materiał bez zdjęcia (zęby, pazury): jednolity kolor z paczki
+            f = mats[mi].get('pbrMetallicRoughness', {}).get('baseColorFactor', [0.8, 0.8, 0.8, 1])
+            atlas.paste(tuple(int(min(1, c) ** (1 / 2.2) * 255) for c in f[:3]), (cx * cell, cy * cell, (cx + 1) * cell, (cy + 1) * cell))
         if tex[mi][1]:
             natlas.paste(Image.open(tex[mi][1]).convert('RGB').resize((cell, cell), Image.LANCZOS), (cx * cell, cy * cell))
     uvs = []
@@ -256,8 +264,10 @@ def build(base, aid, cfg):
             'idx': e(idx.astype('<u2').tobytes()), 'morph': {}}
     for pn in [f'walk{k}' for k in range(WALK)] + [f'idle{k}' for k in range(IDLE)] + ['graze']:
         p, nn = res[pn]
-        body['morph'][pn] = {'pos': e((((p + shift) * scale) - bpos).astype('<f4').tobytes()), 'nrm': q8(nn - bnrm)}
-    out = {'height': cfg['height'], 'length': float((zmax - zmin) * scale), 'credit': cfg['credit'], 'normalMap': True, 'body': body}
+        d = ((p + shift) * scale) - bpos
+        sc = float(np.abs(d).max()) / 32767 or 1e-9   # różnica klatki w int16 ze skalą (połowa rozmiaru float32)
+        body['morph'][pn] = {'pq': e(np.round(d / sc).astype('<i2').tobytes()), 's': sc, 'nrm': q8(nn - bnrm)}
+    out = {'walkN': WALK, 'idleN': IDLE, 'height': cfg['height'], 'length': float((zmax - zmin) * scale), 'credit': cfg['credit'], 'normalMap': True, 'body': body}
     with open(os.path.join(ROOT, 'src', 'render', 'models', f'fauna_{aid}.json'), 'w') as f:
         json.dump(out, f, separators=(',', ':'))
     atlas.save(os.path.join(TEX, f'fauna_{aid}.jpg'), quality=92)
