@@ -7,7 +7,7 @@ import { WALL_TOP } from '../../data/keep';
 import { findPath, walkable } from '../path';
 import { clockAt, hourStarts, rainAt } from '../clock';
 import { FP, Phase, playerKeep, storeRoom, type Building, type GameState, type Unit } from '../state';
-import { GAME_MEAT, GAME_SPECIES, HUNT_RANGE, nearestGame } from './wildgame';
+import { GAME_HIDE, GAME_MEAT, GAME_SPECIES, HUNT_RANGE, nearestGame } from './wildgame';
 import { CAMP_HOLD, campOf, holdTotal, putInHold } from './minecamp';
 import { mineWalkTicks } from '../../data/minewalk';
 import { plantSapling } from './forestry';
@@ -886,7 +886,14 @@ export function workerSystem(g: GameState): void {
         u.hunting = 0;
         // tuszę niesie do chaty i tam ją oprawia: kilka partii mięsa, każda osobno do spichlerza (jak drwal z kłodą)
         u.carryRes = resIndex('meat'); u.carryAmt = meat; u.phase = Phase.ToHome;
-        u.batches = Math.max(1, Math.round(meat / prod.output.amount));
+        // ze skórą (jeleń, dzik) jest jeszcze jedna porcja na końcu: wyprawiona skóra idzie do składu
+        u.hide = GAME_HIDE[GAME_SPECIES[beast.sp]!];
+        u.batches = Math.max(1, Math.round(meat / prod.output.amount)) + (u.hide > 0 ? 1 : 0);
+        continue;
+      }
+      if (u.phase === Phase.Working && prod.site === 'game' && u.batches === 1 && (u.hide ?? 0) > 0) {
+        u.carryRes = resIndex('hides'); u.carryAmt = u.hide!; u.hide = 0;
+        u.phase = Phase.ToStore; u.batches = 0;
         continue;
       }
       u.carryRes = resIndex(prod.output.res);

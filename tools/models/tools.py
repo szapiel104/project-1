@@ -290,8 +290,48 @@ def fork_parts(far=False):
     return wood, iron
 
 
+BOW_ARM = -1.45   # myśliwy: lewa ręka z łukiem wyciągnięta w przód, prawie poziomo (scene.ts: BOW_ARM)
+
+
+def bow_parts(far=False):
+    """Łuk myśliwego w lewej dłoni (układ lewej ręki uniesionej o BOW_ARM): majdan w pięści, łęczysko pionowo,
+    końce ramion wygięte ku strzelcowi (łuk naciągnięty), cięciwa do prawej dłoni przy brodzie i strzała na majdanie."""
+    seg = 4 if far else 7
+    g = GRIP
+    up = arm_dir(0, 1, 0, BOW_ARM)
+    fwd = arm_dir(0, 0, 1, BOW_ARM)
+    side = Vector((1, 0, 0))
+    half = 0.24
+    n = 7 if far else 13
+    pts, radii = [], []
+    for k in range(n):
+        t = -1 + 2 * k / (n - 1)
+        # łęczysko: najgrubsze w majdanie, ku końcom cieńsze i coraz mocniej odgięte do tyłu (naciąg)
+        pts.append(g + up * (t * half) - fwd * (0.075 * t * t) + fwd * 0.012)
+        radii.append(0.0105 - 0.0062 * abs(t) ** 1.3)
+    wood = tube(pts, radii, seg=seg)
+    if not far:
+        # owijka majdanu: krótki, nieco grubszy pierścień skóry (wystaje ponad łęczysko)
+        wood += tube([g + fwd * 0.012 - up * 0.028, g + fwd * 0.012 + up * 0.028], [0.0128, 0.0128], seg=seg)
+    draw = g - fwd * 0.2 + side * 0.11            # prawa dłoń przy brodzie
+    tip_hi, tip_lo = pts[-1], pts[0]
+    iron = tube([tip_hi, draw], [0.0016, 0.0016], seg=3) + tube([draw, tip_lo], [0.0016, 0.0016], seg=3)   # cięciwa
+    if not far:
+        # strzała: drzewce od cięciwy przez majdan, grot w przód, lotki przy cięciwie
+        head = g + fwd * 0.07
+        shaft = (head - draw).normalized()
+        wood += tube([draw + shaft * 0.004, head], [0.0035, 0.0035], seg=5)
+        iron += spike(head - shaft * 0.004, head + shaft * 0.035, 0.0075, seg=5)
+        for k in range(3):
+            a = 2 * math.pi * k / 3
+            off = (up * math.cos(a) + side * math.sin(a)) * 0.006
+            base = draw + shaft * 0.018
+            wood += tube([base + off, base + shaft * 0.045 + off], [0.0045, 0.0018], seg=3)
+    return wood, iron
+
+
 for name, fn in (('fork', fork_parts), ('axe', axe_parts), ('hammer', hammer_parts), ('spade', spade_parts), ('torch', torch_parts), ('bucket', bucket_parts),
-                 ('bucketWater', water_parts), ('rod', rod_parts)):
+                 ('bucketWater', water_parts), ('rod', rod_parts), ('bow', bow_parts)):
     add(name, fn())
     # wiadro z daleka to samo pełne wiadro (uproszczone 8-ścienne bez obręczy wyglądało beznadziejnie)
     add(name + 'Far', fn(name not in ('bucket', 'bucketWater')))

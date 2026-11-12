@@ -7,7 +7,7 @@ import { RESOURCES, type ResourceId } from './resources';
  */
 export const MARKET_VALUE: Partial<Record<ResourceId, number>> = {
   wood: 5, stone: 7, iron: 20,
-  wheat: 4, flour: 7, bread: 5, apples: 4, fish: 5, meat: 8, ale: 10,
+  wheat: 4, flour: 7, bread: 5, apples: 4, fish: 5, meat: 8, ale: 10, hides: 30,
   spear: 25, bow: 35, sword: 50, armor: 80, ladder: 30,
   crystal: 200,
 };

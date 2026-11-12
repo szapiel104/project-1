@@ -15,6 +15,8 @@ export const GAME_SPECIES = ['deer', 'boar', 'rabbit', 'fox', 'camel'] as const;
 export type GameSpecies = typeof GAME_SPECIES[number];
 /** Mięso z ubitej sztuki, oprawiane w chacie partiami po 4 (lis i wielbłąd: nie poluje się na nie) */
 export const GAME_MEAT: Record<GameSpecies, number> = { deer: 12, boar: 16, rabbit: 4, fox: 0, camel: 0 };
+/** Skóry z ubitej sztuki (zając za mały na skórę do składu) */
+export const GAME_HIDE: Record<GameSpecies, number> = { deer: 2, boar: 1, rabbit: 0, fox: 0, camel: 0 };
 /** stada: [gatunek, ile stad, najmniej, najwięcej] na krainę */
 const HERDS: Record<string, [GameSpecies, number, number, number][]> = {
   desert: [['camel', 7, 2, 4], ['fox', 2, 1, 1]],

@@ -45,7 +45,7 @@ export function botTrade(g: GameState, player: number): void {
   if (!hasMarket(g, player)) return;
   const p = g.players[player]!;
   const r = (id: ResourceId): number => p.res[resIndex(id)]!;
-  const sell: [ResourceId, number, number][] = [['wood', 300, 20], ['stone', 220, 20], ['bread', 300, 20], ['apples', 300, 20], ['fish', 250, 20], ['meat', 250, 20], ['spear', 40, 5], ['bow', 40, 5]];
+  const sell: [ResourceId, number, number][] = [['wood', 300, 20], ['stone', 220, 20], ['bread', 300, 20], ['apples', 300, 20], ['fish', 250, 20], ['meat', 250, 20], ['hides', 10, 5], ['spear', 40, 5], ['bow', 40, 5]];
   for (const [id, over, n] of sell) if (r(id) > over) { trade(g, player, resIndex(id), -n); return; }
   if (r('gold') < 160) return;
   const buy: [ResourceId, number, number][] = [['wood', 20, 20], ['stone', 20, 20], ['iron', 8, 5]];

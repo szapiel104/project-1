@@ -265,7 +265,10 @@ const inBasket = (contents: THREE.BufferGeometry[]): THREE.BufferGeometry => mer
  */
 /** Barwy porcji mięsa (tools/models/meat.py): szynka, boczek, kiełbasa, kość, deska */
 export const MEAT_COLORS: Record<string, number> = { meat: 0xa04a3a, meatDark: 0x6a2c1c, bone: 0xe6dcc2, white: 0xeadfd0, woodDark: 0x5e4329 };
+/** Barwy skór z polowania (tools/models/hides.py): sierść, jaśniejsza sierść, strona mięsna, rzemień */
+export const HIDE_COLORS: Record<string, number> = { hide: 0x7a5434, hideLight: 0x9a7048, hideDark: 0x4e3424, cord: 0x3a2818 };
 let meatPile: THREE.BufferGeometry | null = null;
+let hidePile: THREE.BufferGeometry | null = null;
 const PILES: Record<string, { geo: THREE.BufferGeometry; tex?: Pattern; metal?: boolean; withProp?: PropName | PropName[]; noCode?: boolean }> = {
   wood: {
     tex: 'planks',
@@ -402,6 +405,8 @@ const PILES: Record<string, { geo: THREE.BufferGeometry; tex?: Pattern; metal?: 
   // mięso z chlewa (tools/models/meat.py): szynka, boczek i kiełbasa na desce, barwy w kolorach wierzchołków
   // bryła z modelu powstaje przy pierwszym użyciu (moduł wczytuje siatki z Blendera niżej w pliku)
   meat: { get geo() { return (meatPile ??= coloredModel('meat', MEAT_COLORS)); } },
+  // skóry z polowania (tools/models/hides.py): zwinięte rulony z rzemieniem, w składzie warstwami; faktura skóry z płótna
+  hides: { tex: 'burlap', get geo() { return (hidePile ??= coloredModel('hides', HIDE_COLORS, undefined, true)); } },
   fish: {
     tex: 'planks',
     withProp: 'fish',
@@ -2100,13 +2105,13 @@ export function towerDoorKit(): { door: { geo: THREE.BufferGeometry; mat: THREE.
  * Mały model z Blendera jako jedna siatka z barwą w kolorach wierzchołków (barwa materiału × cień z zagłębień): strzały,
  * mięso w spichlerzu i w rękach — wszystkie sztuki naraz jednym wywołaniem rysowania, bez tekstur.
  */
-export function coloredModel(name: string, colors: Record<string, number>, fallback = 0x9a7448): THREE.BufferGeometry {
+export function coloredModel(name: string, colors: Record<string, number>, fallback = 0x9a7448, keepUv = false): THREE.BufferGeometry {
   const model = model_(name) as unknown as BlenderBuilding;
   const parts = ((model.base as { mat: string; pos: string; ao: string }[] | undefined) ?? []).map((m) => {
     const geo = blenderGeo(m.pos, m.ao, model.q, 1).clone();
     const c = new THREE.Color(colors[m.mat] ?? fallback), col = geo.getAttribute('color') as THREE.BufferAttribute;
     for (let i = 0; i < col.count; i++) { const v = 0.55 + col.getX(i) * 0.45; col.setXYZ(i, c.r * v, c.g * v, c.b * v); }
-    geo.deleteAttribute('uv');
+    if (!keepUv) geo.deleteAttribute('uv');
     return geo;
   });
   return mergeGeometries(parts)!;

@@ -242,6 +242,8 @@ export const ICONS: Record<string, string> = {
   armor: '<path d="M6 3h8l4 4-2 2-2-1v9H6V8L4 9 2 7z" fill="#8f949c" stroke="#2a1c10" stroke-width=".9"/><path d="M6.3 10.5h7.4M6.3 13h7.4M6.3 15.5h7.4M7 5.5h6" stroke="#4a4d54" stroke-width=".8"/><path d="M8 3c.5 1.5 3.5 1.5 4 0" fill="#6b4a2e" stroke="#2a1c10" stroke-width=".7"/>',
   // mięso: szynka z kością
   meat: '<path d="M13 12.4l3.4 3.4" stroke="#efe4cc" stroke-width="2.4" stroke-linecap="round"/><circle cx="17" cy="15" r="1.4" fill="#efe4cc" stroke="#2a1a0c" stroke-width=".7"/><circle cx="15.6" cy="16.6" r="1.4" fill="#efe4cc" stroke="#2a1a0c" stroke-width=".7"/><path d="M3.5 8.5c0-3.6 3.6-5.6 7.2-4.6 3.4.9 5 4.4 3.4 7.4-1.6 3-5.6 4.6-8.6 2.8C4.2 13 3.5 11 3.5 8.5z" fill="#a8453a" stroke="#2a1a0c" stroke-width=".9"/><path d="M5.2 8.2c.4-2.2 2.4-3.4 4.6-3" stroke="#e48a72" stroke-width="1.1" fill="none" stroke-linecap="round"/><path d="M6.5 10.5c1.2.6 2.8.6 4-.2" stroke="#f1d2b8" stroke-width=".9" fill="none"/>',
+  // skóra z polowania: rozpięta skóra jelenia (łby łap po rogach), ciemniejszy grzbiet
+  hides: '<path d="M5 3.5c1.6.8 3.4 1 5 1s3.4-.2 5-1c.2 1.6-.4 2.8-1.2 3.6.8 1.8 1 4.6.4 7 .9.6 1.5 1.6 1.4 2.9-1.6-.4-2.8-.4-3.6.1-.7.6-1.3 1-2 1s-1.3-.4-2-1c-.8-.5-2-.5-3.6-.1-.1-1.3.5-2.3 1.4-2.9-.6-2.4-.4-5.2.4-7C5.4 6.3 4.8 5.1 5 3.5z" fill="#8a6440" stroke="#2a1c10" stroke-width=".9"/><path d="M10 5.5v11" stroke="#5a3e26" stroke-width="1.6" stroke-linecap="round"/><path d="M7.4 9.5c.8.4 1.6.5 2.6.5s1.8-.1 2.6-.5" stroke="#b08a60" stroke-width=".8" fill="none"/>',
   // drabina szturmowa: dwie żerdzie i szczeble
   ladder: '<path d="M6.5 2v16M13.5 2v16" stroke="#7a5232" stroke-width="2"/><path d="M6.5 5h7M6.5 9h7M6.5 13h7M6.5 17h7" stroke="#b08a58" stroke-width="1.6"/>',
   // ostrzeżenie: czerwony trójkąt z wykrzyknikiem (pełny magazyn)
@@ -399,7 +401,7 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
   toggleLi.append(resToggle, extra);
   resList.append(toggleLi);
   /** Zapasy dokładane do paska w tej kolejności, póki jest miejsce (broń i piwo, potem składniki jedzenia) */
-  const SECOND: readonly ResourceId[] = ['iron', 'ale', 'spear', 'bow', 'sword', 'armor', 'ladder', 'bread', 'apples', 'wheat', 'flour', 'fish', 'meat'];
+  const SECOND: readonly ResourceId[] = ['iron', 'ale', 'spear', 'bow', 'sword', 'armor', 'ladder', 'bread', 'apples', 'wheat', 'flour', 'fish', 'meat', 'hides'];
   // Michał 7.11.2026: w pasku tylko najważniejsze zapasy (ruda, drewno, kamień, jedzenie razem), a pełny spis wszystkich
   // surowców w oknie na środku (przycisk „…”) — wcześniej kafelki dokładały się do pasku i nachodziły na siebie
   const fitRes = (): void => {
