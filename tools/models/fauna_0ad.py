@@ -37,7 +37,7 @@ ANIMALS = {
     'pig': {'mesh': 'pig.dae', 'idle': 'animal_pig_idle_01', 'graze': 'animal_pig_feeding_01', 'walk': 'animal_pig_walk_01', 'tex': 'animal_pig_01', 'height': 0.27},
     'hen': {'mesh': 'chicken.dae', 'idle': 'chicken_idle_01', 'graze': 'chicken_idle_02', 'walk': 'chicken_walk', 'tex': 'animal_chicken.dds', 'height': 0.1, 'up': 4},
     # zwierzyna w lasach i na łąkach (przyszłe mięso dla myśliwego): dzik ryje, lis węszy przy ziemi, zając skubie
-    'boar': {'mesh': 'animal_boar.dae', 'idle': 'animal_boar_idle_01', 'graze': 'animal_boar_idle_02', 'walk': 'animal_boar_walk_01', 'tex': 'animal_boar_01', 'height': 0.3, 'flip': False, 'freeze': ['Jaw']},
+    'boar': {'mesh': 'animal_boar.dae', 'idle': 'animal_boar_idle_01', 'graze': 'animal_boar_idle_02', 'walk': 'animal_boar_walk_01', 'tex': 'animal_boar_01', 'height': 0.3, 'flip': False, 'freeze': ['Jaw'], 'closeJaw': ['Jaw']},
     'fox': {'mesh': 'fox.dae', 'idle': 'fox_idle', 'graze': 'fox_feeding', 'walk': 'fox_walk', 'tex': 'animal_fox_red', 'height': 0.15},
     'rabbit': {'mesh': 'rabbit_01.dae', 'idle': 'rabbit_idle_01', 'graze': 'rabbit_idle_02', 'walk': 'rabbit_walk', 'tex': 'animal_rabbit_01', 'height': 0.08},
     # wilk (Michał 11.11.2026: „nowy obiekt wilka”) — druga poza to skok do ataku (łeb nisko, z przodu)
@@ -134,7 +134,22 @@ def build(art, aid, cfg):
     for an in (idle, walk, gra):
         for k in [k for k in an if any(f in k for f in cfg.get('freeze', []))]:
             del an[k]
-    base_p, base_n = skin(m, pose(joints, arm, idle, 0))
+    # domknięcie żuchwy (dzik: w każdej animacji i w pozie spoczynkowej paszcza rozdziawiona): żuchwa jedzie razem z łbem
+    # tak, jak leży w samej siatce (tam pysk jest zamknięty) — macierz skórowania żuchwy = macierz skórowania łba
+    xtra = None
+    jaw = next((n for n in m['names'] if any(f in n for f in cfg.get('closeJaw', []))), None)
+    head = next((n for n in m['names'] if 'Head' in n), None)
+    glue = None
+    if jaw and head:
+        ibm = {n: m['ibm'][k] for k, n in enumerate(m['names'])}
+        glue = (jaw, head, ibm[head] @ np.linalg.inv(ibm[jaw]))
+    _pose = pose
+    def pose_(j, a, an, f):
+        W = _pose(j, a, an, f, extra=xtra)
+        if glue:
+            W[glue[0]] = W[glue[1]] @ glue[2]
+        return W
+    base_p, base_n = skin(m, pose_(joints, arm, idle, 0))
     bp = to_game(base_p)
     # kierunek łba: przód to strona osi z, po której jest wyżej (łeb na szyi) — gdyby model patrzył w −z, obracamy o 180°
     zmin, zmax = bp[:, 2].min(), bp[:, 2].max()
@@ -145,19 +160,19 @@ def build(art, aid, cfg):
     print(f'{aid}: {"obrócony o 180°" if flip else "łeb w +z"}')
     # klatka z łbem najniżej (skubanie)
     def head_y(f):
-        p = fix(to_game(skin(m, pose(joints, arm, gra, f))[0]))
+        p = fix(to_game(skin(m, pose_(joints, arm, gra, f))[0]))
         z0, z1 = p[:, 2].min(), p[:, 2].max()
         return p[p[:, 2] > z1 - (z1 - z0) * 0.12][:, 1].min()
     nf = frames(gra)
     gf = min(range(0, nf, max(1, nf // 24)), key=head_y)
     nw = frames(walk)
-    poses = {'base': pose(joints, arm, idle, 0)}
+    poses = {'base': pose_(joints, arm, idle, 0)}
     for k in range(WALK):
-        poses[f'walk{k}'] = pose(joints, arm, walk, int(round(k * nw / WALK)) % nw)
+        poses[f'walk{k}'] = pose_(joints, arm, walk, int(round(k * nw / WALK)) % nw)
     ni = frames(idle)
     for k in range(IDLE):
-        poses[f'idle{k}'] = pose(joints, arm, idle, int(round(k * ni / IDLE)) % ni)
-    poses['graze'] = pose(joints, arm, gra, gf)
+        poses[f'idle{k}'] = pose_(joints, arm, idle, int(round(k * ni / IDLE)) % ni)
+    poses['graze'] = pose_(joints, arm, gra, gf)
     res = {}
     # ruch z korzenia (zając przesuwa się w skoku do przodu i wraca na początek pętli): każda klatka cofnięta w poziomie
     # do środka pozy stojącej — gra przesuwa zwierzę sama
