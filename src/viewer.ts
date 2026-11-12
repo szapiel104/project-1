@@ -137,23 +137,6 @@ function worker(tool: string, arm: number, hand: boolean, extra?: string, grip =
   };
 }
 
-/** Myśliwy celuje z łuku (scene.ts: BOW_ARM, BOW_DRAW): łuk w lewej dłoni, prawa naciąga cięciwę */
-function archerPeasant(): Make {
-  return () => {
-    const holder = new THREE.Scene();
-    Figures.FAR2 = 1e9;
-    const id = 3;
-    const f = new Figures(1, holder, 'peasant');
-    f.set(0, new THREE.Matrix4(), 0, false, RED, id, -1.75, -1.45, false);
-    f.finish(1);
-    const sz = f.sizeOf(id, RED);
-    const mesh = new THREE.Mesh(toolGeometry('bow'), toolMaterials());
-    mesh.applyMatrix4(new THREE.Matrix4().makeScale(sz, sz, sz).multiply(new THREE.Matrix4().makeRotationX(-1.45).setPosition(-0.135, 0.45, 0)));
-    holder.add(mesh);
-    return { obj: holder, size: new THREE.Vector3(0.5, 0.7, 0.5) };
-  };
-}
-
 /** Krzak albo głaz z Blendera (tools/models/plants.py): z lewej z bliska, z prawej z daleka; barwa jak w grze */
 function plantPair(near: THREE.BufferGeometry, far: THREE.BufferGeometry, color: number, tex: 'leaves' | 'rock', flat: boolean): Make {
   return () => {
@@ -305,10 +288,9 @@ const GROUPS: [string, [string, string, Make][]][] = [
     ['work-fork', tx('buntownik z widłami', 'rioter with a pitchfork'), worker('fork', -2.3, true)],
     ['work-bucket', tx('z wiadrem wody', 'with a bucket of water'), worker('bucket', 0, false, 'bucketWater')],
     ['work-rod', tx('rybak z wędką', 'fisherman with rod'), worker('rod', -0.9, true)],
-    ['work-bow', tx('myśliwy z łukiem', 'hunter with bow'), archerPeasant()],
     ['work-back', tx('kilof na plecach', 'pick on the back'), worker('backPick', 0, false)],
   ]],
-  [tx('Narzędzia', 'Tools'), ([['axe', tx('siekiera', 'axe')], ['pick', tx('kilof', 'pick')], ['hammer', tx('młotek', 'hammer')], ['club', tx('maczuga', 'club')], ['fork', tx('widły', 'pitchfork')], ['torch', tx('pochodnia', 'torch')], ['bucket', tx('wiadro', 'bucket')], ['rod', tx('wędka', 'fishing rod')], ['bow', tx('łuk myśliwego', 'hunting bow')], ['backPick', tx('kilof na plecach', 'pick on the back')], ['beltClub', tx('maczuga u pasa', 'club at the belt')]] as const).map(([k, l]) => [`tool-${k}`, `${l} ${tx('(z bliska | z daleka)', '(near | far)')}`, toolPair(k)] as [string, string, Make])],
+  [tx('Narzędzia', 'Tools'), ([['axe', tx('siekiera', 'axe')], ['pick', tx('kilof', 'pick')], ['hammer', tx('młotek', 'hammer')], ['club', tx('maczuga', 'club')], ['fork', tx('widły', 'pitchfork')], ['torch', tx('pochodnia', 'torch')], ['bucket', tx('wiadro', 'bucket')], ['rod', tx('wędka', 'fishing rod')], ['backPick', tx('kilof na plecach', 'pick on the back')], ['beltClub', tx('maczuga u pasa', 'club at the belt')]] as const).map(([k, l]) => [`tool-${k}`, `${l} ${tx('(z bliska | z daleka)', '(near | far)')}`, toolPair(k)] as [string, string, Make])],
   [tx('Części budynków', 'Building parts'), [['towerdoor', tx('drzwi kamiennej wieży (nowe wejście: z muru i przy ziemi)', 'stone tower door (new entrance: from the wall and at ground)'), () => {
     const g = new THREE.Group(), k = towerDoorKit();
     for (const d of [...k.door, ...k.steps]) { const m = new THREE.Mesh(d.geo, d.mat); m.castShadow = true; m.receiveShadow = true; g.add(m); }

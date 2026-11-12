@@ -265,6 +265,8 @@ export class Figures {
 
   /** Ręka z bronią prowadzoną fazą ciosu (topór zbója): set(…, pose) ustawia ją i broń w dłoni wprost */
   private weaponArm: Part['rot'] | null = null;
+  /** Postać z ręką z pozy (łucznik) bierze też kąty rąk do pracy i niesienia (`work`, `workL`) — myśliwy niesie tuszę */
+  private workArms = false;
   private freeArmRot: Part['rot'] | null = null;
   /** Broń jako osobna część (włócznia): pose[1] = jej kąt, pose[2] = wysunięcie do przodu (pchnięcie) */
   private weaponRot: Part['rot'] | null = null;
@@ -530,6 +532,7 @@ export class Figures {
       }
       // w walce strzał fazami (scene.ts: bowShot): pose[0] = ręka cięciwy, pose[3] = ręka z łukiem (łuk zawsze pionowo)
       this.weaponArm = drawArm; this.freeArmRot = bowArm;
+      this.workArms = true; // myśliwy w postaci łucznika niesie tuszę i mięso na rękach jak chłop (scene.ts: hunters)
       // długi łuk: w dłoni, ale zawsze pionowo (druga oś obrotu znosi uniesienie ręki); cięciwa po stronie łucznika
       const chord = 0.58, sag = 0.07, R = (chord * chord / 4 + sag * sag) / (2 * sag), arc = 2 * Math.asin(chord / 2 / R);
       const bowSub = { at: new THREE.Vector3(M.hand[0]!, M.hand[1]!, M.hand[2]!), rot: (s: number, up: boolean): number => -bowArm(s, up) + (up ? 0 : 0.28) };
@@ -596,7 +599,7 @@ export class Figures {
       if (!p.shown(look) || (p.orb && !armsUp)) { p.mesh.setMatrixAt(i, this.none); continue; }
       if (p.opt) p.used = (p.used ?? 0) + 1;
       const r = pose && p.rot === this.weaponArm ? pose[0] : pose && p.rot === this.weaponRot ? pose[1] : pose && p.rot === this.freeArmRot ? (pose[3] ?? p.rot(0, true)) : work === undefined ? p.rot(swing, armsUp)
-        : p.rot === armR ? work : p.rot === armL ? workL : p.rot === legL || p.rot === legR ? (walkLegs ? p.rot(swing, false) : 0) : p.rot(0, false);
+        : p.rot === armR || (this.workArms && p.rot === this.weaponArm) ? work : p.rot === armL || (this.workArms && p.rot === this.freeArmRot) ? workL : p.rot === legL || p.rot === legR ? (walkLegs ? p.rot(swing, false) : 0) : p.rot(0, false);
       // siedzi: obie nogi wyciągnięte przed siebie
       // oburęczny chwyt: ręce obrócone do środka (przed uniesieniem), dłonie spotykają się na stylisku
       const roll = grip && (p.rot === armR || p.rot === armL) ? (p.rot === armR ? -grip : grip) : 0;
