@@ -79,6 +79,7 @@ Nad grą pracuje kilka czatów naraz, więc:
      - `hour(20.5)` — godzina na zegarze;
      - `peasants(n)` — chłopi;
      - `wolf(x, y)` — wilk;
+     - `beasts('deer', x, y, n)` — stado zwierzyny (deer, boar, rabbit, fox, camel), np. do myśliwego;
      - `at(x, y, dist)` — kamera;
      - `run(ticks)` — przewinięcie symulacji.
      Przykład: `const h=__test.home(); __test.place('house',h.x-1,h.y+6); __test.hour(10); __test.at(h.x,h.y+8,7)`.

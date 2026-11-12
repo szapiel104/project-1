@@ -56,6 +56,7 @@ import { EMPTY, SANDBOX, TEST } from './testmode';
 import { census } from './debug/census';
 import { createSimThread, type SimResult } from './sim/simthread';
 import { addPeasants, addWolf, emptyScene, placeReady, removeReady, setHour } from './sim/emptyscene';
+import { GAME_SPECIES } from './sim/systems/wildgame';
 import { Lockstep, TURN } from './net/lockstep';
 import { awardMatch, deleteRoom, flushAwards, isTester, matchBegin, me as netMe, onAccount, saveResult, setStatus } from './net/supa';
 import { forgetMatch, recallMatch, rejoinMatch, rememberMatch, sendState, type MatchMemo } from './net/rejoin';
@@ -2600,6 +2601,18 @@ requestAnimationFrame(loop);
   select(id: string | number): number { const b = typeof id === 'number' ? game.buildings.find((x) => x.id === id) : game.buildings.find((x) => x.owner === ME && BUILDINGS[x.type]!.id === id); select(b?.id ?? 0); return b?.id ?? 0; },
   /** Wilk w polu (x, y) */
   wolf(x: number, y: number): void { addWolf(game, x, y); },
+  /** Stado zwierzyny (deer, boar, rabbit, fox, camel) wokół pola (x, y) — do sprawdzania myśliwego na pustej scenie */
+  beasts(sp: string, x: number, y: number, n = 3): number {
+    const k = GAME_SPECIES.indexOf(sp as never);
+    if (k < 0) return 0;
+    game.beasts ??= [];
+    const herd = game.nextId;
+    for (let i = 0; i < n; i++) {
+      const px = Math.round((x + (i % 3) * 0.9) * FP), py = Math.round((y + Math.floor(i / 3) * 0.9) * FP);
+      game.beasts.push({ id: game.nextId++, sp: k, herd, size: n, px, py, hx: Math.round(x * FP), hy: Math.round(y * FP), tx: px, ty: py, state: 0, until: 0, hp: 1 });
+    }
+    return n;
+  },
   /** Zawala budynek o tym id w ruinę (gruz spada w fizyce) — do sprawdzania gruzu na pustej scenie */
   raze(id: number): boolean { const b = game.buildings.find((x) => x.id === id); if (!b) return false; ruin(game, b); refresh(); return true; },
   state: () => game,
