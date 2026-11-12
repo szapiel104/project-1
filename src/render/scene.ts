@@ -6671,6 +6671,38 @@ export class GameRenderer {
    * Chłop pod kursorem (współrzędne ekranu jak w zdarzeniu myszy), tylko z tych, które przepuści `ok` — promień z kamery
    * jak przy klikaniu w chłopa, więc trafia w całą sylwetkę przy każdym zbliżeniu (wskazywanie wroga do ataku)
    */
+  /**
+   * Zwierzę pod kursorem (Michał 12.11.2026: „na zwierzęta też powinienem kliknąć, powiedzieć co to”): siatki z
+   * userData.animal (fauna.ts, konie, kruki). Najpierw dokładne trafienie w bryłę, potem — dla małych (kura, zając, kruk) —
+   * najbliższe zwierzę do ~22 pikseli od kursora. Zwraca gatunek albo null.
+   */
+  animalAt(clientX: number, clientY: number): string | null {
+    if (!this.view) return null;
+    const r = this.canvas.getBoundingClientRect();
+    const ndc = new THREE.Vector2(((clientX - r.left) / r.width) * 2 - 1, -((clientY - r.top) / r.height) * 2 + 1);
+    this.ray.setFromCamera(ndc, this.cam.camera);
+    const list: THREE.Object3D[] = [];
+    this.scene.traverseVisible((o) => { if (o.userData.animal && (o as THREE.Mesh).isMesh) list.push(o); });
+    if (!list.length) return null;
+    const hit = this.ray.intersectObjects(list, false)[0];
+    if (hit) return hit.object.userData.animal as string;
+    let best: string | null = null, bestD = 22;
+    const p = new THREE.Vector3(), m = new THREE.Matrix4();
+    for (const o of list) {
+      const inst = o as THREE.InstancedMesh;
+      const n = inst.isInstancedMesh ? inst.count : 1;
+      for (let i = 0; i < n; i++) {
+        if (inst.isInstancedMesh) { inst.getMatrixAt(i, m); p.setFromMatrixPosition(m).applyMatrix4(o.matrixWorld); } else p.setFromMatrixPosition(o.matrixWorld);
+        p.y += 0.08;
+        p.project(this.cam.camera);
+        if (p.z > 1) continue;
+        const d = Math.hypot((p.x * 0.5 + 0.5) * r.width + r.left - clientX, (-p.y * 0.5 + 0.5) * r.height + r.top - clientY);
+        if (d < bestD) { bestD = d; best = o.userData.animal as string; }
+      }
+    }
+    return best;
+  }
+
   unitAt(clientX: number, clientY: number, ok: (id: number) => boolean): number {
     if (!this.view) return 0;
     const r = this.canvas.getBoundingClientRect();

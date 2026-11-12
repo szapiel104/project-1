@@ -1791,8 +1791,14 @@ canvas.addEventListener('pointerup', (e) => {
     play('select');
     renderer.markDragged();
   }
-  else if (chosen.size && !e.shiftKey) chooseSoldiers([], false);
+  else {
+    // zwierzę pod kursorem: krótka podpowiedź, co to jest (dzikie, w osadzie, kruki)
+    const sp = renderer.animalAt(e.clientX, e.clientY);
+    if (sp && (ANIMALS as readonly string[]).includes(sp)) { hud.toast(t(`animal.${sp as typeof ANIMALS[number]}`)); play('select'); }
+    if (chosen.size && !e.shiftKey) chooseSoldiers([], false);
+  }
 }, { capture: true });
+const ANIMALS = ['camel', 'deer', 'boar', 'fox', 'rabbit', 'wolf', 'pig', 'hen', 'dog', 'horse', 'crow'] as const;
 
 // ---- wróg pod kursorem: miecz zamiast strzałki, prawy przycisk = atak ----
 let hoverFoe = 0;

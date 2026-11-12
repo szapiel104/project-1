@@ -121,6 +121,7 @@ function ownBody(sp: Species): THREE.Mesh {
   const m = new THREE.Mesh(geo, faunaMaterial(sp));
   m.castShadow = true; m.receiveShadow = true;
   blendFrames(m, sp, [[IDLE0, 1]]);
+  m.userData.animal = sp;   // kliknięcie: co to za zwierzę (scene.ts, animalAt)
   return m;
 }
 /** Wpisuje do siatki mieszankę klatek: lista [klatka, waga] (wagi sumują się do 1) */

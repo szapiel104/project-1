@@ -237,7 +237,7 @@ export class Village {
         let hg = this.horses[horses];
         if (!hg) {
           hg = new THREE.Group(); hg.matrixAutoUpdate = false;
-          for (const part of ['body', 'hair'] as const) { const mm = new THREE.Mesh(horseGeometry(part), horseMaterial(part)); mm.castShadow = true; mm.receiveShadow = part === 'body'; mm.updateMorphTargets(); hg.add(mm); }
+          for (const part of ['body', 'hair'] as const) { const mm = new THREE.Mesh(horseGeometry(part), horseMaterial(part)); mm.castShadow = true; mm.receiveShadow = part === 'body'; mm.updateMorphTargets(); mm.userData.animal = 'horse'; hg.add(mm); }
           this.horseLayer.add(hg); this.horses.push(hg);
         }
         hg.matrix.copy(this.m); hg.matrixWorldNeedsUpdate = true; hg.visible = true;

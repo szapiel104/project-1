@@ -38,9 +38,10 @@ export class CrowLayer {
     if (!this.crows) {
       const c = crowParts();
       this.crows = new THREE.InstancedMesh(c.stand, c.mat, 256);
+      this.crows.userData.animal = 'crow';
       this.crows.frustumCulled = false; this.crows.castShadow = true;
       this.scene.add(this.crows);
-      this.crowFly = c.fly.map((geo) => { const m = new THREE.InstancedMesh(geo, c.mat, 128); m.frustumCulled = false; m.castShadow = true; m.count = 0; this.scene.add(cat(m, 'kruki')); return m; });
+      this.crowFly = c.fly.map((geo) => { const m = new THREE.InstancedMesh(geo, c.mat, 128); m.userData.animal = 'crow'; m.frustumCulled = false; m.castShadow = true; m.count = 0; this.scene.add(cat(m, 'kruki')); return m; });
     }
     const { width, height } = g.map;
     if (g.tick !== this.lastTick) { this.lastTick = g.tick; this.tickAt = this.time; }

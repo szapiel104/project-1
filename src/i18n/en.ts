@@ -385,4 +385,16 @@ export const en: Record<TextKey, string> = {
   'tax.low': 'Low',
   'tax.mid': 'Medium',
   'tax.high': 'High',
+  // zwierzęta po kliknięciu
+  'animal.camel': 'Camel — a wild beast of the desert. Roams in herds near the oases and flees from people.',
+  'animal.deer': 'Red deer — grazes in herds in meadows and woods. Skittish; it flees from people.',
+  'animal.boar': 'Wild boar — roams the woods and meadows in packs, rooting in the earth. Flees from people.',
+  'animal.fox': 'Fox — a loner that sniffs about the meadows, woods and steppe. Flees from people.',
+  'animal.rabbit': 'Hare — hops about the meadows and steppe and bolts when anyone draws near.',
+  'animal.wolf': 'Wolf — a dangerous predator. It falls upon peasants far from the settlement; men-at-arms and archers can see it off.',
+  'animal.pig': 'Pig — kept in the pigsty. Gives meat.',
+  'animal.hen': 'Hen — pecks about the cottages and lays eggs.',
+  'animal.dog': 'Dog — trots after the peasants around the settlement.',
+  'animal.horse': 'Horse — grazes by the stable.',
+  'animal.crow': 'Raven — gathers over the fallen on the battlefield and in the graveyard.',
 };

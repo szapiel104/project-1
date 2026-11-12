@@ -379,6 +379,18 @@ export const pl = {
   'tax.low': 'Niskie',
   'tax.mid': 'Średnie',
   'tax.high': 'Wysokie',
+  // zwierzęta po kliknięciu (Michał 12.11.2026)
+  'animal.camel': 'Wielbłąd — dzikie zwierzę pustyni. Chodzi stadami przy oazach i ucieka przed ludźmi.',
+  'animal.deer': 'Jeleń szlachetny — pasie się stadami na łąkach i w lasach. Płochliwy, ucieka przed ludźmi.',
+  'animal.boar': 'Dzik — chodzi watahą po lasach i łąkach, ryje w ziemi. Ucieka przed ludźmi.',
+  'animal.fox': 'Lis — samotnik, węszy przy ziemi na łąkach, w lasach i na stepie. Ucieka przed ludźmi.',
+  'animal.rabbit': 'Zając — kica po łąkach i stepie, zrywa się, gdy ktoś podejdzie.',
+  'animal.wolf': 'Wilk — groźny drapieżnik. Napada chłopów z dala od osady; zbrojni i łucznicy dają mu radę.',
+  'animal.pig': 'Świnia — hodowana w chlewie. Daje mięso.',
+  'animal.hen': 'Kura — dziobie przy chatach i daje jajka.',
+  'animal.dog': 'Pies — chodzi za chłopami po osadzie.',
+  'animal.horse': 'Koń — pasie się przy stajni.',
+  'animal.crow': 'Kruk — zlatuje się do poległych na polu bitwy i na cmentarz.',
 } as const;
 
 export type TextKey = keyof typeof pl;
