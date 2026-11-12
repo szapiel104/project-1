@@ -157,6 +157,32 @@ def build(art, aid, cfg):
     back = bp[bp[:, 2] < zmin + (zmax - zmin) * 0.15][:, 1].max()
     flip = back > front if 'flip' not in cfg else cfg['flip']   # dzik ma łeb niżej niż zad — wtedy kierunek podany ręcznie
     fix = (lambda p: np.c_[-p[:, 0], p[:, 1], -p[:, 2]]) if flip else (lambda p: p)
+    if glue:
+        # w samej siatce dzik też ma rozdziawiony pysk: obracamy żuchwę wokół zawiasu (położenie kości żuchwy), aż przód
+        # łba (przednie 15% długości) przestanie się zmniejszać w pionie — szczęki zwarte, bez wchodzenia żuchwy w łeb
+        jawi = m['names'].index(glue[0])
+        bindJ = np.linalg.inv(m['ibm'][jawi])
+        H = bindJ[:3, 3]
+        def hinge(axis, ang):
+            ax = bindJ[:3, axis] / np.linalg.norm(bindJ[:3, axis])
+            K = np.array([[0, -ax[2], ax[1]], [ax[2], 0, -ax[0]], [-ax[1], ax[0], 0]])
+            R = np.eye(4); R[:3, :3] = np.eye(3) + np.sin(ang) * K + (1 - np.cos(ang)) * K @ K
+            T = np.eye(4); T[:3, 3] = H
+            Ti = np.eye(4); Ti[:3, 3] = -H
+            hi = m['names'].index(glue[1])
+            return m['ibm'][hi] @ T @ R @ Ti @ np.linalg.inv(m['ibm'][jawi])
+        def front_h(G):
+            W = _pose(joints, arm, idle, 0, extra=xtra); W[glue[0]] = W[glue[1]] @ G
+            p0 = fix(to_game(skin(m, W)[0]))
+            z1, z0 = p0[:, 2].max(), p0[:, 2].min()
+            sel = p0[:, 2] > z1 - (z1 - z0) * 0.15
+            return p0[sel][:, 1].max() - p0[sel][:, 1].min()
+        cands = [(axis, ang) for axis in range(3) for ang in np.linspace(-0.8, 0.8, 33)]
+        hs = {c: front_h(hinge(*c)) for c in cands}
+        lo = min(hs.values())
+        best = min((c for c in cands if hs[c] <= lo * 1.03), key=lambda c: abs(c[1]))
+        glue = (glue[0], glue[1], hinge(*best))
+        print(f'  żuchwa: oś {best[0]}, {best[1]:.2f} rad, pysk z przodu {hs[(best[0], 0.0)] if (best[0], 0.0) in hs else 0:.3f} → {hs[best]:.3f}')
     print(f'{aid}: {"obrócony o 180°" if flip else "łeb w +z"}')
     # klatka z łbem najniżej (skubanie)
     def head_y(f):
