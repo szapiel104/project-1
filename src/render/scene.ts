@@ -2845,7 +2845,8 @@ export class GameRenderer {
       this.syncCrowdSound(g, v);
       T('wojsko', () => { this.syncSoldiers(g, v, alpha); this.placeFoeMark(); });
       T('klimat', () => { this.syncAmbience(g, v, dt); this.syncFlames(g); });
-      T('zwierzęta', () => { this.wolves.sync(g, v, alpha, { time: this.time, calm: this.calm, night: this.night, prevPos: this.prevPos }); this.wolfBlood(g); this.crowLayer.sync(g, v, { time: this.time, calm: this.calm }); this.syncVillage(g, v, dt); });
+      T('zwierzęta', () => { this.wolves.sync(g, v, alpha, { time: this.time, calm: this.calm, night: this.night, prevPos: this.prevPos }); this.wolfBlood(g);
+      this.beastBlood(g); this.crowLayer.sync(g, v, { time: this.time, calm: this.calm }); this.syncVillage(g, v, dt); });
       // macierze świata całej sceny RAZ na klatkę, tuż przed paczkami budynków (wszystko, co rusza obiekty, już się
       // wykonało); paczki i rysowanie (obraz, cienie, odbicie) biorą je stąd — wcześniej scena była przeliczana 2–4 razy
       T('macierze', () => { this.scene.updateMatrixWorld(); this.matrixFrame = this.frameCounter; });
@@ -4484,6 +4485,14 @@ export class GameRenderer {
       this.bloodFx.track(w.id, w.hp, WOLF_HP, x, p.y, z, (w.id * 2.39996) % (Math.PI * 2), true, this.time, this.bloodGround, 0.12, true);
     }
   }
+  /** Krew zwierzyny (Michał 12.11.2026: „krew przy zwierzętach”): trafione strzałą zwierzę pryska krwią na wysokości grzbietu */
+  private beastBlood(g: GameState): void {
+    for (const b of g.beasts ?? []) {
+      if (b.gone || (b.hp <= 0 && !this.bloodFx.knows(b.id))) continue;
+      const x = b.px / FP, z = b.py / FP;
+      this.bloodFx.track(b.id, b.hp > 0 ? 1 : 0, 1, x, this.bloodGround(x, z), z, (b.id * 2.39996) % (Math.PI * 2), false, this.time, this.bloodGround, 0.3, true);
+    }
+  }
   /** Wilki na ekranie: punkt nad grzbietem i zdrowie */
   wolvesOnScreen(): { id: number; x: number; y: number; hp: number; wx: number; wy: number; wz: number }[] {
     if (!this.state) return [];
@@ -5169,6 +5178,16 @@ export class GameRenderer {
     if (this.fallenBearers.size && g.tick % 60 === 0) {
       const dead = new Set(g.corpses.map((cc) => cc.id));
       for (const id of this.fallenBearers) if (!dead.has(id)) this.fallenBearers.delete(id);
+    }
+    // krew pod ubitą zwierzyną: rozlewa się jak pod poległym; zostaje jeszcze chwilę po tym, jak myśliwy zabrał truchło
+    for (const b of g.beasts ?? []) {
+      if (b.hp > 0 || b.dead === undefined) continue;
+      const since = g.tick + alpha - b.dead;
+      if (since > TICKS_PER_SECOND * 240) continue;
+      const fx = b.px / FP, fy = b.py / FP, y = view.heightAt(fx, fy), sb = 0.25;
+      const hx = (view.heightAt(fx + sb, fy) - view.heightAt(fx - sb, fy)) / (2 * sb), hz = (view.heightAt(fx, fy + sb) - view.heightAt(fx, fy - sb)) / (2 * sb);
+      const spread = this.calm ? 1 : Math.max(0, Math.min(1, since / (TICKS_PER_SECOND * 12)));
+      this.stains.add(b.id, fx - width / 2, y + 0.02, fy - height / 2, spread * 0.8, Math.min(1, since / (TICKS_PER_SECOND * 240)), [hx, hz]);
     }
     this.stains.end();
     this.arrows.drawStuck((id) => { const b = bById.get(id); return !!b && !b.ruined; });
@@ -6079,18 +6098,24 @@ export class GameRenderer {
       // myśliwy (postać łucznika) podszedł zwierzynę: staje do niej twarzą, sięga do kołczanu, nakłada strzałę i naciąga
       // cięciwę do policzka (te same fazy co łucznik w walce, combatanim.ts: bowShot); strzał = świst cięciwy
       const huntJob = u.job !== 0 && jobs.get(u.job)?.type === HUNTER;
-      const aiming = huntJob && u.phase === Phase.WorkingSite;
+      const prey = huntJob && u.phase === Phase.WorkingSite && u.hunting ? g.beasts?.find((b) => b.id === u.hunting) : undefined;
+      const aiming = !!prey && prey.hp > 0;
+      // przy ubitym zwierzęciu: pochylony nad truchłem, patroszy je nożem (ręce na zmianę), potem zarzuca na plecy
+      const dressing = !!prey && prey.hp <= 0;
       let huntPose: [number, number, number, number, number, number, number] | undefined;
+      let dressR = 0, dressL = 0;
+      if (prey) { t.rotation.set(0, Math.atan2(prey.px - u.px, prey.py - u.py), 0); swing = 0; }
       if (aiming) {
-        const prey = g.beasts?.find((b) => b.id === u.hunting);
-        if (prey) t.rotation.set(0, Math.atan2(prey.px - u.px, prey.py - u.py), 0);
-        swing = 0;
         this.aiming.add(u.id);
         const p = bowShot(0.3 + 0.7 * Math.min(1, Math.max(0, 1 - u.timer / HUNT_AIM)));
         huntPose = [p[0]!, 0, 0, p[4]!, p[3]!, p[1]!, p[2]!];
-      } else if (this.aiming.delete(u.id) && huntJob && u.phase === Phase.ToHome && !this.calm) this.playHere('bow', t.position.x, t.position.z, 0.8, t.position.y + 1);
+      } else if (this.aiming.delete(u.id) && huntJob && !this.calm) this.playHere('bow', t.position.x, t.position.z, 0.8, t.position.y + 1);
+      if (dressing) {
+        const k2 = this.calm ? 0 : this.time * 4.5 + u.id;
+        dressR = -0.95 + Math.sin(k2) * 0.3; dressL = -0.8 - Math.sin(k2) * 0.15;
+      }
       // drwal z siekierą, kopacz z kilofem: oburęczny zamach, cios z pochyleniem i stuk w chwili trafienia
-      const site = u.phase === Phase.WorkingSite && !fishing && !aiming && u.job ? BUILDINGS[jobs.get(u.job)?.type ?? -1]?.production?.site : undefined;
+      const site = u.phase === Phase.WorkingSite && !fishing && !aiming && !dressing && u.job ? BUILDINGS[jobs.get(u.job)?.type ?? -1]?.production?.site : undefined;
       // rąbiący z biedy (bez chaty drwala, emergencywood.ts) macha siekierą tak samo jak drwal
       // po ścięciu ociosuje i tnie leżący pień przy pniaku: zamach niżej, z mocnym pochyleniem nad pniem
       const limbing = u.phase === Phase.Working && !!u.chop && !u.job;
@@ -6221,7 +6246,7 @@ export class GameRenderer {
       // chłop bez cmentarza zakopuje ciało na skraju lasu: kopie łopatą tak samo jak leśniczy
       const planting = u.phase === Phase.Planting || u.phase === Phase.Burying;
       const hammering = u.phase === Phase.Repairing || u.phase === Phase.Paving;
-      let lean = u.phase === Phase.Paving ? 0.35 : planting ? 0.22 : crafting ? 0.18 : toolLean, work = 0;
+      let lean = u.phase === Phase.Paving ? 0.35 : dressing ? 0.45 : planting ? 0.22 : crafting ? 0.18 : toolLean, work = 0;
       if (planting) {
         if (!this.calm) {
           const ph = (this.time * 0.8 + (u.id % 13) * 0.137) % 1;
@@ -6296,7 +6321,7 @@ export class GameRenderer {
       if (u.id === this.selectedUnit) { this.selection.scale.set(0.5, 0.5, 1); this.selection.position.set(t.position.x, t.position.y + 0.05, t.position.z); this.selection.visible = true; }
       t.scale.setScalar(this.bedHidden ? 0 : FIG);
       // stojący bez zajęcia nie zamiera: przestępuje, rozgląda się, drapie się, przeciąga, przenosi ciężar
-      const rest = !walking && !this.calm && !(job && mode) && !inn && !bed && !fishing && !aiming && !chopping && !mining && !crafting && !hammering && !planting && !fighting && u.carryRes < 0 && !lean && !u.bucket;
+      const rest = !walking && !this.calm && !(job && mode) && !inn && !bed && !fishing && !aiming && !dressing && !chopping && !mining && !crafting && !hammering && !planting && !fighting && u.carryRes < 0 && !lean && !u.bucket;
       const ia = rest ? idle(u.id, this.time) : undefined;
       // rozmowa: obaj zwracają się do siebie, mówiący gestykuluje, słuchający kiwa głową; co kilkanaście sekund chwila ciszy
       const mate = rest ? this.chats.get(u.id) : undefined;
@@ -6458,7 +6483,7 @@ export class GameRenderer {
         this.figures.set(i, t.matrix, swing, false, tc, u.id, arm, arm, true);
         this.bierPose.set(u.id, [t.position.x, t.position.y, t.position.z, heading, this.figures.sizeOf(u.id, tc)]);
       }
-      else (huntJob ? this.hunters : this.figures).set(i, t.matrix, panic ? swing * 1.5 : ia?.legs ? ia.legs : swing, !(u.carryRes >= 0 && !log) && !!ia?.up, TEAM_COLORS[g.players[u.owner]?.team ?? 0] ?? 0x888888, u.id, carrying ? carryR : hammering || planting ? work : chopping || mining ? toolArm : fighting ? fightArm : crafting ? craftR : flee ? -2.5 + flail : wave ? -2.55 + Math.sin(this.time * 14) * 0.35 : fishing ? FISH_ARM : forkUp ? forkArm : torchOn ? torchArm : u.bucket ? 0 : iaArm, carrying ? carryL : rioting && !fighting ? riotL : planting ? work + 0.08 : drawing >= 0 ? (drawing < PICK_GRAB ? -0.5 : -0.5 + ((drawing - PICK_GRAB) / (1 - PICK_GRAB)) * (toolArm + 0.5)) : chopping || mining ? toolArm : fighting ? (weapon === 'pick' ? fightArm + 0.1 : -0.6) : crafting ? craftL : flee ? -2.5 - flail : wave ? -swing * 0.8 : fishing ? FISH_ARM + 0.15 : ia ? (ia.armL ?? 0.05) : -0.5, carrying || flee || wave || torchOn || forkUp || rioting || (!!u.bucket && walking) || !!ia?.legs, undefined, drawing >= 0 ? (drawing < PICK_GRAB ? 0 : TWO_HAND * (drawing - PICK_GRAB) / (1 - PICK_GRAB)) : chopping || mining ? TWO_HAND : 0, huntPose);
+      else (huntJob ? this.hunters : this.figures).set(i, t.matrix, panic ? swing * 1.5 : ia?.legs ? ia.legs : swing, !(u.carryRes >= 0 && !log) && !!ia?.up, TEAM_COLORS[g.players[u.owner]?.team ?? 0] ?? 0x888888, u.id, carrying ? carryR : hammering || planting ? work : chopping || mining ? toolArm : fighting ? fightArm : crafting ? craftR : flee ? -2.5 + flail : wave ? -2.55 + Math.sin(this.time * 14) * 0.35 : fishing ? FISH_ARM : dressing ? dressR : forkUp ? forkArm : torchOn ? torchArm : u.bucket ? 0 : iaArm, carrying ? carryL : rioting && !fighting ? riotL : planting ? work + 0.08 : drawing >= 0 ? (drawing < PICK_GRAB ? -0.5 : -0.5 + ((drawing - PICK_GRAB) / (1 - PICK_GRAB)) * (toolArm + 0.5)) : chopping || mining ? toolArm : fighting ? (weapon === 'pick' ? fightArm + 0.1 : -0.6) : crafting ? craftL : flee ? -2.5 - flail : wave ? -swing * 0.8 : fishing ? FISH_ARM + 0.15 : dressing ? dressL : ia ? (ia.armL ?? 0.05) : -0.5, carrying || flee || wave || torchOn || forkUp || rioting || (!!u.bucket && walking) || !!ia?.legs, undefined, drawing >= 0 ? (drawing < PICK_GRAB ? 0 : TWO_HAND * (drawing - PICK_GRAB) / (1 - PICK_GRAB)) : chopping || mining ? TWO_HAND : 0, huntPose);
       if (u.bucket) this.fireCrew(g, u, i, t, view, jobs, heading, still && cv.speed <= 0.3, alpha);
       // z lasu do chaty niesie kłodę, z chaty do składu gotowe deski
       // ciągnie odmianę, którą ściął (po wczytaniu zapisu w trakcie drogi: stała odmiana dla ludzika)

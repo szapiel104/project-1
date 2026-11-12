@@ -485,15 +485,17 @@ function goalFor(g: GameState, u: Unit, job: Building | undefined, prod: Product
         const jd = job ? BUILDINGS[job.type]! : null;
         const lodge = job && jd ? [job.x + (job.rot % 2 ? jd.h : jd.w) / 2, job.y + (job.rot % 2 ? jd.w : jd.h) / 2] as const : null;
         if (!lodge) return null;
-        let beast = u.hunting ? g.beasts?.find((x) => x.id === u.hunting && x.hp > 0) : undefined;
+        // ubite zwierzę (u.hunting wskazuje truchło): idzie do niego i staje tuż obok, żeby je oprawić i zabrać
+        let beast = u.hunting ? g.beasts?.find((x) => x.id === u.hunting && (x.hp > 0 || !x.gone)) : undefined;
         beast ??= nearestGame(g, lodge[0], lodge[1], HUNT_RANGE, u.id);
         if (!beast) { u.hunting = 0; u.wait = RETRY_TICKS; return null; }
         u.hunting = beast.id;
         const w = g.map.width, bx = (beast.px / FP) | 0, by = (beast.py / FP) | 0;
+        const lo = beast.hp > 0 ? 2 : 0, hi = beast.hp > 0 ? 4 : 1;
         return (t) => {
           if (g.occupancy[t] !== 0) return false;
           const x = t % w, y = (t - x) / w, d = Math.max(Math.abs(x - bx), Math.abs(y - by));
-          return d >= 2 && d <= 4;
+          return d >= lo && d <= hi;
         };
       }
       if (site === 'shore') {
@@ -878,13 +880,19 @@ export function workerSystem(g: GameState): void {
         if (g.map.tiles[tile] === prod.site && ++g.wear[tile]! >= RULES.depositYields) { g.map.tiles[tile] = Terrain.Grass; g.cut.push(tile); }
       }
       if (u.phase === Phase.WorkingSite && prod.site === 'game') {
-        // strzał: zwierzę jeszcze w zasięgu łuku (8 pól) — pada, myśliwy niesie tuszę do chaty; uciekło — szuka dalej
-        const beast = g.beasts?.find((x) => x.id === u.hunting && x.hp > 0);
+        const beast = g.beasts?.find((x) => x.id === u.hunting && (x.hp > 0 || !x.gone));
         const meat = beast ? GAME_MEAT[GAME_SPECIES[beast.sp]!] : 0;
-        if (!beast || meat <= 0 || (beast.px - u.px) ** 2 + (beast.py - u.py) ** 2 > (8 * FP) ** 2) { u.phase = Phase.ToSite; u.path = []; continue; }
-        beast.hp = 0; beast.dead = g.tick; beast.state = 0;
+        if (beast && beast.hp > 0) {
+          // strzał: zwierzę jeszcze w zasięgu łuku (8 pól) — pada, myśliwy idzie do truchła; uciekło — szuka dalej
+          if (meat > 0 && (beast.px - u.px) ** 2 + (beast.py - u.py) ** 2 <= (8 * FP) ** 2) { beast.hp = 0; beast.dead = g.tick; beast.state = 0; }
+          u.phase = Phase.ToSite; u.path = [];
+          continue;
+        }
+        if (!beast || meat <= 0) { u.hunting = 0; u.phase = Phase.ToSite; u.path = []; continue; }
+        // przy truchle: wypatroszone zwierzę zarzuca na plecy (znika z ziemi) i niesie do chaty
+        beast.gone = 1;
         u.hunting = 0;
-        // tuszę niesie do chaty i tam ją oprawia: kilka partii mięsa, każda osobno do spichlerza (jak drwal z kłodą)
+        // tuszę oprawia w chacie: kilka partii mięsa, każda osobno do spichlerza (jak drwal z kłodą)
         u.carryRes = resIndex('meat'); u.carryAmt = meat; u.phase = Phase.ToHome;
         // ze skórą (jeleń, dzik) jest jeszcze jedna porcja na końcu: wyprawiona skóra idzie do składu
         u.hide = GAME_HIDE[GAME_SPECIES[beast.sp]!];
