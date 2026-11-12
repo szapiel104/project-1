@@ -37,7 +37,7 @@ ANIMALS = {
     'pig': {'mesh': 'pig.dae', 'idle': 'animal_pig_idle_01', 'graze': 'animal_pig_feeding_01', 'walk': 'animal_pig_walk_01', 'tex': 'animal_pig_01', 'height': 0.27},
     'hen': {'mesh': 'chicken.dae', 'idle': 'chicken_idle_01', 'graze': 'chicken_idle_02', 'walk': 'chicken_walk', 'tex': 'animal_chicken.dds', 'height': 0.1, 'up': 4},
     # zwierzyna w lasach i na łąkach (przyszłe mięso dla myśliwego): dzik ryje, lis węszy przy ziemi, zając skubie
-    'boar': {'mesh': 'animal_boar.dae', 'idle': 'animal_boar_idle_01', 'graze': 'animal_boar_idle_02', 'walk': 'animal_boar_walk_01', 'tex': 'animal_boar_01', 'height': 0.3, 'flip': False},
+    'boar': {'mesh': 'animal_boar.dae', 'idle': 'animal_boar_idle_01', 'graze': 'animal_boar_idle_02', 'walk': 'animal_boar_walk_01', 'tex': 'animal_boar_01', 'height': 0.3, 'flip': False, 'freeze': ['Jaw']},
     'fox': {'mesh': 'fox.dae', 'idle': 'fox_idle', 'graze': 'fox_feeding', 'walk': 'fox_walk', 'tex': 'animal_fox_red', 'height': 0.15},
     'rabbit': {'mesh': 'rabbit_01.dae', 'idle': 'rabbit_idle_01', 'graze': 'rabbit_idle_02', 'walk': 'rabbit_walk', 'tex': 'animal_rabbit_01', 'height': 0.08},
     # wilk (Michał 11.11.2026: „nowy obiekt wilka”) — druga poza to skok do ataku (łeb nisko, z przodu)
@@ -130,6 +130,10 @@ def build(art, aid, cfg):
     idle = clip(os.path.join(art, 'animation/quadraped', cfg['idle'] + '.dae'))
     walk = clip(os.path.join(art, 'animation/quadraped', cfg['walk'] + '.dae'))
     gra = clip(os.path.join(art, 'animation/quadraped', cfg['graze'] + '.dae'))
+    # kości trzymane w pozie spoczynkowej (dzik: żuchwa — w paczce cały czas rozdziawiony pysk, Michał 12.11.2026)
+    for an in (idle, walk, gra):
+        for k in [k for k in an if any(f in k for f in cfg.get('freeze', []))]:
+            del an[k]
     base_p, base_n = skin(m, pose(joints, arm, idle, 0))
     bp = to_game(base_p)
     # kierunek łba: przód to strona osi z, po której jest wyżej (łeb na szyi) — gdyby model patrzył w −z, obracamy o 180°
