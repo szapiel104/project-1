@@ -4,5 +4,5 @@ import { fetchLiveFixes, loadModels } from './render/modelstore';
 
 // poprawki z edytora (baza + ta przeglądarka) nakładane przy wczytaniu, jak w grze (modelstore.ts)
 await fetchLiveFixes(true);
-await loadModels();
+await loadModels(undefined, { all: true });
 await import('./viewer');

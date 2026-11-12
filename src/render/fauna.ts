@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import type { GameState } from '../sim/state';
 import { Terrain } from '../data/terrain';
-import { model, bytes } from './modelstore';
+import { model, bytes, modelReady } from './modelstore';
 import { cat } from './cat';
 import { play3d } from '../audio/engine';
 
@@ -207,6 +207,7 @@ export class FaunaPool {
   private seen = new Map<number, number>();
   constructor(private sp: Species, private parent: THREE.Object3D) {}
   put(matrix: THREE.Matrix4, walking: boolean, phase: number, alt: number, seed: number, time: number): void {
+    if (!faunaReady(this.sp)) return;   // model zwierzęcia jeszcze się doczytuje (modelstore: zwierzęta po starcie gry)
     let m = this.list[this.n];
     if (!m) { m = ownBody(this.sp); m.matrixAutoUpdate = false; this.parent.add(m); this.list.push(m); }
     // chód ↔ postój płynnie: waga chodu dąży do 1 albo 0 w ok. 0,2 s (osobno dla każdego zwierzęcia, po ziarnie)
@@ -219,9 +220,12 @@ export class FaunaPool {
   }
   end(): void { for (let i = this.n; i < this.list.length; i++) this.list[i]!.visible = false; this.n = 0; }
   /** Długość ciała w polach (krok: pełny cykl chodu na ok. 1,1 długości) */
-  get length(): number { return model<FaunaModel>(`fauna_${this.sp}`).length; }
+  get length(): number { return faunaReady(this.sp) ? model<FaunaModel>(`fauna_${this.sp}`).length : 0.4; }
   static readonly STEPS = WALK;
 }
+
+/** Czy model zwierzęcia już jest (zwierzęta doczytują się w tle po starcie gry — modelstore.ts, `later`) */
+export function faunaReady(sp: Species): boolean { return modelReady(`fauna_${sp}`); }
 
 /** Pojedyncze zwierzę (podgląd modeli) */
 export function faunaObject(sp: Species): THREE.Mesh {
@@ -363,6 +367,7 @@ export class Wildlife {
       }
       // daleko od kamery nie liczymy pozy ani macierzy
       if ((b.x - ctx.cam.x) ** 2 + (b.y - ctx.cam.y) ** 2 > 90 * 90) continue;
+      if (!faunaReady(b.sp)) continue;   // model jeszcze się doczytuje — chodzi, ale go nie widać
       const len = model<FaunaModel>(`fauna_${b.sp}`).length;
       // klatka chodu z przebytej drogi (nogi nie ślizgają się): pełny cykl na ok. 1,1 długości ciała
       // przy ucieczce nogi nie młócą szybciej niż ~2,5 cyklu na sekundę (małe zwierzęta wyglądały jak nakręcane)

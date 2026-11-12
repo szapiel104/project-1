@@ -112,28 +112,48 @@ export function model<T = unknown>(name: string): T {
 /** Wstawienie modelu z zewnątrz (testy w Node czytają pliki z dysku) */
 export function setModel(name: string, data: unknown): void { store.set(name, data); }
 
-export function modelsLoaded(): boolean { return store.size >= Object.keys(URLS).length; }
+/**
+ * Modele doczytywane dopiero po wejściu do gry (Michał 12.11.2026: „krótsze wczytywanie”): zwierzęta (fauna_*) to ok.
+ * 21 MB klatek ruchu, a nie są potrzebne do pierwszego obrazu — do czasu wczytania po prostu ich nie widać.
+ */
+const later = (name: string): boolean => name.startsWith('fauna_');
+const pending = new Map<string, Promise<void>>();
+async function fetchModel(name: string, url: string): Promise<void> {
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(tx(`Nie udało się pobrać modelu ${name} (${res.status})`, `Could not download model ${name} (${res.status})`));
+  const data = await unpackModel(await res.arrayBuffer());
+  // poprawki z edytora w podglądzie modeli (modelfix.ts)
+  applyModelFixes(name, data as Record<string, unknown>, fixesFor(name));
+  names.set(data as object, name);   // nazwa pliku dla edytora poprawek (buildings.ts → userData.modelName)
+  store.set(name, data);
+}
+/** Czy model jest już w pamięci; jeśli nie — zaczyna go pobierać w tle (zwierzęta) i zwraca false */
+export function modelReady(name: string): boolean {
+  if (store.has(name)) return true;
+  const url = URLS[name];
+  if (url && !pending.has(name)) pending.set(name, fetchModel(name, url).catch((e) => { pending.delete(name); console.warn(e); }));
+  return false;
+}
 
-/** Pobiera wszystkie modele naraz; `onProgress(gotowe, wszystkich)` po każdym pliku. Drugie wywołanie nic nie robi. */
-export function loadModels(onProgress?: (done: number, total: number) => void): Promise<void> {
+export function modelsLoaded(): boolean { return Object.keys(URLS).every((n) => later(n) || store.has(n)); }
+
+/**
+ * Pobiera modele naraz; `onProgress(gotowe, wszystkich)` po każdym pliku. Drugie wywołanie nic nie robi.
+ * Zwierzęta (`later`) idą w tle po pozostałych, chyba że `all` (podgląd modeli czeka na wszystko).
+ */
+export function loadModels(onProgress?: (done: number, total: number) => void, opts: { all?: boolean } = {}): Promise<void> {
   if (loading) return loading;
-  const entries = Object.entries(URLS);
+  const entries = Object.entries(URLS).filter(([n]) => opts.all || !later(n));
   let done = 0;
   loading = Promise.all(entries.map(async ([name, url]) => {
-    if (!store.has(name)) {
-      const res = await fetch(url);
-      if (!res.ok) throw new Error(tx(`Nie udało się pobrać modelu ${name} (${res.status})`, `Could not download model ${name} (${res.status})`));
-      const data = await unpackModel(await res.arrayBuffer());
-      // poprawki z edytora w podglądzie modeli (modelfix.ts)
-      applyModelFixes(name, data as Record<string, unknown>, fixesFor(name));
-      names.set(data as object, name);   // nazwa pliku dla edytora poprawek (buildings.ts → userData.modelName)
-      store.set(name, data);
-    }
+    if (!store.has(name)) await fetchModel(name, url);
     done++;
     onProgress?.(done, entries.length);
   })).then(async () => {
     // modele z Poly Haven użyte w poprawkach budynków (rekwizyty 'ph:<id>') — przed budową sceny, żeby stały od razu
     await Promise.all(phUsed(store.values()).map((id) => loadPh(id)));
+    // zwierzęta zaraz po starcie, w tle
+    if (!opts.all) setTimeout(() => { for (const n of Object.keys(URLS)) if (later(n)) modelReady(n); }, 1500);
   });
   return loading;
 }
