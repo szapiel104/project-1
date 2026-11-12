@@ -135,12 +135,6 @@ export const BUILDINGS: readonly BuildingDef[] = [
     needsTerrain: { terrain: Terrain.Water, radius: 7 },
     production: { output: { res: 'fish', amount: 8 }, site: 'shore', workTicks: 110 },
   },
-  // Chata myśliwego (Michał 12.11.2026): myśliwy podchodzi do dzikiej zwierzyny (jeleń, dzik, zając — wildgame.ts),
-  // strzela z łuku i przynosi mięso do spichlerza. Bez zwierzyny w okolicy (30 pól) czeka.
-  {
-    id: 'hunter', category: 'food', name: 'b.hunter', w: 2, h: 2, cost: { wood: 40 }, buildable: true,
-    production: { output: { res: 'meat', amount: 4 }, site: 'game', workTicks: 45, processTicks: 70 },
-  },
   // Wolnostojąca pochodnia: gracz stawia ją, gdzie chce, żeby rozświetlić osadę nocą
   { id: 'torch', category: 'settlement', name: 'b.torch', w: 1, h: 1, cost: { wood: 3 }, buildable: true },
   // Drogi: maluje się je po polach. Ludzie chodzą po nich szybciej i chętniej je wybierają
@@ -275,6 +269,13 @@ export const BUILDINGS: readonly BuildingDef[] = [
     id: 'pigsty', category: 'food', name: 'b.pigsty', w: 3, h: 2, cost: { wood: 35 }, buildable: true,
     workView: 'field',
     production: { output: { res: 'meat', amount: 6 }, site: 'home', workTicks: 180 },
+  },
+  // Chata myśliwego (Michał 12.11.2026): myśliwy podchodzi do dzikiej zwierzyny (jeleń, dzik, zając — wildgame.ts),
+  // strzela z łuku, tuszę oprawia w chacie, mięso do spichlerza, skóry do składu. Bez zwierzyny w okolicy (40 pól) czeka.
+  // NA KOŃCU LISTY: typ budynku w zapisach to numer na tej liście (12.11.2026 wstawiony w środek przesunął stare zapisy)
+  {
+    id: 'hunter', category: 'food', name: 'b.hunter', w: 2, h: 2, cost: { wood: 40 }, buildable: true,
+    production: { output: { res: 'meat', amount: 4 }, site: 'game', workTicks: 45, processTicks: 70 },
   },
 ];
 

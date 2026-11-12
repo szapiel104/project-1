@@ -19,6 +19,7 @@ Nad grą pracuje kilka czatów naraz, więc:
 
 ## Dwa języki: polski i angielski (obowiązkowo dla każdego czatu, od 17.10.2026)
 - Każdy nowy budynek, jednostka, surowiec, okno, przycisk, komunikat i podpowiedź dostaje od razu **obie wersje**. Bez angielskiej wersji zmiana nie jest skończona.
+- **Nowy budynek i surowiec tylko NA KOŃCU listy** (`BUILDINGS`, `RESOURCES`): numer na liście trafia do zapisów; wstawka w środek psuje stare zapisy (12.11.2026). Pilnuje `tests/building-order.test.ts` — dopisz tam nowy id.
 - Stałe teksty (nazwy i opisy budynków, jednostek, surowców): klucz w `src/i18n/pl.ts` **i** ta sama linijka w `src/i18n/en.ts`, w kodzie `t('klucz')`. `en.ts` jest typowany kluczami z `pl.ts`, więc brakujące tłumaczenie wywala `tsc`; `tests/i18n.test.ts` sprawdza dodatkowo, że każdy budynek z `BUILDINGS` ma nazwę w obu językach.
 - Krótkie napisy w miejscu (etykieta jednego przycisku, dymek): `tx('Po polsku', 'In English')` z `src/i18n`.
 - Angielski pisany naturalnie, w klimacie średniowiecznym (keep, armoury, my lord), nie słowo w słowo z polskiego.

@@ -125,7 +125,8 @@ export class PuddleLayer {
     }
     const u = (this.mesh.material as THREE.MeshStandardMaterial).userData.u as Record<string, { value: number }>;
     u.uWet!.value = wet; u.uRain!.value = rain; u.uTime!.value = time;
-    this.mesh.visible = wet > 0.03;
+    // pustynia: piasek od razu wsiąka wodę — bez kałuż (Michał 12.11.2026: czarne plamy na piasku w deszczu)
+    this.mesh.visible = wet > 0.03 && g.map.biome !== 'desert';
     if (!this.mesh.visible) return;
     const key = `${roadSum}|${g.buildings.length}|${g.map.width}x${g.map.height}|${g.map.seed}`;
     if (key === this.key && view === this.viewRef) return;

@@ -12,6 +12,8 @@
 - Obraz: `Wildlife` rysuje `g.beasts` (płynne doganianie, upadek na bok, bez pór roku), myśliwy w postaci łucznika (`hunters` Figures, `bowShot`, `workArms` do niesienia), krew zwierzyny (`beastBlood`, plamy pod truchłem).
 - Zwierzęta: 24/16 klatek, int16, wilk Roo (Sketchfab, CC BY 4.0), żuchwa dzika, kliknięcie w zwierzę, leniwe wczytywanie modeli zwierząt (`modelstore` `later`).
 - Tryb testowy: `__test.beasts(gatunek, x, y, n)`.
+- `hunter` na końcu `BUILDINGS` (wstawka w środek przesuwała numery budynków w starych zapisach); test `building-order.test.ts`.
+- Kałuże: bez kałuż na pustyni.
 
 ## 0.95.6 — 2026-11-11
 - `building.py`: `coals()` (miał, węgiel `coal`, grudki 'ember'); użyte w banditcamp, magehut, smithy; kolejność materiałów zachowana (testy poprawek z edytora).

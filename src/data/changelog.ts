@@ -17,6 +17,7 @@ const NEW: ChangeEntry[] = [
     'Nowy wilk i płynniejsze ruchy wszystkich zwierząt; dzik ma wreszcie zamknięty pysk.',
     'Kliknięcie w zwierzę (dzikie, w osadzie, kruki) mówi, co to za stworzenie.',
     'Krótsze wczytywanie: modele zwierząt doczytują się w tle już po wejściu do gry.',
+    'Na pustyni po deszczu nie ma już czarnych kałuż na piasku.',
   ], en: [
     'A new building: the hunter\'s lodge. The hunter stalks game, reaches for his quiver, draws his bow and looses; he dresses the kill where it fell, carries the carcass home, butchers it and takes the meat to the granary a portion at a time.',
     'A new good: hides. From deer and boar the hunter brings cured hides to the stockpile, and the market pays handsomely for them.',
@@ -25,6 +26,7 @@ const NEW: ChangeEntry[] = [
     'A new wolf and smoother movement for every animal; the boar finally keeps its jaw shut.',
     'Clicking an animal (wild, in the village, or a crow) tells you what manner of creature it is.',
     'Shorter loading: animal models finish loading in the background once you are in the game.',
+    'No more black puddles on the desert sand after rain.',
   ] },
   { v: '0.95.6', date: '2026-11-11', pl: [
     'W ogniskach i paleniskach obozu zbójców, chaty maga i kuźni leży prawdziwy żar: węgiel i rozżarzone grudki zamiast płaskich krążków.',
