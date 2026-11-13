@@ -119,6 +119,11 @@ strzałkami (TransformControls z three.js), zapisać. Plan:
 
 - **Głód i bunt (23.10.2026):** partia 1 zrobiona (0.37.0) — po 5 pustych posiłkach z rzędu część ludzi staje tłumem pod bramą i nie pracuje, straż zmniejsza tłum, większe racje i straż szybciej go uspokajają, buntownicy nie odchodzą. Partia 2 zrobiona 24.10 (0.38.0): „Rozdaj chleb” i „Rozpędź strażą” w oknie twierdzy, tłum z widłami (model z Blendera) i pochodniami, twarzą do bramy; bot też z tego korzysta. Partia 3 zrobiona 24.10 (0.39.0): przy długim buncie napady na zmianę — rozkradanie składu i podpalenie spichlerza, skryba z przyciskiem do miejsca; rozpędzeni uciekają w popłochu. Dalej: okrzyki tłumu głosem (nagrania), straż broniąca napadniętego budynku, rabusie niosący łup do chat (widoczne worki).
 
+## Na przyszłość — wyspy, morze, bestie (Michał 13.11.2026: „do zapisania w przyszłości”)
+- **Wyspy na morzu:** mapy z morzem i wyspami; na wyspę płynie się statkiem.
+- **Statek:** czasami przypływa (kupiec, posiłki, najeźdźcy) albo gracz wysyła nim ludzi i towar na wyspę.
+- **Dalej klimat Gothica:** bestie do zabicia w dziczy (nie tylko wilki — np. silniejsze potwory w jaskiniach i na wyspach), za ubicie łup i trofea; myśliwy i wojsko na wyprawy.
+
 ## Nowe pomysły Claude'a (24.10.2026) — do wyboru przy „co dalej”
 Klimat Gothica: surowo, ale żywo; każdy pomysł to osobna mała partia.
 - **Strach albo łaska (jak w Twierdzy):** budynki grozy na placu (pręgierz, szubienica, klatka) i budynki dobroci (kapliczka Ojca Płomienia, studnia z ławą, ogródek). Przewaga grozy = ludzie pracują szybciej, ale popularność niżej; przewaga dobroci = odwrotnie. Suwak widoczny w rozpisce popularności.
