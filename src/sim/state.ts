@@ -75,6 +75,8 @@ export interface PlayerState {
   raids?: number;
   /** Ostatni napad tłumu do ogłoszenia przez skrybę: tick, budynek, rodzaj (1 = rozkradli skład, 2 = podpalili spichlerz) */
   lastRaid?: { tick: number; building: number; kind: number };
+  /** Ostatni nocny złodziej (thieves.ts): 0 = uciekł z łupem, 1 = złapany przez straż; miejsce, towar i ile */
+  lastThief?: { tick: number; kind: number; x: number; y: number; res: number; amt: number };
   cold?: number;
   /** Opał: ułamek drewna spalonego w piecach, którego jeszcze nie zdjęto ze składu (zima) */
   fuel?: number;
@@ -674,6 +676,25 @@ export interface Beast {
 }
 
 /** Wilk z lasu: poluje nocą, o świcie wraca za mapę */
+/** Nocny złodziej (thieves.ts): zakrada się pod magazyn gracza `owner`, wynosi towar i ucieka za skraj mapy */
+export interface Thief {
+  id: number;
+  owner: number;
+  px: number;
+  py: number;
+  path: number[];
+  /** 0 zakrada się, 1 grzebie przy drzwiach, 2 ucieka */
+  phase: number;
+  /** Id magazynu, który okrada */
+  store: number;
+  timer: number;
+  /** Łup: surowiec i ile */
+  res?: number;
+  amt?: number;
+  /** Ktoś go goni (wygląd: biegnie) */
+  chased?: number;
+}
+
 export interface Wolf {
   id: number;
   px: number;
@@ -707,6 +728,8 @@ export interface GameState {
   wolves: Wolf[];
   /** Dzika zwierzyna (wildgame.ts; brak = jeszcze nie wypuszczona, rodzi się przy pierwszym ticku) */
   beasts?: Beast[];
+  /** Nocni złodzieje (thieves.ts) */
+  thieves?: Thief[];
   /** Brama na polu: właściciel + 1 (0 = brak). Swoi przechodzą, obcy nie */
   gates: Uint8Array;
   /** Ściany między polami (w zamku): bity 1 = ku -y, 2 = ku +x, 4 = ku +y, 8 = ku -x; przez taką krawędź nie da się przejść */
@@ -1093,6 +1116,7 @@ export function stateHash(g: GameState): number {
   for (const q of g.orders ?? []) { add(q.grp); add(q.owner); add(q.patrol ? 1 : 0); for (const m of q.steps) { add(m.tile); add(m.face ?? 9); add(m.form ?? 0); add(m.width ?? 0); add(m.amove ? 1 : 0); } }
   for (const m of g.marches ?? []) { add(m.grp); add(m.px); add(m.py); add(m.dir); add(m.stall); add(m.go ? 1 : 0); add(m.path.length); }
   for (const w of g.wolves) { add(w.id); add(w.px); add(w.py); add(w.hp); }
+  for (const t of g.thieves ?? []) { add(t.id); add(t.owner); add(t.px); add(t.py); add(t.phase); add(t.timer); add(t.amt ?? 0); add(t.path.length); }
   for (const b of g.beasts ?? []) { add(b.id); add(b.sp); add(b.px); add(b.py); add(b.hp); add(b.state); add(b.gone ?? 0); }
   for (const t of g.travelers) { add(t.id); add(t.px); add(t.py); add(t.leaving ? 1 : 0); add(t.path.length); }
   for (const c of g.corpses) { add(c.id); add(c.px); add(c.py); add(c.at); add(c.taken ? 1 : 0); add(c.post ?? 0); for (const b of c.by ?? []) add(b); add(c.since ?? 0); }

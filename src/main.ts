@@ -2065,6 +2065,7 @@ let warnedHungry = false;
 let warnedLeaving = false;
 let warnedRevolt = false;
 let raidSeen = 0;
+let thiefSeen = 0;
 
 /** Skryba przed zimą: na początku jesieni zapowiedź, ok. półtora dnia przed zimą rachunek drewna i jedzenia, a gdy zima
  * przyjdzie — krótko, co robić. Progi liczone z położenia w roku; skok pory roku z menu dewelopera nic nie ogłasza. */
@@ -2124,6 +2125,14 @@ function refresh(): void {
     const rb = game.buildings.find((x) => x.id === p.lastRaid!.building);
     const fp = rb ? footprint(BUILDINGS[rb.type]!, rb.rot) : null;
     scribe.say(`raid${raidSeen}`, t(p.lastRaid.kind === 2 ? 'scribe.riotFire' : 'scribe.riotLoot'), true, 'scribe', rb && fp ? showAt(rb.x + fp.w / 2, rb.y + fp.h / 2) : undefined);
+  }
+  // nocny złodziej (thieves.ts): uciekł z łupem albo złapała go straż
+  if (p.lastThief && p.lastThief.tick !== thiefSeen && game.tick - p.lastThief.tick < 100) {
+    thiefSeen = p.lastThief.tick;
+    const lt = p.lastThief;
+    const what = lt.res >= 0 ? `${lt.amt} × ${t(RESOURCE_DEFS[RESOURCES[lt.res]!].name).toLowerCase()}` : '';
+    const msg = lt.kind === 1 ? (what ? t('scribe.thiefCaught').replace('{loot}', what) : t('scribe.thiefCaughtEmpty')) : t('scribe.thiefGone').replace('{loot}', what);
+    scribe.say(`thief${thiefSeen}`, msg, lt.kind === 0, 'scribe', showAt(lt.x, lt.y));
   }
   // etap osady: skryba ogłasza awans i to, co się odblokowało
   const tierNow = p.tier ?? 0;

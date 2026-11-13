@@ -12,6 +12,7 @@ import { relocate } from './systems/relocate';
 import { wolfSystem } from './systems/wolves';
 import { wildGameSystem } from './systems/wildgame';
 import { guardSystem } from './systems/guards';
+import { thiefSystem } from './systems/thieves';
 import { campSystem } from './systems/minecamp';
 import { GUARD } from '../data/units';
 const isGuard = (g: GameState, id: number): boolean => g.soldiers.some((s) => s.id === id && s.kind === GUARD);
@@ -260,6 +261,7 @@ export function step(g: GameState, commands: readonly Command[]): void {
   wolfSystem(g);
   wildGameSystem(g);
   guardSystem(g);
+  thiefSystem(g);
   campSystem(g);
   economySystem(g);
   // zawartość każdego magazynu osobno zgodna z zapasami gracza (zjedzone, zapłacone, łup — stock.ts)

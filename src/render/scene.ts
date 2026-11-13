@@ -364,6 +364,8 @@ export class GameRenderer {
   private menAtArms!: Figures;
   private sappersFig!: Figures;
   private banditsFig!: Figures;
+  /** Ostatni kierunek marszu nocnego złodzieja (stojąc przy drzwiach patrzy tam, skąd przyszedł) */
+  private thiefFace = new Map<number, number>();
   private banditBodies!: Figures;
   private sapperBodies!: Figures;
   /** Chorążowie z proporcami (po jednym w oddziale) */
@@ -5061,6 +5063,24 @@ export class GameRenderer {
     this.archers.finish(n);
     this.guardsFig.finish(n);
     this.menAtArms.finish(n);
+    // nocni złodzieje (thieves.ts): postać zbója w szarym kapturze, bez barw pana; skrada się, przy drzwiach kuca i grzebie,
+    // z łupem albo w pościgu biegnie; drobny ruch między tickami jak u wilków (krok co tick, bez doganiania)
+    for (const th of g.thieves ?? []) {
+      if (bandits >= 256) break;
+      const next = th.path[0];
+      const nx = next !== undefined ? (next % width) + 0.5 : th.px / FP, ny = next !== undefined ? Math.floor(next / width) + 0.5 : th.py / FP;
+      const x = th.px / FP, y = th.py / FP, moving = next !== undefined && th.phase !== 1;
+      const run = th.phase === 2 || th.chased;
+      t.position.set(x - width / 2, view.heightAt(x, y), y - height / 2);
+      if (moving) this.thiefFace.set(th.id, Math.atan2(nx - x, ny - y));
+      t.rotation.set(0, this.thiefFace.get(th.id) ?? 0, 0);
+      t.scale.setScalar(1);
+      // przy drzwiach magazynu: pochylony, ręce grzebią przy zamku
+      if (th.phase === 1) t.rotation.x = 0.35;
+      t.updateMatrix();
+      const legs = moving && !this.calm ? Math.sin(this.time * (run ? 15 : 8) + th.id) * (run ? 0.75 : 0.4) : 0;
+      this.banditsFig.set(bandits++, t.matrix, legs, false, 0x3a3630, th.id, th.phase === 1 ? -0.9 + Math.sin(this.time * 6) * 0.2 : undefined, th.phase === 1 ? -0.8 : -0.5, false, undefined, 0);
+    }
     this.banditsFig.finish(bandits);
     this.battleFireFig.finish(0);
     this.battleWaterFig.finish(0);
