@@ -483,7 +483,8 @@ describe('balans żywności', () => {
     let hungryMonths = 0;
     for (let i = 0; i < 18_000; i++) {
       step(g, []);
-      if (g.tick % RULES.monthTicks === 0 && g.players[0]!.popDelta < 0) hungryMonths++;
+      // głód, a nie spadek nastrojów w ogóle (pogrzeb bez kapliczki po nocnym wilku też obniża popDelta)
+      if (g.tick % RULES.monthTicks === 0 && g.players[0]!.hungry) hungryMonths++;
     }
     expect(hungryMonths).toBe(0);
     expect(population(g, 0)).toBe(9); // trzech pracujących i pełne obozowisko
