@@ -172,9 +172,19 @@ for k, (vx, vz) in enumerate(((-0.62, -0.55), (-0.62, -0.08))):
     b.prism('base', 'dark', 0.152, 0.152, 0.19, vx, 0.0, vz, seg=14)                          # ciemne wnętrze (garbnik pod skórą)
     for y in (0.04, 0.19):                                                                    # obręcze, odsunięte od klepek
         b.tube('base', 'iron', 0.176, 0.168, 0.025, vx, y, vz, seg=14)
-    # skóra przerzucona przez brzeg kadzi: płat na wierzchu i zwis po boku (dwie warstwy)
-    b.box('base', 'hideLight' if k else 'hide', 0.3, 0.008, 0.26, vx + 0.02, 0.245, vz, rot=0.3 + k)
-    b.box('base', 'hideLight' if k else 'hide', 0.2, 0.14, 0.008, vx + 0.02, 0.11, vz + 0.18, rot=0.3 + k)
+    # skóra przerzucona przez kadź: nieregularny płat (trzy zachodzące na siebie kawałki pod różnym kątem, lekko
+    # zapadnięte do środka), z dwóch stron zwisa po klepkach, z jednej łapa — nie kwadratowa deska
+    m = 'hideLight' if k else 'hide'
+    yaw = 0.3 + k * 1.1
+    cs, sn = math.cos(yaw), math.sin(yaw)
+    for j, (ox, oz, w_, d_, ry, dy) in enumerate(((0.0, 0.0, 0.26, 0.2, 0.0, 0.0), (0.05, -0.04, 0.2, 0.16, 0.5, 0.006), (-0.06, 0.05, 0.18, 0.15, -0.4, 0.012))):
+        b.box('base', m, w_, 0.008, d_, vx + ox * cs - oz * sn, 0.243 + dy - 0.012 * (j == 0), vz + ox * sn + oz * cs, rot=yaw + ry, tilt=0.06 * (j - 1))
+    for side in (-1, 1):                                                                       # zwisy po bokach kadzi
+        fx, fz = vx + side * 0.17 * cs, vz + side * 0.17 * sn
+        b.box('base', m, 0.008, 0.13 + 0.03 * (side > 0), 0.16, fx, 0.12 - 0.03 * (side > 0), fz, rot=yaw, roll=side * 0.12)
+    lx, lz = vx - 0.12 * sn, vz + 0.12 * cs                                                    # łapa zwisająca z przodu
+    b.box('base', m, 0.03, 0.12, 0.008, lx, 0.13, lz, rot=yaw, tilt=0.15)
+    b.crystal('base', 'hideDark', lx, 0.125, lz + 0.004, 0.016, seed=k + 3.3, seg=6)
     solid.append([vx - 0.19, vx + 0.19, vz - 0.19, vz + 0.19])
 # kopczyk kory dębowej (garbnik) przy kadziach
 for k in range(9):
