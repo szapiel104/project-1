@@ -80,6 +80,19 @@ export function wolfSystem(g: GameState): void {
       for (const u of g.units) { if (u.phase === Phase.Sleeping && u.home) continue; const dx = (u.px - w.px) / FP, dy = (u.py - w.py) / FP, d = dx * dx + dy * dy; if (d < best) { best = d; prey = u.id; } }
       for (const s of g.soldiers) { if (high(g, s)) continue; const dx = (s.px - w.px) / FP, dy = (s.py - w.py) / FP, d = dx * dx + dy * dy; if (d < best) { best = d; prey = s.id; } }
       w.target = prey;
+      // nikogo w zasięgu wzroku, a obok leży ubita zwierzyna (myśliwy jeszcze jej nie zabrał): wilk idzie ją pożreć
+      // (Michał 13.11.2026: padlina ściąga wilki i kruki) — myśliwy traci tuszę, a wilk długo nie poluje
+      if (!prey && g.beasts?.length) {
+        let md = SIGHT * SIGHT, meal: (typeof g.beasts)[number] | undefined;
+        for (const b of g.beasts) { if (b.hp > 0 || b.gone) continue; const d = ((b.px - w.px) / FP) ** 2 + ((b.py - w.py) / FP) ** 2; if (d < md) { md = d; meal = b; } }
+        if (meal) {
+          if (md <= 4) { w.path = []; if (w.cd === 0) { meal.gone = 1; w.cd = EAT; } continue; }
+          if (!w.path.length && (g.tick + w.id) % 15 === 0) {
+            const mt = (meal.py >> 8) * width + (meal.px >> 8);
+            w.path = findPath(g, here, (x) => Math.abs((x % width) - (mt % width)) <= 1 && Math.abs(Math.floor(x / width) - Math.floor(mt / width)) <= 1, 3000, WOLF) ?? [];
+          }
+        }
+      }
       // gryzie z sąsiedniego pola, także po skosie (d² = 2): wcześniej wilk po skosie od śpiącego nie gryzł, nie znajdował drogi i wracał do lasu
       if (prey && best <= 2.1) {
         w.path = [];

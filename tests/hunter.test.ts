@@ -63,3 +63,17 @@ it('myśliwy strzela do wilka w zasięgu chaty, a ubitego oskórowuje (skóra do
   expect(shot).toBe(true);
   expect(g.players[0]!.res[resIndex('hides')]!).toBe(hides0 + 1);
 }, 60000);
+
+it('wilk bez ludzi w zasięgu idzie do ubitej zwierzyny i ją zjada', () => {
+  const { g } = scene();
+  const k = g.buildings[0]!, W = g.map.width, hx = k.door % W, hy = Math.floor(k.door / W);
+  // noc drugiego dnia; truchło jelenia daleko od ludzi, wilk obok
+  setHour(g, 24 + 23);
+  const deer = g.beasts![0]!;
+  const x = hx + 30, y = hy + 30;
+  Object.assign(deer, { px: x * FP, py: y * FP, hp: 0, dead: g.tick, state: 0 });
+  g.units.length = 0;
+  addWolf(g, x + 4, y);
+  for (let i = 0; i < 300 && !deer.gone; i++) step(g, []);
+  expect(deer.gone).toBe(1);
+}, 60000);

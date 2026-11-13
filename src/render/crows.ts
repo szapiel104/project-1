@@ -2,7 +2,7 @@
  * Kruki na ciałach poległych (wyniesione z scene.ts, 23.10.2026): przylatują chwilę po śmierci, dziobią i podskakują,
  * a gdy ktoś podejdzie, zrywają się i krążą nad ciałem. Po kilkudziesięciu sekundach odlatują w siną dal
  * (Michał 27.10.2026: nie mają siedzieć nad ciałem bez końca). Garść na całe pobojowisko (najwyżej 18 na mapę).
- * Ciała na wieżach i murach kruki omijają.
+ * Ciała na wieżach i murach kruki omijają. Siadają też przy ubitej zwierzynie (truchło jelenia czy dzika na ziemi).
  */
 /** Sekundy od śmierci: przylot, odlot (koniec siedzenia) i zniknięcie */
 const ARRIVE = 15, LAND = 19, LEAVE = 50, GONE = 57;
@@ -56,13 +56,16 @@ export class CrowLayer {
     const CELL = 10 * FP;
     const bodies = new Map<number, number>();
     const visit = (body: GameState['corpses'][number]): boolean => !body.taken && !body.post && ageOf(body.at) >= ARRIVE && ageOf(body.at) < GONE;
-    for (const body of g.corpses) {
+    // ubita zwierzyna, której myśliwy jeszcze nie zabrał (ani nie zjadł jej wilk), też ściąga kruki (Michał 13.11.2026)
+    const all: GameState['corpses'] = g.corpses.slice();
+    for (const b of g.beasts ?? []) if (b.hp <= 0 && !b.gone && b.dead !== undefined) all.push({ id: b.id, owner: -1, kind: -3, px: b.px, py: b.py, at: b.dead, taken: false });
+    for (const body of all) {
       if (!visit(body)) continue;
       const key = Math.floor(body.px / CELL) * 4096 + Math.floor(body.py / CELL);
       bodies.set(key, (bodies.get(key) ?? 0) + 1);
     }
     const used = new Map<number, number>();
-    for (const body of g.corpses) {
+    for (const body of all) {
       if (total >= 18) break;
       if (!visit(body)) continue; // przylatują chwilę po śmierci, po chwili odlatują
       const key = Math.floor(body.px / CELL) * 4096 + Math.floor(body.py / CELL);
