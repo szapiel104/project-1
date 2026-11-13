@@ -67,6 +67,7 @@ const PIGSTY_MODEL = model('pigsty');
 const CEMETERY_MODEL = model('cemetery');
 const FORESTER_MODEL = model('forester');
 const HUNTER_MODEL = model('hunter');
+const TANNER_MODEL = model('tanner');
 const FIELD_TENT_MODEL = model('fieldtent');
 const SMITHY_MODEL = model('smithy');
 const ARMORER_MODEL = model('armorer');
@@ -267,8 +268,11 @@ const inBasket = (contents: THREE.BufferGeometry[]): THREE.BufferGeometry => mer
 export const MEAT_COLORS: Record<string, number> = { meat: 0xa04a3a, meatDark: 0x6a2c1c, bone: 0xe6dcc2, white: 0xeadfd0, woodDark: 0x5e4329 };
 /** Barwy skór z polowania (tools/models/hides.py): sierść, jaśniejsza sierść, strona mięsna, rzemień */
 export const HIDE_COLORS: Record<string, number> = { hide: 0x7a5434, hideLight: 0x9a7048, hideDark: 0x4e3424, cord: 0x3a2818 };
+/** Barwy kaftanów od kaletnika (tools/models/jerkins.py): wyprawiona skóra jaśniejsza i gładsza niż surowa */
+export const LEATHER_COLORS: Record<string, number> = { hide: 0x9a6c42, hideLight: 0xb08454, hideDark: 0x4e3424, cord: 0x2e2014 };
 let meatPile: THREE.BufferGeometry | null = null;
 let hidePile: THREE.BufferGeometry | null = null;
+let leatherPile: THREE.BufferGeometry | null = null;
 const PILES: Record<string, { geo: THREE.BufferGeometry; tex?: Pattern; metal?: boolean; withProp?: PropName | PropName[]; noCode?: boolean }> = {
   wood: {
     tex: 'planks',
@@ -407,6 +411,8 @@ const PILES: Record<string, { geo: THREE.BufferGeometry; tex?: Pattern; metal?: 
   meat: { get geo() { return (meatPile ??= coloredModel('meat', MEAT_COLORS)); } },
   // skóry z polowania (tools/models/hides.py): zwinięte rulony z rzemieniem, w składzie warstwami; faktura skóry z płótna
   hides: { tex: 'burlap', get geo() { return (hidePile ??= coloredModel('hides', HIDE_COLORS, undefined, true)); } },
+  // kaftany od kaletnika (tools/models/jerkins.py): złożone jeden na drugim, z pasem i sznurowaniem
+  leather: { tex: 'burlap', get geo() { return (leatherPile ??= coloredModel('jerkins', LEATHER_COLORS, undefined, true)); } },
   fish: {
     tex: 'planks',
     withProp: 'fish',
@@ -1810,6 +1816,13 @@ const BUILDERS: Record<string, Builder> = {
     // żerdź z mięsem nad paleniskiem, pieniek z toporkiem, kosz ze strzałami i łuk o ścianę
     blenderModel(g, HUNTER_MODEL as unknown as BlenderBuilding, flag);
     const p = (HUNTER_MODEL as unknown as { pennant: [number, number, number] }).pennant;
+    pennant(g.getObjectByName('shell') as THREE.Group, flag, p[0], p[1], p[2]);
+  },
+  tanner(g, _team, flag) {
+    // garbarnia kaletnika z Blendera (tools/models/tanner.py): chata z bali, kadzie garbarskie przykryte skórami, ława
+    // do mizdrowania ze skrobakiem, rama ze skórą, kora dębowa i ława z gotowymi kaftanami; w izbie stół i kaftany na kołkach
+    blenderModel(g, TANNER_MODEL as unknown as BlenderBuilding, flag);
+    const p = (TANNER_MODEL as unknown as { pennant: [number, number, number] }).pennant;
     pennant(g.getObjectByName('shell') as THREE.Group, flag, p[0], p[1], p[2]);
   },
   fieldTent(g, _team, flag) {

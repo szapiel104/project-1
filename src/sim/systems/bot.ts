@@ -25,7 +25,7 @@ import { nearestGame } from './wildgame';
 // przenoszenia budynków za rudę (relocate.ts) bot świadomie nie używa: stawia od razu tam, gdzie chce, a ruda idzie mu na wojsko
 // rudera i namiot nie są na liście: bot stawia je tylko na szybko, gdy brak łóżek, a na chatę nie ma drewna (urgent niżej)
 // chlew po piekarni: czwarte jedzenie — różnorodność w spichlerzach podnosi popularność (economy.ts), jak u gracza
-const ORDER = ['woodcutter', 'orchard', 'woodcutter', 'house', 'oremine', 'woodcutter', 'orchard', 'woodcutter', 'house', 'hunter', 'stockpile', 'armory', 'poleturner', 'barracks', 'camp', 'camp', 'house', 'farm', 'well', 'mill', 'orchard', 'bakery', 'pigsty', 'fletcher', 'house', 'brewery', 'tavern', 'minecamp', 'woodcutter', 'forester', 'cemetery', 'mageHut', 'engineers', 'carpenter', 'market', 'shrine', 'house', 'camp', 'fletcher', 'house', 'house', 'woodcutter', 'smithy', 'farm', 'bakery', 'armorer', 'mageSeat', 'oremine']; // druga „oremine” = odbudowa po zburzeniu (wolno mieć jedną, maxCount)
+const ORDER = ['woodcutter', 'orchard', 'woodcutter', 'house', 'oremine', 'woodcutter', 'orchard', 'woodcutter', 'house', 'hunter', 'stockpile', 'armory', 'poleturner', 'barracks', 'camp', 'camp', 'house', 'farm', 'well', 'mill', 'orchard', 'bakery', 'pigsty', 'fletcher', 'tanner', 'house', 'brewery', 'tavern', 'minecamp', 'woodcutter', 'forester', 'cemetery', 'mageHut', 'engineers', 'carpenter', 'market', 'shrine', 'house', 'camp', 'fletcher', 'house', 'house', 'woodcutter', 'smithy', 'farm', 'bakery', 'armorer', 'mageSeat', 'oremine']; // druga „oremine” = odbudowa po zburzeniu (wolno mieć jedną, maxCount)
 // druga kopalnia na samym końcu: kosztuje fortunę (BuildingDef.nextCost), więc bot stawia ją dopiero, gdy wszystko inne już stoi
 /** `mageSeat` na liście: siedziba zakonu magów — boty o parzystym numerze stawiają Sanktuarium Źródła, o nieparzystym Wieżę Płomienia;
  *  dopiero w grodzie (etap osady jak u gracza, BuildingDef.tier). Stoją w niej uzdrowiciele i szkolą się magowie bojowi.
@@ -189,6 +189,8 @@ export function botSystem(g: GameState): void {
       if (missingRequirement(g, p.id, BUILDINGS[type]!)) continue;
       // limit sztuk (kopalnia tylko jedna): drugi wpis na liście działa jak odbudowa, gdy pierwsza leży w ruinie
       if (atLimit(g, p.id, type)) continue;
+      // kaletnik tylko przy własnej chacie myśliwego (bez skór nie ma z czego szyć kaftanów)
+      if (id === 'tanner' && !have.get('hunter')) continue;
       if (id === 'minecamp') {
         // barak: przy własnej kopalni (pierścienie wokół niej); bez kopalni bot go pomija
         const mine = g.buildings.find((b) => b.owner === p.id && BUILDINGS[b.type]!.id === 'oremine' && !b.ruined);

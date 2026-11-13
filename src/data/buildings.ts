@@ -277,6 +277,13 @@ export const BUILDINGS: readonly BuildingDef[] = [
     id: 'hunter', category: 'food', name: 'b.hunter', w: 2, h: 2, cost: { wood: 40 }, buildable: true,
     production: { output: { res: 'meat', amount: 4 }, site: 'game', workTicks: 45, processTicks: 70 },
   },
+  // Kaletnik (garbarnia, Michał 13.11.2026): z dwóch skór od myśliwego szyje skórzany kaftan do zbrojowni; łucznik
+  // i włócznik szkolony przy kaftanie w zbrojowni dostaje go od razu i lżej obrywa (army.ts: LEATHER_ARMOR)
+  {
+    id: 'tanner', category: 'military', name: 'b.tanner', w: 2, h: 2, cost: { wood: 45, stone: 10 }, buildable: true,
+    workView: 'inside',
+    production: { input: { res: 'hides', amount: 2 }, output: { res: 'leather', amount: 1 }, site: 'home', workTicks: 160 },
+  },
 ];
 
 /** Mieszkania zwykłych chłopów (chata, rudera, namiot): tu wracają odpocząć i spać, tu bywa kwarantanna. Zamek liczy się osobno */

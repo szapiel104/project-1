@@ -1,5 +1,5 @@
 // KOLEJNOŚĆ MA ZNACZENIE (indeks w stanie gry i zapisach): nowe surowce dopisujemy na końcu
-export const RESOURCES = ['wood', 'stone', 'iron', 'wheat', 'flour', 'bread', 'apples', 'gold', 'fish', 'spear', 'bow', 'ale', 'ore', 'sword', 'armor', 'crystal', 'ladder', 'meat', 'hides'] as const;
+export const RESOURCES = ['wood', 'stone', 'iron', 'wheat', 'flour', 'bread', 'apples', 'gold', 'fish', 'spear', 'bow', 'ale', 'ore', 'sword', 'armor', 'crystal', 'ladder', 'meat', 'hides', 'leather'] as const;
 export type ResourceId = (typeof RESOURCES)[number];
 export type StoreKind = 'stockpile' | 'granary' | 'armory' | 'grain';
 
@@ -43,6 +43,8 @@ export const RESOURCE_DEFS: Record<ResourceId, ResourceDef> = {
   meat: { name: 'res.meat', color: 0xa8463a, store: 'granary', food: true },
   // skóry z polowania (Michał 12.11.2026): myśliwy oprawia jelenia albo dzika i odnosi skórę do składu; na rynek
   hides: { name: 'res.hides', color: 0x8a6440, store: 'stockpile' },
+  // skórzane kaftany od kaletnika (Michał 13.11.2026): łucznik i włócznik w kaftanie lżej obrywa (army.ts: LEATHER_ARMOR)
+  leather: { name: 'res.leather', color: 0xa0784c, store: 'armory' },
 };
 
 export const resIndex = (id: ResourceId): number => RESOURCES.indexOf(id);

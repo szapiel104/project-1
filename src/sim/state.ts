@@ -116,7 +116,7 @@ export interface Building {
   /** Koszary: punkt zbiórki dla każdego rodzaju jednostki (pole albo -1 = przed koszarami) */
   rally?: number[];
   /** Koszary: rekruci w środku, którzy wyjdą w zbroi (rodzaj jednostki i tick wyjścia) */
-  enlistQ?: { k: number; at: number }[];
+  enlistQ?: { k: number; at: number; jerkin?: number }[];
   /** Indeks w BUILDINGS */
   type: number;
   owner: number;
@@ -329,6 +329,8 @@ export interface Unit {
   fireAt?: number;
   /** Rekrut w drodze do koszar: rodzaj jednostki + 1 (0/brak = zwykły chłop) */
   enlist?: number;
+  /** Rekrut niesie skórzany kaftan ze zbrojowni (kaletnik): wyjdzie z koszar w kaftanie */
+  jerkin?: number;
   /** Pozycja w stałym przecinku (środek pola = pole * 256 + 128) */
   px: number;
   py: number;
@@ -399,6 +401,8 @@ export interface Soldier {
   cd: number;
   /** Id wilka, na którego gracz go posłał */
   hunt?: number;
+  /** W skórzanym kaftanie od kaletnika: lżej obrywa (army.ts: LEATHER_ARMOR) */
+  leather?: number;
   /** Wieża strażnicza, na którą idzie albo na której stoi */
   post?: number;
   /** Stoi na wieży: strzela dalej, wręcz nikt go nie dosięgnie */
@@ -1081,11 +1085,11 @@ export function stateHash(g: GameState): number {
   }
   for (const b of g.buildings) { add(b.id); add(b.type); add(b.owner); add(b.x); add(b.y); add(b.door); add(b.worker); for (const c of b.crew ?? []) add(c); for (const v of b.hold ?? []) add(v); add(b.recruitAt ?? 0); add(b.threat ?? 0); add(b.lit ? 1 : 0); add(b.rot); add(b.hp); add(b.build); add(b.shut ? 1 : 0); add(b.loads ?? 0); add(b.delivered ?? 0); add(b.haul ?? 0); add(b.enlistQ?.length ?? 0); add(b.fire ?? 0); add(b.clean ?? 0); add(b.quarantine ? 1 : 0); add(b.off ? 1 : 0); add(b.stall ?? 0); if (b.stock) for (let i = 0; i < b.stock.length; i++) if (b.stock[i]) { add(i); add(b.stock[i]!); } for (const r of b.rally ?? []) add(r + 1); }
   for (const u of g.units) {
-    add(u.id); add(u.owner); add(u.px); add(u.py); add(u.job); add(u.phase); add(u.timer); add(u.wait); add(u.fled ?? 0); add(u.foe ?? 0); add(u.foeU ?? 0); add(u.enlist ?? 0); add(u.bucket ?? 0); add(u.fireAt ?? 0); add(u.riot ?? 0); add(u.raid ?? 0); add(u.sick ?? 0); add(u.sickFrom ?? 0); add(u.care ?? 0); add(u.immune ?? 0); add(u.zap ?? 0); add(u.chop ?? 0);
+    add(u.id); add(u.owner); add(u.px); add(u.py); add(u.job); add(u.phase); add(u.timer); add(u.wait); add(u.fled ?? 0); add(u.foe ?? 0); add(u.foeU ?? 0); add(u.enlist ?? 0); add(u.jerkin ?? 0); add(u.bucket ?? 0); add(u.fireAt ?? 0); add(u.riot ?? 0); add(u.raid ?? 0); add(u.sick ?? 0); add(u.sickFrom ?? 0); add(u.care ?? 0); add(u.immune ?? 0); add(u.zap ?? 0); add(u.chop ?? 0);
     add(u.carryRes); add(u.carryAmt); add(u.trips); add(u.home); add(u.batches); add(u.hide ?? 0); add(u.target); add(u.path.length); add(u.hp ?? 30);
     for (const t of u.path) add(t);
   }
-  for (const s of g.soldiers) { add(s.id); add(s.owner); add(s.kind); add(s.camp ?? 0); add((s.den ?? 0) + 1); add(s.raid ? 1 : 0); add(s.px); add(s.py); add(s.hp); add(s.goal + 1); add(s.wait); add(s.target); add(s.cd); add(s.face ?? 9); add(s.stance ?? 0); add((s.hold ?? -1) + 1); add(s.amove ? 1 : 0); add(s.pace ?? 0); add(s.run ?? 0); add(s.prey ?? 0); add(s.hitting ?? 0); add(s.slot ? s.slot[0] + 50 : 0); add(s.slot ? s.slot[1] + 50 : 0); add(s.wounded ?? 0); add(s.skip ?? 0); add(s.skipUntil ?? 0); add(s.siegeOf ?? 0); add(s.lost ?? 0); add(s.slow ?? 0); add(s.douse ?? 0); add(s.path.length); for (const t of s.path) add(t); }
+  for (const s of g.soldiers) { add(s.id); add(s.owner); add(s.kind); add(s.camp ?? 0); add((s.den ?? 0) + 1); add(s.raid ? 1 : 0); add(s.px); add(s.py); add(s.hp); add(s.goal + 1); add(s.wait); add(s.target); add(s.cd); add(s.face ?? 9); add(s.stance ?? 0); add((s.hold ?? -1) + 1); add(s.amove ? 1 : 0); add(s.pace ?? 0); add(s.run ?? 0); add(s.prey ?? 0); add(s.hitting ?? 0); add(s.slot ? s.slot[0] + 50 : 0); add(s.slot ? s.slot[1] + 50 : 0); add(s.wounded ?? 0); add(s.skip ?? 0); add(s.skipUntil ?? 0); add(s.siegeOf ?? 0); add(s.lost ?? 0); add(s.slow ?? 0); add(s.douse ?? 0); add(s.leather ?? 0); add(s.path.length); for (const t of s.path) add(t); }
   for (const q of g.orders ?? []) { add(q.grp); add(q.owner); add(q.patrol ? 1 : 0); for (const m of q.steps) { add(m.tile); add(m.face ?? 9); add(m.form ?? 0); add(m.width ?? 0); add(m.amove ? 1 : 0); } }
   for (const m of g.marches ?? []) { add(m.grp); add(m.px); add(m.py); add(m.dir); add(m.stall); add(m.go ? 1 : 0); add(m.path.length); }
   for (const w of g.wolves) { add(w.id); add(w.px); add(w.py); add(w.hp); }

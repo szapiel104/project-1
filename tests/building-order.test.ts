@@ -7,8 +7,8 @@ import { RESOURCES } from '../src/data/resources';
  * i stare zapisy pokazują inne budynki (12.11.2026: chata myśliwego w środku listy zamieniła mury w warsztaty bez pracownika).
  * Nowe wpisy dopisujemy NA KOŃCU — i tu też, na końcu listy.
  */
-const BUILDING_ORDER = ['keep', 'house', 'stockpile', 'granary', 'woodcutter', 'quarry', 'mine', 'orchard', 'farm', 'mill', 'bakery', 'camp', 'barn', 'fisher', 'torch', 'roadSand', 'roadStone', 'engineers', 'poleturner', 'barracks', 'cemetery', 'fletcher', 'tavern', 'palisade', 'gate', 'watchtower', 'roadWood', 'well', 'brewery', 'stoneWall', 'ladder', 'stoneTower', 'armory', 'granaryBig', 'stoneGate', 'oremine', 'minecamp', 'banditCamp', 'forester', 'fieldTent', 'smithy', 'armorer', 'stoneTowerBig', 'stoneTowerGreat', 'brazier', 'market', 'shrine', 'mageFire', 'mageWater', 'mageHut', 'shack', 'tent', 'shackL', 'lookout', 'carpenter', 'pigsty', 'hunter'];
-const RESOURCE_ORDER = ['wood', 'stone', 'iron', 'wheat', 'flour', 'bread', 'apples', 'gold', 'fish', 'spear', 'bow', 'ale', 'ore', 'sword', 'armor', 'crystal', 'ladder', 'meat', 'hides'];
+const BUILDING_ORDER = ['keep', 'house', 'stockpile', 'granary', 'woodcutter', 'quarry', 'mine', 'orchard', 'farm', 'mill', 'bakery', 'camp', 'barn', 'fisher', 'torch', 'roadSand', 'roadStone', 'engineers', 'poleturner', 'barracks', 'cemetery', 'fletcher', 'tavern', 'palisade', 'gate', 'watchtower', 'roadWood', 'well', 'brewery', 'stoneWall', 'ladder', 'stoneTower', 'armory', 'granaryBig', 'stoneGate', 'oremine', 'minecamp', 'banditCamp', 'forester', 'fieldTent', 'smithy', 'armorer', 'stoneTowerBig', 'stoneTowerGreat', 'brazier', 'market', 'shrine', 'mageFire', 'mageWater', 'mageHut', 'shack', 'tent', 'shackL', 'lookout', 'carpenter', 'pigsty', 'hunter', 'tanner'];
+const RESOURCE_ORDER = ['wood', 'stone', 'iron', 'wheat', 'flour', 'bread', 'apples', 'gold', 'fish', 'spear', 'bow', 'ale', 'ore', 'sword', 'armor', 'crystal', 'ladder', 'meat', 'hides', 'leather'];
 
 it('budynki i surowce zachowują numery ze starszych wersji (nowe tylko na końcu listy)', () => {
   expect(BUILDINGS.slice(0, BUILDING_ORDER.length).map((b) => b.id)).toEqual(BUILDING_ORDER);

@@ -89,12 +89,17 @@ export function train(g: GameState, player: number, barracksId: number, unit: st
   if (!free.length) return false;
   const pick = free.find((u) => u.phase === Phase.Idle) ?? free[0]!;
   for (const [res, amount] of Object.entries(def.cost)) p.res[resIndex(res as ResourceId)]! -= amount!;
+  // kaftan od kaletnika: łucznik i włócznik biorą go ze zbrojowni, jeśli leży (nie jest potrzebny do szkolenia)
+  const lt = resIndex('leather');
+  const jerkin = LEATHER_KINDS.has(def.id) && p.res[lt]! > 0 ? 1 : 0;
+  if (jerkin) p.res[lt]! -= 1;
   const path = findPath(g, tileOf2(g, pick), (t) => t === b.door, 4000, player, b.door);
   if (!path) {
     // nie dojdzie (zamknięty, odcięty): od razu w koszarach, jak dawniej
     g.units.splice(g.units.indexOf(pick), 1);
-    (b.enlistQ ??= []).push({ k: kind, at: g.tick + ENLIST_TICKS });
+    (b.enlistQ ??= []).push({ k: kind, at: g.tick + ENLIST_TICKS, ...(jerkin ? { jerkin } : {}) });
   } else {
+    if (jerkin) pick.jerkin = 1;
     pick.enlist = kind + 1; pick.job = b.id; pick.phase = Phase.ToEnlist; pick.path = path; pick.wait = 0; pick.target = 0; pick.timer = 0;
   }
   p.stats.trained++;
@@ -103,6 +108,10 @@ export function train(g: GameState, player: number, barracksId: number, unit: st
 
 /** Tyle ticków rekrut jest w koszarach (dostaje broń i zbroję), zanim wyjdzie */
 const ENLIST_TICKS = 20;
+/** Kto bierze skórzany kaftan ze zbrojowni przy szkoleniu */
+const LEATHER_KINDS = new Set(['archer', 'spearman']);
+/** Kaftan skórzany: zbroja jak u zbrojnego, tylko lżejsza (cios wręcz −10%, strzała −15%) */
+export const LEATHER_ARMOR = 10;
 const tileOf2 = (g: GameState, u: { px: number; py: number }): number => (u.py >> 8) * g.map.width + (u.px >> 8);
 
 /** Punkt zbiórki koszar: dla jednego rodzaju jednostki albo dla wszystkich (kind < 0); tile < 0 = bez flagi */
@@ -122,16 +131,21 @@ export function enlistSystem(g: GameState): void {
     const u = g.units[i]!;
     if (!u.enlist) continue;
     const b = g.buildings.find((x) => x.id === u.job && trainHall(x.type));
-    if (!b || b.door < 0) { u.enlist = 0; u.job = 0; u.phase = Phase.Idle; u.path = []; continue; }
+    if (!b || b.door < 0) {
+      // koszary zniknęły: kaftan wraca do zbrojowni
+      if (u.jerkin) { g.players[u.owner]!.res[resIndex('leather')]! += 1; u.jerkin = 0; }
+      u.enlist = 0; u.job = 0; u.phase = Phase.Idle; u.path = []; continue;
+    }
     // ktoś go zawrócił (ucieczka przed wrogiem): po chwili idzie dalej do koszar
     if (u.phase !== Phase.ToEnlist && !u.path.length) u.phase = Phase.ToEnlist;
     if (u.phase === Phase.ToEnlist && !u.path.length) {
+      const q = { k: u.enlist - 1, at: g.tick + ENLIST_TICKS, ...(u.jerkin ? { jerkin: 1 } : {}) };
       if (tileOf2(g, u) === b.door) {
         g.units.splice(i, 1);
-        (b.enlistQ ??= []).push({ k: u.enlist - 1, at: g.tick + ENLIST_TICKS });
+        (b.enlistQ ??= []).push(q);
       } else {
         const path = findPath(g, tileOf2(g, u), (t) => t === b.door, 4000, u.owner, b.door);
-        if (path && path.length) u.path = path; else { g.units.splice(i, 1); (b.enlistQ ??= []).push({ k: u.enlist - 1, at: g.tick + ENLIST_TICKS }); }
+        if (path && path.length) u.path = path; else { g.units.splice(i, 1); (b.enlistQ ??= []).push(q); }
       }
     }
   }
@@ -149,6 +163,7 @@ export function enlistSystem(g: GameState): void {
       const near = g.soldiers.filter((s) => s.owner === b.owner && (s.goal >= 0 ? s.goal : tileOf2(g, s)) !== -1 && Math.abs(((s.goal >= 0 ? s.goal : tileOf2(g, s)) % w) - (at % w)) <= 4 && Math.abs(Math.floor((s.goal >= 0 ? s.goal : tileOf2(g, s)) / w) - Math.floor(at / w)) <= 4).length;
       const spots = formation(g, at, near + 1);
       const s: Soldier = { id: g.nextId++, owner: b.owner, kind: q.k, px: x * FP + FP / 2, py: y * FP + FP / 2, path: [], hp: def.hp, goal: spots[spots.length - 1] ?? -1, wait: 0, target: 0, cd: 0 };
+      if (q.jerkin) s.leather = 1;
       g.soldiers.push(s);
     }
   }
@@ -827,7 +842,9 @@ export function hitDamage(g: GameState, s: Soldier, foe: Soldier, byId: Map<numb
   // ognista strzała: zwykłe obrażenia przy trafieniu, a premia FIRE_BONUS schodzi z celu płomieniem (burnFor, missiles)
   // zbroja (kolczuga zbrojnego): cios wręcz słabszy o armor %, strzała o półtora raza tyle (najwyżej 75%)
   // czar przechodzi przez kolczugę: zbroja łagodzi go tylko o połowę swojej wartości
-  if (fdef.armor) dmg = (dmg * (100 - (def.magic ? fdef.armor >> 1 : ranged ? Math.min(75, (fdef.armor * 3) >> 1) : fdef.armor))) / 100;
+  // skórzany kaftan od kaletnika liczy się jak lekka zbroja
+  const armor = fdef.armor ?? (foe.leather ? LEATHER_ARMOR : 0);
+  if (armor) dmg = (dmg * (100 - (def.magic ? armor >> 1 : ranged ? Math.min(75, (armor * 3) >> 1) : armor))) / 100;
   return Math.max(1, Math.round(dmg / 100));
 }
 
