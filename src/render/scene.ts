@@ -6121,6 +6121,8 @@ export class GameRenderer {
       const huntJob = u.job !== 0 && jobs.get(u.job)?.type === HUNTER;
       // cel myśliwego: zwierzę, truchło, wilk albo ubity wilk (wildgame.ts: quarry)
       const prey = huntJob && u.phase === Phase.WorkingSite && u.hunting ? quarry(g, u.hunting) : undefined;
+      // w procesji (faith.ts): idzie ze złożonymi rękami przed sobą, za kaznodzieją
+      const inProcession = !!u.procession && u.carryRes < 0;
       const aiming = !!prey && (prey.kind === 'beast' || prey.kind === 'wolf');
       // przy ubitym zwierzęciu albo wilku: pochylony nad nim, patroszy albo skóruje nożem (ręce na zmianę)
       const dressing = !!prey && !aiming;
@@ -6494,7 +6496,8 @@ export class GameRenderer {
       if (mage) this.drawMage(g, u, t, mage, swing, heading, view, jobs);
       else if (preacher) {
         // w kazaniu wznosi ręce co kilka sekund (ku posągowi Ojca Płomienia), poza nim chodzi i stoi jak zwykle
-        const up = this.sermon && !this.calm && Math.floor(this.time / 2.6 + u.id) % 3 === 0;
+        // w procesji też wznosi ręce co kilka kroków (prowadzi ludzi przez osadę)
+        const up = (this.sermon || !!u.procession) && !this.calm && Math.floor(this.time / 2.6 + u.id) % 3 === 0;
         this.preacherFig.set(0, t.matrix, swing, up, TEAM_COLORS[g.players[u.owner]?.team ?? 0] ?? 0x888888, u.id);
         this.sermon = false;
       }
@@ -6505,7 +6508,7 @@ export class GameRenderer {
         this.figures.set(i, t.matrix, swing, false, tc, u.id, arm, arm, true);
         this.bierPose.set(u.id, [t.position.x, t.position.y, t.position.z, heading, this.figures.sizeOf(u.id, tc)]);
       }
-      else (huntJob ? this.hunters : this.figures).set(i, t.matrix, panic ? swing * 1.5 : ia?.legs ? ia.legs : swing, !(u.carryRes >= 0 && !log) && !!ia?.up, TEAM_COLORS[g.players[u.owner]?.team ?? 0] ?? 0x888888, u.id, carrying ? carryR : hammering || planting ? work : chopping || mining ? toolArm : fighting ? fightArm : crafting ? craftR : flee ? -2.5 + flail : wave ? -2.55 + Math.sin(this.time * 14) * 0.35 : fishing ? FISH_ARM : dressing ? dressR : forkUp ? forkArm : torchOn ? torchArm : u.bucket ? 0 : iaArm, carrying ? carryL : rioting && !fighting ? riotL : planting ? work + 0.08 : drawing >= 0 ? (drawing < PICK_GRAB ? -0.5 : -0.5 + ((drawing - PICK_GRAB) / (1 - PICK_GRAB)) * (toolArm + 0.5)) : chopping || mining ? toolArm : fighting ? (weapon === 'pick' ? fightArm + 0.1 : -0.6) : crafting ? craftL : flee ? -2.5 - flail : wave ? -swing * 0.8 : fishing ? FISH_ARM + 0.15 : dressing ? dressL : ia ? (ia.armL ?? 0.05) : -0.5, carrying || flee || wave || torchOn || forkUp || rioting || (!!u.bucket && walking) || !!ia?.legs, undefined, drawing >= 0 ? (drawing < PICK_GRAB ? 0 : TWO_HAND * (drawing - PICK_GRAB) / (1 - PICK_GRAB)) : chopping || mining ? TWO_HAND : 0, huntPose);
+      else (huntJob ? this.hunters : this.figures).set(i, t.matrix, panic ? swing * 1.5 : ia?.legs ? ia.legs : swing, !(u.carryRes >= 0 && !log) && !!ia?.up, TEAM_COLORS[g.players[u.owner]?.team ?? 0] ?? 0x888888, u.id, carrying ? carryR : hammering || planting ? work : chopping || mining ? toolArm : fighting ? fightArm : crafting ? craftR : flee ? -2.5 + flail : wave ? -2.55 + Math.sin(this.time * 14) * 0.35 : fishing ? FISH_ARM : dressing ? dressR : inProcession ? -0.75 : forkUp ? forkArm : torchOn ? torchArm : u.bucket ? 0 : iaArm, carrying ? carryL : rioting && !fighting ? riotL : planting ? work + 0.08 : drawing >= 0 ? (drawing < PICK_GRAB ? -0.5 : -0.5 + ((drawing - PICK_GRAB) / (1 - PICK_GRAB)) * (toolArm + 0.5)) : chopping || mining ? toolArm : fighting ? (weapon === 'pick' ? fightArm + 0.1 : -0.6) : crafting ? craftL : flee ? -2.5 - flail : wave ? -swing * 0.8 : fishing ? FISH_ARM + 0.15 : dressing ? dressL : inProcession ? -0.75 : ia ? (ia.armL ?? 0.05) : -0.5, carrying || flee || wave || torchOn || forkUp || rioting || (!!u.bucket && walking) || !!ia?.legs, undefined, drawing >= 0 ? (drawing < PICK_GRAB ? 0 : TWO_HAND * (drawing - PICK_GRAB) / (1 - PICK_GRAB)) : chopping || mining ? TWO_HAND : 0, huntPose);
       if (u.bucket) this.fireCrew(g, u, i, t, view, jobs, heading, still && cv.speed <= 0.3, alpha);
       // z lasu do chaty niesie kłodę, z chaty do składu gotowe deski
       // ciągnie odmianę, którą ściął (po wczytaniu zapisu w trakcie drogi: stała odmiana dla ludzika)

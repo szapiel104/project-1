@@ -83,6 +83,8 @@ export function liftCorpse(g: GameState, u: Unit): void {
   if (!other || other.phase !== Phase.ToCorpse || other.target !== c.id) { release(g, c); return; } // drugiego odwołano: ciało czeka na nową dwójkę
   const lead = u.id === ia ? u : other, help = lead === u ? other : u;
   g.corpses = g.corpses.filter((x) => x !== c);
+  // pogrzeb człowieka (nie wilka ani zwierzęcia): bez kapliczki nie ma kto pomodlić się za zmarłego (economy.ts: 'funeral')
+  if (c.kind !== -2) { const p = g.players[lead.owner]; if (p) p.lastFuneral = g.tick; }
   lead.target = 0; lead.carryRes = CORPSE; lead.carryAmt = 1; lead.phase = Phase.Returning; lead.path = []; lead.wait = 0;
   addBearer(help, lead);
 }

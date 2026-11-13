@@ -8,7 +8,7 @@ import { Rng } from './rng';
 import { openWalk } from './systems/placement';
 import { stoneWallSystem } from './systems/stonewalls';
 import { KEEP_GATE } from '../data/keep';
-import { applyCut, type Building, type Caravan, type Corpse, type Traveler, type Wolf, type Beast, type Thief, type GameState, type March, type Missile, type SiegeLadder, type OrderQueue, type PlayerState, type Pile, type Grave, type Rubble, type Sapling, type Soldier, type Unit } from './state';
+import { applyCut, type Building, type Caravan, type Corpse, type Traveler, type Wolf, type Beast, type Thief, type Procession, type GameState, type March, type Missile, type SiegeLadder, type OrderQueue, type PlayerState, type Pile, type Grave, type Rubble, type Sapling, type Soldier, type Unit } from './state';
 
 /** Zmieniamy przy każdej zmianie kształtu stanu; stary zapis jest wtedy odrzucany zamiast psuć grę. */
 export const SAVE_VERSION = 21;
@@ -46,6 +46,7 @@ export interface SaveData {
   wolves?: Wolf[];
   beasts?: Beast[];
   thieves?: Thief[];
+  processions?: Procession[];
   marches?: March[];
   orders?: OrderQueue[];
   saplings?: Sapling[];
@@ -84,6 +85,7 @@ export function serialize(g: GameState, preset: MapPresetId): SaveData {
     wolves: g.wolves.map((w) => ({ ...w, path: [...w.path] })),
     beasts: g.beasts?.map((b) => ({ ...b })),
     thieves: g.thieves?.map((t) => ({ ...t, path: [...t.path] })),
+    processions: g.processions?.map((x) => ({ ...x, route: [...x.route], members: [...x.members] })),
     saplings: (g.saplings ?? []).map((x) => ({ ...x })),
     piles: (g.piles ?? []).map((x) => ({ ...x })),
     graves: (g.graves ?? []).map((x) => ({ ...x })),
@@ -119,6 +121,7 @@ export function deserialize(d: SaveData): GameState | null {
       wolves: (d.wolves ?? []).map((w) => ({ ...w, path: [...w.path] })),
       beasts: d.beasts?.map((b) => ({ ...b })),
       thieves: d.thieves?.map((t) => ({ ...t, path: [...t.path] })),
+      processions: d.processions?.map((x) => ({ ...x, route: [...x.route], members: [...x.members] })),
       occupancy: new Int32Array(size), gates: new Uint8Array(size), walls: new Uint8Array(size), reserved: new Uint8Array(size), cut: [...d.cut], wear: new Uint8Array(size), roads: new Uint8Array(size), roadPlan: new Uint8Array(size), roadOwner: new Uint8Array(size),
       rubble: d.rubble.map((r) => ({ ...r, loads: r.loads.map((l) => [...l] as [number, number]) })),
       saplings: (d.saplings ?? []).map((x) => ({ ...x })),

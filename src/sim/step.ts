@@ -13,6 +13,7 @@ import { wolfSystem } from './systems/wolves';
 import { wildGameSystem } from './systems/wildgame';
 import { guardSystem } from './systems/guards';
 import { thiefSystem } from './systems/thieves';
+import { processionSystem } from './systems/faith';
 import { campSystem } from './systems/minecamp';
 import { GUARD } from '../data/units';
 const isGuard = (g: GameState, id: number): boolean => g.soldiers.some((s) => s.id === id && s.kind === GUARD);
@@ -254,6 +255,7 @@ export function step(g: GameState, commands: readonly Command[]): void {
   banditSystem(g);
   migrationSystem(g);
   unrestSystem(g);
+  processionSystem(g);
   travelSystem(g);
   caravanSystem(g);
   gateSystem(g);

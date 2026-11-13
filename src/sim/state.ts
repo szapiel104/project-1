@@ -76,6 +76,10 @@ export interface PlayerState {
   /** Ostatni napad tłumu do ogłoszenia przez skrybę: tick, budynek, rodzaj (1 = rozkradli skład, 2 = podpalili spichlerz) */
   lastRaid?: { tick: number; building: number; kind: number };
   /** Ostatni nocny złodziej (thieves.ts): 0 = uciekł z łupem, 1 = złapany przez straż; miejsce, towar i ile */
+  /** Tick ostatniego pogrzebu (bearers.ts) — bez kapliczki psuje nastroje w najbliższym rozliczeniu */
+  lastFuneral?: number;
+  /** Dzień, w którym przeszła procesja (faith.ts) — w dzień święta dokłada do nastrojów */
+  processionDay?: number;
   lastThief?: { tick: number; kind: number; x: number; y: number; res: number; amt: number };
   cold?: number;
   /** Opał: ułamek drewna spalonego w piecach, którego jeszcze nie zdjęto ze składu (zima) */
@@ -368,6 +372,8 @@ export interface Unit {
   chop?: number;
   /** Bunt głodowy: 1 = rzucił robotę i stoi pod twierdzą (jego budynek stoi bez rąk do pracy) */
   riot?: number;
+  /** Idzie w procesji w dzień święta (faith.ts): rzuca robotę, idzie za kaznodzieją, po procesji wraca */
+  procession?: number;
   /** Nocna zmiana: budowę postawiono nocą, więc ten chłop wstał i buduje do tego ticku (albo do końca budów) */
   nightShift?: number;
   /** Długi bunt: buntownik idzie z tłumem na napad na ten budynek (skład albo spichlerz), potem wraca pod bramę */
@@ -676,6 +682,19 @@ export interface Beast {
 }
 
 /** Wilk z lasu: poluje nocą, o świcie wraca za mapę */
+/** Procesja w dzień święta (faith.ts): kaznodzieja prowadzi ludzi od kapliczki przez osadę i z powrotem */
+export interface Procession {
+  id: number;
+  owner: number;
+  shrine: number;
+  /** Przystanki (pola): kapliczka, brama twierdzy, chaty na skraju osady, kapliczka */
+  route: number[];
+  leg: number;
+  /** Id idących: pierwszy to kaznodzieja, reszta za nim gęsiego */
+  members: number[];
+  until: number;
+}
+
 /** Nocny złodziej (thieves.ts): zakrada się pod magazyn gracza `owner`, wynosi towar i ucieka za skraj mapy */
 export interface Thief {
   id: number;
@@ -730,6 +749,8 @@ export interface GameState {
   beasts?: Beast[];
   /** Nocni złodzieje (thieves.ts) */
   thieves?: Thief[];
+  /** Procesje w dzień święta (faith.ts) */
+  processions?: Procession[];
   /** Brama na polu: właściciel + 1 (0 = brak). Swoi przechodzą, obcy nie */
   gates: Uint8Array;
   /** Ściany między polami (w zamku): bity 1 = ku -y, 2 = ku +x, 4 = ku +y, 8 = ku -x; przez taką krawędź nie da się przejść */
@@ -1108,7 +1129,7 @@ export function stateHash(g: GameState): number {
   }
   for (const b of g.buildings) { add(b.id); add(b.type); add(b.owner); add(b.x); add(b.y); add(b.door); add(b.worker); for (const c of b.crew ?? []) add(c); for (const v of b.hold ?? []) add(v); add(b.recruitAt ?? 0); add(b.threat ?? 0); add(b.lit ? 1 : 0); add(b.rot); add(b.hp); add(b.build); add(b.shut ? 1 : 0); add(b.loads ?? 0); add(b.delivered ?? 0); add(b.haul ?? 0); add(b.enlistQ?.length ?? 0); add(b.fire ?? 0); add(b.clean ?? 0); add(b.quarantine ? 1 : 0); add(b.off ? 1 : 0); add(b.stall ?? 0); if (b.stock) for (let i = 0; i < b.stock.length; i++) if (b.stock[i]) { add(i); add(b.stock[i]!); } for (const r of b.rally ?? []) add(r + 1); }
   for (const u of g.units) {
-    add(u.id); add(u.owner); add(u.px); add(u.py); add(u.job); add(u.phase); add(u.timer); add(u.wait); add(u.fled ?? 0); add(u.foe ?? 0); add(u.foeU ?? 0); add(u.enlist ?? 0); add(u.jerkin ?? 0); add(u.bucket ?? 0); add(u.fireAt ?? 0); add(u.riot ?? 0); add(u.raid ?? 0); add(u.sick ?? 0); add(u.sickFrom ?? 0); add(u.care ?? 0); add(u.immune ?? 0); add(u.zap ?? 0); add(u.chop ?? 0);
+    add(u.id); add(u.owner); add(u.px); add(u.py); add(u.job); add(u.phase); add(u.timer); add(u.wait); add(u.fled ?? 0); add(u.foe ?? 0); add(u.foeU ?? 0); add(u.enlist ?? 0); add(u.jerkin ?? 0); add(u.bucket ?? 0); add(u.fireAt ?? 0); add(u.riot ?? 0); add(u.procession ?? 0); add(u.raid ?? 0); add(u.sick ?? 0); add(u.sickFrom ?? 0); add(u.care ?? 0); add(u.immune ?? 0); add(u.zap ?? 0); add(u.chop ?? 0);
     add(u.carryRes); add(u.carryAmt); add(u.trips); add(u.home); add(u.batches); add(u.hide ?? 0); add(u.target); add(u.path.length); add(u.hp ?? 30);
     for (const t of u.path) add(t);
   }
@@ -1116,6 +1137,7 @@ export function stateHash(g: GameState): number {
   for (const q of g.orders ?? []) { add(q.grp); add(q.owner); add(q.patrol ? 1 : 0); for (const m of q.steps) { add(m.tile); add(m.face ?? 9); add(m.form ?? 0); add(m.width ?? 0); add(m.amove ? 1 : 0); } }
   for (const m of g.marches ?? []) { add(m.grp); add(m.px); add(m.py); add(m.dir); add(m.stall); add(m.go ? 1 : 0); add(m.path.length); }
   for (const w of g.wolves) { add(w.id); add(w.px); add(w.py); add(w.hp); }
+  for (const pr of g.processions ?? []) { add(pr.id); add(pr.leg); add(pr.members.length); }
   for (const t of g.thieves ?? []) { add(t.id); add(t.owner); add(t.px); add(t.py); add(t.phase); add(t.timer); add(t.amt ?? 0); add(t.path.length); }
   for (const b of g.beasts ?? []) { add(b.id); add(b.sp); add(b.px); add(b.py); add(b.hp); add(b.state); add(b.gone ?? 0); }
   for (const t of g.travelers) { add(t.id); add(t.px); add(t.py); add(t.leaving ? 1 : 0); add(t.path.length); }

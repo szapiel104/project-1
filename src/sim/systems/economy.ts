@@ -6,7 +6,7 @@ import { dayPart } from './workers';
 import { magesOf, ordersQuarrel } from './plague';
 import { tierFor } from './placement';
 import { feastDay, preached } from './faith';
-import { rainAt } from '../clock';
+import { clockAt, rainAt } from '../clock';
 import { COLD, SEASON_DAYS, temperatureAt, weatherOf, yearPos, YEAR_DAYS } from '../weather';
 
 const FOOD_VALUE_OF: Record<string, number> = { apples: 1, bread: 2, fish: 3, meat: 3 };
@@ -118,6 +118,10 @@ export function monthlyForecast(g: GameState, p: PlayerState): { delta: number; 
   const preach = preached(g, p.id);
   parts.push({ key: 'sermon', value: preach ? RULES.faith.sermon : 0 });
   parts.push({ key: 'feast', value: preach && feastDay(g) ? RULES.faith.feast : 0 });
+  // procesja, która dziś przeszła przez osadę, dokłada jeszcze trochę (faith.ts)
+  parts.push({ key: 'procession', value: preach && feastDay(g) && p.processionDay === clockAt(g.tick).day ? 1 : 0 });
+  // pogrzeb bez kapliczki: nie ma kto pomodlić się za zmarłego — w najbliższym rozliczeniu nastroje o 1 w dół
+  parts.push({ key: 'funeral', value: !shrines && p.lastFuneral !== undefined && g.tick - p.lastFuneral < RULES.monthTicks ? -1 : 0 });
   // bunt głodowy: tłum pod bramą i stojące warsztaty psują nastroje całej osady
   parts.push({ key: 'revolt', value: p.revolt ? RULES.revoltPenalty : 0 });
   // zaraza: strach w osadzie (zgony liczą się osobno, od razu); magowie dają ludziom poczucie, że ktoś nad nimi czuwa,
