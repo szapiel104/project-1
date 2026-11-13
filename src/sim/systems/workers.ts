@@ -7,7 +7,7 @@ import { WALL_TOP } from '../../data/keep';
 import { findPath, walkable } from '../path';
 import { clockAt, hourStarts, rainAt } from '../clock';
 import { FP, Phase, playerKeep, storeRoom, type Building, type GameState, type Unit } from '../state';
-import { GAME_HIDE, GAME_MEAT, GAME_SPECIES, HUNT_RANGE, nearestGame } from './wildgame';
+import { GAME_HIDE, GAME_MEAT, GAME_SPECIES, HUNT_RANGE, HUNTER_ARROW, pickQuarry, quarry, WOLF_HIDE } from './wildgame';
 import { CAMP_HOLD, campOf, holdTotal, putInHold } from './minecamp';
 import { mineWalkTicks } from '../../data/minewalk';
 import { plantSapling } from './forestry';
@@ -481,18 +481,18 @@ function goalFor(g: GameState, u: Unit, job: Building | undefined, prod: Product
       const site = prod?.site;
       if (site === undefined || site === 'home') return null;
       if (site === 'game') {
-        // myśliwy: najbliższa zwierzyna z mięsem do 30 pól od chaty (ta sama, jeśli jeszcze żyje); podchodzi na 2–4 pola
+        // myśliwy: wilk, ubity wilk albo zwierzyna z mięsem do HUNT_RANGE pól od chaty (ten sam cel, póki jest)
         const jd = job ? BUILDINGS[job.type]! : null;
         const lodge = job && jd ? [job.x + (job.rot % 2 ? jd.h : jd.w) / 2, job.y + (job.rot % 2 ? jd.w : jd.h) / 2] as const : null;
         if (!lodge) return null;
-        // ubite zwierzę (u.hunting wskazuje truchło): idzie do niego i staje tuż obok, żeby je oprawić i zabrać
-        let beast = u.hunting ? g.beasts?.find((x) => x.id === u.hunting && (x.hp > 0 || !x.gone)) : undefined;
-        beast ??= nearestGame(g, lodge[0], lodge[1], HUNT_RANGE, u.id);
-        if (!beast) { u.hunting = 0; u.wait = RETRY_TICKS; return null; }
-        u.hunting = beast.id;
-        const w = g.map.width, bx = (beast.px / FP) | 0, by = (beast.py / FP) | 0;
-        // żywe: podchodzi na strzał (2–4 pola); truchło: staje na jego polu (pochyla się nad nim)
-        const lo = beast.hp > 0 ? 2 : 0, hi = beast.hp > 0 ? 4 : 0;
+        // dotychczasowy cel, jeśli jeszcze jest (żywe zwierzę, truchło, wilk, ubity wilk), albo nowy: wilk ma pierwszeństwo
+        let q = quarry(g, u.hunting ?? 0);
+        if (!q) { u.hunting = pickQuarry(g, lodge[0], lodge[1], HUNT_RANGE, u.id); q = quarry(g, u.hunting); }
+        if (!q) { u.hunting = 0; u.wait = RETRY_TICKS; return null; }
+        const w = g.map.width, bx = q.x | 0, by = q.y | 0;
+        // żywe (zwierzę, wilk): podchodzi na strzał (2–4 pola); truchło i ubity wilk: staje na jego polu (pochyla się nad nim)
+        const alive = q.kind === 'beast' || q.kind === 'wolf';
+        const lo = alive ? 2 : 0, hi = alive ? 4 : 0;
         return (t) => {
           if (g.occupancy[t] !== 0) return false;
           const x = t % w, y = (t - x) / w, d = Math.max(Math.abs(x - bx), Math.abs(y - by));
@@ -881,11 +881,28 @@ export function workerSystem(g: GameState): void {
         if (g.map.tiles[tile] === prod.site && ++g.wear[tile]! >= RULES.depositYields) { g.map.tiles[tile] = Terrain.Grass; g.cut.push(tile); }
       }
       if (u.phase === Phase.WorkingSite && prod.site === 'game') {
-        const beast = g.beasts?.find((x) => x.id === u.hunting && (x.hp > 0 || !x.gone));
+        const q = quarry(g, u.hunting ?? 0);
+        const inBow = q && (q.x * FP - u.px) ** 2 + (q.y * FP - u.py) ** 2 <= (8 * FP) ** 2;
+        if (q?.kind === 'wolf') {
+          // strzał w wilka: ranny ucieka do lasu (wolves.ts), ubity zostaje na ziemi — myśliwy idzie go oskórować
+          const wolf = g.wolves.find((x) => x.id === u.hunting)!;
+          if (inBow) wolf.hp -= HUNTER_ARROW;
+          u.phase = Phase.ToSite; u.path = [];
+          continue;
+        }
+        if (q?.kind === 'pelt') {
+          // ubity wilk: skórę niesie do składu, oskórowane ciało zakopuje (znika z ziemi)
+          const ci = g.corpses.findIndex((x) => x.id === u.hunting);
+          if (ci >= 0) g.corpses.splice(ci, 1);
+          u.hunting = 0;
+          u.carryRes = resIndex('hides'); u.carryAmt = WOLF_HIDE; u.phase = Phase.ToStore;
+          continue;
+        }
+        const beast = q?.beast;
         const meat = beast ? GAME_MEAT[GAME_SPECIES[beast.sp]!] : 0;
         if (beast && beast.hp > 0) {
           // strzał: zwierzę jeszcze w zasięgu łuku (8 pól) — pada, myśliwy idzie do truchła; uciekło — szuka dalej
-          if (meat > 0 && (beast.px - u.px) ** 2 + (beast.py - u.py) ** 2 <= (8 * FP) ** 2) { beast.hp = 0; beast.dead = g.tick; beast.state = 0; }
+          if (meat > 0 && inBow) { beast.hp = 0; beast.dead = g.tick; beast.state = 0; }
           u.phase = Phase.ToSite; u.path = [];
           continue;
         }

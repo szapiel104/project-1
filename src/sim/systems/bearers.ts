@@ -46,7 +46,8 @@ function rank(g: GameState, x: Unit, owner: number): number {
 export function handFor(g: GameState, owner: number, px: number, py: number, skip?: Unit): Unit | undefined {
   let best: Unit | undefined, br = 9, bd = (REACH * FP) ** 2;
   for (const x of g.units) {
-    if (x === skip) continue;
+    // myśliwy w pogoni za wilkiem albo zwierzyną nie rzuca polowania, żeby nosić ciała
+    if (x === skip || x.hunting) continue;
     const r = rank(g, x, owner);
     if (r < 0 || r > br) continue;
     const d = (x.px - px) ** 2 + (x.py - py) ** 2;
@@ -110,13 +111,16 @@ export function collectCorpses(g: GameState): void {
     if (going < 2 || g.tick - (c.since ?? g.tick) > STUCK) release(g, c);
   }
   if (!g.corpses.some((c) => free(g, c))) return;
+  // ubitego wilka, którego myśliwy idzie oskórować, nikt nie zabiera
+  const hunted = new Set<number>();
+  for (const u of g.units) if (u.hunting) hunted.add(u.hunting);
   for (const p of g.players) {
     let pairs = 0;
     for (const u of g.units) if (u.owner === p.id && (u.phase === Phase.ToCorpse || (u.carryRes === CORPSE && u.phase !== Phase.Burying)) && !(u.job && buildingById(g, u.job)?.type === CEMETERY)) pairs++;
     pairs = Math.ceil(pairs / 2);
     while (pairs < PAIRS) {
       let c: Corpse | undefined;
-      for (const x of g.corpses) if (free(g, x) && (!c || x.at < c.at) && onLand(g, p.id, x)) c = x;
+      for (const x of g.corpses) if (free(g, x) && !hunted.has(x.id) && (!c || x.at < c.at) && onLand(g, p.id, x)) c = x;
       if (!c) break;
       const a = handFor(g, p.id, c.px, c.py);
       const b = a && handFor(g, p.id, c.px, c.py, a);

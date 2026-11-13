@@ -10,6 +10,11 @@
 import { Terrain } from '../../data/terrain';
 import { FP, type Beast, type GameState } from '../state';
 
+/** Strzała myśliwego w wilka (wilk ma 45 zdrowia: po pierwszej ranny ucieka, druga go kładzie) */
+export const HUNTER_ARROW = 30;
+/** Skóra z ubitego wilka */
+export const WOLF_HIDE = 1;
+
 /** Gatunki zwierzyny (indeks = Beast.sp; ta sama kolejność w render/fauna.ts) */
 export const GAME_SPECIES = ['deer', 'boar', 'rabbit', 'fox', 'camel'] as const;
 export type GameSpecies = typeof GAME_SPECIES[number];
@@ -164,6 +169,45 @@ function entry(g: GameState, b: Beast, tick: number): [number, number] | null {
       if (beastCan(g, b.sp, x, y)) return [x, y];
     }
   return null;
+}
+
+/**
+ * Cel myśliwego po id (Unit.hunting): żywe zwierzę albo jego truchło, wilk albo ubity wilk do oskórowania.
+ * Zwraca położenie (pola) i rodzaj; undefined, gdy celu już nie ma.
+ */
+export function quarry(g: GameState, id: number): { kind: 'beast' | 'carcass' | 'wolf' | 'pelt'; x: number; y: number; beast?: Beast } | undefined {
+  if (!id) return undefined;
+  const b = g.beasts?.find((x) => x.id === id && (x.hp > 0 || !x.gone));
+  if (b) return { kind: b.hp > 0 ? 'beast' : 'carcass', x: b.px / FP, y: b.py / FP, beast: b };
+  const w = g.wolves.find((x) => x.id === id && x.hp > 0);
+  if (w) return { kind: 'wolf', x: w.px / FP, y: w.py / FP };
+  const c = g.corpses.find((x) => x.id === id && x.kind === -2 && !x.taken);
+  if (c) return { kind: 'pelt', x: c.px / FP, y: c.py / FP };
+  return undefined;
+}
+
+/**
+ * Nowy cel myśliwego (Michał 13.11.2026: myśliwy przepędza wilki): najpierw wilk w zasięgu chaty — broni osady —
+ * potem ubity wilk do oskórowania, a dopiero potem zwierzyna na mięso. Id celu albo 0.
+ */
+export function pickQuarry(g: GameState, x: number, y: number, range: number, except = 0): number {
+  const r2 = range * range;
+  const taken = new Set<number>();
+  for (const u of g.units) if (u.hunting && u.hunting !== except) taken.add(u.hunting);
+  let best = 0, bd = r2;
+  for (const w of g.wolves) {
+    if (w.hp <= 0) continue;
+    const d = (w.px / FP - x) ** 2 + (w.py / FP - y) ** 2;
+    if (d < bd) { bd = d; best = w.id; }
+  }
+  if (best) return best;
+  for (const c of g.corpses) {
+    if (c.kind !== -2 || c.taken || taken.has(c.id)) continue;
+    const d = (c.px / FP - x) ** 2 + (c.py / FP - y) ** 2;
+    if (d < bd) { bd = d; best = c.id; }
+  }
+  if (best) return best;
+  return nearestGame(g, x, y, range, except)?.id ?? 0;
 }
 
 /** Najbliższa żywa zwierzyna z mięsem w zasięgu (pola) od punktu; nie ta, na którą już poluje inny myśliwy */

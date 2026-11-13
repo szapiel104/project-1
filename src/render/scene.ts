@@ -20,6 +20,7 @@ import { RULES } from '../data/rules';
 import { loop3d, musicPlaying, play3d, playAt, pluck, setListener, updateLoops, type WorldSound } from '../audio/sfx';
 import { TEST } from '../testmode';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
+import { quarry } from '../sim/systems/wildgame';
 import { BUILDINGS, brazierHost, NO_TORCH, footprint, isStoneTower, isTower, towerBonus, workArea } from '../data/buildings';
 import { crewOf } from '../sim/systems/workers';
 import { mageKindOf } from '../sim/systems/plague';
@@ -6098,13 +6099,14 @@ export class GameRenderer {
       // myśliwy (postać łucznika) podszedł zwierzynę: staje do niej twarzą, sięga do kołczanu, nakłada strzałę i naciąga
       // cięciwę do policzka (te same fazy co łucznik w walce, combatanim.ts: bowShot); strzał = świst cięciwy
       const huntJob = u.job !== 0 && jobs.get(u.job)?.type === HUNTER;
-      const prey = huntJob && u.phase === Phase.WorkingSite && u.hunting ? g.beasts?.find((b) => b.id === u.hunting) : undefined;
-      const aiming = !!prey && prey.hp > 0;
-      // przy ubitym zwierzęciu: pochylony nad truchłem, patroszy je nożem (ręce na zmianę), potem zarzuca na plecy
-      const dressing = !!prey && prey.hp <= 0;
+      // cel myśliwego: zwierzę, truchło, wilk albo ubity wilk (wildgame.ts: quarry)
+      const prey = huntJob && u.phase === Phase.WorkingSite && u.hunting ? quarry(g, u.hunting) : undefined;
+      const aiming = !!prey && (prey.kind === 'beast' || prey.kind === 'wolf');
+      // przy ubitym zwierzęciu albo wilku: pochylony nad nim, patroszy albo skóruje nożem (ręce na zmianę)
+      const dressing = !!prey && !aiming;
       let huntPose: [number, number, number, number, number, number, number] | undefined;
       let dressR = 0, dressL = 0;
-      if (prey) { t.rotation.set(0, Math.atan2(prey.px - u.px, prey.py - u.py), 0); swing = 0; }
+      if (prey) { t.rotation.set(0, Math.atan2(prey.x * FP - u.px, prey.y * FP - u.py), 0); swing = 0; }
       if (aiming) {
         this.aiming.add(u.id);
         const p = bowShot(0.3 + 0.7 * Math.min(1, Math.max(0, 1 - u.timer / HUNT_AIM)));

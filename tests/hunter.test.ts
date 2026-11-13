@@ -1,7 +1,7 @@
 import { expect, it } from 'vitest';
 import { resIndex } from '../src/data/resources';
 import { deserialize, serialize } from '../src/sim/save';
-import { addPeasants, emptyScene, placeReady, setHour } from '../src/sim/emptyscene';
+import { addPeasants, addWolf, emptyScene, placeReady, setHour } from '../src/sim/emptyscene';
 import { createGame, FP, stateHash, type GameState } from '../src/sim/state';
 import { step } from '../src/sim/step';
 
@@ -48,3 +48,18 @@ it('wybite stado odnawia się zwierzętami, które przychodzą z krańca mapy', 
   expect(Math.hypot(b.px - b.hx, b.py - b.hy) / FP).toBeGreaterThan(10);
   expect(edge).toBeLessThan(20);
 });
+
+it('myśliwy strzela do wilka w zasięgu chaty, a ubitego oskórowuje (skóra do składu)', () => {
+  const { g } = scene();
+  g.beasts!.length = 0;
+  const k = g.buildings[0]!, W = g.map.width, hx = k.door % W, hy = Math.floor(k.door / W);
+  // świt drugiego dnia: wilk jeszcze krąży, myśliwy wstaje do pracy (setHour liczy godziny od początku gry)
+  setHour(g, 29.9);
+  for (let i = 0; i < 120; i++) step(g, []);
+  addWolf(g, hx + 6, hy + 16);
+  const hides0 = g.players[0]!.res[resIndex('hides')]!;
+  let shot = false;
+  for (let i = 0; i < 1500; i++) { step(g, []); if (g.wolves[0] && g.wolves[0].hp < 45) shot = true; }
+  expect(shot).toBe(true);
+  expect(g.players[0]!.res[resIndex('hides')]!).toBe(hides0 + 1);
+}, 60000);
