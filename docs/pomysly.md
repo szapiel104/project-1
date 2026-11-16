@@ -2,6 +2,62 @@
 
 Tu trafia wszystko nowe, co nie należy do bieżącej partii. Do planu etapów (`plan.md`) przenosimy stąd, gdy przychodzi na to kolej.
 
+## NASTĘPNA PARTIA: oblężenie jak naprawdę — murów nie rąbie się mieczem (Michał 16.11.2026, robić jako pierwsze)
+
+**Po co:** z Twierdzy 4 śmieją się, że w grze z 2026/2027 roku rozbija się mury mieczami. My mamy być lepsi:
+**mieczem, włócznią, toporem, pięścią ani strzałą nie zadaje się obrażeń murom ani budynkom.**
+Mur bierze się machiną, podkopem albo drabiną, a budynki się **podpala**.
+
+**Jak jest dziś (sprawdzone w kodzie 16.11.2026):**
+- `src/sim/systems/army.ts` → `siege()`: każdy wojownik wręcz, który ma cel-budynek, woła
+  `hitBuilding(g, b, def.attack, …)`. Miecz zbrojnego, włócznia czy pięść pospolitego ruszenia zabierają hp
+  **każdemu** budynkowi: kamiennemu murowi (`stoneWall`, 1100 hp), bramie (`gate`/`stoneGate`), wieżom, zamkowi.
+- Łucznicy i mag strzelają w budynki pociskiem (`g.missiles`, `bld: true`, `burn: 1`): trafienie zabiera hp także
+  murom i bramom. Ogień ich nie pali (`hitBuilding` nie podpala `wall`/`gate`), ale samo trafienie rani kamień.
+- Taran (`ram`) bije budynki, woli umocnienia. Katapulty ani trebusza nie ma.
+- Saper (`sapper`) tylko rozbiera wrogie ruiny. Podkopu nie ma.
+- Drabiny szturmowe są (`siegeladders.ts`): wejście na mur działa.
+
+**Kto co może — docelowo:**
+
+| Kto | Mur kamienny, wieża, zamek | Palisada i drewniana brama | Chaty, warsztaty, inne budynki |
+| --- | --- | --- | --- |
+| Miecz, włócznia, pika, topór, pięść (zbrojny, włócznik, pikinier, pospolite ruszenie, zbój) | nic | nic (ewentualnie pochodnią podpalić palisadę) | **podpala pochodnią** (podchodzi, przykłada ogień → `b.fire`); bronią nie bije |
+| Łucznik | nic | ognista strzała tylko podpala | ognista strzała tylko podpala (obrażenia daje pożar, nie trafienie) |
+| Mag ognia | nic | podpala | podpala (kula ognia jak dziś parzy ludzi) |
+| Taran | bramę tak; mur i wieżę bardzo słabo albo wcale | bije bramę i palisadę | bije (powoli) |
+| **Katapulta / trebusz (nowe)** | **burzy mur, wieżę, zamek** z daleka | burzy | burzy |
+| **Podkop (nowe, saperzy z kilofami)** | **kopią pod murem długo, mur się wali** | — | — |
+| Drabiny | wejście na mur (już jest) | wejście | — |
+
+**Do zrobienia, po kolei:**
+1. `src/data/units.ts`: dopisać przy jednostkach, czym mogą działać na budynki, np. `breach?: 'gate' | 'all'` (taran,
+   katapulta) i `torch?: true` (piechota podpala). Domyślnie: zero obrażeń dla budynków.
+2. `army.ts` → `siege()` i `hitBuilding()`: wojownik wręcz bez `breach` nie zadaje obrażeń. Przy drewnianym budynku
+   podchodzi i podpala go pochodnią (ustawia `b.fire`). Przy murze, bramie i kamiennym budynku nie bije: szuka
+   wejścia (brama otwarta, drabina, wyłom), czeka na machiny albo wybiera inny cel.
+3. Pociski w budynki (`missiles`, `bld: true`): trafienie bez obrażeń. Ognista strzała tylko dokłada pożaru
+   drewnianym budynkom (`fire.ts`), w kamień nic.
+4. Taran: bramy (drewniane i kamienne) i palisada. Mur kamienny i wieża tylko symbolicznie albo wcale.
+5. **Nowa machina: katapulta (potem trebusz).** Buduje się w warsztacie inżynierów (`engineers`), obsługa
+   inżynierów. Strzela kamieniem z daleka (widoczny lot kamienia, pył przy trafieniu), burzy mury, wieże i zamek.
+   Wolna, krucha z bliska (piechota może ją podpalić albo rozbić — to wyjątek: machinę z drewna wolno rąbać).
+   Model z Blendera albo gotowy CC0/CC-BY (zasady modeli w CLAUDE.md), animacja ramienia.
+6. **Podkop:** saperzy z kilofami podchodzą pod mur i kopią (długo, np. kilka minut). Na końcu kawałek muru się wali
+   i powstaje wyłom. Obrońcy mogą ich zestrzelić z murów.
+7. **Bot** (`src/sim/systems/bot.ts`): nie wysyła piechoty na mur. Ma taran na bramę, drabiny, katapulty i podkop.
+   Budynki za murem podpala, a nie rąbie.
+8. **Obraz:** żołnierz z pochodnią przy podpalaniu (ruch przyłożenia ognia, płomień na budynku z systemu efektów),
+   nigdzie „walenia mieczem w kamień”. Wyłom w murze po katapulcie albo podkopie widoczny jako gruzowisko.
+9. **Interfejs (PL/EN):** gdy gracz każe oddziałowi bez machin atakować mur, podpowiedź: „Mieczem muru nie
+   zburzysz — potrzebny taran, katapulta, podkop albo drabiny.” / „No sword ever felled a wall, my lord — bring a ram,
+   a catapult, sappers or ladders.” Przy drewnianym budynku podpowiedź „Podpal”.
+10. **Testy:** miecz nie zabiera hp murowi ani zamkowi; włócznik podpala drewnianą chatę (`b.fire > 0`), ale jej
+    nie rąbie; strzała nie rani muru; taran bije bramę; katapulta burzy mur; podkop robi wyłom; bot zdobywa zamek
+    bez rąbania murów.
+11. „Co nowego” (PL/EN) z tym wprost: „Murów nie da się już rąbać mieczem. Bierze się je taranem, katapultą,
+    podkopem albo drabiną, a budynki się podpala.”
+
 ## Kolejka Michała z 11.11.2026, 16:15 (robić po kolei, odhaczać datą)
 - [x] (11.11.2026) Wilk: model z 0 A.D. (chód, spoczynek, skok do ataku, płynne przejścia), bez świecących oczu.
 - [x] (11.11.2026) Sanktuarium źródła: woda w budynkach z falującymi zmarszczkami i odbiciem nieba (`waterMaterial`, `tickBuildingWater`). Na zrzucie Michała budynki były bez dachów — w podglądzie z dachami wyglądają dobrze (sprawdzić, czy to nie przycisk „Bez dachu”).

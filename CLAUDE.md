@@ -133,6 +133,9 @@ Nad grą pracuje kilka czatów naraz, więc:
 - Plan i postęp: `docs/webgpu.md`. Gra przechodzi z WebGL na `WebGPURenderer` + TSL partiami (`src/render/gpu/`). **Tylko WebGPU** (Michał 6.11.2026: „WebGL już niepotrzebny, zostawiamy tylko WebGPU”): od 0.94.43 nie ma już `?webgl=1`; przeglądarka bez WebGPU dostaje WebGPURenderer w trybie WebGL2 (TSL kompiluje się sam). Stare bliźniaki GLSL usuwamy partiami (lista w `docs/webgpu.md`), nowych nie piszemy. Wspólne shadery pul tylko `?pule=1` (zwykłe materiały) — `?pule=2` psuje bufory (docs/webgpu.md). Zmiany w WebGPU sprawdzaj na dużym zapisie Michała (jego Chrome, Kontynuuj, `await __drawStat()`, `__perf()`).
 - Zmieniasz efekt — zmieniaj tylko wersję TSL (`src/render/gpu/`). GLSL to martwy kod do usunięcia; nowe efekty tylko w TSL.
 
+## Oblężenie jak naprawdę (Michał 16.11.2026, na zawsze, dla wszystkich czatów)
+- **Mieczem, włócznią, toporem, pięścią ani strzałą nie zadaje się obrażeń murom ani budynkom** (z Twierdzy 4 śmieją się, że tam się tak robi — my mamy być lepsi). Mur bierze się taranem (bramy), katapultą, podkopem albo drabiną; budynki się podpala (pochodnia, ognista strzała, mag ognia). Plan i kolejność w `docs/pomysly.md` („Oblężenie jak naprawdę”). Nowe jednostki i mechaniki nie mogą tego łamać.
+
 ## Pomysły
 - **Progresja gracza (poziomy, doświadczenie, rozwój postaci, ranking — kierunek RPG/MMO):** plan i kolejność partii w `docs/progresja.md`. Gdy Michał prosi o coś z tego obszaru, bierz następną nieoznaczoną partię i oznacz ją datą po wdrożeniu.
 - Lista kolejnych partii jest w `docs/pomysly.md`. Gdy Michał pyta „co dalej”, podpowiadaj z niej (i dopisuj tam nowe pomysły, zdejmuj zrobione).
